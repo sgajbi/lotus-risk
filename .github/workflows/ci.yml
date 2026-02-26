@@ -85,9 +85,24 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
 
+  test-pyramid-gate:
+    name: Test Pyramid Gate
+    needs: [test-suites]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+      - name: Install
+        run: make install
+      - name: Enforce test pyramid distribution
+        run: make test-pyramid-gate
+
   coverage-gate:
     name: Coverage Gate (Combined)
-    needs: [test-suites]
+    needs: [test-suites, test-pyramid-gate]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -103,10 +118,10 @@ jobs:
           pattern: coverage-data-*
           merge-multiple: true
           path: coverage-data
-      - name: Enforce 85% coverage
+      - name: Enforce 99% coverage
         run: |
           python -m coverage combine coverage-data
-          python -m coverage report --fail-under=85
+          python -m coverage report --fail-under=99
 
   docker-build:
     name: Validate Docker Build

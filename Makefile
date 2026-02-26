@@ -1,4 +1,4 @@
-.PHONY: install lint monetary-float-guard typecheck openapi-gate migration-smoke migration-apply test test-unit test-integration test-e2e test-coverage coverage-gate security-audit check ci docker-build clean
+.PHONY: install lint monetary-float-guard typecheck openapi-gate migration-smoke migration-apply test test-unit test-integration test-e2e test-pyramid-gate test-coverage coverage-gate security-audit check ci docker-build clean
 
 install:
 	python -m pip install --upgrade pip
@@ -35,19 +35,22 @@ test-integration:
 test-e2e:
 	python -m pytest tests/e2e
 
+test-pyramid-gate:
+	python scripts/test_pyramid_gate.py
+
 test-coverage:
 	COVERAGE_FILE=.coverage.unit python -m pytest tests/unit --cov=src --cov-report=
 	COVERAGE_FILE=.coverage.integration python -m pytest tests/integration --cov=src --cov-report=
 	COVERAGE_FILE=.coverage.e2e python -m pytest tests/e2e --cov=src --cov-report=
 	python -m coverage combine .coverage.unit .coverage.integration .coverage.e2e
-	python -m coverage report --fail-under=85
+	python -m coverage report --fail-under=99
 
 security-audit:
 	python -m pip_audit
 
 check: lint typecheck openapi-gate test
 
-ci: lint typecheck openapi-gate migration-smoke test-integration test-e2e test-coverage security-audit
+ci: lint typecheck openapi-gate migration-smoke test-pyramid-gate test-integration test-e2e test-coverage security-audit
 
 docker-build:
 	docker build -t backend-service:ci-test .
