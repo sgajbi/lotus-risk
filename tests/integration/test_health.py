@@ -56,6 +56,22 @@ def test_legacy_workbench_proxy_still_available() -> None:
     assert response.status_code == 200
 
 
+def test_concentration_handles_non_positive_positions() -> None:
+    client = TestClient(app)
+    response = client.post(
+        "/analytics/risk/concentration",
+        json={
+            "currentPositions": [{"securityId": "A", "quantity": 0}],
+            "projectedPositions": [{"securityId": "B", "proposedQuantity": -5}],
+        },
+    )
+    assert response.status_code == 200
+    proxy = response.json()["riskProxy"]
+    assert proxy["hhiCurrent"] == 0
+    assert proxy["hhiProposed"] == 0
+    assert proxy["hhiDelta"] == 0
+
+
 def test_openapi_hides_legacy_proxy_and_exposes_concentration() -> None:
     client = TestClient(app)
     spec = client.get("/openapi.json").json()

@@ -165,3 +165,93 @@ def test_health_ready_draining_branch() -> None:
 def test_period_year_requires_year_validation() -> None:
     with pytest.raises(Exception):
         RiskRequestPeriod.model_validate({"type": "YEAR"})
+
+
+def test_resolve_period_validates_required_inputs() -> None:
+    with pytest.raises(ValueError, match="EXPLICIT period requires"):
+        risk_engine._resolve_period("EXPLICIT", date(2025, 3, 31), date(2024, 1, 1))
+    with pytest.raises(ValueError, match="YEAR period requires year"):
+        risk_engine._resolve_period("YEAR", date(2025, 3, 31), date(2024, 1, 1))
+
+
+def test_to_log_returns_empty_series_passthrough() -> None:
+    empty = pd.Series(dtype=float)
+    assert risk_engine._to_log_returns(empty).empty
+
+
+def test_risk_metrics_return_domain_errors_for_insufficient_data() -> None:
+    payload = {
+        "scope": {"asOfDate": "2025-03-31", "netOrGross": "NET"},
+        "portfolioOpenDate": "2024-01-01",
+        "periods": [{"type": "YTD", "name": "YTD"}],
+        "metrics": [
+            "VOLATILITY",
+            "DRAWDOWN",
+            "SHARPE",
+            "SORTINO",
+            "BETA",
+            "TRACKING_ERROR",
+            "INFORMATION_RATIO",
+            "VAR",
+        ],
+        "returns": [{"date": "2025-01-02", "value": 0.5}],
+        "benchmarkReturns": [{"date": "2025-01-02", "value": 0.4}],
+    }
+    response = risk_engine.calculate_risk(RiskCalculationRequest.model_validate(payload))
+    metrics = response.results["YTD"].metrics
+    for metric_name in payload["metrics"]:
+        assert metrics[metric_name].value is None
+        assert metrics[metric_name].details is not None
+        assert metrics[metric_name].details["error"] == "Insufficient data"
+
+
+def test_beta_and_information_ratio_guard_clauses() -> None:
+    constant = pd.Series([0.2, 0.2, 0.2])
+    with pytest.raises(ValueError, match="Benchmark variance is zero"):
+        risk_engine._beta(pd.Series([0.1, 0.3, 0.2]), constant)
+    with pytest.raises(ValueError, match="Tracking error is zero"):
+        risk_engine._information_ratio(constant, constant, annual_factor=252)
+
+
+def test_benchmark_metric_dispatch_rejects_unknown_metric() -> None:
+    with pytest.raises(ValueError, match="Unsupported benchmark metric"):
+        risk_engine._calculate_benchmark_metric(
+            "UNKNOWN",
+            pd.Series([0.1, 0.2]),
+            pd.Series([0.1, 0.2]),
+            annual_factor=252,
+        )
+
+
+def test_sharpe_and_sortino_error_contracts() -> None:
+    zero_vol_payload = {
+        "scope": {"asOfDate": "2025-03-31", "netOrGross": "NET"},
+        "portfolioOpenDate": "2024-01-01",
+        "periods": [{"type": "YTD", "name": "YTD"}],
+        "metrics": ["SHARPE"],
+        "returns": [
+            {"date": "2025-01-02", "value": 0.5},
+            {"date": "2025-01-03", "value": 0.5},
+        ],
+    }
+    sharpe_response = risk_engine.calculate_risk(RiskCalculationRequest.model_validate(zero_vol_payload))
+    sharpe_error = sharpe_response.results["YTD"].metrics["SHARPE"].details
+    assert sharpe_error is not None
+    assert sharpe_error["error"] == "Zero volatility"
+
+    no_downside_payload = {
+        "scope": {"asOfDate": "2025-03-31", "netOrGross": "NET"},
+        "portfolioOpenDate": "2024-01-01",
+        "periods": [{"type": "YTD", "name": "YTD"}],
+        "metrics": ["SORTINO"],
+        "returns": [
+            {"date": "2025-01-02", "value": 1.0},
+            {"date": "2025-01-03", "value": 2.0},
+        ],
+    }
+    sortino_response = risk_engine.calculate_risk(
+        RiskCalculationRequest.model_validate(no_downside_payload)
+    )
+    sortino_error = sortino_response.results["YTD"].metrics["SORTINO"].details
+    assert sortino_error is not None
+    assert sortino_error["error"] == "No downside observations"
