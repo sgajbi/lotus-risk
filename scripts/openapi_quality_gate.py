@@ -8,7 +8,7 @@ SRC_PATH = str(PROJECT_ROOT / "src")
 if SRC_PATH not in sys.path:
     sys.path.insert(0, SRC_PATH)
 
-from app.main import app
+from app.main import app  # noqa: E402
 
 
 def main() -> None:
