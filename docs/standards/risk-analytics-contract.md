@@ -3,6 +3,19 @@
 ## Endpoints
 - `POST /analytics/risk/calculate`
 - `POST /analytics/risk/concentration`
+- `GET /integration/capabilities`
+
+## Integration Capabilities Contract
+- `sourceService`: `lotus-risk`
+- `policyVersion`: `risk.v1`
+- `supportedInputModes`: `["api"]`
+- `features`:
+  - `risk.analytics.risk_analytics`
+  - `risk.analytics.concentration`
+  - `risk.analytics.metrics`
+- `workflows`:
+  - `risk_snapshot`
+  - `concentration_risk`
 
 ## Supported Period Types
 - `EXPLICIT`: requires `from/to` (`fromDate` and `toDate` also supported).

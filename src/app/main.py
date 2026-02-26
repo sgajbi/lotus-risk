@@ -2,6 +2,13 @@ from fastapi import FastAPI, HTTPException, Response, status
 from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel, Field
 
+from app.contracts.capabilities import (
+    CAPABILITY_FEATURE_KEYS,
+    CAPABILITY_WORKFLOW_KEYS,
+    CapabilityFeature,
+    CapabilityWorkflow,
+    IntegrationCapabilitiesResponse,
+)
 from app.contracts.risk import RiskCalculationRequest, RiskResponse
 from app.enterprise_readiness import (
     build_enterprise_audit_middleware,
@@ -48,22 +55,18 @@ async def metadata() -> dict[str, str]:
     }
 
 
-@app.get("/integration/capabilities")
-async def integration_capabilities() -> dict[str, object]:
-    return {
-        "sourceService": SERVICE_NAME,
-        "policyVersion": "risk.v1",
-        "supportedInputModes": ["api"],
-        "features": [
-            {"key": "risk.analytics.risk_analytics", "enabled": True},
-            {"key": "risk.analytics.concentration", "enabled": True},
-            {"key": "risk.analytics.metrics", "enabled": True},
+@app.get("/integration/capabilities", response_model=IntegrationCapabilitiesResponse)
+async def integration_capabilities() -> IntegrationCapabilitiesResponse:
+    return IntegrationCapabilitiesResponse(
+        sourceService=SERVICE_NAME,
+        policyVersion="risk.v1",
+        supportedInputModes=["api"],
+        features=[CapabilityFeature(key=feature_key) for feature_key in CAPABILITY_FEATURE_KEYS],
+        workflows=[
+            CapabilityWorkflow(workflow_key=workflow_key)
+            for workflow_key in CAPABILITY_WORKFLOW_KEYS
         ],
-        "workflows": [
-            {"workflow_key": "risk_snapshot", "enabled": True},
-            {"workflow_key": "concentration_risk", "enabled": True},
-        ],
-    }
+    )
 
 
 class _RiskPosition(BaseModel):
