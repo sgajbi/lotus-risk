@@ -49,12 +49,13 @@ async def integration_capabilities() -> dict[str, object]:
         "policyVersion": "risk.v1",
         "supportedInputModes": ["api"],
         "features": [
-            {"key": "risk.analytics.proxy", "enabled": True},
+            {"key": "risk.analytics.risk_analytics", "enabled": True},
             {"key": "risk.analytics.concentration", "enabled": True},
             {"key": "risk.analytics.metrics", "enabled": True},
         ],
         "workflows": [
             {"workflow_key": "risk_snapshot", "enabled": True},
+            {"workflow_key": "concentration_risk", "enabled": True},
         ],
     }
 
@@ -80,8 +81,7 @@ def _compute_hhi(values: list[float]) -> float:
     return sum(w * w for w in weights) * 10000.0
 
 
-@app.post("/analytics/workbench/risk-proxy")
-async def workbench_risk_proxy(request: _RiskProxyRequest) -> dict[str, object]:
+def _build_concentration_response(request: _RiskProxyRequest) -> dict[str, object]:
     current_values = [
         p.quantity for p in request.current_positions if p.quantity is not None and p.quantity > 0
     ]
@@ -100,6 +100,23 @@ async def workbench_risk_proxy(request: _RiskProxyRequest) -> dict[str, object]:
             "hhiDelta": round(proposed_hhi - current_hhi, 6),
         },
     }
+
+
+@app.post(
+    "/analytics/risk/concentration",
+    summary="Calculate concentration risk analytics",
+    description=(
+        "Calculates concentration-risk HHI metrics from current and projected position "
+        "weights. Returns current, proposed, and delta concentration."
+    ),
+)
+async def analytics_risk_concentration(request: _RiskProxyRequest) -> dict[str, object]:
+    return _build_concentration_response(request)
+
+
+@app.post("/analytics/workbench/risk-proxy", include_in_schema=False)
+async def workbench_risk_proxy(request: _RiskProxyRequest) -> dict[str, object]:
+    return _build_concentration_response(request)
 
 
 @app.post(
