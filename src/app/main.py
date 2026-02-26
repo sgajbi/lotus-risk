@@ -1,7 +1,9 @@
-from fastapi import FastAPI, Response, status
+from fastapi import FastAPI, HTTPException, Response, status
 from prometheus_fastapi_instrumentator import Instrumentator
-from src.app.middleware.correlation import CorrelationIdMiddleware
 from pydantic import BaseModel, Field
+from src.app.contracts.risk import RiskCalculationRequest
+from src.app.middleware.correlation import CorrelationIdMiddleware
+from src.app.services.risk_engine import calculate_risk
 
 SERVICE_NAME = "lotus-risk"
 SERVICE_VERSION = "0.1.0"
@@ -48,6 +50,7 @@ async def integration_capabilities() -> dict:
         "features": [
             {"key": "risk.analytics.proxy", "enabled": True},
             {"key": "risk.analytics.concentration", "enabled": True},
+            {"key": "risk.analytics.metrics", "enabled": True},
         ],
         "workflows": [
             {"workflow_key": "risk_snapshot", "enabled": True},
@@ -96,3 +99,12 @@ async def workbench_risk_proxy(request: _RiskProxyRequest) -> dict:
             "hhiDelta": round(proposed_hhi - current_hhi, 6),
         },
     }
+
+
+@app.post("/analytics/risk/calculate")
+async def analytics_risk_calculate(request: RiskCalculationRequest) -> dict:
+    try:
+        response = calculate_risk(request)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return response.model_dump(by_alias=True)
