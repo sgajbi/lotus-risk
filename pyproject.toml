@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "lotus-risk"
 version = "0.1.0"
-description = "Lotus backend service"
+description = "Advanced risk analytics service for Lotus platform."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

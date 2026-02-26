@@ -1,4 +1,4 @@
-.PHONY: install lint typecheck openapi-gate test test-unit test-integration test-e2e test-coverage security-audit check ci docker-build clean
+.PHONY: install lint monetary-float-guard typecheck openapi-gate test test-unit test-integration test-e2e test-coverage coverage-gate security-audit check ci docker-build clean
 
 install:
 	python -m pip install --upgrade pip
@@ -7,6 +7,9 @@ install:
 lint:
 	ruff check .
 	ruff format --check .
+
+monetary-float-guard:
+	python scripts/check_monetary_float_usage.py
 
 typecheck:
 	mypy --config-file mypy.ini
@@ -45,4 +48,5 @@ docker-build:
 
 clean:
 	python -c "import shutil, pathlib; [shutil.rmtree(p, ignore_errors=True) for p in ['.pytest_cache', '.ruff_cache', '.mypy_cache']]; [pathlib.Path(p).unlink(missing_ok=True) for p in ['.coverage', '.coverage.unit', '.coverage.integration', '.coverage.e2e']]"
+
 

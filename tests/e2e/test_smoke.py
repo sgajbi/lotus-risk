@@ -7,3 +7,10 @@ def test_e2e_smoke() -> None:
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
+
+
+def test_metadata_endpoint() -> None:
+    client = TestClient(app)
+    response = client.get("/metadata")
+    assert response.status_code == 200
+    assert response.json()["service"].startswith("lotus-")

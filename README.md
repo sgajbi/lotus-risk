@@ -1,6 +1,6 @@
 # lotus-risk
 
-Lotus backend service
+Advanced risk analytics service for Lotus platform.
 
 ## Quick Start
 
@@ -15,7 +15,13 @@ make ci
   
 
 `powershell
-uvicorn src.app.main:app --reload --port 8000
+uvicorn src.app.main:app --reload --port 8130
+`",
+  ",
+  
+
+`powershell
+docker compose up --build
 `",
   ",
   
