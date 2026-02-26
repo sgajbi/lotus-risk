@@ -18,32 +18,31 @@ def test_correlation_header_propagation() -> None:
 
 def test_integration_capabilities_contract() -> None:
     client = TestClient(app)
-    response = client.get('/integration/capabilities')
+    response = client.get("/integration/capabilities")
     assert response.status_code == 200
     body = response.json()
-    assert body['sourceService'] == 'lotus-risk'
-    assert isinstance(body['features'], list)
-    assert isinstance(body['workflows'], list)
+    assert body["sourceService"] == "lotus-risk"
+    assert isinstance(body["features"], list)
+    assert isinstance(body["workflows"], list)
 
 
 def test_workbench_risk_proxy_endpoint() -> None:
     client = TestClient(app)
     response = client.post(
-        '/analytics/workbench/risk-proxy',
+        "/analytics/workbench/risk-proxy",
         json={
-            'currentPositions': [
-                {'securityId': 'A', 'quantity': 10},
-                {'securityId': 'B', 'quantity': 10},
+            "currentPositions": [
+                {"securityId": "A", "quantity": 10},
+                {"securityId": "B", "quantity": 10},
             ],
-            'projectedPositions': [
-                {'securityId': 'A', 'proposedQuantity': 15},
-                {'securityId': 'B', 'proposedQuantity': 5},
+            "projectedPositions": [
+                {"securityId": "A", "proposedQuantity": 15},
+                {"securityId": "B", "proposedQuantity": 5},
             ],
         },
     )
     assert response.status_code == 200
     body = response.json()
-    assert body['sourceService'] == 'lotus-risk'
-    assert 'riskProxy' in body
-    assert body['riskProxy']['hhiCurrent'] > 0
-
+    assert body["sourceService"] == "lotus-risk"
+    assert "riskProxy" in body
+    assert body["riskProxy"]["hhiCurrent"] > 0

@@ -22,7 +22,15 @@ class ResolvedPeriod:
     end: date
 
 
-def _resolve_period(period_type: str, as_of: date, open_date: date, *, year: int | None = None, from_date: date | None = None, to_date: date | None = None) -> tuple[date, date]:
+def _resolve_period(
+    period_type: str,
+    as_of: date,
+    open_date: date,
+    *,
+    year: int | None = None,
+    from_date: date | None = None,
+    to_date: date | None = None,
+) -> tuple[date, date]:
     if period_type == "CUSTOM":
         if from_date is None or to_date is None:
             raise ValueError("CUSTOM period requires fromDate and toDate")
@@ -131,11 +139,14 @@ def calculate_risk(request: RiskCalculationRequest) -> RiskResponse:
         benchmark_df["date"] = pd.to_datetime(benchmark_df["date"])
         benchmark_df = benchmark_df.sort_values("date").set_index("date")
 
-    annual_factor = request.options.annualization_factor or {
-        "DAILY": 252,
-        "WEEKLY": 52,
-        "MONTHLY": 12,
-    }[request.options.frequency]
+    annual_factor = (
+        request.options.annualization_factor
+        or {
+            "DAILY": 252,
+            "WEEKLY": 52,
+            "MONTHLY": 12,
+        }[request.options.frequency]
+    )
 
     periodic_rf = 0.0
     if (
@@ -158,12 +169,15 @@ def calculate_risk(request: RiskCalculationRequest) -> RiskResponse:
         period_name = period.name or period.type
 
         period_returns = returns_df.loc[
-            (returns_df.index >= pd.Timestamp(start)) & (returns_df.index <= pd.Timestamp(end)), "value"
+            (returns_df.index >= pd.Timestamp(start)) & (returns_df.index <= pd.Timestamp(end)),
+            "value",
         ]
         period_returns = _resample_returns(period_returns, request.options.frequency)
 
         for_drawdown = period_returns
-        for_metrics = _to_log_returns(period_returns) if request.options.use_log_returns else period_returns
+        for_metrics = (
+            _to_log_returns(period_returns) if request.options.use_log_returns else period_returns
+        )
 
         metric_map: dict[str, RiskValue] = {}
 
@@ -189,7 +203,9 @@ def calculate_risk(request: RiskCalculationRequest) -> RiskResponse:
                 denom = for_metrics.std(ddof=1)
                 if denom == 0:
                     raise ValueError("Zero volatility")
-                sharpe = ((for_metrics.mean() / 100 - periodic_rf) / (denom / 100)) * sqrt(annual_factor)
+                sharpe = ((for_metrics.mean() / 100 - periodic_rf) / (denom / 100)) * sqrt(
+                    annual_factor
+                )
                 metric_map["SHARPE"] = RiskValue(value=float(sharpe))
             except ValueError as exc:
                 metric_map["SHARPE"] = RiskValue(value=None, details={"error": str(exc)})
@@ -197,14 +213,16 @@ def calculate_risk(request: RiskCalculationRequest) -> RiskResponse:
         if "SORTINO" in request.metrics:
             try:
                 _require_data(for_metrics)
-                downside = ((for_metrics / 100) - periodic_mar)
+                downside = (for_metrics / 100) - periodic_mar
                 downside = downside[downside < 0]
                 if downside.empty:
                     raise ValueError("No downside observations")
                 downside_dev = float(np.sqrt((downside**2).mean()))
                 if downside_dev == 0:
                     raise ValueError("Zero downside deviation")
-                sortino = (((for_metrics.mean() / 100) - periodic_mar) / downside_dev) * sqrt(annual_factor)
+                sortino = (((for_metrics.mean() / 100) - periodic_mar) / downside_dev) * sqrt(
+                    annual_factor
+                )
                 metric_map["SORTINO"] = RiskValue(value=float(sortino))
             except ValueError as exc:
                 metric_map["SORTINO"] = RiskValue(value=None, details={"error": str(exc)})
@@ -214,7 +232,9 @@ def calculate_risk(request: RiskCalculationRequest) -> RiskResponse:
         )
         if need_bench and not benchmark_df.empty:
             bench_period = benchmark_df.loc[
-                (benchmark_df.index >= pd.Timestamp(start)) & (benchmark_df.index <= pd.Timestamp(end)), "value"
+                (benchmark_df.index >= pd.Timestamp(start))
+                & (benchmark_df.index <= pd.Timestamp(end)),
+                "value",
             ]
             bench_period = _resample_returns(bench_period, request.options.frequency)
             if request.options.use_log_returns:
@@ -241,7 +261,9 @@ def calculate_risk(request: RiskCalculationRequest) -> RiskResponse:
                         value=_tracking_error(p, b, annual_factor)
                     )
                 except ValueError as exc:
-                    metric_map["TRACKING_ERROR"] = RiskValue(value=None, details={"error": str(exc)})
+                    metric_map["TRACKING_ERROR"] = RiskValue(
+                        value=None, details={"error": str(exc)}
+                    )
             if "INFORMATION_RATIO" in request.metrics:
                 try:
                     _require_data(p)
@@ -261,7 +283,9 @@ def calculate_risk(request: RiskCalculationRequest) -> RiskResponse:
                 details = None
                 if request.options.var.include_expected_shortfall:
                     base_es = _expected_shortfall(for_metrics, base_var)
-                    details = {"expected_shortfall": base_es * sqrt(request.options.var.horizon_days)}
+                    details = {
+                        "expected_shortfall": base_es * sqrt(request.options.var.horizon_days)
+                    }
                 metric_map["VAR"] = RiskValue(value=scaled_var, details=details)
             except ValueError as exc:
                 metric_map["VAR"] = RiskValue(value=None, details={"error": str(exc)})
