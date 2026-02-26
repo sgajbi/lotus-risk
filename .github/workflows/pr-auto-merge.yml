@@ -35,5 +35,10 @@ jobs:
             echo "$output"
             exit 0
           fi
+          if echo "$output" | grep -qi "Protected branch rules not configured"; then
+            echo "Auto-merge skipped: branch protection/auto-merge is not enabled on target branch."
+            echo "$output"
+            exit 0
+          fi
           echo "$output"
           exit "$code"
