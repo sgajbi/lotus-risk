@@ -1,7 +1,8 @@
 # Risk Analytics Contract Standard
 
-## Endpoint
+## Endpoints
 - `POST /analytics/risk/calculate`
+- `POST /analytics/risk/concentration`
 
 ## Supported Period Types
 - `EXPLICIT`: requires `from/to` (`fromDate` and `toDate` also supported).
@@ -33,6 +34,10 @@
 - `peak_date`
 - `trough_date`
 - `max_drawdown_date` (compatibility alias to trough date)
+
+## Concentration Risk
+- Concentration endpoint computes HHI-based concentration metrics from current/projected positions.
+- Returns `hhiCurrent`, `hhiProposed`, and `hhiDelta` under `riskProxy`.
 
 ## Error Semantics
 - Period/model validation errors return `422` (request validation layer).

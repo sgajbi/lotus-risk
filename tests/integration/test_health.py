@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+
 from app.main import app
 
 
@@ -26,23 +27,37 @@ def test_integration_capabilities_contract() -> None:
     assert isinstance(body["workflows"], list)
 
 
-def test_workbench_risk_proxy_endpoint() -> None:
+def _concentration_payload() -> dict[str, object]:
+    return {
+        "currentPositions": [
+            {"securityId": "A", "quantity": 10},
+            {"securityId": "B", "quantity": 10},
+        ],
+        "projectedPositions": [
+            {"securityId": "A", "proposedQuantity": 15},
+            {"securityId": "B", "proposedQuantity": 5},
+        ],
+    }
+
+
+def test_concentration_risk_endpoint() -> None:
     client = TestClient(app)
-    response = client.post(
-        "/analytics/workbench/risk-proxy",
-        json={
-            "currentPositions": [
-                {"securityId": "A", "quantity": 10},
-                {"securityId": "B", "quantity": 10},
-            ],
-            "projectedPositions": [
-                {"securityId": "A", "proposedQuantity": 15},
-                {"securityId": "B", "proposedQuantity": 5},
-            ],
-        },
-    )
+    response = client.post("/analytics/risk/concentration", json=_concentration_payload())
     assert response.status_code == 200
     body = response.json()
     assert body["sourceService"] == "lotus-risk"
     assert "riskProxy" in body
     assert body["riskProxy"]["hhiCurrent"] > 0
+
+
+def test_legacy_workbench_proxy_still_available() -> None:
+    client = TestClient(app)
+    response = client.post("/analytics/workbench/risk-proxy", json=_concentration_payload())
+    assert response.status_code == 200
+
+
+def test_openapi_hides_legacy_proxy_and_exposes_concentration() -> None:
+    client = TestClient(app)
+    spec = client.get("/openapi.json").json()
+    assert "/analytics/risk/concentration" in spec["paths"]
+    assert "/analytics/workbench/risk-proxy" not in spec["paths"]
