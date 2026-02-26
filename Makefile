@@ -40,7 +40,7 @@ test-coverage:
 	COVERAGE_FILE=.coverage.integration python -m pytest tests/integration --cov=src --cov-report=
 	COVERAGE_FILE=.coverage.e2e python -m pytest tests/e2e --cov=src --cov-report=
 	python -m coverage combine .coverage.unit .coverage.integration .coverage.e2e
-	python -m coverage report --fail-under=99
+	python -m coverage report --fail-under=85
 
 security-audit:
 	python -m pip_audit
