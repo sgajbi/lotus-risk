@@ -38,7 +38,9 @@ class CorrelationIdMiddleware(BaseHTTPMiddleware):
         call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
         correlation_id = request.headers.get("X-Correlation-Id") or str(uuid.uuid4())
-        trace_id = self._resolve_trace_id(request.headers.get("X-Trace-Id"), request.headers.get("traceparent"))
+        trace_id = self._resolve_trace_id(
+            request.headers.get("X-Trace-Id"), request.headers.get("traceparent")
+        )
         traceparent = self._resolve_traceparent(request.headers.get("traceparent"), trace_id)
         request.state.correlation_id = correlation_id
         request.state.trace_id = trace_id
