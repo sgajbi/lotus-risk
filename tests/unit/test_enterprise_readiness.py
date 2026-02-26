@@ -14,7 +14,9 @@ from app.enterprise_readiness import (
 )
 
 
-def test_validate_runtime_config_collects_and_enforces_issues(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_validate_runtime_config_collects_and_enforces_issues(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setenv("ENTERPRISE_POLICY_VERSION", " ")
     monkeypatch.setenv("ENTERPRISE_SECRET_ROTATION_DAYS", "120")
     monkeypatch.setenv("ENTERPRISE_ENFORCE_AUTHZ", "true")

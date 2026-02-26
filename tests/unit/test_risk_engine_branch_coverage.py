@@ -234,7 +234,9 @@ def test_sharpe_and_sortino_error_contracts() -> None:
             {"date": "2025-01-03", "value": 0.5},
         ],
     }
-    sharpe_response = risk_engine.calculate_risk(RiskCalculationRequest.model_validate(zero_vol_payload))
+    sharpe_response = risk_engine.calculate_risk(
+        RiskCalculationRequest.model_validate(zero_vol_payload)
+    )
     sharpe_error = sharpe_response.results["YTD"].metrics["SHARPE"].details
     assert sharpe_error is not None
     assert sharpe_error["error"] == "Zero volatility"
