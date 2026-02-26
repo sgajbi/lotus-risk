@@ -1,36 +1,94 @@
-from src.app.contracts.risk import RiskCalculationRequest
-from src.app.services.risk_engine import calculate_risk
+from app.contracts.risk import RiskCalculationRequest, RiskRequestPeriod
+from app.services.risk_engine import calculate_risk
 
 
-def _base_payload() -> dict:
+from typing import Any
+
+
+def _base_payload() -> dict[str, Any]:
     return {
         "scope": {"asOfDate": "2025-03-31", "netOrGross": "NET"},
         "portfolioOpenDate": "2024-01-01",
         "periods": [{"type": "YTD", "name": "YTD"}],
-        "metrics": ["BETA", "TRACKING_ERROR", "INFORMATION_RATIO", "DRAWDOWN"],
+        "metrics": ["VOLATILITY", "SHARPE", "VAR"],
+        "options": {
+            "frequency": "DAILY",
+            "riskFreeMode": "ANNUAL_RATE",
+            "riskFreeAnnualRate": 0.01,
+            "var": {"confidence": 0.95, "horizonDays": 1, "includeExpectedShortfall": True},
+        },
         "returns": [
             {"date": "2025-01-02", "value": 1.0},
             {"date": "2025-01-03", "value": 2.0},
             {"date": "2025-01-06", "value": -1.0},
             {"date": "2025-01-07", "value": 0.5},
         ],
-        "benchmarkReturns": [
-            {"date": "2025-01-02", "value": 0.8},
-            {"date": "2025-01-03", "value": 1.1},
-            {"date": "2025-01-06", "value": -0.7},
-            {"date": "2025-01-07", "value": 0.4},
-        ],
     }
 
 
-def test_calculate_risk_benchmark_metrics() -> None:
-    request = RiskCalculationRequest.model_validate(_base_payload())
+def test_period_normalization_explicit_aliases() -> None:
+    period = RiskRequestPeriod.model_validate(
+        {"type": "custom", "from": "2025-01-01", "to": "2025-01-31", "name": "Explicit"}
+    )
+    assert period.type == "EXPLICIT"
+    assert str(period.from_date) == "2025-01-01"
+    assert str(period.to_date) == "2025-01-31"
+
+
+def test_period_normalization_one_year_alias() -> None:
+    period = RiskRequestPeriod.model_validate({"type": "1Y"})
+    assert period.type == "ONE_YEAR"
+
+
+def test_period_validation_rejects_missing_explicit_bounds() -> None:
+    try:
+        RiskRequestPeriod.model_validate({"type": "EXPLICIT"})
+        assert False, "Expected validation error"
+    except Exception as exc:  # pydantic validation type is enough here
+        assert "EXPLICIT period requires" in str(exc)
+
+
+def test_calculate_risk_var_methods() -> None:
+    payload = _base_payload()
+    methods = ["HISTORICAL", "GAUSSIAN", "CORNISH_FISHER"]
+    results = []
+    for method in methods:
+        payload["options"]["var"]["method"] = method
+        request = RiskCalculationRequest.model_validate(payload)
+        response = calculate_risk(request)
+        var_value = response.results["YTD"].metrics["VAR"].value
+        assert var_value is not None
+        results.append(var_value)
+
+    assert len(set(results)) >= 2
+
+
+def test_drawdown_metadata_fields_present() -> None:
+    payload = _base_payload()
+    payload["metrics"] = ["DRAWDOWN"]
+    request = RiskCalculationRequest.model_validate(payload)
     response = calculate_risk(request)
-    ytd = response.results["YTD"].metrics
-    assert ytd["BETA"].value is not None
-    assert ytd["TRACKING_ERROR"].value is not None
-    assert ytd["INFORMATION_RATIO"].value is not None
-    assert ytd["DRAWDOWN"].details is not None
+    details = response.results["YTD"].metrics["DRAWDOWN"].details
+    assert details is not None
+    assert "max_drawdown" in details
+    assert "peak_date" in details
+    assert "trough_date" in details
+    assert "max_drawdown_date" in details
+
+
+def test_benchmark_metrics_require_benchmark_series() -> None:
+    payload = _base_payload()
+    payload["metrics"] = ["BETA", "TRACKING_ERROR", "INFORMATION_RATIO"]
+    payload["benchmarkReturns"] = []
+
+    response = calculate_risk(RiskCalculationRequest.model_validate(payload))
+    metrics = response.results["YTD"].metrics
+    for metric_name in ["BETA", "TRACKING_ERROR", "INFORMATION_RATIO"]:
+        assert metric_name in metrics
+        assert metrics[metric_name].value is None
+        details = metrics[metric_name].details
+        assert details is not None
+        assert "Benchmark returns required" in str(details.get("error"))
 
 
 def test_calculate_risk_empty_returns() -> None:

@@ -1,4 +1,4 @@
-from src.app.main import SERVICE_NAME
+from app.main import SERVICE_NAME
 
 
 def test_service_name_is_lotus_prefixed() -> None:
