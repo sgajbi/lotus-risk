@@ -1,4 +1,5 @@
 import logging
+from typing import Any, cast
 
 import pytest
 from fastapi import FastAPI
@@ -104,7 +105,7 @@ def test_emit_audit_event_redacts_metadata(caplog: pytest.LogCaptureFixture) -> 
         correlation_id=None,
         metadata={"token": "top-secret", "safe": {"ssn": "123-45-6789"}},
     )
-    audit = caplog.records[-1].audit
+    audit = cast(dict[str, Any], getattr(caplog.records[-1], "audit"))
     assert audit["correlation_id"] == ""
     assert audit["metadata"]["token"] == "***REDACTED***"
     assert audit["metadata"]["safe"]["ssn"] == "***REDACTED***"

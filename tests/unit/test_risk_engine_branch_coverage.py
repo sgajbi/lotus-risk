@@ -199,10 +199,12 @@ def test_risk_metrics_return_domain_errors_for_insufficient_data() -> None:
     }
     response = risk_engine.calculate_risk(RiskCalculationRequest.model_validate(payload))
     metrics = response.results["YTD"].metrics
-    for metric_name in payload["metrics"]:
-        assert metrics[metric_name].value is None
-        assert metrics[metric_name].details is not None
-        assert metrics[metric_name].details["error"] == "Insufficient data"
+    metric_names = cast(list[str], payload["metrics"])
+    for metric_name in metric_names:
+        metric = metrics[metric_name]
+        assert metric.value is None
+        assert metric.details is not None
+        assert metric.details["error"] == "Insufficient data"
 
 
 def test_beta_and_information_ratio_guard_clauses() -> None:
