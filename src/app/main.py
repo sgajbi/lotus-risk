@@ -3,6 +3,10 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel, Field
 
 from app.contracts.risk import RiskCalculationRequest, RiskResponse
+from app.enterprise_readiness import (
+    build_enterprise_audit_middleware,
+    validate_enterprise_runtime_config,
+)
 from app.middleware.correlation import CorrelationIdMiddleware
 from app.services.risk_engine import calculate_risk
 
@@ -12,6 +16,8 @@ ROUNDING_POLICY_VERSION = "v1"
 
 app = FastAPI(title=SERVICE_NAME, version=SERVICE_VERSION)
 app.add_middleware(CorrelationIdMiddleware, service_name=SERVICE_NAME)
+validate_enterprise_runtime_config()
+app.middleware("http")(build_enterprise_audit_middleware())
 Instrumentator().instrument(app).expose(app)
 
 

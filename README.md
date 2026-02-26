@@ -29,3 +29,5 @@ docker compose up --build
 - CI and governance: .github/workflows/
 - Engineering commands: Makefile
 - Platform standards docs: docs/standards/
+
+API docs endpoint: /docs
