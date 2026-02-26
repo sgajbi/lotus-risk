@@ -159,7 +159,7 @@ def _expected_shortfall(returns: pd.Series, var_value: float) -> float:
 def _beta(portfolio: pd.Series, benchmark: pd.Series) -> float:
     covariance = np.cov(portfolio, benchmark, ddof=1)
     denominator = covariance[1, 1]
-    if denominator == 0:
+    if np.isclose(denominator, 0.0):
         raise ValueError("Benchmark variance is zero")
     return _as_number(covariance[0, 1] / denominator)
 
@@ -172,9 +172,21 @@ def _tracking_error(portfolio: pd.Series, benchmark: pd.Series, annual_factor: i
 def _information_ratio(portfolio: pd.Series, benchmark: pd.Series, annual_factor: int) -> float:
     active = portfolio - benchmark
     tracking_err = active.std(ddof=1)
-    if tracking_err == 0:
+    if np.isclose(tracking_err, 0.0):
         raise ValueError("Tracking error is zero")
     return _as_number((active.mean() / tracking_err) * sqrt(annual_factor))
+
+
+def _calculate_benchmark_metric(
+    metric_name: str, portfolio: pd.Series, benchmark: pd.Series, annual_factor: int
+) -> float:
+    if metric_name == "BETA":
+        return _beta(portfolio, benchmark)
+    if metric_name == "TRACKING_ERROR":
+        return _tracking_error(portfolio, benchmark, annual_factor)
+    if metric_name == "INFORMATION_RATIO":
+        return _information_ratio(portfolio, benchmark, annual_factor)
+    raise ValueError(f"Unsupported benchmark metric: {metric_name}")
 
 
 def _require_data(series: pd.Series, minimum: int = 2) -> None:
@@ -281,7 +293,7 @@ def calculate_risk(request: RiskCalculationRequest) -> RiskResponse:
                 try:
                     _require_data(metric_series)
                     denominator = metric_series.std(ddof=1)
-                    if denominator == 0:
+                    if np.isclose(denominator, 0.0):
                         raise ValueError("Zero volatility")
                     sharpe = (
                         (metric_series.mean() / 100 - periodic_rf) / (denominator / 100)
@@ -299,8 +311,6 @@ def calculate_risk(request: RiskCalculationRequest) -> RiskResponse:
                     if downside.empty:
                         raise ValueError("No downside observations")
                     downside_deviation = _as_number(np.sqrt((downside**2).mean()))
-                    if downside_deviation == 0:
-                        raise ValueError("Zero downside deviation")
                     sortino = (
                         ((metric_series.mean() / 100) - periodic_mar) / downside_deviation
                     ) * sqrt(annual_factor)
@@ -335,41 +345,17 @@ def calculate_risk(request: RiskCalculationRequest) -> RiskResponse:
                 portfolio_series = aligned["portfolio"]
                 benchmark_series = aligned["benchmark"]
 
-                if "BETA" in benchmark_metrics:
-                    with RISK_METRIC_DURATION_SECONDS.labels(metric_name="BETA").time():
+                for metric_name in benchmark_metrics:
+                    with RISK_METRIC_DURATION_SECONDS.labels(metric_name=metric_name).time():
                         try:
                             _require_data(portfolio_series)
-                            metric_map["BETA"] = RiskValue(
-                                value=_beta(portfolio_series, benchmark_series)
-                            )
-                        except ValueError as exc:
-                            metric_map["BETA"] = _metric_error(str(exc))
-
-                if "TRACKING_ERROR" in benchmark_metrics:
-                    with RISK_METRIC_DURATION_SECONDS.labels(metric_name="TRACKING_ERROR").time():
-                        try:
-                            _require_data(portfolio_series)
-                            metric_map["TRACKING_ERROR"] = RiskValue(
-                                value=_tracking_error(
-                                    portfolio_series, benchmark_series, annual_factor
+                            metric_map[metric_name] = RiskValue(
+                                value=_calculate_benchmark_metric(
+                                    metric_name, portfolio_series, benchmark_series, annual_factor
                                 )
                             )
                         except ValueError as exc:
-                            metric_map["TRACKING_ERROR"] = _metric_error(str(exc))
-
-                if "INFORMATION_RATIO" in benchmark_metrics:
-                    with RISK_METRIC_DURATION_SECONDS.labels(
-                        metric_name="INFORMATION_RATIO"
-                    ).time():
-                        try:
-                            _require_data(portfolio_series)
-                            metric_map["INFORMATION_RATIO"] = RiskValue(
-                                value=_information_ratio(
-                                    portfolio_series, benchmark_series, annual_factor
-                                )
-                            )
-                        except ValueError as exc:
-                            metric_map["INFORMATION_RATIO"] = _metric_error(str(exc))
+                            metric_map[metric_name] = _metric_error(str(exc))
 
         if "VAR" in request.metrics:
             with RISK_METRIC_DURATION_SECONDS.labels(metric_name="VAR").time():
