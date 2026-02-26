@@ -36,3 +36,19 @@ async def metadata() -> dict[str, str]:
         "version": SERVICE_VERSION,
         "roundingPolicyVersion": ROUNDING_POLICY_VERSION,
     }
+
+
+@app.get("/integration/capabilities")
+async def integration_capabilities() -> dict:
+    return {
+        "sourceService": SERVICE_NAME,
+        "policyVersion": "risk.v1",
+        "supportedInputModes": ["api"],
+        "features": [
+            {"key": "risk.analytics.proxy", "enabled": True},
+            {"key": "risk.analytics.concentration", "enabled": True},
+        ],
+        "workflows": [
+            {"workflow_key": "risk_snapshot", "enabled": True},
+        ],
+    }
