@@ -2,11 +2,12 @@ services:
   lotus-risk:
     build: .
     ports:
-      - \"8130:8130\"
+      - "8130:8130"
     env_file:
       - .env
     healthcheck:
-      test: [\"CMD\", \"python\", \"-c\", \"import urllib.request; urllib.request.urlopen('http://localhost:8130/health/ready')\"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8130/health/ready')"]
       interval: 15s
       timeout: 3s
       retries: 10
+
