@@ -1,9 +1,10 @@
 from fastapi import FastAPI, HTTPException, Response, status
 from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel, Field
-from src.app.contracts.risk import RiskCalculationRequest
-from src.app.middleware.correlation import CorrelationIdMiddleware
-from src.app.services.risk_engine import calculate_risk
+
+from app.contracts.risk import RiskCalculationRequest, RiskResponse
+from app.middleware.correlation import CorrelationIdMiddleware
+from app.services.risk_engine import calculate_risk
 
 SERVICE_NAME = "lotus-risk"
 SERVICE_VERSION = "0.1.0"
@@ -42,7 +43,7 @@ async def metadata() -> dict[str, str]:
 
 
 @app.get("/integration/capabilities")
-async def integration_capabilities() -> dict:
+async def integration_capabilities() -> dict[str, object]:
     return {
         "sourceService": SERVICE_NAME,
         "policyVersion": "risk.v1",
@@ -80,7 +81,7 @@ def _compute_hhi(values: list[float]) -> float:
 
 
 @app.post("/analytics/workbench/risk-proxy")
-async def workbench_risk_proxy(request: _RiskProxyRequest) -> dict:
+async def workbench_risk_proxy(request: _RiskProxyRequest) -> dict[str, object]:
     current_values = [
         p.quantity for p in request.current_positions if p.quantity is not None and p.quantity > 0
     ]
@@ -101,10 +102,18 @@ async def workbench_risk_proxy(request: _RiskProxyRequest) -> dict:
     }
 
 
-@app.post("/analytics/risk/calculate")
-async def analytics_risk_calculate(request: RiskCalculationRequest) -> dict:
+@app.post(
+    "/analytics/risk/calculate",
+    response_model=RiskResponse,
+    summary="Calculate portfolio risk metrics",
+    description=(
+        "Calculates risk metrics from provided return series using stateless input mode. "
+        "Supports EXPLICIT/YEAR/MTD/QTD/YTD/ONE_YEAR/THREE_YEAR/FIVE_YEAR/SI periods, "
+        "all VaR methods (HISTORICAL/GAUSSIAN/CORNISH_FISHER), and benchmark-aware metrics."
+    ),
+)
+async def analytics_risk_calculate(request: RiskCalculationRequest) -> RiskResponse:
     try:
-        response = calculate_risk(request)
+        return calculate_risk(request)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-    return response.model_dump(by_alias=True)

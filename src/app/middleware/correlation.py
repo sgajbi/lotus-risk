@@ -2,18 +2,23 @@ from __future__ import annotations
 
 import time
 import uuid
-from typing import Callable
+from typing import Awaitable, Callable
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.types import ASGIApp
 
 
 class CorrelationIdMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, service_name: str) -> None:
+    def __init__(self, app: ASGIApp, service_name: str) -> None:
         super().__init__(app)
         self._service_name = service_name
 
-    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+    async def dispatch(
+        self,
+        request: Request,
+        call_next: Callable[[Request], Awaitable[Response]],
+    ) -> Response:
         correlation_id = request.headers.get("X-Correlation-Id") or str(uuid.uuid4())
         request.state.correlation_id = correlation_id
         start = time.perf_counter()
