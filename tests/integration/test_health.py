@@ -23,8 +23,18 @@ def test_integration_capabilities_contract() -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["sourceService"] == "lotus-risk"
+    assert body["policyVersion"] == "risk.v1"
+    assert body["supportedInputModes"] == ["api"]
     assert isinstance(body["features"], list)
     assert isinstance(body["workflows"], list)
+    feature_keys = {feature["key"] for feature in body["features"]}
+    assert feature_keys == {
+        "risk.analytics.risk_analytics",
+        "risk.analytics.concentration",
+        "risk.analytics.metrics",
+    }
+    workflow_keys = {workflow["workflow_key"] for workflow in body["workflows"]}
+    assert workflow_keys == {"risk_snapshot", "concentration_risk"}
 
 
 def _concentration_payload() -> dict[str, object]:
@@ -77,3 +87,13 @@ def test_openapi_hides_legacy_proxy_and_exposes_concentration() -> None:
     spec = client.get("/openapi.json").json()
     assert "/analytics/risk/concentration" in spec["paths"]
     assert "/analytics/workbench/risk-proxy" not in spec["paths"]
+
+
+def test_openapi_exposes_typed_capabilities_response_contract() -> None:
+    client = TestClient(app)
+    spec = client.get("/openapi.json").json()
+    capabilities_get = spec["paths"]["/integration/capabilities"]["get"]
+    schema_ref = capabilities_get["responses"]["200"]["content"]["application/json"]["schema"][
+        "$ref"
+    ]
+    assert schema_ref.endswith("/IntegrationCapabilitiesResponse")
