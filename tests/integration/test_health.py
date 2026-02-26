@@ -25,3 +25,25 @@ def test_integration_capabilities_contract() -> None:
     assert isinstance(body['features'], list)
     assert isinstance(body['workflows'], list)
 
+
+def test_workbench_risk_proxy_endpoint() -> None:
+    client = TestClient(app)
+    response = client.post(
+        '/analytics/workbench/risk-proxy',
+        json={
+            'currentPositions': [
+                {'securityId': 'A', 'quantity': 10},
+                {'securityId': 'B', 'quantity': 10},
+            ],
+            'projectedPositions': [
+                {'securityId': 'A', 'proposedQuantity': 15},
+                {'securityId': 'B', 'proposedQuantity': 5},
+            ],
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body['sourceService'] == 'lotus-risk'
+    assert 'riskProxy' in body
+    assert body['riskProxy']['hhiCurrent'] > 0
+
