@@ -71,6 +71,20 @@ class LotusCoreClient:
             correlation_id=correlation_id,
         )
 
+    async def get_instrument_enrichment(
+        self,
+        *,
+        security_ids: list[str],
+        correlation_id: str | None,
+    ) -> dict[str, Any]:
+        payload = {"security_ids": security_ids}
+        return await self._request_json(
+            "POST",
+            "/integration/instruments/enrichment-bulk",
+            json_payload=payload,
+            correlation_id=correlation_id,
+        )
+
     async def _request_json(
         self,
         method: str,

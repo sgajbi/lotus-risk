@@ -49,8 +49,8 @@ This package documents the current `lotus-risk` API surface and evaluates it aga
 ## Findings Snapshot
 
 - `lotus-risk` is correctly the bounded-context owner for risk/concentration analytics.
-- Stateless mode exists and is production-ready for risk and concentration APIs.
-- Stateful and simulation modes are not yet implemented in lotus-risk.
+- Concentration API supports stateless, stateful, and simulation modes.
+- Legacy concentration payload aliases are removed; canonical envelope is required.
 - `/ops` endpoint is implemented with typed diagnostics contract.
 - Legacy endpoint `/analytics/workbench/risk-proxy` is removed from runtime surface.
 
@@ -61,3 +61,4 @@ See per-endpoint detail:
 - `docs/domain-apis/integration-capabilities.md`
 - `docs/domain-apis/risk-calculate.md`
 - `docs/domain-apis/risk-concentration.md`
+- `docs/domain-apis/lotus-core-requirements-for-issuer-concentration.md`

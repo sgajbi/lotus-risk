@@ -253,6 +253,19 @@ class _FakeLotusCoreClient:
             },
         }
 
+    async def get_instrument_enrichment(
+        self,
+        *,
+        security_ids: list[str],
+        correlation_id: str | None,
+    ) -> dict[str, object]:
+        return {
+            "records": [
+                {"security_id": security_id, "issuer_id": f"ISSUER_{security_id}"}
+                for security_id in security_ids
+            ]
+        }
+
 
 def test_concentration_stateful_mode_uses_lotus_core_snapshot() -> None:
     client = TestClient(app)

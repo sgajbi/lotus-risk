@@ -138,6 +138,13 @@ TTL validation and behavior:
 2. If `sessionId` is provided and `startNewSession` is not set, `sessionTtlHours` is rejected as invalid request combination (`400`).
 3. Session expiry remains core-owned; lotus-risk surfaces expiry metadata to caller.
 
+Iterative session semantics:
+
+1. `simulationChanges[]` is applied to the resolved session for each call.
+2. Session changes are cumulative unless caller starts a new session.
+3. `expectedVersion` should be used to prevent concurrent session drift.
+4. Response metadata must include `simulationSessionId`, `simulationSessionVersion`, and `sessionExpiresAt` (when available).
+
 ## Concentration Types (v1/v2 rollout)
 
 ### v1 required (PR-1)
