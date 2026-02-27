@@ -1,0 +1,65 @@
+# lotus-risk Domain API Assessment
+
+## Scope
+
+This package documents the current `lotus-risk` API surface and evaluates it against:
+
+- lotus-platform bounded context ownership
+- platform operational endpoint expectations
+- three execution modes for analytics APIs:
+  - stateless
+  - stateful
+  - simulation
+
+## Source-of-Truth Inputs Used
+
+- `lotus-risk` runtime/router/contracts
+- cross-repo consumers (`lotus-gateway`, `lotus-report`, `lotus-core`)
+- lotus-platform governance references:
+  - `rfcs/RFC-0065-lotus-performance-to-lotus-performance-and-lotus-risk-split.md`
+  - `rfcs/RFC-0015-domain-boundaries-and-service-ownership.md`
+  - `platform-contracts/cross-cutting-platform-contract.yaml`
+  - `Scalability and Availability Standard.md`
+
+## Endpoint Inventory
+
+- Operational:
+  - `GET /health`
+  - `GET /health/live`
+  - `GET /health/ready`
+  - `GET /metadata`
+  - `GET /metrics` (Prometheus exposure)
+- Integration:
+  - `GET /integration/capabilities`
+- Domain analytics:
+  - `POST /analytics/risk/calculate`
+  - `POST /analytics/risk/concentration`
+- Legacy compatibility:
+  - `POST /analytics/workbench/risk-proxy` (hidden from OpenAPI)
+
+## Current Dependency Summary
+
+- Upstream dependencies (for live ecosystem usage):
+  - Data sourcing expected from `lotus-core` integration contracts for stateful/simulation patterns.
+  - Optional derived returns path through `lotus-performance` (already used by `lotus-report`) for risk-ready daily return series.
+- Downstream consumers:
+  - `lotus-gateway`
+  - `lotus-report`
+  - `lotus-core` (indirect via 410 redirects that point callers to lotus-risk)
+
+## Findings Snapshot
+
+- `lotus-risk` is correctly the bounded-context owner for risk/concentration analytics.
+- Stateless mode exists and is production-ready for risk and concentration APIs.
+- Stateful and simulation modes are not yet implemented in lotus-risk.
+- Mandatory `/ops` endpoint is missing.
+- Legacy endpoint `/analytics/workbench/risk-proxy` remains for compatibility and should be formally deprecation-managed.
+
+See per-endpoint detail:
+
+- `docs/domain-apis/endpoint-matrix.md`
+- `docs/domain-apis/operational-endpoints.md`
+- `docs/domain-apis/integration-capabilities.md`
+- `docs/domain-apis/risk-calculate.md`
+- `docs/domain-apis/risk-concentration.md`
+- `docs/domain-apis/legacy-endpoints.md`
