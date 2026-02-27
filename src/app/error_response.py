@@ -29,13 +29,13 @@ def build_error_payload(
         error=ErrorBody(
             code=code,
             message=message,
-            correlationId=_resolve_correlation_id(request),
+            correlation_id=_resolve_correlation_id(request),
             details=details,
         )
     )
     return cast(
         dict[str, Any],
-        jsonable_encoder(payload.model_dump(by_alias=True, exclude_none=True)),
+        jsonable_encoder(payload.model_dump(exclude_none=True)),
     )
 
 

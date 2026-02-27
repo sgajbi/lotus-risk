@@ -23,9 +23,9 @@ def test_integration_capabilities_contract() -> None:
     response = client.get("/integration/capabilities")
     assert response.status_code == 200
     body = response.json()
-    assert body["sourceService"] == "lotus-risk"
-    assert body["policyVersion"] == "risk.v1"
-    assert body["supportedInputModes"] == ["stateless", "stateful", "simulation"]
+    assert body["source_service"] == "lotus-risk"
+    assert body["policy_version"] == "risk.v1"
+    assert body["supported_input_modes"] == ["stateless", "stateful", "simulation"]
     assert isinstance(body["features"], list)
     assert isinstance(body["workflows"], list)
     feature_keys = {feature["key"] for feature in body["features"]}
@@ -40,13 +40,13 @@ def test_integration_capabilities_contract() -> None:
 
 def _concentration_payload() -> dict[str, object]:
     return {
-        "currentPositions": [
-            {"securityId": "A", "quantity": 10},
-            {"securityId": "B", "quantity": 10},
+        "current_positions": [
+            {"security_id": "A", "quantity": 10},
+            {"security_id": "B", "quantity": 10},
         ],
-        "projectedPositions": [
-            {"securityId": "A", "proposedQuantity": 15},
-            {"securityId": "B", "proposedQuantity": 5},
+        "projected_positions": [
+            {"security_id": "A", "proposed_quantity": 15},
+            {"security_id": "B", "proposed_quantity": 5},
         ],
     }
 
@@ -56,9 +56,9 @@ def test_concentration_risk_endpoint() -> None:
     response = client.post("/analytics/risk/concentration", json=_concentration_payload())
     assert response.status_code == 200
     body = response.json()
-    assert body["sourceService"] == "lotus-risk"
-    assert "riskProxy" in body
-    assert body["riskProxy"]["hhiCurrent"] > 0
+    assert body["source_service"] == "lotus-risk"
+    assert "risk_proxy" in body
+    assert body["risk_proxy"]["hhi_current"] > 0
 
 
 def test_legacy_workbench_proxy_removed_with_standard_404_error() -> None:
@@ -72,7 +72,7 @@ def test_legacy_workbench_proxy_removed_with_standard_404_error() -> None:
     assert response.headers["X-Correlation-Id"] == "corr-legacy-404"
     body = response.json()["error"]
     assert body["code"] == "RESOURCE_NOT_FOUND"
-    assert body["correlationId"] == "corr-legacy-404"
+    assert body["correlation_id"] == "corr-legacy-404"
 
 
 def test_concentration_handles_non_positive_positions() -> None:
@@ -80,15 +80,15 @@ def test_concentration_handles_non_positive_positions() -> None:
     response = client.post(
         "/analytics/risk/concentration",
         json={
-            "currentPositions": [{"securityId": "A", "quantity": 0}],
-            "projectedPositions": [{"securityId": "B", "proposedQuantity": -5}],
+            "current_positions": [{"security_id": "A", "quantity": 0}],
+            "projected_positions": [{"security_id": "B", "proposed_quantity": -5}],
         },
     )
     assert response.status_code == 200
-    proxy = response.json()["riskProxy"]
-    assert proxy["hhiCurrent"] == 0
-    assert proxy["hhiProposed"] == 0
-    assert proxy["hhiDelta"] == 0
+    proxy = response.json()["risk_proxy"]
+    assert proxy["hhi_current"] == 0
+    assert proxy["hhi_proposed"] == 0
+    assert proxy["hhi_delta"] == 0
 
 
 def test_openapi_hides_legacy_proxy_and_exposes_concentration() -> None:
@@ -109,12 +109,12 @@ def test_metadata_and_ops_contract_shape() -> None:
     ops_body = ops.json()
     assert metadata_body["service"] == "lotus-risk"
     assert metadata_body["version"] == "0.1.0"
-    assert "roundingPolicyVersion" in metadata_body
+    assert "rounding_policy_version" in metadata_body
     assert ops_body["status"] == "ok"
     assert ops_body["checks"]["live"] is True
     assert ops_body["checks"]["ready"] is True
     assert ops_body["checks"]["draining"] is False
-    assert ops_body["inputModes"] == ["stateless", "stateful", "simulation"]
+    assert ops_body["input_modes"] == ["stateless", "stateful", "simulation"]
 
 
 def test_openapi_declares_standard_error_models_for_risk_endpoints() -> None:

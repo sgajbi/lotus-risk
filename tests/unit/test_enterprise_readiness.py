@@ -138,7 +138,7 @@ def test_enterprise_middleware_payload_limit(monkeypatch: pytest.MonkeyPatch) ->
     body = response.json()["error"]
     assert body["code"] == "PAYLOAD_TOO_LARGE"
     assert body["message"] == "payload_too_large"
-    assert body["correlationId"] == "corr-413"
+    assert body["correlation_id"] == "corr-413"
 
 
 def test_enterprise_middleware_denies_unauthorized_writes(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -154,7 +154,7 @@ def test_enterprise_middleware_denies_unauthorized_writes(monkeypatch: pytest.Mo
     assert body["code"] == "AUTHORIZATION_DENIED"
     assert body["message"] == "authorization_policy_denied"
     assert body["details"]["reason"].startswith("missing_headers:")
-    assert body["correlationId"] == "corr-403"
+    assert body["correlation_id"] == "corr-403"
 
 
 def test_enterprise_middleware_sets_policy_header(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -14,28 +14,28 @@ def test_compute_hhi_equal_weights() -> None:
 def test_calculate_concentration_uses_projected_values_when_provided() -> None:
     request = ConcentrationRequest.model_validate(
         {
-            "currentPositions": [
-                {"securityId": "A", "quantity": 10},
-                {"securityId": "B", "quantity": 10},
+            "current_positions": [
+                {"security_id": "A", "quantity": 10},
+                {"security_id": "B", "quantity": 10},
             ],
-            "projectedPositions": [
-                {"securityId": "A", "proposedQuantity": 15},
-                {"securityId": "B", "proposedQuantity": 5},
+            "projected_positions": [
+                {"security_id": "A", "proposed_quantity": 15},
+                {"security_id": "B", "proposed_quantity": 5},
             ],
         }
     )
-    response = calculate_concentration(request).model_dump(by_alias=True)
-    assert response["sourceService"] == "lotus-risk"
-    assert response["riskProxy"]["hhiCurrent"] == 5000.0
-    assert response["riskProxy"]["hhiProposed"] == 6250.0
-    assert response["riskProxy"]["hhiDelta"] == 1250.0
+    response = calculate_concentration(request).model_dump()
+    assert response["source_service"] == "lotus-risk"
+    assert response["risk_proxy"]["hhi_current"] == 5000.0
+    assert response["risk_proxy"]["hhi_proposed"] == 6250.0
+    assert response["risk_proxy"]["hhi_delta"] == 1250.0
 
 
 def test_calculate_concentration_falls_back_to_current_when_no_projected() -> None:
     request = ConcentrationRequest.model_validate(
-        {"currentPositions": [{"securityId": "A", "quantity": 10}]}
+        {"current_positions": [{"security_id": "A", "quantity": 10}]}
     )
-    response = calculate_concentration(request).model_dump(by_alias=True)
-    assert response["riskProxy"]["hhiCurrent"] == 10000.0
-    assert response["riskProxy"]["hhiProposed"] == 10000.0
-    assert response["riskProxy"]["hhiDelta"] == 0.0
+    response = calculate_concentration(request).model_dump()
+    assert response["risk_proxy"]["hhi_current"] == 10000.0
+    assert response["risk_proxy"]["hhi_proposed"] == 10000.0
+    assert response["risk_proxy"]["hhi_delta"] == 0.0

@@ -4,8 +4,8 @@ from app.main import app
 
 def _risk_payload() -> dict[str, object]:
     return {
-        "scope": {"asOfDate": "2025-03-31", "netOrGross": "NET"},
-        "portfolioOpenDate": "2024-01-01",
+        "scope": {"as_of_date": "2025-03-31", "net_or_gross": "NET"},
+        "portfolio_open_date": "2024-01-01",
         "periods": [{"type": "YTD", "name": "YTD"}],
         "metrics": ["VOLATILITY", "VAR"],
         "returns": [

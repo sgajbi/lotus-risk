@@ -20,7 +20,7 @@ def test_build_error_payload_includes_correlation_and_details() -> None:
     )
     assert payload["error"]["code"] == "INVALID_INPUT"
     assert payload["error"]["message"] == "bad input"
-    assert payload["error"]["correlationId"] == "corr-unit"
+    assert payload["error"]["correlation_id"] == "corr-unit"
     assert payload["error"]["details"] == {"field": "periods"}
 
 
@@ -34,4 +34,4 @@ def test_error_response_serializes_error_payload() -> None:
     body = json.loads(bytes(response.body).decode("utf-8"))
     assert response.status_code == 404
     assert body["error"]["code"] == "RESOURCE_NOT_FOUND"
-    assert body["error"]["correlationId"] == "corr-json"
+    assert body["error"]["correlation_id"] == "corr-json"

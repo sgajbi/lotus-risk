@@ -20,15 +20,15 @@ def test_capability_workflow_keys_use_snake_case_domain_vocabulary() -> None:
         assert "-" not in workflow_key
 
 
-def test_integration_capabilities_response_alias_contract() -> None:
+def test_integration_capabilities_response_contract() -> None:
     payload = IntegrationCapabilitiesResponse(
-        sourceService="lotus-risk",
-        policyVersion="risk.v1",
-        supportedInputModes=["stateless", "stateful", "simulation"],
+        source_service="lotus-risk",
+        policy_version="risk.v1",
+        supported_input_modes=["stateless", "stateful", "simulation"],
         features=[CapabilityFeature(key=CAPABILITY_FEATURE_KEYS[0])],
         workflows=[CapabilityWorkflow(workflow_key=CAPABILITY_WORKFLOW_KEYS[0])],
-    ).model_dump(by_alias=True)
-    assert payload["sourceService"] == "lotus-risk"
-    assert payload["policyVersion"] == "risk.v1"
-    assert payload["supportedInputModes"] == ["stateless", "stateful", "simulation"]
+    ).model_dump()
+    assert payload["source_service"] == "lotus-risk"
+    assert payload["policy_version"] == "risk.v1"
+    assert payload["supported_input_modes"] == ["stateless", "stateful", "simulation"]
     assert payload["workflows"][0]["workflow_key"] == CAPABILITY_WORKFLOW_KEYS[0]
