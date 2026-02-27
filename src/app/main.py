@@ -24,6 +24,7 @@ from app.enterprise_readiness import (
     validate_enterprise_runtime_config,
 )
 from app.error_response import error_response
+from app.integrations.lotus_core_client import LotusCoreClient
 from app.middleware.correlation import CorrelationIdMiddleware
 from app.services.concentration_engine import calculate_concentration
 from app.services.risk_engine import calculate_risk
@@ -348,8 +349,19 @@ async def metrics() -> Response:
         "weights. Returns current, proposed, and delta concentration."
     ),
 )
-async def analytics_risk_concentration(request: ConcentrationRequest) -> ConcentrationResponse:
-    return calculate_concentration(request)
+async def analytics_risk_concentration(
+    payload: ConcentrationRequest,
+    request: Request,
+) -> ConcentrationResponse:
+    core_client = getattr(app.state, "lotus_core_client", None)
+    if core_client is None:
+        core_client = LotusCoreClient()
+    return await calculate_concentration(
+        payload,
+        core_client=core_client,
+        correlation_id=request.headers.get("X-Correlation-Id"),
+        actor_id=request.headers.get("X-Actor-Id"),
+    )
 
 
 @app.post(

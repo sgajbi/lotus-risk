@@ -149,3 +149,124 @@ def test_openapi_exposes_typed_capabilities_response_contract() -> None:
         "$ref"
     ]
     assert schema_ref.endswith("/IntegrationCapabilitiesResponse")
+
+
+class _FakeLotusCoreClient:
+    async def create_simulation_session(
+        self,
+        *,
+        portfolio_id: str,
+        ttl_hours: int | None,
+        created_by: str | None,
+        correlation_id: str | None,
+    ) -> dict[str, object]:
+        return {
+            "session": {
+                "session_id": "SIM_0001",
+                "portfolio_id": portfolio_id,
+                "status": "ACTIVE",
+                "version": 1,
+                "created_by": created_by,
+                "created_at": "2026-02-27T10:30:00Z",
+                "expires_at": "2026-02-28T10:30:00Z",
+            }
+        }
+
+    async def add_simulation_changes(
+        self,
+        *,
+        session_id: str,
+        changes: list[dict[str, object]],
+        correlation_id: str | None,
+    ) -> dict[str, object]:
+        assert session_id == "SIM_0001"
+        assert len(changes) == 1
+        return {"session_id": session_id, "version": 3, "changes": []}
+
+    async def get_core_snapshot(
+        self,
+        *,
+        portfolio_id: str,
+        request_payload: dict[str, object],
+        correlation_id: str | None,
+    ) -> dict[str, object]:
+        if request_payload.get("snapshot_mode") == "BASELINE":
+            return {
+                "portfolio_id": portfolio_id,
+                "as_of_date": "2026-02-27",
+                "snapshot_mode": "BASELINE",
+                "valuation_context": {
+                    "portfolio_currency": "EUR",
+                    "reporting_currency": "USD",
+                    "position_basis": "market_value_base",
+                    "weight_basis": "total_market_value_base",
+                },
+                "sections": {
+                    "positions_baseline": [
+                        {"security_id": "SEC_A", "market_value_base": "80"},
+                        {"security_id": "SEC_B", "market_value_base": "20"},
+                    ]
+                },
+            }
+        return {
+            "portfolio_id": portfolio_id,
+            "as_of_date": "2026-02-27",
+            "snapshot_mode": "SIMULATION",
+            "valuation_context": {
+                "portfolio_currency": "EUR",
+                "reporting_currency": "USD",
+                "position_basis": "market_value_base",
+                "weight_basis": "total_market_value_base",
+            },
+            "simulation": {"session_id": "SIM_0001", "version": 3, "baseline_as_of_date": "2026-02-27"},
+            "sections": {
+                "positions_baseline": [
+                    {"security_id": "SEC_A", "market_value_base": "60"},
+                    {"security_id": "SEC_B", "market_value_base": "40"},
+                ],
+                "positions_projected": [
+                    {"security_id": "SEC_A", "market_value_base": "90"},
+                    {"security_id": "SEC_B", "market_value_base": "10"},
+                ],
+            },
+        }
+
+
+def test_concentration_stateful_mode_uses_lotus_core_snapshot() -> None:
+    client = TestClient(app)
+    app.state.lotus_core_client = _FakeLotusCoreClient()
+    response = client.post(
+        "/analytics/risk/concentration",
+        json={
+            "input_mode": "stateful",
+            "stateful_input": {"portfolio_id": "DEMO_DPM_EUR_001", "as_of_date": "2026-02-27"},
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["input_mode"] == "stateful"
+    assert body["risk_proxy"]["hhi_current"] == 6800.0
+    assert body["metadata"]["portfolio_id"] == "DEMO_DPM_EUR_001"
+
+
+def test_concentration_simulation_mode_reuses_or_creates_session_and_returns_metadata() -> None:
+    client = TestClient(app)
+    app.state.lotus_core_client = _FakeLotusCoreClient()
+    response = client.post(
+        "/analytics/risk/concentration",
+        json={
+            "input_mode": "simulation",
+            "simulation_input": {
+                "portfolio_id": "DEMO_DPM_EUR_001",
+                "as_of_date": "2026-02-27",
+                "simulation_changes": [{"security_id": "SEC_A", "transaction_type": "BUY", "quantity": 10}],
+            },
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["input_mode"] == "simulation"
+    assert body["risk_proxy"]["hhi_current"] == 5200.0
+    assert body["risk_proxy"]["hhi_proposed"] == 8200.0
+    assert body["metadata"]["simulation_session_id"] == "SIM_0001"
+    assert body["metadata"]["simulation_session_version"] == 3
