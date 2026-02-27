@@ -61,12 +61,18 @@ def test_concentration_risk_endpoint() -> None:
     assert body["riskProxy"]["hhiCurrent"] > 0
 
 
-def test_legacy_workbench_proxy_is_not_exposed() -> None:
+def test_legacy_workbench_proxy_removed_with_standard_404_error() -> None:
     client = TestClient(app)
-    response = client.post("/analytics/workbench/risk-proxy", json=_concentration_payload())
+    response = client.post(
+        "/analytics/workbench/risk-proxy",
+        json=_concentration_payload(),
+        headers={"X-Correlation-Id": "corr-legacy-404"},
+    )
     assert response.status_code == 404
+    assert response.headers["X-Correlation-Id"] == "corr-legacy-404"
     body = response.json()["error"]
     assert body["code"] == "RESOURCE_NOT_FOUND"
+    assert body["correlationId"] == "corr-legacy-404"
 
 
 def test_concentration_handles_non_positive_positions() -> None:
@@ -109,6 +115,30 @@ def test_metadata_and_ops_contract_shape() -> None:
     assert ops_body["checks"]["ready"] is True
     assert ops_body["checks"]["draining"] is False
     assert ops_body["inputModes"] == ["stateless", "stateful", "simulation"]
+
+
+def test_openapi_declares_standard_error_models_for_risk_endpoints() -> None:
+    client = TestClient(app)
+    spec = client.get("/openapi.json").json()
+    calculate_responses = spec["paths"]["/analytics/risk/calculate"]["post"]["responses"]
+    concentration_responses = spec["paths"]["/analytics/risk/concentration"]["post"]["responses"]
+
+    for responses in (calculate_responses, concentration_responses):
+        for status_code in ("400", "403", "404", "422"):
+            schema_ref = responses[status_code]["content"]["application/json"]["schema"]["$ref"]
+            assert schema_ref.endswith("/ErrorResponse")
+        assert responses["400"]["content"]["application/json"]["example"]["error"]["code"] == (
+            "INVALID_INPUT"
+        )
+        assert responses["403"]["content"]["application/json"]["example"]["error"]["code"] == (
+            "AUTHORIZATION_DENIED"
+        )
+        assert responses["404"]["content"]["application/json"]["example"]["error"]["code"] == (
+            "RESOURCE_NOT_FOUND"
+        )
+        assert responses["422"]["content"]["application/json"]["example"]["error"]["code"] == (
+            "INVALID_REQUEST"
+        )
 
 
 def test_openapi_exposes_typed_capabilities_response_contract() -> None:

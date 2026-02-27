@@ -54,7 +54,12 @@
 - Returns `hhiCurrent`, `hhiProposed`, and `hhiDelta` under `riskProxy`.
 
 ## Error Semantics
-- Standard envelope:
+- All documented risk endpoints expose standard OpenAPI error contracts for:
+  - `400`
+  - `403`
+  - `404`
+  - `422`
+- Error envelope:
   - `error.code`
   - `error.message`
   - `error.correlationId`
