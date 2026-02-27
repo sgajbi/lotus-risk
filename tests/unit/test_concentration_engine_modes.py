@@ -209,8 +209,6 @@ async def test_unsupported_mode_guard_branch() -> None:
         stateless_input=None,
         stateful_input=None,
         simulation_input=None,
-        current_positions=None,
-        projected_positions=None,
     )
     with pytest.raises(ValueError, match="Unsupported concentration input_mode"):
         await calculate_concentration(request, core_client=_RecordingCoreClient())

@@ -40,14 +40,17 @@ def test_integration_capabilities_contract() -> None:
 
 def _concentration_payload() -> dict[str, object]:
     return {
-        "current_positions": [
-            {"security_id": "A", "quantity": 10},
-            {"security_id": "B", "quantity": 10},
-        ],
-        "projected_positions": [
-            {"security_id": "A", "proposed_quantity": 15},
-            {"security_id": "B", "proposed_quantity": 5},
-        ],
+        "input_mode": "stateless",
+        "stateless_input": {
+            "current_positions": [
+                {"security_id": "A", "quantity": 10},
+                {"security_id": "B", "quantity": 10},
+            ],
+            "projected_positions": [
+                {"security_id": "A", "proposed_quantity": 15},
+                {"security_id": "B", "proposed_quantity": 5},
+            ],
+        },
     }
 
 
@@ -80,8 +83,11 @@ def test_concentration_handles_non_positive_positions() -> None:
     response = client.post(
         "/analytics/risk/concentration",
         json={
-            "current_positions": [{"security_id": "A", "quantity": 0}],
-            "projected_positions": [{"security_id": "B", "proposed_quantity": -5}],
+            "input_mode": "stateless",
+            "stateless_input": {
+                "current_positions": [{"security_id": "A", "quantity": 0}],
+                "projected_positions": [{"security_id": "B", "proposed_quantity": -5}],
+            },
         },
     )
     assert response.status_code == 200
@@ -149,6 +155,18 @@ def test_openapi_exposes_typed_capabilities_response_contract() -> None:
         "$ref"
     ]
     assert schema_ref.endswith("/IntegrationCapabilitiesResponse")
+
+
+def test_concentration_rejects_legacy_payload_shape() -> None:
+    client = TestClient(app)
+    response = client.post(
+        "/analytics/risk/concentration",
+        json={
+            "current_positions": [{"security_id": "A", "quantity": 10}],
+            "projected_positions": [{"security_id": "B", "proposed_quantity": 5}],
+        },
+    )
+    assert response.status_code == 422
 
 
 class _FakeLotusCoreClient:

@@ -1,4 +1,5 @@
 import pytest
+from pydantic import ValidationError
 
 from app.contracts.concentration import ConcentrationRequest
 
@@ -19,13 +20,12 @@ def test_simulation_input_rejects_ttl_when_reusing_session() -> None:
         )
 
 
-def test_legacy_payload_rejected_when_mode_is_not_stateless() -> None:
-    with pytest.raises(ValueError, match="legacy current_positions/projected_positions"):
+def test_legacy_payload_rejected() -> None:
+    with pytest.raises(ValidationError):
         ConcentrationRequest.model_validate(
             {
-                "input_mode": "stateful",
                 "current_positions": [{"security_id": "A", "quantity": 10}],
-                "stateful_input": {"portfolio_id": "DEMO_DPM_EUR_001", "as_of_date": "2026-02-27"},
+                "projected_positions": [{"security_id": "A", "proposed_quantity": 12}],
             }
         )
 

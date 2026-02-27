@@ -1,6 +1,6 @@
 # RFC-0003 - Concentration API Stateful and Simulation Integration via lotus-core Snapshot
 
-- Status: Proposed (for approval)
+- Status: Implemented (v1 scope), Partially complete for full RFC scope
 - Date: 2026-02-27
 - Owners: lotus-risk
 - Upstream dependency owners: lotus-core
@@ -67,7 +67,7 @@ Keep `POST /analytics/risk/concentration` as the only concentration API and add 
 }
 ```
 
-Backwards compatibility: existing stateless payload remains accepted for a deprecation window and is normalized internally to `inputMode=stateless`.
+No legacy payload aliases are supported. Only canonical mode envelope payloads are accepted.
 
 ## Mode Contracts
 
@@ -225,12 +225,25 @@ No concentration-specific API is required in lotus-core.
 3. Vocabulary drift:
  - gate with inventory sync and cross-app validator in lotus-platform.
 
-## Implementation Plan (post-approval)
+## Implementation Status Report
 
-1. PR-1: request/response contract refactor with backward-compatible stateless normalization.
-2. PR-2: lotus-core snapshot client and stateful/simulation adapters.
-3. PR-3: concentration type expansion (single-position in v1), tests, and docs.
-4. PR-4: RFC-0067 artifacts: inventory refresh, OpenAPI examples, and platform sync PR.
+Completed in `lotus-risk`:
+
+1. Single concentration endpoint with canonical `inputMode` envelope (`stateless`, `stateful`, `simulation`).
+2. Stateful + simulation orchestration via lotus-core integration contracts (`/simulation-sessions/*` and `/integration/.../core-snapshot`).
+3. Simulation session lifecycle implemented with caller-managed `sessionId` reuse, optional `startNewSession`, optional `sessionTtlHours`, and session metadata returned.
+4. v1 concentration outputs implemented:
+ - HHI (`hhiCurrent`, `hhiProposed`, `hhiDelta`)
+ - Single-position concentration (top position and top-N cumulative metrics)
+5. RFC-0067 governance artifacts implemented:
+ - OpenAPI documentation completeness and examples
+ - no-alias guard
+ - vocabulary inventory regeneration and validation
+6. Legacy stateless payload compatibility removed; canonical payload shape is now mandatory.
+
+Pending for full RFC scope:
+
+1. `issuerConcentration` remains pending (v2 scope) because issuer grouping depends on a canonical issuer attribute in lotus-core snapshot enrichment contract.
 
 ## Approval Decisions
 
