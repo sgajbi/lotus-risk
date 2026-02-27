@@ -1,0 +1,171 @@
+from __future__ import annotations
+
+from collections.abc import Callable
+from types import TracebackType
+from typing import Any
+
+import httpx
+import pytest
+
+from app.integrations.lotus_core_client import LotusCoreClient
+
+
+class _FakeAsyncClient:
+    response_factory: Callable[..., httpx.Response] | None = None
+    last_request: dict[str, Any] | None = None
+
+    def __init__(self, *, timeout: httpx.Timeout) -> None:
+        self.timeout = timeout
+
+    async def __aenter__(self) -> "_FakeAsyncClient":
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
+        return None
+
+    async def request(
+        self,
+        *,
+        method: str,
+        url: str,
+        json: dict[str, Any],
+        headers: dict[str, str],
+    ) -> httpx.Response:
+        _FakeAsyncClient.last_request = {
+            "method": method,
+            "url": url,
+            "json": json,
+            "headers": headers,
+        }
+        assert _FakeAsyncClient.response_factory is not None
+        return _FakeAsyncClient.response_factory(method=method, url=url, json=json, headers=headers)
+
+
+def _ok_response(
+    payload: Any, *, status_code: int = 200, url: str = "http://localhost/mock"
+) -> httpx.Response:
+    return httpx.Response(
+        status_code=status_code,
+        json=payload,
+        request=httpx.Request("POST", url),
+    )
+
+
+@pytest.mark.asyncio
+async def test_client_builds_headers_and_payload_for_session_creation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(httpx, "AsyncClient", _FakeAsyncClient)
+    _FakeAsyncClient.response_factory = lambda **_: _ok_response(
+        {"session": {"session_id": "SIM_1"}}
+    )
+
+    client = LotusCoreClient(base_url="http://core.local", timeout_seconds=5)
+    response = await client.create_simulation_session(
+        portfolio_id="DEMO_DPM_EUR_001",
+        ttl_hours=24,
+        created_by="risk-agent",
+        correlation_id="corr-123",
+    )
+
+    assert response["session"]["session_id"] == "SIM_1"
+    assert _FakeAsyncClient.last_request is not None
+    assert _FakeAsyncClient.last_request["url"] == "http://core.local/simulation-sessions"
+    assert _FakeAsyncClient.last_request["json"]["ttl_hours"] == 24
+    assert _FakeAsyncClient.last_request["json"]["created_by"] == "risk-agent"
+    assert _FakeAsyncClient.last_request["headers"]["X-Correlation-Id"] == "corr-123"
+
+
+@pytest.mark.asyncio
+async def test_client_supports_add_changes_and_snapshot_routes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(httpx, "AsyncClient", _FakeAsyncClient)
+    _FakeAsyncClient.response_factory = lambda **_: _ok_response({"ok": True})
+    client = LotusCoreClient(base_url="http://core.local")
+
+    add_response = await client.add_simulation_changes(
+        session_id="SIM_1",
+        changes=[{"security_id": "SEC_A", "transaction_type": "BUY"}],
+        correlation_id=None,
+    )
+    snapshot_response = await client.get_core_snapshot(
+        portfolio_id="DEMO_DPM_EUR_001",
+        request_payload={"snapshot_mode": "BASELINE"},
+        correlation_id=None,
+    )
+
+    assert add_response == {"ok": True}
+    assert snapshot_response == {"ok": True}
+
+
+@pytest.mark.asyncio
+async def test_client_rejects_non_object_json_response(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(httpx, "AsyncClient", _FakeAsyncClient)
+    _FakeAsyncClient.response_factory = lambda **_: _ok_response(["invalid"])
+    client = LotusCoreClient(base_url="http://core.local")
+
+    with pytest.raises(ValueError, match="invalid JSON payload"):
+        await client.get_core_snapshot(
+            portfolio_id="DEMO_DPM_EUR_001",
+            request_payload={"snapshot_mode": "BASELINE"},
+            correlation_id=None,
+        )
+
+
+@pytest.mark.asyncio
+async def test_client_maps_http_status_error_with_detail(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(httpx, "AsyncClient", _FakeAsyncClient)
+    _FakeAsyncClient.response_factory = lambda **_: _ok_response(
+        {"detail": "bad request"},
+        status_code=400,
+    )
+    client = LotusCoreClient(base_url="http://core.local")
+
+    with pytest.raises(ValueError, match="failed \\(400\\): bad request"):
+        await client.get_core_snapshot(
+            portfolio_id="DEMO_DPM_EUR_001",
+            request_payload={"snapshot_mode": "BASELINE"},
+            correlation_id=None,
+        )
+
+
+@pytest.mark.asyncio
+async def test_client_maps_http_transport_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    class _BrokenAsyncClient(_FakeAsyncClient):
+        async def request(
+            self,
+            *,
+            method: str,
+            url: str,
+            json: dict[str, Any],
+            headers: dict[str, str],
+        ) -> httpx.Response:
+            raise httpx.ConnectError("network down", request=httpx.Request(method, url))
+
+    monkeypatch.setattr(httpx, "AsyncClient", _BrokenAsyncClient)
+    client = LotusCoreClient(base_url="http://core.local")
+
+    with pytest.raises(ValueError, match="unavailable"):
+        await client.get_core_snapshot(
+            portfolio_id="DEMO_DPM_EUR_001",
+            request_payload={"snapshot_mode": "BASELINE"},
+            correlation_id=None,
+        )
+
+
+def test_extract_error_detail_variants() -> None:
+    response_plain = httpx.Response(
+        status_code=500,
+        text="plain text",
+        request=httpx.Request("POST", "http://x"),
+    )
+    assert LotusCoreClient._extract_error_detail(response_plain) == "plain text"
+
+    response_dict = _ok_response({"detail": {"message": "nested message"}})
+    assert LotusCoreClient._extract_error_detail(response_dict) == "nested message"
