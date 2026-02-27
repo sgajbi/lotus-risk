@@ -5,7 +5,8 @@ from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable
 
 from fastapi import Request, Response
-from fastapi.responses import JSONResponse
+
+from app.error_model import error_response
 
 logger = logging.getLogger("enterprise_readiness")
 MiddlewareNext = Callable[[Request], Awaitable[Response]]
@@ -163,7 +164,12 @@ def build_enterprise_audit_middleware() -> MiddlewareCallable:
         except ValueError:
             content_length = 0
         if request.method in _WRITE_METHODS and content_length > max_write_payload_bytes:
-            return JSONResponse(status_code=413, content={"detail": "payload_too_large"})
+            return error_response(
+                request,
+                status_code=413,
+                code="PAYLOAD_TOO_LARGE",
+                message="payload_too_large",
+            )
 
         authorized, reason = authorize_write_request(
             request.method, request.url.path, dict(request.headers)
@@ -177,9 +183,12 @@ def build_enterprise_audit_middleware() -> MiddlewareCallable:
                 correlation_id=request.headers.get("X-Correlation-Id"),
                 metadata={"reason": reason},
             )
-            return JSONResponse(
+            return error_response(
+                request,
                 status_code=403,
-                content={"detail": "authorization_policy_denied", "reason": reason},
+                code="AUTHORIZATION_DENIED",
+                message="authorization_policy_denied",
+                details={"reason": reason},
             )
 
         response = await call_next(request)

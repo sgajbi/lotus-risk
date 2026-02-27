@@ -47,3 +47,4 @@ def test_e2e_risk_calculate_invalid_period_contract() -> None:
     payload["periods"] = [{"type": "EXPLICIT", "name": "Bad"}]
     response = client.post("/analytics/risk/calculate", json=payload)
     assert response.status_code == 422
+    assert response.json()["error"]["code"] == "INVALID_REQUEST"

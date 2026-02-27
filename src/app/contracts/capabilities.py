@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 
 CAPABILITY_FEATURE_KEYS: tuple[str, ...] = (
@@ -11,6 +13,7 @@ CAPABILITY_WORKFLOW_KEYS: tuple[str, ...] = (
     "risk_snapshot",
     "concentration_risk",
 )
+SupportedInputMode = Literal["stateless", "stateful", "simulation"]
 
 
 class CapabilityFeature(BaseModel):
@@ -32,6 +35,6 @@ class IntegrationCapabilitiesResponse(BaseModel):
 
     source_service: str = Field(alias="sourceService")
     policy_version: str = Field(alias="policyVersion")
-    supported_input_modes: list[str] = Field(alias="supportedInputModes")
+    supported_input_modes: list[SupportedInputMode] = Field(alias="supportedInputModes")
     features: list[CapabilityFeature]
     workflows: list[CapabilityWorkflow]

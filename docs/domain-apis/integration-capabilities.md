@@ -30,7 +30,7 @@
 
 - `sourceService: "lotus-risk"`
 - `policyVersion: "risk.v1"`
-- `supportedInputModes: ["api"]`
+- `supportedInputModes: ["stateless", "stateful", "simulation"]`
 - `features`:
   - `risk.analytics.risk_analytics`
   - `risk.analytics.concentration`

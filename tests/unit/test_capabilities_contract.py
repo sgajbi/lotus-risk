@@ -24,11 +24,11 @@ def test_integration_capabilities_response_alias_contract() -> None:
     payload = IntegrationCapabilitiesResponse(
         sourceService="lotus-risk",
         policyVersion="risk.v1",
-        supportedInputModes=["api"],
+        supportedInputModes=["stateless", "stateful", "simulation"],
         features=[CapabilityFeature(key=CAPABILITY_FEATURE_KEYS[0])],
         workflows=[CapabilityWorkflow(workflow_key=CAPABILITY_WORKFLOW_KEYS[0])],
     ).model_dump(by_alias=True)
     assert payload["sourceService"] == "lotus-risk"
     assert payload["policyVersion"] == "risk.v1"
-    assert payload["supportedInputModes"] == ["api"]
+    assert payload["supportedInputModes"] == ["stateless", "stateful", "simulation"]
     assert payload["workflows"][0]["workflow_key"] == CAPABILITY_WORKFLOW_KEYS[0]

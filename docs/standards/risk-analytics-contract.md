@@ -1,6 +1,7 @@
 # Risk Analytics Contract Standard
 
 ## Endpoints
+- `GET /ops`
 - `POST /analytics/risk/calculate`
 - `POST /analytics/risk/concentration`
 - `GET /integration/capabilities`
@@ -8,7 +9,7 @@
 ## Integration Capabilities Contract
 - `sourceService`: `lotus-risk`
 - `policyVersion`: `risk.v1`
-- `supportedInputModes`: `["api"]`
+- `supportedInputModes`: `["stateless", "stateful", "simulation"]`
 - `features`:
   - `risk.analytics.risk_analytics`
   - `risk.analytics.concentration`
@@ -53,5 +54,10 @@
 - Returns `hhiCurrent`, `hhiProposed`, and `hhiDelta` under `riskProxy`.
 
 ## Error Semantics
-- Period/model validation errors return `422` (request validation layer).
-- Calculation-level invalid period or method errors return `400`.
+- Standard envelope:
+  - `error.code`
+  - `error.message`
+  - `error.correlationId`
+  - optional `error.details`
+- Period/model validation errors return `422` with `error.code=INVALID_REQUEST`.
+- Calculation-level invalid period or method errors return `400` with `error.code=INVALID_INPUT`.

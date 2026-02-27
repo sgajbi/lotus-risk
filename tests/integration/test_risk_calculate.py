@@ -50,6 +50,9 @@ def test_risk_calculate_endpoint_rejects_invalid_explicit_period() -> None:
     payload["periods"] = [{"type": "EXPLICIT", "name": "Bad"}]
     response = client.post("/analytics/risk/calculate", json=payload)
     assert response.status_code == 422
+    body = response.json()["error"]
+    assert body["code"] == "INVALID_REQUEST"
+    assert body["message"] == "Request validation failed"
 
 
 def test_risk_calculate_benchmark_requirement_behavior() -> None:

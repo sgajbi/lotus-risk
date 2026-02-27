@@ -104,7 +104,6 @@ class RiskOptions(BaseModel):
     risk_free_mode: Literal["ZERO", "ANNUAL_RATE"] = Field("ZERO", alias="riskFreeMode")
     risk_free_annual_rate: float | None = Field(default=None, ge=0, alias="riskFreeAnnualRate")
     mar_annual_rate: float = Field(0.0, ge=0, alias="marAnnualRate")
-    benchmark_security_id: str | None = Field(default=None, alias="benchmarkSecurityId")
     var: VaROptions = Field(default_factory=_default_var_options)
 
 
