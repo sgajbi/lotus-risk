@@ -57,7 +57,10 @@ async def test_calculate_concentration_legacy_payload_is_backward_compatible() -
 @pytest.mark.asyncio
 async def test_calculate_concentration_falls_back_to_current_when_no_projected() -> None:
     request = ConcentrationRequest.model_validate(
-        {"input_mode": "stateless", "stateless_input": {"current_positions": [{"security_id": "A", "quantity": 10}]}}
+        {
+            "input_mode": "stateless",
+            "stateless_input": {"current_positions": [{"security_id": "A", "quantity": 10}]},
+        }
     )
     response = (await calculate_concentration(request)).model_dump()
     assert response["risk_proxy"]["hhi_current"] == 10000.0
