@@ -14,7 +14,7 @@ class CorrelationIdMiddleware(BaseHTTPMiddleware):
     def __init__(self, app: ASGIApp, service_name: str) -> None:
         super().__init__(app)
         self._service_name = service_name
-        self._access_logger = logging.getLogger("uvicorn.access")
+        self._event_logger = logging.getLogger("lotus_risk.request")
 
     @staticmethod
     def _resolve_trace_id(inbound_trace_id: str | None, traceparent: str | None) -> str:
@@ -52,14 +52,19 @@ class CorrelationIdMiddleware(BaseHTTPMiddleware):
         response.headers["traceparent"] = traceparent
         response.headers["X-Service-Name"] = self._service_name
         response.headers["X-Request-Duration-Ms"] = f"{duration_ms:.3f}"
-        self._access_logger.info(
-            "request_observed service=%s method=%s path=%s status=%s correlation=%s trace_id=%s latency_ms=%.3f risk=true",
-            self._service_name,
-            request.method,
-            request.url.path,
-            response.status_code,
-            correlation_id,
-            trace_id,
-            duration_ms,
+        self._event_logger.info(
+            (
+                "request_observed service=%s method=%s path=%s status=%s "
+                "correlation=%s trace_id=%s latency_ms=%.3f risk=true"
+            )
+            % (
+                self._service_name,
+                request.method,
+                request.url.path,
+                response.status_code,
+                correlation_id,
+                trace_id,
+                duration_ms,
+            )
         )
         return response
