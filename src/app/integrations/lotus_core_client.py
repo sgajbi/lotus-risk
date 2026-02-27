@@ -99,7 +99,9 @@ class LotusCoreClient:
                 return data
         except httpx.HTTPStatusError as exc:
             detail = self._extract_error_detail(exc.response)
-            raise ValueError(f"lotus-core {path} failed ({exc.response.status_code}): {detail}") from exc
+            raise ValueError(
+                f"lotus-core {path} failed ({exc.response.status_code}): {detail}"
+            ) from exc
         except httpx.HTTPError as exc:
             raise ValueError(f"lotus-core {path} unavailable: {exc}") from exc
 

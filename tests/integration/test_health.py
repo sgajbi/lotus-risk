@@ -218,7 +218,11 @@ class _FakeLotusCoreClient:
                 "position_basis": "market_value_base",
                 "weight_basis": "total_market_value_base",
             },
-            "simulation": {"session_id": "SIM_0001", "version": 3, "baseline_as_of_date": "2026-02-27"},
+            "simulation": {
+                "session_id": "SIM_0001",
+                "version": 3,
+                "baseline_as_of_date": "2026-02-27",
+            },
             "sections": {
                 "positions_baseline": [
                     {"security_id": "SEC_A", "market_value_base": "60"},
@@ -259,7 +263,9 @@ def test_concentration_simulation_mode_reuses_or_creates_session_and_returns_met
             "simulation_input": {
                 "portfolio_id": "DEMO_DPM_EUR_001",
                 "as_of_date": "2026-02-27",
-                "simulation_changes": [{"security_id": "SEC_A", "transaction_type": "BUY", "quantity": 10}],
+                "simulation_changes": [
+                    {"security_id": "SEC_A", "transaction_type": "BUY", "quantity": 10}
+                ],
             },
         },
     )

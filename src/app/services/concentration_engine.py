@@ -85,7 +85,9 @@ def _extract_values_from_snapshot_positions(positions: list[dict[str, Any]] | No
     return values
 
 
-def _extract_values_from_stateless_payload(payload: StatelessConcentrationInput) -> tuple[list[float], list[float]]:
+def _extract_values_from_stateless_payload(
+    payload: StatelessConcentrationInput,
+) -> tuple[list[float], list[float]]:
     current_values: list[float] = []
     for position in payload.current_positions:
         candidate = _to_decimal(position.market_value_base)
@@ -131,9 +133,13 @@ def _build_response(payload: ConcentrationComputationInput) -> ConcentrationResp
     current_hhi = _compute_hhi(payload.current_values)
     proposed_hhi = _compute_hhi(payload.proposed_values) if payload.proposed_values else current_hhi
 
-    current_top, current_top_n = _single_position_metrics(payload.current_values, top_n=payload.top_n)
+    current_top, current_top_n = _single_position_metrics(
+        payload.current_values, top_n=payload.top_n
+    )
     if payload.proposed_values:
-        proposed_top, proposed_top_n = _single_position_metrics(payload.proposed_values, top_n=payload.top_n)
+        proposed_top, proposed_top_n = _single_position_metrics(
+            payload.proposed_values, top_n=payload.top_n
+        )
     else:
         proposed_top, proposed_top_n = current_top, current_top_n
 
@@ -264,7 +270,9 @@ async def _resolve_simulation(
         )
         session_record = session_response.get("session")
         if not isinstance(session_record, dict):
-            raise ValueError("lotus-core create simulation session returned invalid response payload")
+            raise ValueError(
+                "lotus-core create simulation session returned invalid response payload"
+            )
         resolved_session_id = _as_str(session_record.get("session_id"))
         if not resolved_session_id:
             raise ValueError("lotus-core create simulation session response missing session_id")

@@ -251,7 +251,9 @@ class ConcentrationRequest(BaseModel):
 
     @model_validator(mode="after")
     def normalize_and_validate(self) -> "ConcentrationRequest":
-        has_legacy_payload = self.current_positions is not None or self.projected_positions is not None
+        has_legacy_payload = (
+            self.current_positions is not None or self.projected_positions is not None
+        )
         if has_legacy_payload and self.stateless_input is None:
             if self.input_mode != ConcentrationInputMode.STATELESS:
                 raise ValueError(
