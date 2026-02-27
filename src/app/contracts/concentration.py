@@ -12,6 +12,17 @@ class ConcentrationInputMode(str, Enum):
     SIMULATION = "simulation"
 
 
+class IssuerGroupingLevel(str, Enum):
+    LEGAL_ISSUER = "legal_issuer"
+    ULTIMATE_PARENT = "ultimate_parent"
+
+
+class EnrichmentPolicy(str, Enum):
+    USE_CALLER_ONLY = "use_caller_only"
+    MERGE_CALLER_THEN_CORE = "merge_caller_then_core"
+    CORE_ONLY = "core_only"
+
+
 class CurrentPosition(BaseModel):
     security_id: str = Field(
         description="Canonical security identifier in the baseline portfolio state.",
@@ -31,6 +42,16 @@ class CurrentPosition(BaseModel):
         default=None,
         description="Optional baseline portfolio weight for this position.",
         json_schema_extra={"example": 0.1245},
+    )
+    issuer_id: str | None = Field(
+        default=None,
+        description="Optional canonical issuer identifier for issuer concentration grouping.",
+        json_schema_extra={"example": "ISSUER_APPLE_INC"},
+    )
+    ultimate_parent_issuer_id: str | None = Field(
+        default=None,
+        description="Optional ultimate parent issuer identifier for parent-level issuer concentration grouping.",
+        json_schema_extra={"example": "ISSUER_APPLE_HOLDING"},
     )
 
 
@@ -53,6 +74,43 @@ class ProjectedPosition(BaseModel):
         default=None,
         description="Optional projected portfolio weight for this position.",
         json_schema_extra={"example": 0.142},
+    )
+    issuer_id: str | None = Field(
+        default=None,
+        description="Optional canonical issuer identifier for issuer concentration grouping.",
+        json_schema_extra={"example": "ISSUER_APPLE_INC"},
+    )
+    ultimate_parent_issuer_id: str | None = Field(
+        default=None,
+        description="Optional ultimate parent issuer identifier for parent-level issuer concentration grouping.",
+        json_schema_extra={"example": "ISSUER_APPLE_HOLDING"},
+    )
+
+
+class IssuerMappingInput(BaseModel):
+    security_id: str = Field(
+        description="Security identifier mapped to issuer keys for concentration enrichment overrides.",
+        json_schema_extra={"example": "SEC_AAPL_US"},
+    )
+    issuer_id: str | None = Field(
+        default=None,
+        description="Legal issuer identifier mapped to this security.",
+        json_schema_extra={"example": "ISSUER_APPLE_INC"},
+    )
+    issuer_name: str | None = Field(
+        default=None,
+        description="Legal issuer display name mapped to this security.",
+        json_schema_extra={"example": "Apple Inc."},
+    )
+    ultimate_parent_issuer_id: str | None = Field(
+        default=None,
+        description="Ultimate parent issuer identifier mapped to this security.",
+        json_schema_extra={"example": "ISSUER_APPLE_HOLDING"},
+    )
+    ultimate_parent_issuer_name: str | None = Field(
+        default=None,
+        description="Ultimate parent issuer display name mapped to this security.",
+        json_schema_extra={"example": "Apple Holdings PLC"},
     )
 
 
@@ -106,6 +164,24 @@ class StatefulConcentrationInput(BaseModel):
         le=100,
         description="Top-N bucket used for single-position concentration aggregates.",
         json_schema_extra={"example": 10},
+    )
+    issuer_mappings: list[IssuerMappingInput] = Field(
+        default_factory=list,
+        description=(
+            "Optional caller-provided issuer mappings keyed by security_id. "
+            "Used according to enrichment_policy when computing issuer concentration."
+        ),
+        json_schema_extra={
+            "example": [
+                {
+                    "security_id": "SEC_AAPL_US",
+                    "issuer_id": "ISSUER_APPLE_INC",
+                    "issuer_name": "Apple Inc.",
+                    "ultimate_parent_issuer_id": "ISSUER_APPLE_HOLDING",
+                    "ultimate_parent_issuer_name": "Apple Holdings PLC",
+                }
+            ]
+        },
     )
 
 
@@ -236,6 +312,18 @@ class ConcentrationRequest(BaseModel):
             }
         },
     )
+    issuer_grouping_level: IssuerGroupingLevel = Field(
+        default=IssuerGroupingLevel.ULTIMATE_PARENT,
+        description="Issuer grouping hierarchy used for issuer concentration analytics.",
+        json_schema_extra={"example": "ultimate_parent"},
+    )
+    enrichment_policy: EnrichmentPolicy = Field(
+        default=EnrichmentPolicy.MERGE_CALLER_THEN_CORE,
+        description=(
+            "Controls issuer enrichment precedence between caller-provided issuer mappings and lotus-core enrichment."
+        ),
+        json_schema_extra={"example": "merge_caller_then_core"},
+    )
 
     model_config = ConfigDict(extra="forbid")
 
@@ -296,6 +384,64 @@ class SinglePositionConcentration(BaseModel):
     top_n: int = Field(
         description="Top-N parameter used for cumulative concentration calculations.",
         json_schema_extra={"example": 10},
+    )
+
+
+class IssuerCoverageStatus(str, Enum):
+    COMPLETE = "complete"
+    PARTIAL = "partial"
+    UNAVAILABLE = "unavailable"
+
+
+class IssuerConcentration(BaseModel):
+    hhi_current: float = Field(
+        description="Issuer-level baseline HHI concentration (0 to 10000).",
+        json_schema_extra={"example": 3200.0},
+    )
+    hhi_proposed: float = Field(
+        description="Issuer-level proposed HHI concentration (0 to 10000).",
+        json_schema_extra={"example": 3475.0},
+    )
+    hhi_delta: float = Field(
+        description="Difference between proposed and baseline issuer-level HHI concentration.",
+        json_schema_extra={"example": 275.0},
+    )
+    top_issuer_weight_current: float = Field(
+        description="Highest issuer-level baseline concentration weight.",
+        json_schema_extra={"example": 0.18},
+    )
+    top_issuer_weight_proposed: float = Field(
+        description="Highest issuer-level proposed concentration weight.",
+        json_schema_extra={"example": 0.21},
+    )
+    top_issuer_weight_delta: float = Field(
+        description="Difference between proposed and baseline top issuer weights.",
+        json_schema_extra={"example": 0.03},
+    )
+    coverage_status: IssuerCoverageStatus = Field(
+        description="Coverage quality for issuer mapping used in issuer concentration calculations.",
+        json_schema_extra={"example": "partial"},
+    )
+    covered_position_count_current: int = Field(
+        description="Count of baseline positions included in issuer grouping.",
+        json_schema_extra={"example": 25},
+    )
+    covered_position_count_proposed: int = Field(
+        description="Count of proposed positions included in issuer grouping.",
+        json_schema_extra={"example": 27},
+    )
+    total_position_count_current: int = Field(
+        description="Total baseline positions evaluated for issuer coverage.",
+        json_schema_extra={"example": 30},
+    )
+    total_position_count_proposed: int = Field(
+        description="Total proposed positions evaluated for issuer coverage.",
+        json_schema_extra={"example": 31},
+    )
+    note: str | None = Field(
+        default=None,
+        description="Optional diagnostics note when issuer coverage is partial or unavailable.",
+        json_schema_extra={"example": "issuer_id missing in lotus-core instrument_enrichment"},
     )
 
 
@@ -376,6 +522,25 @@ class ConcentrationResponse(BaseModel):
                 "top_n_cumulative_weight_proposed": 0.4551,
                 "top_n_cumulative_weight_delta": 0.0428,
                 "top_n": 10,
+            }
+        },
+    )
+    issuer_concentration: IssuerConcentration = Field(
+        description="Issuer-level concentration analytics payload with coverage diagnostics.",
+        json_schema_extra={
+            "example": {
+                "hhi_current": 3200.0,
+                "hhi_proposed": 3475.0,
+                "hhi_delta": 275.0,
+                "top_issuer_weight_current": 0.18,
+                "top_issuer_weight_proposed": 0.21,
+                "top_issuer_weight_delta": 0.03,
+                "coverage_status": "partial",
+                "covered_position_count_current": 25,
+                "covered_position_count_proposed": 27,
+                "total_position_count_current": 30,
+                "total_position_count_proposed": 31,
+                "note": "issuer_id missing in lotus-core instrument_enrichment",
             }
         },
     )

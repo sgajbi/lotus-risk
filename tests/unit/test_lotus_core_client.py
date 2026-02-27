@@ -99,9 +99,14 @@ async def test_client_supports_add_changes_and_snapshot_routes(
         request_payload={"snapshot_mode": "BASELINE"},
         correlation_id=None,
     )
+    enrichment_response = await client.get_instrument_enrichment(
+        security_ids=["SEC_A", "SEC_B"],
+        correlation_id=None,
+    )
 
     assert add_response == {"ok": True}
     assert snapshot_response == {"ok": True}
+    assert enrichment_response == {"ok": True}
 
 
 @pytest.mark.asyncio

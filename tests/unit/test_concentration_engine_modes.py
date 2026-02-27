@@ -46,6 +46,19 @@ class _RecordingCoreClient:
         self.last_snapshot_payload = request_payload
         return self.snapshot_response
 
+    async def get_instrument_enrichment(
+        self,
+        *,
+        security_ids: list[str],
+        correlation_id: str | None,
+    ) -> dict[str, object]:
+        return {
+            "records": [
+                {"security_id": security_id, "issuer_id": f"ISSUER_{security_id}"}
+                for security_id in security_ids
+            ]
+        }
+
 
 @pytest.mark.asyncio
 async def test_stateful_mode_includes_reporting_currency_and_metadata() -> None:

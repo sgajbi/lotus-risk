@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-02-27T11:33:14.676950+00:00",
+  "generatedAt": "2026-02-27T12:44:12.810949+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.annualization_factor",
@@ -88,6 +88,48 @@
       ]
     },
     {
+      "semanticId": "lotus.coverage_status",
+      "canonicalTerm": "coverage_status",
+      "preferredName": "coverage_status",
+      "description": "Canonical coverage status used by lotus-risk APIs.",
+      "example": "complete",
+      "type": "IssuerCoverageStatus",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "IssuerCoverageStatus"
+      ]
+    },
+    {
+      "semanticId": "lotus.covered_position_count_current",
+      "canonicalTerm": "covered_position_count_current",
+      "preferredName": "covered_position_count_current",
+      "description": "Count of baseline positions included in issuer grouping.",
+      "example": 25,
+      "type": "integer",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "integer"
+      ]
+    },
+    {
+      "semanticId": "lotus.covered_position_count_proposed",
+      "canonicalTerm": "covered_position_count_proposed",
+      "preferredName": "covered_position_count_proposed",
+      "description": "Count of proposed positions included in issuer grouping.",
+      "example": 27,
+      "type": "integer",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "integer"
+      ]
+    },
+    {
       "semanticId": "lotus.date",
       "canonicalTerm": "date",
       "preferredName": "date",
@@ -127,6 +169,20 @@
       ],
       "observedTypes": [
         "boolean"
+      ]
+    },
+    {
+      "semanticId": "lotus.enrichment_policy",
+      "canonicalTerm": "enrichment_policy",
+      "preferredName": "enrichment_policy",
+      "description": "Canonical enrichment policy used by lotus-risk APIs.",
+      "example": "use_caller_only",
+      "type": "EnrichmentPolicy",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "EnrichmentPolicy"
       ]
     },
     {
@@ -279,6 +335,36 @@
       ]
     },
     {
+      "semanticId": "lotus.issuer_concentration",
+      "canonicalTerm": "issuer_concentration",
+      "preferredName": "issuer_concentration",
+      "description": "Canonical issuer concentration used by lotus-risk APIs.",
+      "example": {
+        "key": "value"
+      },
+      "type": "IssuerConcentration",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "IssuerConcentration"
+      ]
+    },
+    {
+      "semanticId": "lotus.issuer_grouping_level",
+      "canonicalTerm": "issuer_grouping_level",
+      "preferredName": "issuer_grouping_level",
+      "description": "Canonical issuer grouping level used by lotus-risk APIs.",
+      "example": "legal_issuer",
+      "type": "IssuerGroupingLevel",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "IssuerGroupingLevel"
+      ]
+    },
+    {
       "semanticId": "lotus.key",
       "canonicalTerm": "key",
       "preferredName": "key",
@@ -398,6 +484,20 @@
       ],
       "observedTypes": [
         "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.note",
+      "canonicalTerm": "note",
+      "preferredName": "note",
+      "description": "Optional diagnostics note when issuer coverage is partial or unavailable.",
+      "example": "issuer_id missing in lotus-core instrument_enrichment",
+      "type": "object",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "object"
       ]
     },
     {
@@ -775,6 +875,48 @@
       ]
     },
     {
+      "semanticId": "lotus.top_issuer_weight_current",
+      "canonicalTerm": "top_issuer_weight_current",
+      "preferredName": "top_issuer_weight_current",
+      "description": "Highest issuer-level baseline concentration weight.",
+      "example": 0.18,
+      "type": "number",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "number"
+      ]
+    },
+    {
+      "semanticId": "lotus.top_issuer_weight_delta",
+      "canonicalTerm": "top_issuer_weight_delta",
+      "preferredName": "top_issuer_weight_delta",
+      "description": "Difference between proposed and baseline top issuer weights.",
+      "example": 0.03,
+      "type": "number",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "number"
+      ]
+    },
+    {
+      "semanticId": "lotus.top_issuer_weight_proposed",
+      "canonicalTerm": "top_issuer_weight_proposed",
+      "preferredName": "top_issuer_weight_proposed",
+      "description": "Highest issuer-level proposed concentration weight.",
+      "example": 0.21,
+      "type": "number",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "number"
+      ]
+    },
+    {
       "semanticId": "lotus.top_n",
       "canonicalTerm": "top_n",
       "preferredName": "top_n",
@@ -870,6 +1012,34 @@
       ],
       "observedTypes": [
         "number"
+      ]
+    },
+    {
+      "semanticId": "lotus.total_position_count_current",
+      "canonicalTerm": "total_position_count_current",
+      "preferredName": "total_position_count_current",
+      "description": "Total baseline positions evaluated for issuer coverage.",
+      "example": 30,
+      "type": "integer",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "integer"
+      ]
+    },
+    {
+      "semanticId": "lotus.total_position_count_proposed",
+      "canonicalTerm": "total_position_count_proposed",
+      "preferredName": "total_position_count_proposed",
+      "description": "Total proposed positions evaluated for issuer coverage.",
+      "example": 31,
+      "type": "integer",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "integer"
       ]
     },
     {
@@ -1341,6 +1511,22 @@
             "type": "object",
             "semanticId": "lotus.simulation_input",
             "attributeRef": "#/attributeCatalog/lotus.simulation_input"
+          },
+          {
+            "name": "issuer_grouping_level",
+            "location": "body",
+            "required": false,
+            "type": "IssuerGroupingLevel",
+            "semanticId": "lotus.issuer_grouping_level",
+            "attributeRef": "#/attributeCatalog/lotus.issuer_grouping_level"
+          },
+          {
+            "name": "enrichment_policy",
+            "location": "body",
+            "required": false,
+            "type": "EnrichmentPolicy",
+            "semanticId": "lotus.enrichment_policy",
+            "attributeRef": "#/attributeCatalog/lotus.enrichment_policy"
           }
         ]
       },
@@ -1457,6 +1643,110 @@
             "type": "integer",
             "semanticId": "lotus.top_n",
             "attributeRef": "#/attributeCatalog/lotus.top_n"
+          },
+          {
+            "name": "issuer_concentration",
+            "location": "body",
+            "required": true,
+            "type": "IssuerConcentration",
+            "semanticId": "lotus.issuer_concentration",
+            "attributeRef": "#/attributeCatalog/lotus.issuer_concentration"
+          },
+          {
+            "name": "issuer_concentration.hhi_current",
+            "location": "body",
+            "required": true,
+            "type": "number",
+            "semanticId": "lotus.hhi_current",
+            "attributeRef": "#/attributeCatalog/lotus.hhi_current"
+          },
+          {
+            "name": "issuer_concentration.hhi_proposed",
+            "location": "body",
+            "required": true,
+            "type": "number",
+            "semanticId": "lotus.hhi_proposed",
+            "attributeRef": "#/attributeCatalog/lotus.hhi_proposed"
+          },
+          {
+            "name": "issuer_concentration.hhi_delta",
+            "location": "body",
+            "required": true,
+            "type": "number",
+            "semanticId": "lotus.hhi_delta",
+            "attributeRef": "#/attributeCatalog/lotus.hhi_delta"
+          },
+          {
+            "name": "issuer_concentration.top_issuer_weight_current",
+            "location": "body",
+            "required": true,
+            "type": "number",
+            "semanticId": "lotus.top_issuer_weight_current",
+            "attributeRef": "#/attributeCatalog/lotus.top_issuer_weight_current"
+          },
+          {
+            "name": "issuer_concentration.top_issuer_weight_proposed",
+            "location": "body",
+            "required": true,
+            "type": "number",
+            "semanticId": "lotus.top_issuer_weight_proposed",
+            "attributeRef": "#/attributeCatalog/lotus.top_issuer_weight_proposed"
+          },
+          {
+            "name": "issuer_concentration.top_issuer_weight_delta",
+            "location": "body",
+            "required": true,
+            "type": "number",
+            "semanticId": "lotus.top_issuer_weight_delta",
+            "attributeRef": "#/attributeCatalog/lotus.top_issuer_weight_delta"
+          },
+          {
+            "name": "issuer_concentration.coverage_status",
+            "location": "body",
+            "required": true,
+            "type": "IssuerCoverageStatus",
+            "semanticId": "lotus.coverage_status",
+            "attributeRef": "#/attributeCatalog/lotus.coverage_status"
+          },
+          {
+            "name": "issuer_concentration.covered_position_count_current",
+            "location": "body",
+            "required": true,
+            "type": "integer",
+            "semanticId": "lotus.covered_position_count_current",
+            "attributeRef": "#/attributeCatalog/lotus.covered_position_count_current"
+          },
+          {
+            "name": "issuer_concentration.covered_position_count_proposed",
+            "location": "body",
+            "required": true,
+            "type": "integer",
+            "semanticId": "lotus.covered_position_count_proposed",
+            "attributeRef": "#/attributeCatalog/lotus.covered_position_count_proposed"
+          },
+          {
+            "name": "issuer_concentration.total_position_count_current",
+            "location": "body",
+            "required": true,
+            "type": "integer",
+            "semanticId": "lotus.total_position_count_current",
+            "attributeRef": "#/attributeCatalog/lotus.total_position_count_current"
+          },
+          {
+            "name": "issuer_concentration.total_position_count_proposed",
+            "location": "body",
+            "required": true,
+            "type": "integer",
+            "semanticId": "lotus.total_position_count_proposed",
+            "attributeRef": "#/attributeCatalog/lotus.total_position_count_proposed"
+          },
+          {
+            "name": "issuer_concentration.note",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.note",
+            "attributeRef": "#/attributeCatalog/lotus.note"
           },
           {
             "name": "valuation_context",
