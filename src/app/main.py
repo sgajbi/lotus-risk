@@ -1,6 +1,7 @@
-from fastapi import FastAPI, HTTPException, Response, status
+from fastapi import FastAPI, HTTPException, Request, Response, status
+from fastapi.exceptions import RequestValidationError
 from prometheus_fastapi_instrumentator import Instrumentator
-from pydantic import BaseModel, Field
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.contracts.capabilities import (
     CAPABILITY_FEATURE_KEYS,
@@ -8,24 +9,87 @@ from app.contracts.capabilities import (
     CapabilityFeature,
     CapabilityWorkflow,
     IntegrationCapabilitiesResponse,
+    SupportedInputMode,
 )
+from app.contracts.concentration import ConcentrationRequest, ConcentrationResponse
+from app.contracts.ops import OpsChecks, OpsResponse
 from app.contracts.risk import RiskCalculationRequest, RiskResponse
+from app.error_model import error_response
 from app.enterprise_readiness import (
     build_enterprise_audit_middleware,
     validate_enterprise_runtime_config,
 )
 from app.middleware.correlation import CorrelationIdMiddleware
+from app.services.concentration_engine import calculate_concentration
 from app.services.risk_engine import calculate_risk
 
 SERVICE_NAME = "lotus-risk"
 SERVICE_VERSION = "0.1.0"
 ROUNDING_POLICY_VERSION = "v1"
+SUPPORTED_INPUT_MODES: tuple[SupportedInputMode, ...] = ("stateless", "stateful", "simulation")
 
 app = FastAPI(title=SERVICE_NAME, version=SERVICE_VERSION)
 app.add_middleware(CorrelationIdMiddleware, service_name=SERVICE_NAME)
 validate_enterprise_runtime_config()
 app.middleware("http")(build_enterprise_audit_middleware())
 Instrumentator().instrument(app).expose(app)
+
+
+def _default_error_code(status_code: int) -> str:
+    if status_code == status.HTTP_404_NOT_FOUND:
+        return "RESOURCE_NOT_FOUND"
+    if status_code == status.HTTP_403_FORBIDDEN:
+        return "AUTHORIZATION_DENIED"
+    if status_code == status.HTTP_413_REQUEST_ENTITY_TOO_LARGE:
+        return "PAYLOAD_TOO_LARGE"
+    if status_code == status.HTTP_422_UNPROCESSABLE_ENTITY:
+        return "INVALID_REQUEST"
+    if status_code == status.HTTP_400_BAD_REQUEST:
+        return "INVALID_INPUT"
+    return "REQUEST_REJECTED"
+
+
+@app.exception_handler(RequestValidationError)
+async def handle_validation_error(request: Request, exc: RequestValidationError) -> Response:
+    return error_response(
+        request,
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        code="INVALID_REQUEST",
+        message="Request validation failed",
+        details=exc.errors(),
+    )
+
+
+@app.exception_handler(StarletteHTTPException)
+async def handle_starlette_http_exception(
+    request: Request, exc: StarletteHTTPException
+) -> Response:
+    return error_response(
+        request,
+        status_code=exc.status_code,
+        code=_default_error_code(exc.status_code),
+        message=str(exc.detail),
+    )
+
+
+@app.exception_handler(HTTPException)
+async def handle_http_exception(request: Request, exc: HTTPException) -> Response:
+    return error_response(
+        request,
+        status_code=exc.status_code,
+        code=_default_error_code(exc.status_code),
+        message=str(exc.detail),
+    )
+
+
+@app.exception_handler(ValueError)
+async def handle_value_error(request: Request, exc: ValueError) -> Response:
+    return error_response(
+        request,
+        status_code=status.HTTP_400_BAD_REQUEST,
+        code="INVALID_INPUT",
+        message=str(exc),
+    )
 
 
 @app.get("/health")
@@ -55,12 +119,24 @@ async def metadata() -> dict[str, str]:
     }
 
 
+@app.get("/ops", response_model=OpsResponse)
+async def ops() -> OpsResponse:
+    is_draining = bool(getattr(app.state, "is_draining", False))
+    return OpsResponse(
+        service=SERVICE_NAME,
+        version=SERVICE_VERSION,
+        status="degraded" if is_draining else "ok",
+        checks=OpsChecks(live=True, ready=not is_draining, draining=is_draining),
+        inputModes=list(SUPPORTED_INPUT_MODES),
+    )
+
+
 @app.get("/integration/capabilities", response_model=IntegrationCapabilitiesResponse)
 async def integration_capabilities() -> IntegrationCapabilitiesResponse:
     return IntegrationCapabilitiesResponse(
         sourceService=SERVICE_NAME,
         policyVersion="risk.v1",
-        supportedInputModes=["api"],
+        supportedInputModes=list(SUPPORTED_INPUT_MODES),
         features=[CapabilityFeature(key=feature_key) for feature_key in CAPABILITY_FEATURE_KEYS],
         workflows=[
             CapabilityWorkflow(workflow_key=workflow_key)
@@ -69,63 +145,17 @@ async def integration_capabilities() -> IntegrationCapabilitiesResponse:
     )
 
 
-class _RiskPosition(BaseModel):
-    security_id: str = Field(alias="securityId")
-    proposed_quantity: float | None = Field(default=None, alias="proposedQuantity")
-    quantity: float | None = None
-
-
-class _RiskProxyRequest(BaseModel):
-    current_positions: list[_RiskPosition] = Field(default_factory=list, alias="currentPositions")
-    projected_positions: list[_RiskPosition] = Field(
-        default_factory=list, alias="projectedPositions"
-    )
-
-
-def _compute_hhi(values: list[float]) -> float:
-    total = sum(abs(v) for v in values)
-    if total <= 0:
-        return 0.0
-    weights = [abs(v) / total for v in values]
-    return sum(w * w for w in weights) * 10000.0
-
-
-def _build_concentration_response(request: _RiskProxyRequest) -> dict[str, object]:
-    current_values = [
-        p.quantity for p in request.current_positions if p.quantity is not None and p.quantity > 0
-    ]
-    projected_values = [
-        p.proposed_quantity
-        for p in request.projected_positions
-        if p.proposed_quantity is not None and p.proposed_quantity > 0
-    ]
-    current_hhi = _compute_hhi(current_values)
-    proposed_hhi = _compute_hhi(projected_values) if projected_values else current_hhi
-    return {
-        "sourceService": SERVICE_NAME,
-        "riskProxy": {
-            "hhiCurrent": round(current_hhi, 6),
-            "hhiProposed": round(proposed_hhi, 6),
-            "hhiDelta": round(proposed_hhi - current_hhi, 6),
-        },
-    }
-
-
 @app.post(
     "/analytics/risk/concentration",
+    response_model=ConcentrationResponse,
     summary="Calculate concentration risk analytics",
     description=(
         "Calculates concentration-risk HHI metrics from current and projected position "
         "weights. Returns current, proposed, and delta concentration."
     ),
 )
-async def analytics_risk_concentration(request: _RiskProxyRequest) -> dict[str, object]:
-    return _build_concentration_response(request)
-
-
-@app.post("/analytics/workbench/risk-proxy", include_in_schema=False)
-async def workbench_risk_proxy(request: _RiskProxyRequest) -> dict[str, object]:
-    return _build_concentration_response(request)
+async def analytics_risk_concentration(request: ConcentrationRequest) -> ConcentrationResponse:
+    return calculate_concentration(request)
 
 
 @app.post(
@@ -139,7 +169,4 @@ async def workbench_risk_proxy(request: _RiskProxyRequest) -> dict[str, object]:
     ),
 )
 async def analytics_risk_calculate(request: RiskCalculationRequest) -> RiskResponse:
-    try:
-        return calculate_risk(request)
-    except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return calculate_risk(request)

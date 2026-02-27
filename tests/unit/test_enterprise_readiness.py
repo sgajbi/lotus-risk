@@ -131,7 +131,9 @@ def test_enterprise_middleware_payload_limit(monkeypatch: pytest.MonkeyPatch) ->
     client = TestClient(_enterprise_test_app())
     response = client.post("/writes", content="too-large")
     assert response.status_code == 413
-    assert response.json()["detail"] == "payload_too_large"
+    body = response.json()["error"]
+    assert body["code"] == "PAYLOAD_TOO_LARGE"
+    assert body["message"] == "payload_too_large"
 
 
 def test_enterprise_middleware_denies_unauthorized_writes(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -139,9 +141,10 @@ def test_enterprise_middleware_denies_unauthorized_writes(monkeypatch: pytest.Mo
     client = TestClient(_enterprise_test_app())
     response = client.post("/writes", content="{}")
     assert response.status_code == 403
-    body = response.json()
-    assert body["detail"] == "authorization_policy_denied"
-    assert body["reason"].startswith("missing_headers:")
+    body = response.json()["error"]
+    assert body["code"] == "AUTHORIZATION_DENIED"
+    assert body["message"] == "authorization_policy_denied"
+    assert body["details"]["reason"].startswith("missing_headers:")
 
 
 def test_enterprise_middleware_sets_policy_header(monkeypatch: pytest.MonkeyPatch) -> None:

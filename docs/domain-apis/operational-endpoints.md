@@ -81,22 +81,23 @@
 
 ## Endpoint: `GET /ops`
 
-- Status: not implemented.
+- Status: implemented.
 - Execution modes supported: operational.
 - Required inputs:
   - none (expected).
 - Input source mapping:
   - runtime configuration, health/readiness/observability internals (expected).
 - Availability status:
-  - needs enhancement.
-- Gap:
-  - explicit `/ops` endpoint requested by current governance direction is absent.
-  - no equivalent route in `lotus-risk` router.
-- Decision required:
-  - define canonical `/ops` response model and required fields for all Lotus backend services.
-  - decide whether `/ops` is mandatory in platform contract artifact (currently health endpoints are explicit in cross-cutting contract; `/ops` is not explicitly declared there).
+  - available in runtime and OpenAPI.
+- Output:
+  - `service`
+  - `version`
+  - `status` (`ok`/`degraded`)
+  - `checks.live`
+  - `checks.ready`
+  - `checks.draining`
+  - `inputModes`
 
 ## Operational Alignment Verdict
 
-- Current state: mostly compliant on health/metadata/metrics.
-- Blocking gap for requested target state: missing `/ops`.
+- Current state: compliant on health/metadata/metrics/ops.

@@ -148,6 +148,7 @@ def test_endpoint_error_path_returns_400() -> None:
             },
         )
         assert response.status_code == 400
+        assert response.json()["error"]["code"] == "INVALID_INPUT"
     finally:
         main_module_any.calculate_risk = original
 
@@ -158,7 +159,11 @@ def test_health_ready_draining_branch() -> None:
     app.state.is_draining = True
     client = TestClient(app)
     response = client.get("/health/ready")
+    ops_response = client.get("/ops")
     assert response.status_code == 503
+    assert ops_response.status_code == 200
+    assert ops_response.json()["status"] == "degraded"
+    assert ops_response.json()["checks"]["ready"] is False
     app.state.is_draining = False
 
 

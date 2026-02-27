@@ -28,14 +28,13 @@ This package documents the current `lotus-risk` API surface and evaluates it aga
   - `GET /health/live`
   - `GET /health/ready`
   - `GET /metadata`
+  - `GET /ops`
   - `GET /metrics` (Prometheus exposure)
 - Integration:
   - `GET /integration/capabilities`
 - Domain analytics:
   - `POST /analytics/risk/calculate`
   - `POST /analytics/risk/concentration`
-- Legacy compatibility:
-  - `POST /analytics/workbench/risk-proxy` (hidden from OpenAPI)
 
 ## Current Dependency Summary
 
@@ -52,8 +51,8 @@ This package documents the current `lotus-risk` API surface and evaluates it aga
 - `lotus-risk` is correctly the bounded-context owner for risk/concentration analytics.
 - Stateless mode exists and is production-ready for risk and concentration APIs.
 - Stateful and simulation modes are not yet implemented in lotus-risk.
-- Mandatory `/ops` endpoint is missing.
-- Legacy endpoint `/analytics/workbench/risk-proxy` remains for compatibility and should be formally deprecation-managed.
+- `/ops` endpoint is implemented with typed diagnostics contract.
+- Legacy endpoint `/analytics/workbench/risk-proxy` is removed from runtime surface.
 
 See per-endpoint detail:
 
