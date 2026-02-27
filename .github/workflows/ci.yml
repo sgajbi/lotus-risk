@@ -42,10 +42,14 @@ jobs:
         run: python -m pip check
       - name: Lint
         run: make lint
+      - name: No Alias Gate
+        run: make no-alias-gate
       - name: Typecheck
         run: make typecheck
       - name: OpenAPI Gate
         run: make openapi-gate
+      - name: API Vocabulary Gate
+        run: make api-vocabulary-gate
       - name: Migration Contract Smoke
         run: make migration-smoke
       - name: Security Audit

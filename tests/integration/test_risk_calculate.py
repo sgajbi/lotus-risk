@@ -5,21 +5,26 @@ from app.main import app
 
 def _request_payload() -> dict[str, object]:
     return {
-        "scope": {"asOfDate": "2025-03-31", "netOrGross": "NET"},
-        "portfolioOpenDate": "2024-01-01",
+        "scope": {"as_of_date": "2025-03-31", "net_or_gross": "NET"},
+        "portfolio_open_date": "2024-01-01",
         "periods": [
-            {"type": "EXPLICIT", "name": "Explicit", "from": "2025-01-01", "to": "2025-03-31"}
+            {
+                "type": "EXPLICIT",
+                "name": "Explicit",
+                "from_date": "2025-01-01",
+                "to_date": "2025-03-31",
+            }
         ],
         "metrics": ["VOLATILITY", "SHARPE", "VAR"],
         "options": {
             "frequency": "DAILY",
-            "riskFreeMode": "ANNUAL_RATE",
-            "riskFreeAnnualRate": 0.01,
+            "risk_free_mode": "ANNUAL_RATE",
+            "risk_free_annual_rate": 0.01,
             "var": {
                 "method": "HISTORICAL",
                 "confidence": 0.95,
-                "horizonDays": 1,
-                "includeExpectedShortfall": True,
+                "horizon_days": 1,
+                "include_expected_shortfall": True,
             },
         },
         "returns": [
@@ -31,7 +36,7 @@ def _request_payload() -> dict[str, object]:
     }
 
 
-def test_risk_calculate_endpoint_happy_path_alias_contract() -> None:
+def test_risk_calculate_endpoint_happy_path_contract() -> None:
     client = TestClient(app)
     response = client.post("/analytics/risk/calculate", json=_request_payload())
     assert response.status_code == 200
@@ -57,7 +62,7 @@ def test_risk_calculate_endpoint_rejects_invalid_explicit_period() -> None:
     assert response.headers["X-Correlation-Id"] == "corr-422"
     body = response.json()["error"]
     assert body["code"] == "INVALID_REQUEST"
-    assert body["correlationId"] == "corr-422"
+    assert body["correlation_id"] == "corr-422"
     assert body["message"] == "Request validation failed"
 
 
@@ -65,7 +70,7 @@ def test_risk_calculate_benchmark_requirement_behavior() -> None:
     client = TestClient(app)
     payload = _request_payload()
     payload["metrics"] = ["BETA", "TRACKING_ERROR", "INFORMATION_RATIO"]
-    payload["benchmarkReturns"] = []
+    payload["benchmark_returns"] = []
     response = client.post("/analytics/risk/calculate", json=payload)
     assert response.status_code == 200
     metrics = response.json()["results"]["Explicit"]["metrics"]

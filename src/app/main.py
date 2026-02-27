@@ -2,7 +2,9 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.exceptions import RequestValidationError
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from prometheus_fastapi_instrumentator import Instrumentator
+from pydantic import BaseModel, Field
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.contracts.capabilities import (
@@ -35,7 +37,48 @@ app = FastAPI(title=SERVICE_NAME, version=SERVICE_VERSION)
 app.add_middleware(CorrelationIdMiddleware, service_name=SERVICE_NAME)
 validate_enterprise_runtime_config()
 app.middleware("http")(build_enterprise_audit_middleware())
-Instrumentator().instrument(app).expose(app)
+Instrumentator().instrument(app)
+
+
+class HealthResponse(BaseModel):
+    status: str = Field(
+        description="Health status indicator.",
+        json_schema_extra={"example": "ok"},
+    )
+    service: str = Field(
+        description="Service identifier.",
+        json_schema_extra={"example": "lotus-risk"},
+    )
+
+
+class LivenessResponse(BaseModel):
+    status: str = Field(
+        description="Liveness status indicator.",
+        json_schema_extra={"example": "live"},
+    )
+
+
+class ReadinessResponse(BaseModel):
+    status: str = Field(
+        description="Readiness state.",
+        json_schema_extra={"example": "ready"},
+    )
+
+
+class MetadataResponse(BaseModel):
+    service: str = Field(
+        description="Service identifier.",
+        json_schema_extra={"example": "lotus-risk"},
+    )
+    version: str = Field(
+        description="Service version string.",
+        json_schema_extra={"example": "0.1.0"},
+    )
+    rounding_policy_version: str = Field(
+        description="Rounding policy revision used by risk outputs.",
+        json_schema_extra={"example": "v1"},
+    )
+
 
 ERROR_RESPONSE_400: dict[str, Any] = {
     "model": ErrorResponse,
@@ -46,7 +89,7 @@ ERROR_RESPONSE_400: dict[str, Any] = {
                 "error": {
                     "code": "INVALID_INPUT",
                     "message": "Unsupported period type: BAD",
-                    "correlationId": "corr-123",
+                    "correlation_id": "corr-123",
                 }
             }
         }
@@ -61,7 +104,7 @@ ERROR_RESPONSE_403: dict[str, Any] = {
                 "error": {
                     "code": "AUTHORIZATION_DENIED",
                     "message": "authorization_policy_denied",
-                    "correlationId": "corr-123",
+                    "correlation_id": "corr-123",
                     "details": {"reason": "missing_headers:x-actor-id"},
                 }
             }
@@ -77,7 +120,7 @@ ERROR_RESPONSE_404: dict[str, Any] = {
                 "error": {
                     "code": "RESOURCE_NOT_FOUND",
                     "message": "Not Found",
-                    "correlationId": "corr-123",
+                    "correlation_id": "corr-123",
                 }
             }
         }
@@ -92,8 +135,25 @@ ERROR_RESPONSE_422: dict[str, Any] = {
                 "error": {
                     "code": "INVALID_REQUEST",
                     "message": "Request validation failed",
-                    "correlationId": "corr-123",
-                    "details": [{"loc": ["body", "periods", 0, "toDate"], "msg": "Field required"}],
+                    "correlation_id": "corr-123",
+                    "details": [
+                        {"loc": ["body", "periods", 0, "to_date"], "msg": "Field required"}
+                    ],
+                }
+            }
+        }
+    },
+}
+ERROR_RESPONSE_DEFAULT: dict[str, Any] = {
+    "model": ErrorResponse,
+    "description": "Unhandled service error.",
+    "content": {
+        "application/json": {
+            "example": {
+                "error": {
+                    "code": "REQUEST_REJECTED",
+                    "message": "Unexpected error",
+                    "correlation_id": "corr-123",
                 }
             }
         }
@@ -104,6 +164,7 @@ STANDARD_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     403: ERROR_RESPONSE_403,
     404: ERROR_RESPONSE_404,
     422: ERROR_RESPONSE_422,
+    "default": ERROR_RESPONSE_DEFAULT,
 }
 
 
@@ -164,34 +225,69 @@ async def handle_value_error(request: Request, exc: ValueError) -> Response:
     )
 
 
-@app.get("/health")
-async def health() -> dict[str, str]:
-    return {"status": "ok", "service": SERVICE_NAME}
+@app.get(
+    "/health",
+    response_model=HealthResponse,
+    summary="Health status",
+    description="Returns basic service health for compatibility probes.",
+    tags=["operational"],
+    responses=STANDARD_ERROR_RESPONSES,
+)
+async def health() -> HealthResponse:
+    return HealthResponse(status="ok", service=SERVICE_NAME)
 
 
-@app.get("/health/live")
-async def health_live() -> dict[str, str]:
-    return {"status": "live"}
+@app.get(
+    "/health/live",
+    response_model=LivenessResponse,
+    summary="Liveness probe",
+    description="Returns liveness status for container/orchestrator probes.",
+    tags=["operational"],
+    responses=STANDARD_ERROR_RESPONSES,
+)
+async def health_live() -> LivenessResponse:
+    return LivenessResponse(status="live")
 
 
-@app.get("/health/ready")
-async def health_ready(response: Response) -> dict[str, str]:
+@app.get(
+    "/health/ready",
+    response_model=ReadinessResponse,
+    summary="Readiness probe",
+    description="Returns readiness status, including draining behavior.",
+    tags=["operational"],
+    responses=STANDARD_ERROR_RESPONSES,
+)
+async def health_ready(response: Response) -> ReadinessResponse:
     if bool(getattr(app.state, "is_draining", False)):
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-        return {"status": "draining"}
-    return {"status": "ready"}
+        return ReadinessResponse(status="draining")
+    return ReadinessResponse(status="ready")
 
 
-@app.get("/metadata")
-async def metadata() -> dict[str, str]:
-    return {
-        "service": SERVICE_NAME,
-        "version": SERVICE_VERSION,
-        "roundingPolicyVersion": ROUNDING_POLICY_VERSION,
-    }
+@app.get(
+    "/metadata",
+    response_model=MetadataResponse,
+    summary="Service metadata",
+    description="Returns service metadata and policy versions.",
+    tags=["operational"],
+    responses=STANDARD_ERROR_RESPONSES,
+)
+async def metadata() -> MetadataResponse:
+    return MetadataResponse(
+        service=SERVICE_NAME,
+        version=SERVICE_VERSION,
+        rounding_policy_version=ROUNDING_POLICY_VERSION,
+    )
 
 
-@app.get("/ops", response_model=OpsResponse)
+@app.get(
+    "/ops",
+    response_model=OpsResponse,
+    summary="Operational diagnostics",
+    description="Returns consolidated operational diagnostics and execution modes.",
+    tags=["operational"],
+    responses=STANDARD_ERROR_RESPONSES,
+)
 async def ops() -> OpsResponse:
     is_draining = bool(getattr(app.state, "is_draining", False))
     return OpsResponse(
@@ -199,16 +295,23 @@ async def ops() -> OpsResponse:
         version=SERVICE_VERSION,
         status="degraded" if is_draining else "ok",
         checks=OpsChecks(live=True, ready=not is_draining, draining=is_draining),
-        inputModes=list(SUPPORTED_INPUT_MODES),
+        input_modes=list(SUPPORTED_INPUT_MODES),
     )
 
 
-@app.get("/integration/capabilities", response_model=IntegrationCapabilitiesResponse)
+@app.get(
+    "/integration/capabilities",
+    response_model=IntegrationCapabilitiesResponse,
+    summary="Integration capabilities",
+    description="Publishes lotus-risk capabilities used for cross-service orchestration.",
+    tags=["integration"],
+    responses=STANDARD_ERROR_RESPONSES,
+)
 async def integration_capabilities() -> IntegrationCapabilitiesResponse:
     return IntegrationCapabilitiesResponse(
-        sourceService=SERVICE_NAME,
-        policyVersion="risk.v1",
-        supportedInputModes=list(SUPPORTED_INPUT_MODES),
+        source_service=SERVICE_NAME,
+        policy_version="risk.v1",
+        supported_input_modes=list(SUPPORTED_INPUT_MODES),
         features=[CapabilityFeature(key=feature_key) for feature_key in CAPABILITY_FEATURE_KEYS],
         workflows=[
             CapabilityWorkflow(workflow_key=workflow_key)
@@ -217,11 +320,29 @@ async def integration_capabilities() -> IntegrationCapabilitiesResponse:
     )
 
 
+@app.get(
+    "/metrics",
+    summary="Prometheus metrics",
+    description="Exposes Prometheus metrics for observability scraping.",
+    tags=["operational"],
+    responses={
+        200: {
+            "description": "Prometheus text metrics payload.",
+            "content": {"text/plain": {"example": "# HELP process_cpu_seconds_total ..."}},
+        },
+        **STANDARD_ERROR_RESPONSES,
+    },
+)
+async def metrics() -> Response:
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
 @app.post(
     "/analytics/risk/concentration",
     response_model=ConcentrationResponse,
     responses=STANDARD_ERROR_RESPONSES,
     summary="Calculate concentration risk analytics",
+    tags=["risk-analytics"],
     description=(
         "Calculates concentration-risk HHI metrics from current and projected position "
         "weights. Returns current, proposed, and delta concentration."
@@ -236,6 +357,7 @@ async def analytics_risk_concentration(request: ConcentrationRequest) -> Concent
     response_model=RiskResponse,
     responses=STANDARD_ERROR_RESPONSES,
     summary="Calculate portfolio risk metrics",
+    tags=["risk-analytics"],
     description=(
         "Calculates risk metrics from provided return series using stateless input mode. "
         "Supports EXPLICIT/YEAR/MTD/QTD/YTD/ONE_YEAR/THREE_YEAR/FIVE_YEAR/SI periods, "

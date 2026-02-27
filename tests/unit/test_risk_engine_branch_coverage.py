@@ -11,8 +11,8 @@ from app.services import risk_engine
 
 def _payload_all_metrics() -> dict[str, object]:
     return {
-        "scope": {"asOfDate": "2025-03-31", "netOrGross": "NET"},
-        "portfolioOpenDate": "2024-01-01",
+        "scope": {"as_of_date": "2025-03-31", "net_or_gross": "NET"},
+        "portfolio_open_date": "2024-01-01",
         "periods": [
             {"type": "MTD", "name": "MTD"},
             {"type": "QTD", "name": "QTD"},
@@ -25,8 +25,8 @@ def _payload_all_metrics() -> dict[str, object]:
             {
                 "type": "EXPLICIT",
                 "name": "EXP",
-                "fromDate": "2025-01-01",
-                "toDate": "2025-03-31",
+                "from_date": "2025-01-01",
+                "to_date": "2025-03-31",
             },
         ],
         "metrics": [
@@ -41,11 +41,11 @@ def _payload_all_metrics() -> dict[str, object]:
         ],
         "options": {
             "frequency": "WEEKLY",
-            "useLogReturns": True,
-            "riskFreeMode": "ANNUAL_RATE",
-            "riskFreeAnnualRate": 0.02,
-            "marAnnualRate": 0.01,
-            "var": {"method": "GAUSSIAN", "confidence": 0.95, "horizonDays": 5},
+            "use_log_returns": True,
+            "risk_free_mode": "ANNUAL_RATE",
+            "risk_free_annual_rate": 0.02,
+            "mar_annual_rate": 0.01,
+            "var": {"method": "GAUSSIAN", "confidence": 0.95, "horizon_days": 5},
         },
         "returns": [
             {"date": "2024-12-30", "value": 0.3},
@@ -63,7 +63,7 @@ def _payload_all_metrics() -> dict[str, object]:
             {"date": "2025-03-21", "value": 0.1},
             {"date": "2025-03-28", "value": -0.2},
         ],
-        "benchmarkReturns": [
+        "benchmark_returns": [
             {"date": "2024-12-30", "value": 0.2},
             {"date": "2025-01-03", "value": 0.6},
             {"date": "2025-01-10", "value": -0.3},
@@ -140,8 +140,8 @@ def test_endpoint_error_path_returns_400() -> None:
         response = client.post(
             "/analytics/risk/calculate",
             json={
-                "scope": {"asOfDate": "2025-03-31", "netOrGross": "NET"},
-                "portfolioOpenDate": "2024-01-01",
+                "scope": {"as_of_date": "2025-03-31", "net_or_gross": "NET"},
+                "portfolio_open_date": "2024-01-01",
                 "periods": [{"type": "YTD"}],
                 "metrics": ["VOLATILITY"],
                 "returns": [{"date": "2025-01-01", "value": 0.1}],
@@ -151,7 +151,7 @@ def test_endpoint_error_path_returns_400() -> None:
         assert response.status_code == 400
         body = response.json()["error"]
         assert body["code"] == "INVALID_INPUT"
-        assert body["correlationId"] == "corr-400"
+        assert body["correlation_id"] == "corr-400"
     finally:
         main_module_any.calculate_risk = original
 
@@ -189,8 +189,8 @@ def test_to_log_returns_empty_series_passthrough() -> None:
 
 def test_risk_metrics_return_domain_errors_for_insufficient_data() -> None:
     payload = {
-        "scope": {"asOfDate": "2025-03-31", "netOrGross": "NET"},
-        "portfolioOpenDate": "2024-01-01",
+        "scope": {"as_of_date": "2025-03-31", "net_or_gross": "NET"},
+        "portfolio_open_date": "2024-01-01",
         "periods": [{"type": "YTD", "name": "YTD"}],
         "metrics": [
             "VOLATILITY",
@@ -203,7 +203,7 @@ def test_risk_metrics_return_domain_errors_for_insufficient_data() -> None:
             "VAR",
         ],
         "returns": [{"date": "2025-01-02", "value": 0.5}],
-        "benchmarkReturns": [{"date": "2025-01-02", "value": 0.4}],
+        "benchmark_returns": [{"date": "2025-01-02", "value": 0.4}],
     }
     response = risk_engine.calculate_risk(RiskCalculationRequest.model_validate(payload))
     metrics = response.results["YTD"].metrics
@@ -235,8 +235,8 @@ def test_benchmark_metric_dispatch_rejects_unknown_metric() -> None:
 
 def test_sharpe_and_sortino_error_contracts() -> None:
     zero_vol_payload = {
-        "scope": {"asOfDate": "2025-03-31", "netOrGross": "NET"},
-        "portfolioOpenDate": "2024-01-01",
+        "scope": {"as_of_date": "2025-03-31", "net_or_gross": "NET"},
+        "portfolio_open_date": "2024-01-01",
         "periods": [{"type": "YTD", "name": "YTD"}],
         "metrics": ["SHARPE"],
         "returns": [
@@ -252,8 +252,8 @@ def test_sharpe_and_sortino_error_contracts() -> None:
     assert sharpe_error["error"] == "Zero volatility"
 
     no_downside_payload = {
-        "scope": {"asOfDate": "2025-03-31", "netOrGross": "NET"},
-        "portfolioOpenDate": "2024-01-01",
+        "scope": {"as_of_date": "2025-03-31", "net_or_gross": "NET"},
+        "portfolio_open_date": "2024-01-01",
         "periods": [{"type": "YTD", "name": "YTD"}],
         "metrics": ["SORTINO"],
         "returns": [

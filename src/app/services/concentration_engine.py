@@ -29,10 +29,10 @@ def calculate_concentration(request: ConcentrationRequest) -> ConcentrationRespo
     current_hhi = _compute_hhi(current_values)
     proposed_hhi = _compute_hhi(projected_values) if projected_values else current_hhi
     return ConcentrationResponse(
-        sourceService=SERVICE_NAME,
-        riskProxy=ConcentrationRiskProxy(
-            hhiCurrent=round(current_hhi, 6),
-            hhiProposed=round(proposed_hhi, 6),
-            hhiDelta=round(proposed_hhi - current_hhi, 6),
+        source_service=SERVICE_NAME,
+        risk_proxy=ConcentrationRiskProxy(
+            hhi_current=round(current_hhi, 6),
+            hhi_proposed=round(proposed_hhi, 6),
+            hhi_delta=round(proposed_hhi - current_hhi, 6),
         ),
     )

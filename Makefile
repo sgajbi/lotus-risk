@@ -1,4 +1,4 @@
-.PHONY: install lint monetary-float-guard typecheck openapi-gate migration-smoke migration-apply test test-unit test-integration test-e2e test-pyramid-gate test-coverage coverage-gate security-audit check ci docker-build clean
+.PHONY: install lint monetary-float-guard no-alias-gate typecheck openapi-gate api-vocabulary-gate migration-smoke migration-apply test test-unit test-integration test-e2e test-pyramid-gate test-coverage coverage-gate security-audit check ci docker-build clean
 
 install:
 	python -m pip install --upgrade pip
@@ -11,11 +11,17 @@ lint:
 monetary-float-guard:
 	python scripts/check_monetary_float_usage.py
 
+no-alias-gate:
+	python scripts/no_alias_contract_guard.py
+
 typecheck:
 	mypy --config-file mypy.ini
 
 openapi-gate:
 	python scripts/openapi_quality_gate.py
+
+api-vocabulary-gate:
+	python scripts/api_vocabulary_inventory.py --validate-only
 
 migration-smoke:
 	python scripts/migration_contract_check.py --mode no-schema
@@ -48,9 +54,9 @@ test-coverage:
 security-audit:
 	python -m pip_audit
 
-check: lint typecheck openapi-gate test
+check: lint no-alias-gate typecheck openapi-gate api-vocabulary-gate test
 
-ci: lint typecheck openapi-gate migration-smoke test-pyramid-gate test-integration test-e2e test-coverage security-audit
+ci: lint no-alias-gate typecheck openapi-gate api-vocabulary-gate migration-smoke test-pyramid-gate test-integration test-e2e test-coverage security-audit
 
 docker-build:
 	docker build -t backend-service:ci-test .

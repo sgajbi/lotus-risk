@@ -365,7 +365,7 @@ def calculate_risk(request: RiskCalculationRequest) -> RiskResponse:
                         metric_series, request.options.var.method, request.options.var.confidence
                     )
                     scaled_var = base_var * sqrt(request.options.var.horizon_days)
-                    details = None
+                    details: dict[str, str | float | int | bool | None] | None = None
                     if request.options.var.include_expected_shortfall:
                         base_es = _expected_shortfall(metric_series, base_var)
                         details = {
@@ -375,6 +375,6 @@ def calculate_risk(request: RiskCalculationRequest) -> RiskResponse:
                 except ValueError as exc:
                     metric_map["VAR"] = _metric_error(str(exc))
 
-        results[period_name] = RiskPeriodResult(startDate=start, endDate=end, metrics=metric_map)
+        results[period_name] = RiskPeriodResult(start_date=start, end_date=end, metrics=metric_map)
 
     return RiskResponse(scope=request.scope, results=results)

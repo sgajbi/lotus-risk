@@ -7,15 +7,15 @@ from typing import Any
 
 def _base_payload() -> dict[str, Any]:
     return {
-        "scope": {"asOfDate": "2025-03-31", "netOrGross": "NET"},
-        "portfolioOpenDate": "2024-01-01",
+        "scope": {"as_of_date": "2025-03-31", "net_or_gross": "NET"},
+        "portfolio_open_date": "2024-01-01",
         "periods": [{"type": "YTD", "name": "YTD"}],
         "metrics": ["VOLATILITY", "SHARPE", "VAR"],
         "options": {
             "frequency": "DAILY",
-            "riskFreeMode": "ANNUAL_RATE",
-            "riskFreeAnnualRate": 0.01,
-            "var": {"confidence": 0.95, "horizonDays": 1, "includeExpectedShortfall": True},
+            "risk_free_mode": "ANNUAL_RATE",
+            "risk_free_annual_rate": 0.01,
+            "var": {"confidence": 0.95, "horizon_days": 1, "include_expected_shortfall": True},
         },
         "returns": [
             {"date": "2025-01-02", "value": 1.0},
@@ -26,18 +26,26 @@ def _base_payload() -> dict[str, Any]:
     }
 
 
-def test_period_normalization_explicit_aliases() -> None:
+def test_period_explicit_canonical_fields() -> None:
     period = RiskRequestPeriod.model_validate(
-        {"type": "custom", "from": "2025-01-01", "to": "2025-01-31", "name": "Explicit"}
+        {
+            "type": "EXPLICIT",
+            "from_date": "2025-01-01",
+            "to_date": "2025-01-31",
+            "name": "Explicit",
+        }
     )
     assert period.type == "EXPLICIT"
     assert str(period.from_date) == "2025-01-01"
     assert str(period.to_date) == "2025-01-31"
 
 
-def test_period_normalization_one_year_alias() -> None:
-    period = RiskRequestPeriod.model_validate({"type": "1Y"})
-    assert period.type == "ONE_YEAR"
+def test_period_rejects_non_canonical_alias_type() -> None:
+    try:
+        RiskRequestPeriod.model_validate({"type": "1Y"})
+        assert False, "Expected validation error"
+    except Exception as exc:
+        assert "Input should be" in str(exc)
 
 
 def test_period_validation_rejects_missing_explicit_bounds() -> None:
@@ -79,7 +87,7 @@ def test_drawdown_metadata_fields_present() -> None:
 def test_benchmark_metrics_require_benchmark_series() -> None:
     payload = _base_payload()
     payload["metrics"] = ["BETA", "TRACKING_ERROR", "INFORMATION_RATIO"]
-    payload["benchmarkReturns"] = []
+    payload["benchmark_returns"] = []
 
     response = calculate_risk(RiskCalculationRequest.model_validate(payload))
     metrics = response.results["YTD"].metrics

@@ -31,4 +31,4 @@ def test_handle_http_exception_returns_platform_error_envelope() -> None:
     assert response.status_code == 400
     assert body["error"]["code"] == "INVALID_INPUT"
     assert body["error"]["message"] == "bad_input"
-    assert body["error"]["correlationId"] == "corr-123"
+    assert body["error"]["correlation_id"] == "corr-123"
