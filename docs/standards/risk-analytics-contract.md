@@ -50,8 +50,14 @@
 - `max_drawdown_date` (compatibility alias to trough date)
 
 ## Concentration Risk
-- Concentration endpoint computes HHI-based concentration metrics from current/projected positions.
-- Returns `hhiCurrent`, `hhiProposed`, and `hhiDelta` under `riskProxy`.
+- Concentration endpoint supports all execution modes:
+  - `stateless`: caller supplies positions
+  - `stateful`: caller supplies identifiers; lotus-risk resolves baseline from lotus-core
+  - `simulation`: caller supplies identifiers and simulation changes; lotus-risk orchestrates lotus-core session and snapshot APIs
+- Response includes:
+  - `risk_proxy`: `hhi_current`, `hhi_proposed`, `hhi_delta`
+  - `single_position_concentration`: top-position and top-N concentration metrics
+  - `valuation_context` and `metadata` for stateful/simulation executions
 
 ## Error Semantics
 - All documented risk endpoints expose standard OpenAPI error contracts for:

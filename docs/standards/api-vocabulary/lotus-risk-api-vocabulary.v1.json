@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-02-27T08:33:31.873539+00:00",
+  "generatedAt": "2026-02-27T11:02:49.102338+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.annualization_factor",
@@ -91,19 +91,19 @@
       "semanticId": "lotus.current_positions",
       "canonicalTerm": "current_positions",
       "preferredName": "current_positions",
-      "description": "Current portfolio positions used to compute baseline concentration.",
+      "description": "Legacy stateless baseline positions. Deprecated: use stateless_input.current_positions.",
       "example": [
         {
           "quantity": 1000.0,
           "security_id": "AAPL.US"
         }
       ],
-      "type": "array",
+      "type": "object",
       "locations": [
         "body"
       ],
       "observedTypes": [
-        "array"
+        "object"
       ]
     },
     {
@@ -266,6 +266,20 @@
       ]
     },
     {
+      "semanticId": "lotus.input_mode",
+      "canonicalTerm": "input_mode",
+      "preferredName": "input_mode",
+      "description": "Canonical input mode used by lotus-risk APIs.",
+      "example": "stateless",
+      "type": "ConcentrationInputMode",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "ConcentrationInputMode"
+      ]
+    },
+    {
       "semanticId": "lotus.input_modes",
       "canonicalTerm": "input_modes",
       "preferredName": "input_modes",
@@ -323,6 +337,26 @@
       ],
       "observedTypes": [
         "number"
+      ]
+    },
+    {
+      "semanticId": "lotus.metadata",
+      "canonicalTerm": "metadata",
+      "preferredName": "metadata",
+      "description": "Execution metadata for stateful/simulation concentration calculations.",
+      "example": {
+        "as_of_date": "2026-02-27",
+        "portfolio_id": "DEMO_DPM_EUR_001",
+        "session_expires_at": "2026-02-28T10:30:00Z",
+        "simulation_session_id": "SIM_0001",
+        "simulation_session_version": 3
+      },
+      "type": "object",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "object"
       ]
     },
     {
@@ -453,41 +487,13 @@
       "semanticId": "lotus.projected_positions",
       "canonicalTerm": "projected_positions",
       "preferredName": "projected_positions",
-      "description": "Projected positions used to compute post-change concentration.",
+      "description": "Legacy stateless projected positions. Deprecated: use stateless_input.projected_positions.",
       "example": [
         {
           "proposed_quantity": 1200.0,
           "security_id": "AAPL.US"
         }
       ],
-      "type": "array",
-      "locations": [
-        "body"
-      ],
-      "observedTypes": [
-        "array"
-      ]
-    },
-    {
-      "semanticId": "lotus.proposed_quantity",
-      "canonicalTerm": "proposed_quantity",
-      "preferredName": "proposed_quantity",
-      "description": "Projected quantity used for simulation or concentration what-if analysis.",
-      "example": 1200.0,
-      "type": "object",
-      "locations": [
-        "body"
-      ],
-      "observedTypes": [
-        "object"
-      ]
-    },
-    {
-      "semanticId": "lotus.quantity",
-      "canonicalTerm": "quantity",
-      "preferredName": "quantity",
-      "description": "Current quantity in the baseline portfolio state.",
-      "example": 1000.0,
       "type": "object",
       "locations": [
         "body"
@@ -642,20 +648,6 @@
       ]
     },
     {
-      "semanticId": "lotus.security_id",
-      "canonicalTerm": "security_id",
-      "preferredName": "security_id",
-      "description": "Canonical security identifier in the portfolio position set.",
-      "example": "AAPL.US",
-      "type": "string",
-      "locations": [
-        "body"
-      ],
-      "observedTypes": [
-        "string"
-      ]
-    },
-    {
       "semanticId": "lotus.service",
       "canonicalTerm": "service",
       "preferredName": "service",
@@ -670,6 +662,48 @@
       ]
     },
     {
+      "semanticId": "lotus.simulation_input",
+      "canonicalTerm": "simulation_input",
+      "preferredName": "simulation_input",
+      "description": "Simulation execution payload orchestrated through lotus-core simulation session APIs.",
+      "example": {
+        "as_of_date": "2026-02-27",
+        "expected_version": 3,
+        "portfolio_id": "DEMO_DPM_EUR_001",
+        "session_id": "SIM_0001",
+        "simulation_changes": [
+          {
+            "security_id": "SEC_AAPL_US",
+            "transaction_type": "BUY"
+          }
+        ],
+        "top_n": 10
+      },
+      "type": "object",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "object"
+      ]
+    },
+    {
+      "semanticId": "lotus.single_position_concentration",
+      "canonicalTerm": "single_position_concentration",
+      "preferredName": "single_position_concentration",
+      "description": "Canonical single position concentration used by lotus-risk APIs.",
+      "example": {
+        "key": "value"
+      },
+      "type": "SinglePositionConcentration",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "SinglePositionConcentration"
+      ]
+    },
+    {
       "semanticId": "lotus.source_service",
       "canonicalTerm": "source_service",
       "preferredName": "source_service",
@@ -681,6 +715,55 @@
       ],
       "observedTypes": [
         "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.stateful_input",
+      "canonicalTerm": "stateful_input",
+      "preferredName": "stateful_input",
+      "description": "Stateful execution payload with identifiers resolved through lotus-core.",
+      "example": {
+        "as_of_date": "2026-02-27",
+        "include_cash_positions": true,
+        "include_zero_quantity_positions": false,
+        "portfolio_id": "DEMO_DPM_EUR_001",
+        "reporting_currency": "USD",
+        "top_n": 10
+      },
+      "type": "object",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "object"
+      ]
+    },
+    {
+      "semanticId": "lotus.stateless_input",
+      "canonicalTerm": "stateless_input",
+      "preferredName": "stateless_input",
+      "description": "Stateless execution payload with fully supplied positions.",
+      "example": {
+        "current_positions": [
+          {
+            "quantity": 1000.0,
+            "security_id": "AAPL.US"
+          }
+        ],
+        "projected_positions": [
+          {
+            "proposed_quantity": 1200.0,
+            "security_id": "AAPL.US"
+          }
+        ],
+        "top_n": 10
+      },
+      "type": "object",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "object"
       ]
     },
     {
@@ -730,6 +813,104 @@
       ]
     },
     {
+      "semanticId": "lotus.top_n",
+      "canonicalTerm": "top_n",
+      "preferredName": "top_n",
+      "description": "Top-N parameter used for cumulative concentration calculations.",
+      "example": 10,
+      "type": "integer",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "integer"
+      ]
+    },
+    {
+      "semanticId": "lotus.top_n_cumulative_weight_current",
+      "canonicalTerm": "top_n_cumulative_weight_current",
+      "preferredName": "top_n_cumulative_weight_current",
+      "description": "Cumulative baseline weight of top-N positions.",
+      "example": 0.4123,
+      "type": "number",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "number"
+      ]
+    },
+    {
+      "semanticId": "lotus.top_n_cumulative_weight_delta",
+      "canonicalTerm": "top_n_cumulative_weight_delta",
+      "preferredName": "top_n_cumulative_weight_delta",
+      "description": "Difference between proposed and baseline top-N cumulative weights.",
+      "example": 0.0428,
+      "type": "number",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "number"
+      ]
+    },
+    {
+      "semanticId": "lotus.top_n_cumulative_weight_proposed",
+      "canonicalTerm": "top_n_cumulative_weight_proposed",
+      "preferredName": "top_n_cumulative_weight_proposed",
+      "description": "Cumulative proposed weight of top-N positions.",
+      "example": 0.4551,
+      "type": "number",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "number"
+      ]
+    },
+    {
+      "semanticId": "lotus.top_position_weight_current",
+      "canonicalTerm": "top_position_weight_current",
+      "preferredName": "top_position_weight_current",
+      "description": "Highest single-position weight in baseline state.",
+      "example": 0.1245,
+      "type": "number",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "number"
+      ]
+    },
+    {
+      "semanticId": "lotus.top_position_weight_delta",
+      "canonicalTerm": "top_position_weight_delta",
+      "preferredName": "top_position_weight_delta",
+      "description": "Difference between proposed and baseline top-position weights.",
+      "example": 0.0175,
+      "type": "number",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "number"
+      ]
+    },
+    {
+      "semanticId": "lotus.top_position_weight_proposed",
+      "canonicalTerm": "top_position_weight_proposed",
+      "preferredName": "top_position_weight_proposed",
+      "description": "Highest single-position weight in proposed state.",
+      "example": 0.142,
+      "type": "number",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "number"
+      ]
+    },
+    {
       "semanticId": "lotus.type",
       "canonicalTerm": "type",
       "preferredName": "type",
@@ -755,6 +936,25 @@
       ],
       "observedTypes": [
         "boolean"
+      ]
+    },
+    {
+      "semanticId": "lotus.valuation_context",
+      "canonicalTerm": "valuation_context",
+      "preferredName": "valuation_context",
+      "description": "Valuation context sourced from lotus-core for stateful/simulation mode.",
+      "example": {
+        "portfolio_currency": "EUR",
+        "position_basis": "market_value_base",
+        "reporting_currency": "USD",
+        "weight_basis": "total_market_value_base"
+      },
+      "type": "object",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "object"
       ]
     },
     {
@@ -1149,68 +1349,52 @@
       "request": {
         "fields": [
           {
+            "name": "input_mode",
+            "location": "body",
+            "required": false,
+            "type": "ConcentrationInputMode",
+            "semanticId": "lotus.input_mode",
+            "attributeRef": "#/attributeCatalog/lotus.input_mode"
+          },
+          {
+            "name": "stateless_input",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.stateless_input",
+            "attributeRef": "#/attributeCatalog/lotus.stateless_input"
+          },
+          {
+            "name": "stateful_input",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.stateful_input",
+            "attributeRef": "#/attributeCatalog/lotus.stateful_input"
+          },
+          {
+            "name": "simulation_input",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.simulation_input",
+            "attributeRef": "#/attributeCatalog/lotus.simulation_input"
+          },
+          {
             "name": "current_positions",
             "location": "body",
             "required": false,
-            "type": "array",
+            "type": "object",
             "semanticId": "lotus.current_positions",
             "attributeRef": "#/attributeCatalog/lotus.current_positions"
-          },
-          {
-            "name": "current_positions[].security_id",
-            "location": "body",
-            "required": true,
-            "type": "string",
-            "semanticId": "lotus.security_id",
-            "attributeRef": "#/attributeCatalog/lotus.security_id"
-          },
-          {
-            "name": "current_positions[].proposed_quantity",
-            "location": "body",
-            "required": false,
-            "type": "object",
-            "semanticId": "lotus.proposed_quantity",
-            "attributeRef": "#/attributeCatalog/lotus.proposed_quantity"
-          },
-          {
-            "name": "current_positions[].quantity",
-            "location": "body",
-            "required": false,
-            "type": "object",
-            "semanticId": "lotus.quantity",
-            "attributeRef": "#/attributeCatalog/lotus.quantity"
           },
           {
             "name": "projected_positions",
             "location": "body",
             "required": false,
-            "type": "array",
+            "type": "object",
             "semanticId": "lotus.projected_positions",
             "attributeRef": "#/attributeCatalog/lotus.projected_positions"
-          },
-          {
-            "name": "projected_positions[].security_id",
-            "location": "body",
-            "required": true,
-            "type": "string",
-            "semanticId": "lotus.security_id",
-            "attributeRef": "#/attributeCatalog/lotus.security_id"
-          },
-          {
-            "name": "projected_positions[].proposed_quantity",
-            "location": "body",
-            "required": false,
-            "type": "object",
-            "semanticId": "lotus.proposed_quantity",
-            "attributeRef": "#/attributeCatalog/lotus.proposed_quantity"
-          },
-          {
-            "name": "projected_positions[].quantity",
-            "location": "body",
-            "required": false,
-            "type": "object",
-            "semanticId": "lotus.quantity",
-            "attributeRef": "#/attributeCatalog/lotus.quantity"
           }
         ]
       },
@@ -1223,6 +1407,14 @@
             "type": "string",
             "semanticId": "lotus.source_service",
             "attributeRef": "#/attributeCatalog/lotus.source_service"
+          },
+          {
+            "name": "input_mode",
+            "location": "body",
+            "required": true,
+            "type": "ConcentrationInputMode",
+            "semanticId": "lotus.input_mode",
+            "attributeRef": "#/attributeCatalog/lotus.input_mode"
           },
           {
             "name": "risk_proxy",
@@ -1255,6 +1447,86 @@
             "type": "number",
             "semanticId": "lotus.hhi_delta",
             "attributeRef": "#/attributeCatalog/lotus.hhi_delta"
+          },
+          {
+            "name": "single_position_concentration",
+            "location": "body",
+            "required": true,
+            "type": "SinglePositionConcentration",
+            "semanticId": "lotus.single_position_concentration",
+            "attributeRef": "#/attributeCatalog/lotus.single_position_concentration"
+          },
+          {
+            "name": "single_position_concentration.top_position_weight_current",
+            "location": "body",
+            "required": true,
+            "type": "number",
+            "semanticId": "lotus.top_position_weight_current",
+            "attributeRef": "#/attributeCatalog/lotus.top_position_weight_current"
+          },
+          {
+            "name": "single_position_concentration.top_position_weight_proposed",
+            "location": "body",
+            "required": true,
+            "type": "number",
+            "semanticId": "lotus.top_position_weight_proposed",
+            "attributeRef": "#/attributeCatalog/lotus.top_position_weight_proposed"
+          },
+          {
+            "name": "single_position_concentration.top_position_weight_delta",
+            "location": "body",
+            "required": true,
+            "type": "number",
+            "semanticId": "lotus.top_position_weight_delta",
+            "attributeRef": "#/attributeCatalog/lotus.top_position_weight_delta"
+          },
+          {
+            "name": "single_position_concentration.top_n_cumulative_weight_current",
+            "location": "body",
+            "required": true,
+            "type": "number",
+            "semanticId": "lotus.top_n_cumulative_weight_current",
+            "attributeRef": "#/attributeCatalog/lotus.top_n_cumulative_weight_current"
+          },
+          {
+            "name": "single_position_concentration.top_n_cumulative_weight_proposed",
+            "location": "body",
+            "required": true,
+            "type": "number",
+            "semanticId": "lotus.top_n_cumulative_weight_proposed",
+            "attributeRef": "#/attributeCatalog/lotus.top_n_cumulative_weight_proposed"
+          },
+          {
+            "name": "single_position_concentration.top_n_cumulative_weight_delta",
+            "location": "body",
+            "required": true,
+            "type": "number",
+            "semanticId": "lotus.top_n_cumulative_weight_delta",
+            "attributeRef": "#/attributeCatalog/lotus.top_n_cumulative_weight_delta"
+          },
+          {
+            "name": "single_position_concentration.top_n",
+            "location": "body",
+            "required": true,
+            "type": "integer",
+            "semanticId": "lotus.top_n",
+            "attributeRef": "#/attributeCatalog/lotus.top_n"
+          },
+          {
+            "name": "valuation_context",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.valuation_context",
+            "attributeRef": "#/attributeCatalog/lotus.valuation_context"
+          },
+          {
+            "name": "metadata",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.metadata",
+            "attributeRef": "#/attributeCatalog/lotus.metadata"
           }
         ]
       }
