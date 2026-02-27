@@ -1,3 +1,5 @@
+from typing import Any
+
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from prometheus_fastapi_instrumentator import Instrumentator
@@ -12,13 +14,14 @@ from app.contracts.capabilities import (
     SupportedInputMode,
 )
 from app.contracts.concentration import ConcentrationRequest, ConcentrationResponse
+from app.contracts.error import ErrorResponse
 from app.contracts.ops import OpsChecks, OpsResponse
 from app.contracts.risk import RiskCalculationRequest, RiskResponse
-from app.error_model import error_response
 from app.enterprise_readiness import (
     build_enterprise_audit_middleware,
     validate_enterprise_runtime_config,
 )
+from app.error_response import error_response
 from app.middleware.correlation import CorrelationIdMiddleware
 from app.services.concentration_engine import calculate_concentration
 from app.services.risk_engine import calculate_risk
@@ -33,6 +36,75 @@ app.add_middleware(CorrelationIdMiddleware, service_name=SERVICE_NAME)
 validate_enterprise_runtime_config()
 app.middleware("http")(build_enterprise_audit_middleware())
 Instrumentator().instrument(app).expose(app)
+
+ERROR_RESPONSE_400: dict[str, Any] = {
+    "model": ErrorResponse,
+    "description": "Invalid input for business rule evaluation.",
+    "content": {
+        "application/json": {
+            "example": {
+                "error": {
+                    "code": "INVALID_INPUT",
+                    "message": "Unsupported period type: BAD",
+                    "correlationId": "corr-123",
+                }
+            }
+        }
+    },
+}
+ERROR_RESPONSE_403: dict[str, Any] = {
+    "model": ErrorResponse,
+    "description": "Authorization denied by enterprise policy.",
+    "content": {
+        "application/json": {
+            "example": {
+                "error": {
+                    "code": "AUTHORIZATION_DENIED",
+                    "message": "authorization_policy_denied",
+                    "correlationId": "corr-123",
+                    "details": {"reason": "missing_headers:x-actor-id"},
+                }
+            }
+        }
+    },
+}
+ERROR_RESPONSE_404: dict[str, Any] = {
+    "model": ErrorResponse,
+    "description": "Endpoint or resource not found.",
+    "content": {
+        "application/json": {
+            "example": {
+                "error": {
+                    "code": "RESOURCE_NOT_FOUND",
+                    "message": "Not Found",
+                    "correlationId": "corr-123",
+                }
+            }
+        }
+    },
+}
+ERROR_RESPONSE_422: dict[str, Any] = {
+    "model": ErrorResponse,
+    "description": "Request payload validation failed.",
+    "content": {
+        "application/json": {
+            "example": {
+                "error": {
+                    "code": "INVALID_REQUEST",
+                    "message": "Request validation failed",
+                    "correlationId": "corr-123",
+                    "details": [{"loc": ["body", "periods", 0, "toDate"], "msg": "Field required"}],
+                }
+            }
+        }
+    },
+}
+STANDARD_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
+    400: ERROR_RESPONSE_400,
+    403: ERROR_RESPONSE_403,
+    404: ERROR_RESPONSE_404,
+    422: ERROR_RESPONSE_422,
+}
 
 
 def _default_error_code(status_code: int) -> str:
@@ -148,6 +220,7 @@ async def integration_capabilities() -> IntegrationCapabilitiesResponse:
 @app.post(
     "/analytics/risk/concentration",
     response_model=ConcentrationResponse,
+    responses=STANDARD_ERROR_RESPONSES,
     summary="Calculate concentration risk analytics",
     description=(
         "Calculates concentration-risk HHI metrics from current and projected position "
@@ -161,6 +234,7 @@ async def analytics_risk_concentration(request: ConcentrationRequest) -> Concent
 @app.post(
     "/analytics/risk/calculate",
     response_model=RiskResponse,
+    responses=STANDARD_ERROR_RESPONSES,
     summary="Calculate portfolio risk metrics",
     description=(
         "Calculates risk metrics from provided return series using stateless input mode. "

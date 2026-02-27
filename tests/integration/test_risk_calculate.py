@@ -48,10 +48,16 @@ def test_risk_calculate_endpoint_rejects_invalid_explicit_period() -> None:
     client = TestClient(app)
     payload = _request_payload()
     payload["periods"] = [{"type": "EXPLICIT", "name": "Bad"}]
-    response = client.post("/analytics/risk/calculate", json=payload)
+    response = client.post(
+        "/analytics/risk/calculate",
+        json=payload,
+        headers={"X-Correlation-Id": "corr-422"},
+    )
     assert response.status_code == 422
+    assert response.headers["X-Correlation-Id"] == "corr-422"
     body = response.json()["error"]
     assert body["code"] == "INVALID_REQUEST"
+    assert body["correlationId"] == "corr-422"
     assert body["message"] == "Request validation failed"
 
 

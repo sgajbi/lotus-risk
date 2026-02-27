@@ -146,9 +146,12 @@ def test_endpoint_error_path_returns_400() -> None:
                 "metrics": ["VOLATILITY"],
                 "returns": [{"date": "2025-01-01", "value": 0.1}],
             },
+            headers={"X-Correlation-Id": "corr-400"},
         )
         assert response.status_code == 400
-        assert response.json()["error"]["code"] == "INVALID_INPUT"
+        body = response.json()["error"]
+        assert body["code"] == "INVALID_INPUT"
+        assert body["correlationId"] == "corr-400"
     finally:
         main_module_any.calculate_risk = original
 

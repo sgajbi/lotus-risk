@@ -61,4 +61,3 @@ See per-endpoint detail:
 - `docs/domain-apis/integration-capabilities.md`
 - `docs/domain-apis/risk-calculate.md`
 - `docs/domain-apis/risk-concentration.md`
-- `docs/domain-apis/legacy-endpoints.md`

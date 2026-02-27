@@ -129,22 +129,32 @@ def _enterprise_test_app() -> FastAPI:
 def test_enterprise_middleware_payload_limit(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES", "1")
     client = TestClient(_enterprise_test_app())
-    response = client.post("/writes", content="too-large")
+    response = client.post(
+        "/writes",
+        content="too-large",
+        headers={"X-Correlation-Id": "corr-413"},
+    )
     assert response.status_code == 413
     body = response.json()["error"]
     assert body["code"] == "PAYLOAD_TOO_LARGE"
     assert body["message"] == "payload_too_large"
+    assert body["correlationId"] == "corr-413"
 
 
 def test_enterprise_middleware_denies_unauthorized_writes(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("ENTERPRISE_ENFORCE_AUTHZ", "true")
     client = TestClient(_enterprise_test_app())
-    response = client.post("/writes", content="{}")
+    response = client.post(
+        "/writes",
+        content="{}",
+        headers={"X-Correlation-Id": "corr-403"},
+    )
     assert response.status_code == 403
     body = response.json()["error"]
     assert body["code"] == "AUTHORIZATION_DENIED"
     assert body["message"] == "authorization_policy_denied"
     assert body["details"]["reason"].startswith("missing_headers:")
+    assert body["correlationId"] == "corr-403"
 
 
 def test_enterprise_middleware_sets_policy_header(monkeypatch: pytest.MonkeyPatch) -> None:
