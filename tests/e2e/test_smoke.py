@@ -48,3 +48,24 @@ def test_e2e_risk_calculate_invalid_period_contract() -> None:
     response = client.post("/analytics/risk/calculate", json=payload)
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "INVALID_REQUEST"
+
+
+def test_e2e_concentration_stateless_legacy_payload() -> None:
+    client = TestClient(app)
+    response = client.post(
+        "/analytics/risk/concentration",
+        json={
+            "current_positions": [
+                {"security_id": "A", "quantity": 10},
+                {"security_id": "B", "quantity": 10},
+            ],
+            "projected_positions": [
+                {"security_id": "A", "proposed_quantity": 15},
+                {"security_id": "B", "proposed_quantity": 5},
+            ],
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["input_mode"] == "stateless"
+    assert body["risk_proxy"]["hhi_proposed"] == 6250.0
