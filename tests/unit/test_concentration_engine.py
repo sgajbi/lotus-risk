@@ -1,6 +1,7 @@
 from app.contracts.concentration import ConcentrationRequest
 from app.services.concentration_engine import _compute_hhi, calculate_concentration
 import pytest
+from pydantic import ValidationError
 
 
 def test_compute_hhi_handles_empty_and_zero_total() -> None:
@@ -41,17 +42,14 @@ async def test_calculate_concentration_stateless_uses_projected_values_when_prov
 
 
 @pytest.mark.asyncio
-async def test_calculate_concentration_legacy_payload_is_backward_compatible() -> None:
-    request = ConcentrationRequest.model_validate(
-        {
-            "current_positions": [{"security_id": "A", "quantity": 10}],
-            "projected_positions": [{"security_id": "A", "proposed_quantity": 10}],
-        }
-    )
-    response = await calculate_concentration(request)
-    assert response.input_mode == "stateless"
-    assert response.risk_proxy.hhi_current == 10000.0
-    assert response.single_position_concentration.top_position_weight_current == 1.0
+async def test_calculate_concentration_rejects_legacy_payload() -> None:
+    with pytest.raises(ValidationError):
+        ConcentrationRequest.model_validate(
+            {
+                "current_positions": [{"security_id": "A", "quantity": 10}],
+                "projected_positions": [{"security_id": "A", "proposed_quantity": 10}],
+            }
+        )
 
 
 @pytest.mark.asyncio

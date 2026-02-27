@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-02-27T11:02:49.102338+00:00",
+  "generatedAt": "2026-02-27T11:33:14.676950+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.annualization_factor",
@@ -85,25 +85,6 @@
       ],
       "observedTypes": [
         "number"
-      ]
-    },
-    {
-      "semanticId": "lotus.current_positions",
-      "canonicalTerm": "current_positions",
-      "preferredName": "current_positions",
-      "description": "Legacy stateless baseline positions. Deprecated: use stateless_input.current_positions.",
-      "example": [
-        {
-          "quantity": 1000.0,
-          "security_id": "AAPL.US"
-        }
-      ],
-      "type": "object",
-      "locations": [
-        "body"
-      ],
-      "observedTypes": [
-        "object"
       ]
     },
     {
@@ -481,25 +462,6 @@
       ],
       "observedTypes": [
         "string"
-      ]
-    },
-    {
-      "semanticId": "lotus.projected_positions",
-      "canonicalTerm": "projected_positions",
-      "preferredName": "projected_positions",
-      "description": "Legacy stateless projected positions. Deprecated: use stateless_input.projected_positions.",
-      "example": [
-        {
-          "proposed_quantity": 1200.0,
-          "security_id": "AAPL.US"
-        }
-      ],
-      "type": "object",
-      "locations": [
-        "body"
-      ],
-      "observedTypes": [
-        "object"
       ]
     },
     {
@@ -1379,22 +1341,6 @@
             "type": "object",
             "semanticId": "lotus.simulation_input",
             "attributeRef": "#/attributeCatalog/lotus.simulation_input"
-          },
-          {
-            "name": "current_positions",
-            "location": "body",
-            "required": false,
-            "type": "object",
-            "semanticId": "lotus.current_positions",
-            "attributeRef": "#/attributeCatalog/lotus.current_positions"
-          },
-          {
-            "name": "projected_positions",
-            "location": "body",
-            "required": false,
-            "type": "object",
-            "semanticId": "lotus.projected_positions",
-            "attributeRef": "#/attributeCatalog/lotus.projected_positions"
           }
         ]
       },

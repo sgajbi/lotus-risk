@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from enum import Enum
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class ConcentrationInputMode(str, Enum):
@@ -236,34 +236,11 @@ class ConcentrationRequest(BaseModel):
             }
         },
     )
-    current_positions: list[CurrentPosition] | None = Field(
-        default=None,
-        description="Legacy stateless baseline positions. Deprecated: use stateless_input.current_positions.",
-        json_schema_extra={"example": [{"security_id": "AAPL.US", "quantity": 1000.0}]},
-    )
-    projected_positions: list[ProjectedPosition] | None = Field(
-        default=None,
-        description=(
-            "Legacy stateless projected positions. Deprecated: use stateless_input.projected_positions."
-        ),
-        json_schema_extra={"example": [{"security_id": "AAPL.US", "proposed_quantity": 1200.0}]},
-    )
+
+    model_config = ConfigDict(extra="forbid")
 
     @model_validator(mode="after")
     def normalize_and_validate(self) -> "ConcentrationRequest":
-        has_legacy_payload = (
-            self.current_positions is not None or self.projected_positions is not None
-        )
-        if has_legacy_payload and self.stateless_input is None:
-            if self.input_mode != ConcentrationInputMode.STATELESS:
-                raise ValueError(
-                    "legacy current_positions/projected_positions are allowed only when input_mode=stateless"
-                )
-            self.stateless_input = StatelessConcentrationInput(
-                current_positions=self.current_positions or [],
-                projected_positions=self.projected_positions or [],
-            )
-
         if self.input_mode == ConcentrationInputMode.STATELESS and self.stateless_input is None:
             self.stateless_input = StatelessConcentrationInput()
 
