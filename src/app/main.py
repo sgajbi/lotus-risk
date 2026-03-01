@@ -15,6 +15,11 @@ from app.contracts.capabilities import (
     IntegrationCapabilitiesResponse,
     SupportedInputMode,
 )
+from app.contracts.attribution import (
+    AttributionInputMode,
+    HistoricalAttributionRequest,
+    HistoricalAttributionResponse,
+)
 from app.contracts.concentration import ConcentrationRequest, ConcentrationResponse
 from app.contracts.drawdown import (
     DrawdownAnalyticsRequest,
@@ -38,6 +43,7 @@ from app.integrations.lotus_core_client import LotusCoreClient
 from app.integrations.lotus_performance_client import LotusPerformanceClient
 from app.middleware.correlation import CorrelationIdMiddleware
 from app.services.concentration_engine import calculate_concentration
+from app.services.attribution_engine import calculate_historical_attribution
 from app.services.drawdown_engine import calculate_drawdown
 from app.services.drawdown_mode_adapter import calculate_drawdown_stateful
 from app.services.rolling_engine import calculate_rolling_metrics
@@ -352,6 +358,34 @@ async def integration_capabilities() -> IntegrationCapabilitiesResponse:
 )
 async def metrics() -> Response:
     return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
+@app.post(
+    "/analytics/risk/historical-attribution",
+    response_model=HistoricalAttributionResponse,
+    responses=STANDARD_ERROR_RESPONSES,
+    summary="Calculate historical risk attribution analytics",
+    tags=["risk-analytics"],
+    description=(
+        "Calculates historical risk and active-risk attribution decompositions with contributor-level "
+        "component, marginal, and percent contributions plus reconciliation diagnostics."
+    ),
+)
+async def analytics_risk_historical_attribution(
+    request_payload: HistoricalAttributionRequest,
+) -> HistoricalAttributionResponse:
+    if request_payload.input_mode == AttributionInputMode.STATELESS:
+        stateless_input = request_payload.stateless_input
+        assert stateless_input is not None
+        return calculate_historical_attribution(
+            stateless_input,
+            input_mode=AttributionInputMode.STATELESS,
+        )
+
+    raise ValueError(
+        f"input_mode={request_payload.input_mode.value} is not implemented for /analytics/risk/historical-attribution yet. "
+        "Use input_mode=stateless in this slice."
+    )
 
 
 @app.post(

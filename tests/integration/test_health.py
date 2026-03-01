@@ -34,6 +34,7 @@ def test_integration_capabilities_contract() -> None:
         "risk.analytics.concentration",
         "risk.analytics.drawdown",
         "risk.analytics.rolling_metrics",
+        "risk.analytics.historical_attribution",
         "risk.analytics.metrics",
     }
     workflow_keys = {workflow["workflow_key"] for workflow in body["workflows"]}
@@ -42,6 +43,7 @@ def test_integration_capabilities_contract() -> None:
         "concentration_risk",
         "drawdown_analytics",
         "rolling_risk_analytics",
+        "historical_risk_attribution",
     }
 
 
@@ -108,6 +110,7 @@ def test_openapi_hides_legacy_proxy_and_exposes_concentration() -> None:
     client = TestClient(app)
     spec = client.get("/openapi.json").json()
     assert "/analytics/risk/concentration" in spec["paths"]
+    assert "/analytics/risk/historical-attribution" in spec["paths"]
     assert "/analytics/risk/drawdown" in spec["paths"]
     assert "/analytics/risk/rolling-metrics" in spec["paths"]
     assert "/ops" in spec["paths"]
@@ -137,12 +140,16 @@ def test_openapi_declares_standard_error_models_for_risk_endpoints() -> None:
     spec = client.get("/openapi.json").json()
     calculate_responses = spec["paths"]["/analytics/risk/calculate"]["post"]["responses"]
     concentration_responses = spec["paths"]["/analytics/risk/concentration"]["post"]["responses"]
+    attribution_responses = spec["paths"]["/analytics/risk/historical-attribution"]["post"][
+        "responses"
+    ]
     drawdown_responses = spec["paths"]["/analytics/risk/drawdown"]["post"]["responses"]
     rolling_responses = spec["paths"]["/analytics/risk/rolling-metrics"]["post"]["responses"]
 
     for responses in (
         calculate_responses,
         concentration_responses,
+        attribution_responses,
         drawdown_responses,
         rolling_responses,
     ):
