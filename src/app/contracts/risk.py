@@ -179,6 +179,17 @@ class ReturnPoint(BaseModel):
     )
 
 
+def _validate_unique_period_names(periods: list["RiskRequestPeriod"]) -> None:
+    resolved_names = [period.name or period.type for period in periods]
+    duplicates = sorted({name for name in resolved_names if resolved_names.count(name) > 1})
+    if duplicates:
+        duplicate_names = ", ".join(duplicates)
+        raise ValueError(
+            f"Duplicate period names resolved in request: {duplicate_names}. "
+            "Each period name (or type fallback) must be unique."
+        )
+
+
 class StatelessRiskInput(BaseModel):
     scope: RiskRequestScope = Field(
         description="Scope and policy context for risk calculations.",
@@ -233,14 +244,7 @@ class StatelessRiskInput(BaseModel):
 
     @model_validator(mode="after")
     def validate_unique_period_names(self) -> "StatelessRiskInput":
-        resolved_names = [period.name or period.type for period in self.periods]
-        duplicates = sorted({name for name in resolved_names if resolved_names.count(name) > 1})
-        if duplicates:
-            duplicate_names = ", ".join(duplicates)
-            raise ValueError(
-                f"Duplicate period names resolved in request: {duplicate_names}. "
-                "Each period name (or type fallback) must be unique."
-            )
+        _validate_unique_period_names(self.periods)
         return self
 
 
@@ -263,6 +267,43 @@ class StatefulRiskInput(BaseModel):
         description="Optional client identifier used for upstream data access policy controls.",
         json_schema_extra={"example": "CIF_1000123"},
     )
+    net_or_gross: Literal["NET", "GROSS"] = Field(
+        default="NET",
+        description="Whether sourced returns are evaluated on net or gross basis.",
+        json_schema_extra={"example": "NET"},
+    )
+    periods: list[RiskRequestPeriod] = Field(
+        description="List of periods to evaluate for stateful execution.",
+        json_schema_extra={
+            "example": [{"type": "EXPLICIT", "from_date": "2025-01-01", "to_date": "2025-03-31"}]
+        },
+    )
+    metrics: list[RiskMetric] = Field(
+        description="Requested risk metrics for stateful execution.",
+        json_schema_extra={"example": ["VOLATILITY", "SHARPE", "VAR"]},
+    )
+    options: RiskOptions = Field(
+        default_factory=_default_risk_options,
+        description="Risk calculation options for stateful execution.",
+        json_schema_extra={
+            "example": {
+                "frequency": "DAILY",
+                "risk_free_mode": "ANNUAL_RATE",
+                "risk_free_annual_rate": 0.01,
+                "var": {
+                    "method": "HISTORICAL",
+                    "confidence": 0.95,
+                    "horizon_days": 1,
+                    "include_expected_shortfall": True,
+                },
+            }
+        },
+    )
+
+    @model_validator(mode="after")
+    def validate_unique_period_names(self) -> "StatefulRiskInput":
+        _validate_unique_period_names(self.periods)
+        return self
 
 
 class SimulationRiskInput(StatefulRiskInput):

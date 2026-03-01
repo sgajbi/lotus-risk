@@ -43,6 +43,11 @@
 - `value: null`
 - `details.error: "Benchmark returns required for benchmark-dependent metric"`
 
+## Risk Calculate Mode Support
+- `stateless`: caller supplies full return series.
+- `stateful`: caller supplies identifiers + risk metric specification; lotus-risk sources canonical portfolio returns from lotus-performance (`/integration/returns/series`, `source.input_mode=core_api_ref`) and computes with the same engine.
+- `simulation`: reserved and not implemented for risk/calculate.
+
 ## Drawdown Details
 - `max_drawdown`
 - `peak_date`

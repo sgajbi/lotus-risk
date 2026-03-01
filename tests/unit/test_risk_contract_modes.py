@@ -48,3 +48,20 @@ def test_risk_contract_accepts_mode_specific_payloads() -> None:
     request = RiskAnalyticsRequest.model_validate(_stateless_payload())
     assert request.input_mode == RiskInputMode.STATELESS
     assert request.stateless_input is not None
+
+
+def test_risk_contract_accepts_stateful_payload_with_metric_spec() -> None:
+    payload = {
+        "input_mode": "stateful",
+        "stateful_input": {
+            "portfolio_id": "DEMO_DPM_EUR_001",
+            "as_of_date": "2026-02-27",
+            "net_or_gross": "NET",
+            "periods": [{"type": "YTD", "name": "YTD"}],
+            "metrics": ["VOLATILITY", "VAR"],
+        },
+    }
+    request = RiskAnalyticsRequest.model_validate(payload)
+    assert request.input_mode == RiskInputMode.STATEFUL
+    assert request.stateful_input is not None
+    assert request.stateful_input.options.frequency == "DAILY"
