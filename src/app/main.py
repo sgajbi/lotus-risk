@@ -16,6 +16,11 @@ from app.contracts.capabilities import (
     SupportedInputMode,
 )
 from app.contracts.concentration import ConcentrationRequest, ConcentrationResponse
+from app.contracts.drawdown import (
+    DrawdownAnalyticsRequest,
+    DrawdownInputMode,
+    DrawdownResponse,
+)
 from app.contracts.error import ErrorResponse
 from app.contracts.ops import OpsChecks, OpsResponse
 from app.contracts.risk import RiskAnalyticsRequest, RiskInputMode, RiskResponse
@@ -28,6 +33,8 @@ from app.integrations.lotus_core_client import LotusCoreClient
 from app.integrations.lotus_performance_client import LotusPerformanceClient
 from app.middleware.correlation import CorrelationIdMiddleware
 from app.services.concentration_engine import calculate_concentration
+from app.services.drawdown_engine import calculate_drawdown
+from app.services.drawdown_mode_adapter import calculate_drawdown_stateful
 from app.services.risk_engine import calculate_risk
 from app.services.risk_mode_adapter import calculate_risk_stateful
 
@@ -363,6 +370,49 @@ async def analytics_risk_concentration(
         core_client=core_client,
         correlation_id=request.headers.get("X-Correlation-Id"),
         actor_id=request.headers.get("X-Actor-Id"),
+    )
+
+
+@app.post(
+    "/analytics/risk/drawdown",
+    response_model=DrawdownResponse,
+    responses=STANDARD_ERROR_RESPONSES,
+    summary="Calculate realized drawdown analytics",
+    tags=["risk-analytics"],
+    description=(
+        "Calculates historical drawdown analytics including max drawdown, episode diagnostics, "
+        "time-under-water, ulcer index, and conditional drawdown metrics."
+    ),
+)
+async def analytics_risk_drawdown(
+    request_payload: DrawdownAnalyticsRequest,
+    request: Request,
+) -> DrawdownResponse:
+    if request_payload.input_mode == DrawdownInputMode.STATELESS:
+        stateless_input = request_payload.stateless_input
+        assert stateless_input is not None
+        return calculate_drawdown(
+            stateless_input,
+            input_mode=DrawdownInputMode.STATELESS,
+            analysis_options=request_payload.analysis_options,
+        )
+
+    if request_payload.input_mode == DrawdownInputMode.STATEFUL:
+        stateful_input = request_payload.stateful_input
+        assert stateful_input is not None
+        performance_client = getattr(app.state, "lotus_performance_client", None)
+        if performance_client is None:
+            performance_client = LotusPerformanceClient()
+        return await calculate_drawdown_stateful(
+            stateful_input,
+            analysis_options=request_payload.analysis_options,
+            performance_client=performance_client,
+            correlation_id=request.headers.get("X-Correlation-Id"),
+        )
+
+    raise ValueError(
+        f"input_mode={request_payload.input_mode.value} is not implemented for /analytics/risk/drawdown yet. "
+        "Use input_mode=stateless or input_mode=stateful in this slice."
     )
 
 

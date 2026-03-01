@@ -7,11 +7,13 @@ from pydantic import BaseModel, Field
 CAPABILITY_FEATURE_KEYS: tuple[str, ...] = (
     "risk.analytics.risk_analytics",
     "risk.analytics.concentration",
+    "risk.analytics.drawdown",
     "risk.analytics.metrics",
 )
 CAPABILITY_WORKFLOW_KEYS: tuple[str, ...] = (
     "risk_snapshot",
     "concentration_risk",
+    "drawdown_analytics",
 )
 SupportedInputMode = Literal["stateless", "stateful", "simulation"]
 
