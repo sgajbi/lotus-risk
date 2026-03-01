@@ -209,6 +209,18 @@ class RollingStatefulInput(BaseModel):
         },
     )
 
+    @model_validator(mode="after")
+    def validate_semantics(self) -> "RollingStatefulInput":
+        resolved_names = [period.name or period.type for period in self.periods]
+        duplicates = sorted({name for name in resolved_names if resolved_names.count(name) > 1})
+        if duplicates:
+            raise ValueError(
+                "Duplicate period names resolved in request: "
+                + ", ".join(duplicates)
+                + ". Each period name (or type fallback) must be unique."
+            )
+        return self
+
 
 class RollingAnalyticsRequest(BaseModel):
     input_mode: RollingInputMode = Field(

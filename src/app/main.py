@@ -41,6 +41,7 @@ from app.services.concentration_engine import calculate_concentration
 from app.services.drawdown_engine import calculate_drawdown
 from app.services.drawdown_mode_adapter import calculate_drawdown_stateful
 from app.services.rolling_engine import calculate_rolling_metrics
+from app.services.rolling_mode_adapter import calculate_rolling_metrics_stateful
 from app.services.risk_engine import calculate_risk
 from app.services.risk_mode_adapter import calculate_risk_stateful
 
@@ -435,6 +436,7 @@ async def analytics_risk_drawdown(
 )
 async def analytics_risk_rolling_metrics(
     request_payload: RollingAnalyticsRequest,
+    request: Request,
 ) -> RollingResponse:
     if request_payload.input_mode == RollingInputMode.STATELESS:
         stateless_input = request_payload.stateless_input
@@ -444,9 +446,21 @@ async def analytics_risk_rolling_metrics(
             input_mode=RollingInputMode.STATELESS,
         )
 
+    if request_payload.input_mode == RollingInputMode.STATEFUL:
+        stateful_input = request_payload.stateful_input
+        assert stateful_input is not None
+        performance_client = getattr(app.state, "lotus_performance_client", None)
+        if performance_client is None:
+            performance_client = LotusPerformanceClient()
+        return await calculate_rolling_metrics_stateful(
+            stateful_input,
+            performance_client=performance_client,
+            correlation_id=request.headers.get("X-Correlation-Id"),
+        )
+
     raise ValueError(
         f"input_mode={request_payload.input_mode.value} is not implemented for /analytics/risk/rolling-metrics yet. "
-        "Use input_mode=stateless in this slice."
+        "Use input_mode=stateless or input_mode=stateful in this slice."
     )
 
 

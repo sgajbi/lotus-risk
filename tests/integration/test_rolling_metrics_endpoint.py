@@ -1,6 +1,76 @@
+from typing import Any, cast
+
 from fastapi.testclient import TestClient
 
 from app.main import app
+
+
+class _RecordingLotusPerformanceClient:
+    def __init__(self) -> None:
+        self.calls: list[dict[str, object]] = []
+
+    async def get_returns_series(
+        self,
+        *,
+        request_payload: dict[str, object],
+        correlation_id: str | None,
+    ) -> dict[str, object]:
+        self.calls.append(
+            {
+                "request_payload": request_payload,
+                "correlation_id": correlation_id,
+            }
+        )
+        return {
+            "series": {
+                "portfolio_returns": [
+                    {"date": "2026-01-02", "return_value": "0.0100"},
+                    {"date": "2026-01-03", "return_value": "-0.0200"},
+                    {"date": "2026-01-04", "return_value": "0.0050"},
+                ],
+                "benchmark_returns": [
+                    {"date": "2026-01-02", "return_value": "0.0080"},
+                    {"date": "2026-01-03", "return_value": "-0.0150"},
+                    {"date": "2026-01-04", "return_value": "0.0040"},
+                ],
+                "risk_free_returns": [
+                    {"date": "2026-01-02", "return_value": "0.0001"},
+                    {"date": "2026-01-03", "return_value": "0.0001"},
+                    {"date": "2026-01-04", "return_value": "0.0001"},
+                ],
+            }
+        }
+
+
+class _AutoWiredLotusPerformanceClient:
+    calls: list[dict[str, object]] = []
+
+    async def get_returns_series(
+        self,
+        *,
+        request_payload: dict[str, object],
+        correlation_id: str | None,
+    ) -> dict[str, object]:
+        _AutoWiredLotusPerformanceClient.calls.append(
+            {
+                "request_payload": request_payload,
+                "correlation_id": correlation_id,
+            }
+        )
+        return {
+            "series": {
+                "portfolio_returns": [
+                    {"date": "2026-01-02", "return_value": "0.0100"},
+                    {"date": "2026-01-03", "return_value": "-0.0200"},
+                    {"date": "2026-01-04", "return_value": "0.0050"},
+                ],
+                "benchmark_returns": [
+                    {"date": "2026-01-02", "return_value": "0.0080"},
+                    {"date": "2026-01-03", "return_value": "-0.0150"},
+                    {"date": "2026-01-04", "return_value": "0.0040"},
+                ],
+            }
+        }
 
 
 def _stateless_payload() -> dict[str, object]:
@@ -57,21 +127,71 @@ def test_rolling_metrics_endpoint_stateless_contract() -> None:
     assert "ROLLING_VOLATILITY" in window["metric_summaries"]
 
 
-def test_rolling_metrics_endpoint_rejects_stateful_mode_for_now() -> None:
+def test_rolling_metrics_endpoint_stateful_uses_lotus_performance() -> None:
+    recorder = _RecordingLotusPerformanceClient()
+    app.state.lotus_performance_client = recorder
     client = TestClient(app)
     response = client.post(
         "/analytics/risk/rolling-metrics",
+        headers={"X-Correlation-Id": "corr-rolling-stateful"},
         json={
             "input_mode": "stateful",
             "stateful_input": {
                 "portfolio_id": "DEMO_DPM_EUR_001",
-                "as_of_date": "2026-01-08",
-                "periods": [{"type": "YTD"}],
+                "as_of_date": "2026-01-04",
+                "periods": [{"type": "YTD", "name": "YTD"}],
+                "rolling_options": {
+                    "window_lengths": [2],
+                    "metrics": [
+                        "ROLLING_VOLATILITY",
+                        "ROLLING_SHARPE",
+                        "ROLLING_BETA",
+                    ],
+                },
             },
         },
     )
-    assert response.status_code == 400
-    assert "not implemented" in response.json()["error"]["message"]
+    assert response.status_code == 200
+    assert len(recorder.calls) == 1
+    assert recorder.calls[0]["correlation_id"] == "corr-rolling-stateful"
+    payload = recorder.calls[0]["request_payload"]
+    assert isinstance(payload, dict)
+    assert payload["source"] == {"input_mode": "core_api_ref"}
+    assert payload["series_selection"]["include_benchmark"] is True
+    assert payload["series_selection"]["include_risk_free"] is True
+    assert response.json()["input_mode"] == "stateful"
+
+
+def test_rolling_metrics_endpoint_stateful_autowires_performance_client() -> None:
+    import app.main as main_module
+
+    main_module_any = cast(Any, main_module)
+    original = main_module_any.LotusPerformanceClient
+    try:
+        main_module_any.LotusPerformanceClient = _AutoWiredLotusPerformanceClient
+        app.state.lotus_performance_client = None
+        _AutoWiredLotusPerformanceClient.calls = []
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/rolling-metrics",
+            headers={"X-Correlation-Id": "corr-rolling-auto"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-04",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "rolling_options": {
+                        "window_lengths": [2],
+                        "metrics": ["ROLLING_VOLATILITY", "ROLLING_BETA"],
+                    },
+                },
+            },
+        )
+        assert response.status_code == 200
+        assert _AutoWiredLotusPerformanceClient.calls[0]["correlation_id"] == "corr-rolling-auto"
+    finally:
+        main_module_any.LotusPerformanceClient = original
 
 
 def test_rolling_metrics_endpoint_rejects_simulation_mode_for_now() -> None:
