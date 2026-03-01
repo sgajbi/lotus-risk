@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+from typing import Any, cast
 
 from app.main import app
 
@@ -176,9 +177,10 @@ def test_risk_calculate_stateful_mode_uses_lotus_performance_returns_series() ->
 def test_risk_calculate_stateful_mode_autowires_lotus_performance_client() -> None:
     import app.main as main_module
 
-    original_client = main_module.LotusPerformanceClient
+    main_module_any = cast(Any, main_module)
+    original_client = main_module_any.LotusPerformanceClient
     try:
-        main_module.LotusPerformanceClient = _AutoWiredLotusPerformanceClient
+        main_module_any.LotusPerformanceClient = _AutoWiredLotusPerformanceClient
         app.state.lotus_performance_client = None
         _AutoWiredLotusPerformanceClient.calls = []
         client = TestClient(app)
@@ -198,7 +200,7 @@ def test_risk_calculate_stateful_mode_autowires_lotus_performance_client() -> No
         assert response.status_code == 200
         assert _AutoWiredLotusPerformanceClient.calls[0]["correlation_id"] == "corr-autowire"
     finally:
-        main_module.LotusPerformanceClient = original_client
+        main_module_any.LotusPerformanceClient = original_client
 
 
 def test_risk_calculate_simulation_mode_returns_not_implemented_error() -> None:

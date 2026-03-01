@@ -1,6 +1,7 @@
 import asyncio
 import json
 from types import SimpleNamespace
+from typing import Any, cast
 
 from fastapi import HTTPException
 import pytest
@@ -40,4 +41,4 @@ def test_analytics_risk_calculate_unsupported_mode_guard_branch() -> None:
     request_payload = SimpleNamespace(input_mode=SimpleNamespace(value="unsupported_mode"))
     request = Request({"type": "http", "method": "POST", "path": "/", "headers": []})
     with pytest.raises(ValueError, match="Unsupported input_mode=unsupported_mode"):
-        asyncio.run(analytics_risk_calculate(request_payload, request))
+        asyncio.run(analytics_risk_calculate(cast(Any, request_payload), request))
