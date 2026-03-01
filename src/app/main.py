@@ -23,6 +23,11 @@ from app.contracts.drawdown import (
 )
 from app.contracts.error import ErrorResponse
 from app.contracts.ops import OpsChecks, OpsResponse
+from app.contracts.rolling import (
+    RollingAnalyticsRequest,
+    RollingInputMode,
+    RollingResponse,
+)
 from app.contracts.risk import RiskAnalyticsRequest, RiskInputMode, RiskResponse
 from app.enterprise_readiness import (
     build_enterprise_audit_middleware,
@@ -35,6 +40,7 @@ from app.middleware.correlation import CorrelationIdMiddleware
 from app.services.concentration_engine import calculate_concentration
 from app.services.drawdown_engine import calculate_drawdown
 from app.services.drawdown_mode_adapter import calculate_drawdown_stateful
+from app.services.rolling_engine import calculate_rolling_metrics
 from app.services.risk_engine import calculate_risk
 from app.services.risk_mode_adapter import calculate_risk_stateful
 
@@ -413,6 +419,34 @@ async def analytics_risk_drawdown(
     raise ValueError(
         f"input_mode={request_payload.input_mode.value} is not implemented for /analytics/risk/drawdown yet. "
         "Use input_mode=stateless or input_mode=stateful in this slice."
+    )
+
+
+@app.post(
+    "/analytics/risk/rolling-metrics",
+    response_model=RollingResponse,
+    responses=STANDARD_ERROR_RESPONSES,
+    summary="Calculate rolling risk metrics",
+    tags=["risk-analytics"],
+    description=(
+        "Calculates rolling-window historical risk diagnostics including volatility, Sharpe, beta, "
+        "tracking error, information ratio, and rolling max drawdown."
+    ),
+)
+async def analytics_risk_rolling_metrics(
+    request_payload: RollingAnalyticsRequest,
+) -> RollingResponse:
+    if request_payload.input_mode == RollingInputMode.STATELESS:
+        stateless_input = request_payload.stateless_input
+        assert stateless_input is not None
+        return calculate_rolling_metrics(
+            stateless_input,
+            input_mode=RollingInputMode.STATELESS,
+        )
+
+    raise ValueError(
+        f"input_mode={request_payload.input_mode.value} is not implemented for /analytics/risk/rolling-metrics yet. "
+        "Use input_mode=stateless in this slice."
     )
 
 

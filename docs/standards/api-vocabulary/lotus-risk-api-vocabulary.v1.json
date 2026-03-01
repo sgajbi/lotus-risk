@@ -8,8 +8,22 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-03-01T06:11:21.687295+00:00",
+  "generatedAt": "2026-03-01T10:51:29.535214+00:00",
   "attributeCatalog": [
+    {
+      "semanticId": "lotus.alignment_policy",
+      "canonicalTerm": "alignment_policy",
+      "preferredName": "alignment_policy",
+      "description": "Series alignment policy used for multi-series rolling metrics.",
+      "example": "INNER_JOIN",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
     {
       "semanticId": "lotus.analysis_options",
       "canonicalTerm": "analysis_options",
@@ -24,6 +38,20 @@
       ],
       "observedTypes": [
         "DrawdownAnalysisOptions"
+      ]
+    },
+    {
+      "semanticId": "lotus.annualization_basis",
+      "canonicalTerm": "annualization_basis",
+      "preferredName": "annualization_basis",
+      "description": "Annualization basis used for annualized rolling metrics.",
+      "example": 252,
+      "type": "integer",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "integer"
       ]
     },
     {
@@ -284,6 +312,7 @@
       "observedTypes": [
         "ConcentrationInputMode",
         "DrawdownInputMode",
+        "RollingInputMode",
         "RiskInputMode"
       ]
     },
@@ -381,7 +410,8 @@
       ],
       "observedTypes": [
         "object",
-        "DrawdownMetadata"
+        "DrawdownMetadata",
+        "RollingMetadata"
       ]
     },
     {
@@ -1716,6 +1746,149 @@
             "type": "string",
             "semanticId": "lotus.methodology_version",
             "attributeRef": "#/attributeCatalog/lotus.methodology_version"
+          }
+        ]
+      }
+    },
+    {
+      "domain": "risk_analytics",
+      "method": "POST",
+      "path": "/analytics/risk/rolling-metrics",
+      "operationId": "analytics_risk_rolling_metrics_analytics_risk_rolling_metrics_post",
+      "summary": "Calculate rolling risk metrics",
+      "request": {
+        "fields": [
+          {
+            "name": "input_mode",
+            "location": "body",
+            "required": false,
+            "type": "RollingInputMode",
+            "semanticId": "lotus.input_mode",
+            "attributeRef": "#/attributeCatalog/lotus.input_mode"
+          },
+          {
+            "name": "stateless_input",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.stateless_input",
+            "attributeRef": "#/attributeCatalog/lotus.stateless_input"
+          },
+          {
+            "name": "stateful_input",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.stateful_input",
+            "attributeRef": "#/attributeCatalog/lotus.stateful_input"
+          },
+          {
+            "name": "simulation_input",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.simulation_input",
+            "attributeRef": "#/attributeCatalog/lotus.simulation_input"
+          }
+        ]
+      },
+      "response": {
+        "fields": [
+          {
+            "name": "source_service",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.source_service",
+            "attributeRef": "#/attributeCatalog/lotus.source_service"
+          },
+          {
+            "name": "input_mode",
+            "location": "body",
+            "required": true,
+            "type": "RollingInputMode",
+            "semanticId": "lotus.input_mode",
+            "attributeRef": "#/attributeCatalog/lotus.input_mode"
+          },
+          {
+            "name": "scope",
+            "location": "body",
+            "required": true,
+            "type": "RiskRequestScope",
+            "semanticId": "lotus.scope",
+            "attributeRef": "#/attributeCatalog/lotus.scope"
+          },
+          {
+            "name": "scope.as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.as_of_date"
+          },
+          {
+            "name": "scope.reporting_currency",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.reporting_currency",
+            "attributeRef": "#/attributeCatalog/lotus.reporting_currency"
+          },
+          {
+            "name": "scope.net_or_gross",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.net_or_gross",
+            "attributeRef": "#/attributeCatalog/lotus.net_or_gross"
+          },
+          {
+            "name": "results",
+            "location": "body",
+            "required": true,
+            "type": "object",
+            "semanticId": "lotus.results",
+            "attributeRef": "#/attributeCatalog/lotus.results"
+          },
+          {
+            "name": "metadata",
+            "location": "body",
+            "required": true,
+            "type": "RollingMetadata",
+            "semanticId": "lotus.metadata",
+            "attributeRef": "#/attributeCatalog/lotus.metadata"
+          },
+          {
+            "name": "metadata.contract_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.contract_version",
+            "attributeRef": "#/attributeCatalog/lotus.contract_version"
+          },
+          {
+            "name": "metadata.methodology_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.methodology_version",
+            "attributeRef": "#/attributeCatalog/lotus.methodology_version"
+          },
+          {
+            "name": "metadata.annualization_basis",
+            "location": "body",
+            "required": true,
+            "type": "integer",
+            "semanticId": "lotus.annualization_basis",
+            "attributeRef": "#/attributeCatalog/lotus.annualization_basis"
+          },
+          {
+            "name": "metadata.alignment_policy",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.alignment_policy",
+            "attributeRef": "#/attributeCatalog/lotus.alignment_policy"
           }
         ]
       }

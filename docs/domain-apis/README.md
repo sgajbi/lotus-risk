@@ -36,7 +36,7 @@ This package documents the current `lotus-risk` API surface and evaluates it aga
 - `POST /analytics/risk/calculate`
 - `POST /analytics/risk/drawdown`
 - `POST /analytics/risk/concentration`
-- `POST /analytics/risk/rolling-metrics` (planned by RFC-0005)
+- `POST /analytics/risk/rolling-metrics`
 
 ## Current Dependency Summary
 

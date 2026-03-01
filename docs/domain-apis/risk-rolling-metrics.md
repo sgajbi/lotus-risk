@@ -1,8 +1,8 @@
-# Rolling Risk Metrics API (Design Assessment)
+# Rolling Risk Metrics API Assessment
 
 ## Endpoint
 
-- `POST /analytics/risk/rolling-metrics` (proposed)
+- `POST /analytics/risk/rolling-metrics`
 
 ## Purpose
 
@@ -12,12 +12,12 @@ Provide windowed historical risk diagnostics for PB/WM portfolios with instituti
 
 ### Stateless (v1)
 
-- Status: planned in Slice A
+- Status: implemented
 - Caller provides portfolio and optional reference series directly.
 
 ### Stateful (v1)
 
-- Status: planned in Slice B
+- Status: deferred to Slice B
 - Caller provides identifiers and options; lotus-risk sources canonical series from lotus-performance.
 
 ### Simulation
@@ -78,7 +78,7 @@ Provide windowed historical risk diagnostics for PB/WM portfolios with instituti
 
 ## Gaps / Decisions Required
 
-1. Confirm default window set (proposal: 21/63/126/252).
-2. Confirm annualization basis flexibility (252 only vs 252/260).
-3. Confirm strict vs partial window policy defaults.
-4. Confirm percentile summary set in v1.
+1. Implement stateful integration with lotus-performance reference-series contracts.
+2. Implement simulation mode after historical simulation data contract finalization.
+3. Evaluate whether annualization basis should support both 252 and 260 in v2.
+4. Add lineage metadata expansion in stateful slice.
