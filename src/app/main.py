@@ -25,9 +25,11 @@ from app.enterprise_readiness import (
 )
 from app.error_response import error_response
 from app.integrations.lotus_core_client import LotusCoreClient
+from app.integrations.lotus_performance_client import LotusPerformanceClient
 from app.middleware.correlation import CorrelationIdMiddleware
 from app.services.concentration_engine import calculate_concentration
 from app.services.risk_engine import calculate_risk
+from app.services.risk_mode_adapter import calculate_risk_stateful
 
 SERVICE_NAME = "lotus-risk"
 SERVICE_VERSION = "0.1.0"
@@ -371,17 +373,38 @@ async def analytics_risk_concentration(
     summary="Calculate portfolio risk metrics",
     tags=["risk-analytics"],
     description=(
-        "Calculates risk metrics from provided return series using stateless input mode. "
+        "Calculates risk metrics from provided return series using stateless or stateful input modes. "
         "Supports EXPLICIT/YEAR/MTD/QTD/YTD/ONE_YEAR/THREE_YEAR/FIVE_YEAR/SI periods, "
         "all VaR methods (HISTORICAL/GAUSSIAN/CORNISH_FISHER), and benchmark-aware metrics."
     ),
 )
-async def analytics_risk_calculate(request: RiskAnalyticsRequest) -> RiskResponse:
-    if request.input_mode != RiskInputMode.STATELESS:
-        raise ValueError(
-            f"input_mode={request.input_mode.value} is not implemented for /analytics/risk/calculate yet. "
-            "Use input_mode=stateless in this slice."
+async def analytics_risk_calculate(
+    request_payload: RiskAnalyticsRequest,
+    request: Request,
+) -> RiskResponse:
+    if request_payload.input_mode == RiskInputMode.STATELESS:
+        stateless_input = request_payload.stateless_input
+        assert stateless_input is not None
+        return calculate_risk(stateless_input)
+
+    if request_payload.input_mode == RiskInputMode.STATEFUL:
+        stateful_input = request_payload.stateful_input
+        assert stateful_input is not None
+        performance_client = getattr(app.state, "lotus_performance_client", None)
+        if performance_client is None:
+            performance_client = LotusPerformanceClient()
+        return await calculate_risk_stateful(
+            stateful_input,
+            performance_client=performance_client,
+            correlation_id=request.headers.get("X-Correlation-Id"),
         )
-    stateless_input = request.stateless_input
-    assert stateless_input is not None
-    return calculate_risk(stateless_input)
+
+    if request_payload.input_mode == RiskInputMode.SIMULATION:
+        raise ValueError(
+            f"input_mode={request_payload.input_mode.value} is not implemented for /analytics/risk/calculate yet. "
+            "Use input_mode=stateless or input_mode=stateful in this slice."
+        )
+
+    raise ValueError(
+        f"Unsupported input_mode={request_payload.input_mode.value} for /analytics/risk/calculate"
+    )

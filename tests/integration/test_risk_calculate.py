@@ -3,6 +3,35 @@ from fastapi.testclient import TestClient
 from app.main import app
 
 
+class _RecordingLotusPerformanceClient:
+    def __init__(self) -> None:
+        self.calls: list[dict[str, object]] = []
+
+    async def get_returns_series(
+        self,
+        *,
+        request_payload: dict[str, object],
+        correlation_id: str | None,
+    ) -> dict[str, object]:
+        self.calls.append(
+            {
+                "request_payload": request_payload,
+                "correlation_id": correlation_id,
+            }
+        )
+        return {
+            "series": {
+                "portfolio_returns": [
+                    {"date": "2025-01-02", "return_value": "0.0100"},
+                    {"date": "2025-01-03", "return_value": "0.0200"},
+                    {"date": "2025-01-06", "return_value": "-0.0100"},
+                    {"date": "2025-01-07", "return_value": "0.0050"},
+                ],
+                "benchmark_returns": None,
+            }
+        }
+
+
 def _request_payload() -> dict[str, object]:
     return {
         "input_mode": "stateless",
@@ -83,17 +112,40 @@ def test_risk_calculate_benchmark_requirement_behavior() -> None:
     assert "Benchmark returns required" in metrics["BETA"]["details"]["error"]
 
 
-def test_risk_calculate_rejects_non_stateless_modes_in_slice_one() -> None:
+def test_risk_calculate_stateful_mode_uses_lotus_performance_returns_series() -> None:
+    performance_client = _RecordingLotusPerformanceClient()
+    app.state.lotus_performance_client = performance_client
     client = TestClient(app)
     response = client.post(
         "/analytics/risk/calculate",
+        headers={"X-Correlation-Id": "corr-risk-stateful"},
         json={
             "input_mode": "stateful",
-            "stateful_input": {"portfolio_id": "DEMO_DPM_EUR_001", "as_of_date": "2026-02-27"},
+            "stateful_input": {
+                "portfolio_id": "DEMO_DPM_EUR_001",
+                "as_of_date": "2025-01-07",
+                "net_or_gross": "NET",
+                "periods": [{"type": "YTD", "name": "YTD"}],
+                "metrics": ["VOLATILITY", "BETA"],
+            },
         },
     )
-    assert response.status_code == 400
-    assert "not implemented" in response.json()["error"]["message"]
+    assert response.status_code == 200
+    payload = performance_client.calls[0]["request_payload"]
+    assert isinstance(payload, dict)
+    assert payload["portfolio_id"] == "DEMO_DPM_EUR_001"
+    assert payload["source"] == {"input_mode": "core_api_ref"}
+    assert payload["window"] == {"mode": "RELATIVE", "period": "SI"}
+    assert payload["series_selection"] == {
+        "include_portfolio": True,
+        "include_benchmark": False,
+        "include_risk_free": False,
+    }
+    assert performance_client.calls[0]["correlation_id"] == "corr-risk-stateful"
+    metrics = response.json()["results"]["YTD"]["metrics"]
+    assert metrics["VOLATILITY"]["value"] is not None
+    assert metrics["BETA"]["value"] is None
+    assert "Benchmark returns required" in metrics["BETA"]["details"]["error"]
 
 
 def test_metrics_endpoint_exposes_risk_metric_observability() -> None:
