@@ -19,6 +19,22 @@ def _risk_payload() -> dict[str, object]:
     }
 
 
+def _drawdown_payload() -> dict[str, object]:
+    return {
+        "input_mode": "stateless",
+        "stateless_input": {
+            "scope": {"as_of_date": "2026-02-28", "net_or_gross": "NET"},
+            "periods": [{"type": "YTD", "name": "YTD"}],
+            "returns": [
+                {"date": "2026-01-02", "value": -1.2},
+                {"date": "2026-01-03", "value": 0.8},
+                {"date": "2026-01-04", "value": -0.4},
+                {"date": "2026-01-05", "value": 1.1},
+            ],
+        },
+    }
+
+
 def test_e2e_smoke() -> None:
     client = TestClient(app)
     response = client.get("/health")
@@ -53,6 +69,16 @@ def test_e2e_risk_calculate_invalid_period_contract() -> None:
     response = client.post("/analytics/risk/calculate", json=payload)
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "INVALID_REQUEST"
+
+
+def test_e2e_drawdown_stateless_happy_path() -> None:
+    client = TestClient(app)
+    response = client.post("/analytics/risk/drawdown", json=_drawdown_payload())
+    assert response.status_code == 200
+    body = response.json()
+    assert body["input_mode"] == "stateless"
+    assert "YTD" in body["results"]
+    assert body["results"]["YTD"]["summary"]["max_drawdown"] is not None
 
 
 def test_e2e_concentration_stateless_payload() -> None:
