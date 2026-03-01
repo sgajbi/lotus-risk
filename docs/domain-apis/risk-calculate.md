@@ -20,7 +20,7 @@
 ### Stateful
 
 - Status: implemented in lotus-risk.
-- Target behavior:
+- Current behavior:
   - caller supplies identifiers plus risk metric specification (`periods`, `metrics`, `options`).
   - lotus-risk sources canonical portfolio return series from `lotus-performance` using `source.input_mode=core_api_ref`.
   - lotus-risk computes with the same risk engine used by stateless mode.
@@ -80,9 +80,9 @@
 ## Alignment Assessment
 
 - Bounded context ownership: aligned (`lotus-risk` is correct owner per RFC-0065).
-- API mode support: partial (stateless only).
-- Cross-service integration posture: downstream-ready; upstream sourcing not yet integrated in-service.
-- Naming/vocabulary: largely aligned in current stateless contract.
+- API mode support: partial (`stateless` + `stateful` implemented; `simulation` pending).
+- Cross-service integration posture: integrated with `lotus-performance` for stateful return sourcing.
+- Naming/vocabulary: aligned with canonical `client_id` naming and RFC-0067 guardrails.
 
 ## Gaps and Decisions Required
 
