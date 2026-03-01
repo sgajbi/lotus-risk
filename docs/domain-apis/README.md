@@ -33,9 +33,10 @@ This package documents the current `lotus-risk` API surface and evaluates it aga
 - Integration:
   - `GET /integration/capabilities`
 - Domain analytics:
-  - `POST /analytics/risk/calculate`
-  - `POST /analytics/risk/drawdown`
-  - `POST /analytics/risk/concentration`
+- `POST /analytics/risk/calculate`
+- `POST /analytics/risk/drawdown`
+- `POST /analytics/risk/concentration`
+- `POST /analytics/risk/rolling-metrics` (planned by RFC-0005)
 
 ## Current Dependency Summary
 
@@ -63,4 +64,5 @@ See per-endpoint detail:
 - `docs/domain-apis/risk-calculate.md`
 - `docs/domain-apis/risk-drawdown.md`
 - `docs/domain-apis/risk-concentration.md`
+- `docs/domain-apis/risk-rolling-metrics.md`
 - `docs/domain-apis/lotus-core-requirements-for-issuer-concentration.md`
