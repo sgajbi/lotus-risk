@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import datetime as dt
+from enum import Enum
 from typing import Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 RiskMetric = Literal[
     "VOLATILITY",
@@ -15,6 +16,12 @@ RiskMetric = Literal[
     "INFORMATION_RATIO",
     "VAR",
 ]
+
+
+class RiskInputMode(str, Enum):
+    STATELESS = "stateless"
+    STATEFUL = "stateful"
+    SIMULATION = "simulation"
 
 
 class RiskRequestScope(BaseModel):
@@ -172,7 +179,7 @@ class ReturnPoint(BaseModel):
     )
 
 
-class RiskCalculationRequest(BaseModel):
+class StatelessRiskInput(BaseModel):
     scope: RiskRequestScope = Field(
         description="Scope and policy context for risk calculations.",
         json_schema_extra={
@@ -223,6 +230,135 @@ class RiskCalculationRequest(BaseModel):
         description="Benchmark return observations for benchmark-dependent metrics.",
         json_schema_extra={"example": [{"date": "2025-01-02", "value": 0.75}]},
     )
+
+    @model_validator(mode="after")
+    def validate_unique_period_names(self) -> "StatelessRiskInput":
+        resolved_names = [period.name or period.type for period in self.periods]
+        duplicates = sorted({name for name in resolved_names if resolved_names.count(name) > 1})
+        if duplicates:
+            duplicate_names = ", ".join(duplicates)
+            raise ValueError(
+                f"Duplicate period names resolved in request: {duplicate_names}. "
+                "Each period name (or type fallback) must be unique."
+            )
+        return self
+
+
+class StatefulRiskInput(BaseModel):
+    portfolio_id: str = Field(
+        description="Portfolio identifier resolved through lotus-core/lotus-performance integrations.",
+        json_schema_extra={"example": "DEMO_DPM_EUR_001"},
+    )
+    as_of_date: dt.date = Field(
+        description="Business date used to resolve time series inputs from upstream services.",
+        json_schema_extra={"example": "2026-02-27"},
+    )
+    reporting_currency: str | None = Field(
+        default=None,
+        description="Optional reporting currency override. Defaults to portfolio currency policy.",
+        json_schema_extra={"example": "USD"},
+    )
+    cif_id: str | None = Field(
+        default=None,
+        description="Optional client identifier used for upstream data access policy controls.",
+        json_schema_extra={"example": "CIF_1000123"},
+    )
+
+
+class SimulationRiskInput(StatefulRiskInput):
+    session_id: str | None = Field(
+        default=None,
+        description="Optional existing simulation session identifier for iterative workflows.",
+        json_schema_extra={"example": "SIM_0001"},
+    )
+    start_new_session: bool = Field(
+        default=False,
+        description="When true, forces lotus-risk to create a new simulation session.",
+        json_schema_extra={"example": False},
+    )
+    session_ttl_hours: int | None = Field(
+        default=None,
+        ge=1,
+        le=168,
+        description="Optional simulation session TTL in hours when creating a new session.",
+        json_schema_extra={"example": 24},
+    )
+    expected_version: int | None = Field(
+        default=None,
+        ge=1,
+        description="Optional optimistic-lock version when reading simulation state.",
+        json_schema_extra={"example": 3},
+    )
+    simulation_changes: list[dict[str, object]] = Field(
+        default_factory=list,
+        description="Simulation delta set. Not implemented for risk/calculate in this slice.",
+        json_schema_extra={"example": [{"security_id": "SEC_A", "transaction_type": "BUY"}]},
+    )
+
+
+class RiskAnalyticsRequest(BaseModel):
+    input_mode: RiskInputMode = Field(
+        default=RiskInputMode.STATELESS,
+        description="Execution mode for risk analytics: stateless, stateful, or simulation.",
+        json_schema_extra={"example": "stateless"},
+    )
+    stateless_input: StatelessRiskInput | None = Field(
+        default=None,
+        description="Stateless execution payload with fully supplied return series.",
+        json_schema_extra={
+            "example": {
+                "scope": {"as_of_date": "2025-03-31", "reporting_currency": "USD", "net_or_gross": "NET"},
+                "periods": [{"type": "YTD", "name": "YTD"}],
+                "metrics": ["VOLATILITY", "VAR"],
+                "portfolio_open_date": "2024-01-01",
+                "returns": [{"date": "2025-01-02", "value": 0.8}],
+            }
+        },
+    )
+    stateful_input: StatefulRiskInput | None = Field(
+        default=None,
+        description="Stateful execution payload sourced from upstream integrations.",
+        json_schema_extra={
+            "example": {
+                "portfolio_id": "DEMO_DPM_EUR_001",
+                "as_of_date": "2026-02-27",
+                "reporting_currency": "USD",
+                "cif_id": "CIF_1000123",
+            }
+        },
+    )
+    simulation_input: SimulationRiskInput | None = Field(
+        default=None,
+        description="Simulation execution payload. Reserved for a future slice.",
+        json_schema_extra={
+            "example": {
+                "portfolio_id": "DEMO_DPM_EUR_001",
+                "as_of_date": "2026-02-27",
+                "session_id": "SIM_0001",
+                "simulation_changes": [{"security_id": "SEC_A", "transaction_type": "BUY"}],
+            }
+        },
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def normalize_and_validate(self) -> "RiskAnalyticsRequest":
+        if self.input_mode == RiskInputMode.STATELESS and self.stateless_input is None:
+            raise ValueError("stateless_input is required when input_mode=stateless")
+
+        if self.input_mode == RiskInputMode.STATEFUL and self.stateful_input is None:
+            raise ValueError("stateful_input is required when input_mode=stateful")
+
+        if self.input_mode == RiskInputMode.SIMULATION and self.simulation_input is None:
+            raise ValueError("simulation_input is required when input_mode=simulation")
+
+        return self
+
+
+# Alias retained to keep risk engine internals and tests stateless while request envelope evolves.
+RiskStatelessCalculationInput = StatelessRiskInput
+RiskCalculationRequest = StatelessRiskInput
 
 
 class RiskValue(BaseModel):

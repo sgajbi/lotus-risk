@@ -10,9 +10,9 @@ import pandas as pd
 from prometheus_client import Counter, Histogram
 
 from app.contracts.risk import (
-    RiskCalculationRequest,
     RiskPeriodResult,
     RiskResponse,
+    RiskStatelessCalculationInput,
     RiskValue,
 )
 
@@ -203,7 +203,7 @@ def _record_metric_request(metrics: Sequence[str]) -> None:
         RISK_METRIC_REQUESTED_TOTAL.labels(metric_name=metric).inc()
 
 
-def calculate_risk(request: RiskCalculationRequest) -> RiskResponse:
+def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
     _record_metric_request(request.metrics)
 
     returns_df = pd.DataFrame([{"date": p.date, "value": p.value} for p in request.returns])

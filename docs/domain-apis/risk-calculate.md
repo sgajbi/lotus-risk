@@ -34,22 +34,23 @@
 
 ## Stateless Inputs (Current)
 
-- `scope`
-  - `asOfDate: date`
-  - `reportingCurrency?: str`
-  - `netOrGross: "NET" | "GROSS"`
-- `periods[]`
+- `input_mode: "stateless"` (required in this slice)
+- `stateless_input.scope`
+  - `as_of_date: date`
+  - `reporting_currency?: str`
+  - `net_or_gross: "NET" | "GROSS"`
+- `stateless_input.periods[]`
   - `type: EXPLICIT|YEAR|MTD|QTD|YTD|ONE_YEAR|THREE_YEAR|FIVE_YEAR|SI`
   - `name?: str`
-  - `fromDate?/toDate?` (required for `EXPLICIT`)
+  - `from_date?/to_date?` (required for `EXPLICIT`)
   - `year?` (required for `YEAR`)
-- `metrics[]`
+- `stateless_input.metrics[]`
   - `VOLATILITY|DRAWDOWN|SHARPE|SORTINO|BETA|TRACKING_ERROR|INFORMATION_RATIO|VAR`
-- `options`
+- `stateless_input.options`
   - frequency/log-return/risk-free/MAR/annualization/benchmark/VaR method config
-- `portfolioOpenDate: date`
-- `returns[]: [{date, value}]`
-- `benchmarkReturns[]: [{date, value}]` (required for benchmark-dependent metrics)
+- `stateless_input.portfolio_open_date: date`
+- `stateless_input.returns[]: [{date, value}]`
+- `stateless_input.benchmark_returns[]: [{date, value}]` (required for benchmark-dependent metrics)
 
 ## Stateful/Simulation Input Source Mapping (Target)
 
