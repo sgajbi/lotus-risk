@@ -77,7 +77,7 @@ Provide windowed historical risk diagnostics for PB/WM portfolios with instituti
 
 ## Gaps / Decisions Required
 
-1. Implement stateful integration with lotus-performance reference-series contracts.
+1. Expand stateful lineage metadata in response contract (`source_window`, `data_quality`, `upstream_refs`).
 2. Implement simulation mode after historical simulation data contract finalization.
 3. Evaluate whether annualization basis should support both 252 and 260 in v2.
-4. Add lineage metadata expansion in stateful slice.
+4. Confirm final benchmark/risk-free selector standardization in upstream contracts.
