@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
@@ -21,13 +21,12 @@ class _MalformedEnrichmentCoreClient:
     async def get_instrument_enrichment(
         self, *, security_ids: list[str], correlation_id: str | None
     ) -> dict[str, Any]:
-        return {
-            "records": [
-                "invalid-row",
-                {"security_id": None, "issuer_id": "X"},
-                {"security_id": "A", "issuer_id": "ISSUER_A"},
-            ]
-        }
+        malformed_records: list[Any] = [
+            "invalid-row",
+            {"security_id": None, "issuer_id": "X"},
+            {"security_id": "A", "issuer_id": "ISSUER_A"},
+        ]
+        return {"records": malformed_records}
 
     async def create_simulation_session(
         self,
@@ -97,12 +96,13 @@ def test_helper_caller_issuer_map_ultimate_parent_branch() -> None:
 
 
 def test_extract_values_with_issuer_handles_fallback_and_non_dict_rows() -> None:
+    rows: list[Any] = [
+        {"security_id": "SEC_A", "market_value_base": None, "quantity": "10"},
+        "bad-row",
+        {"security_id": "SEC_B", "market_value_base": None, "quantity": None},
+    ]
     values, issuer_values, covered, total = _extract_values_with_issuer_from_snapshot(
-        [
-            {"security_id": "SEC_A", "market_value_base": None, "quantity": "10"},
-            "bad-row",
-            {"security_id": "SEC_B", "market_value_base": None, "quantity": None},
-        ],
+        cast(list[dict[str, Any]] | None, rows),
         {"SEC_A": "ISSUER_A"},
     )
     assert values == [10.0]
