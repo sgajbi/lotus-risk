@@ -73,7 +73,7 @@
 ## Rolling Metrics Endpoint
 - `POST /analytics/risk/rolling-metrics` supports:
   - `stateless`: caller supplies return/reference series and rolling options
-  - `stateful`: caller supplies identifiers and options; lotus-risk sources canonical portfolio/benchmark series from lotus-performance
+  - `stateful`: caller supplies identifiers and options; lotus-risk sources canonical portfolio/benchmark/risk-free series from lotus-performance as required by requested metrics
   - `simulation`: reserved/not yet implemented
 - Output includes:
   - per-window summaries for rolling volatility, Sharpe, beta, tracking error, information ratio, and rolling max drawdown
