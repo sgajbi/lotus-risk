@@ -5,6 +5,7 @@
 - `POST /analytics/risk/calculate`
 - `POST /analytics/risk/drawdown`
 - `POST /analytics/risk/rolling-metrics`
+- `POST /analytics/risk/historical-attribution`
 - `POST /analytics/risk/concentration`
 - `GET /integration/capabilities`
 
@@ -16,12 +17,14 @@
   - `risk.analytics.risk_analytics`
   - `risk.analytics.drawdown`
   - `risk.analytics.rolling_metrics`
+  - `risk.analytics.historical_attribution`
   - `risk.analytics.concentration`
   - `risk.analytics.metrics`
 - `workflows`:
   - `risk_snapshot`
   - `drawdown_analytics`
   - `rolling_risk_analytics`
+  - `historical_risk_attribution`
   - `concentration_risk`
 
 ## Supported Period Types
@@ -79,6 +82,16 @@
   - per-window summaries for rolling volatility, Sharpe, beta, tracking error, information ratio, and rolling max drawdown
   - optional rolling time-series points
   - deterministic quality flags for non-computable windows/alignments
+
+## Historical Attribution Endpoint
+- `POST /analytics/risk/historical-attribution` supports:
+  - `stateless`: caller supplies portfolio/benchmark return series plus exposure history by grouping dimension
+  - `stateful`: reserved/not yet implemented in Slice A
+  - `simulation`: reserved/not yet implemented
+- Output includes:
+  - period-level attribution decomposition sets for total risk and active risk
+  - contributor-level `weight_average`, `marginal_contribution`, `component_contribution`, `percent_contribution`
+  - reconciliation controls: `total_value`, `reconciled_sum`, `residual`, and `quality_flags`
 
 ## Concentration Risk
 - Concentration endpoint supports all execution modes:

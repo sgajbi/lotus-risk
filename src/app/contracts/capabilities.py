@@ -9,6 +9,7 @@ CAPABILITY_FEATURE_KEYS: tuple[str, ...] = (
     "risk.analytics.concentration",
     "risk.analytics.drawdown",
     "risk.analytics.rolling_metrics",
+    "risk.analytics.historical_attribution",
     "risk.analytics.metrics",
 )
 CAPABILITY_WORKFLOW_KEYS: tuple[str, ...] = (
@@ -16,6 +17,7 @@ CAPABILITY_WORKFLOW_KEYS: tuple[str, ...] = (
     "concentration_risk",
     "drawdown_analytics",
     "rolling_risk_analytics",
+    "historical_risk_attribution",
 )
 SupportedInputMode = Literal["stateless", "stateful", "simulation"]
 

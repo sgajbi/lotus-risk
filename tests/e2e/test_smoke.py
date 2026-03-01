@@ -67,6 +67,88 @@ def _rolling_payload() -> dict[str, object]:
     }
 
 
+def _historical_attribution_payload() -> dict[str, object]:
+    return {
+        "input_mode": "stateless",
+        "stateless_input": {
+            "scope": {"as_of_date": "2026-01-06", "net_or_gross": "NET"},
+            "periods": [{"type": "YTD", "name": "YTD"}],
+            "returns": [
+                {"date": "2026-01-02", "value": 1.0},
+                {"date": "2026-01-03", "value": -0.4},
+                {"date": "2026-01-04", "value": 0.3},
+                {"date": "2026-01-05", "value": 0.6},
+                {"date": "2026-01-06", "value": -0.2},
+            ],
+            "benchmark_returns": [
+                {"date": "2026-01-02", "value": 0.8},
+                {"date": "2026-01-03", "value": -0.3},
+                {"date": "2026-01-04", "value": 0.2},
+                {"date": "2026-01-05", "value": 0.4},
+                {"date": "2026-01-06", "value": -0.1},
+            ],
+            "exposure_history": [
+                {
+                    "date": "2026-01-02",
+                    "grouping_dimension": "SECTOR",
+                    "group_key": "SECTOR_TECH",
+                    "weight": 0.55,
+                },
+                {
+                    "date": "2026-01-02",
+                    "grouping_dimension": "SECTOR",
+                    "group_key": "SECTOR_HEALTH",
+                    "weight": 0.45,
+                },
+                {
+                    "date": "2026-01-03",
+                    "grouping_dimension": "SECTOR",
+                    "group_key": "SECTOR_TECH",
+                    "weight": 0.50,
+                },
+                {
+                    "date": "2026-01-03",
+                    "grouping_dimension": "SECTOR",
+                    "group_key": "SECTOR_HEALTH",
+                    "weight": 0.50,
+                },
+            ],
+            "benchmark_exposure_history": [
+                {
+                    "date": "2026-01-02",
+                    "grouping_dimension": "SECTOR",
+                    "group_key": "SECTOR_TECH",
+                    "weight": 0.48,
+                },
+                {
+                    "date": "2026-01-02",
+                    "grouping_dimension": "SECTOR",
+                    "group_key": "SECTOR_HEALTH",
+                    "weight": 0.52,
+                },
+                {
+                    "date": "2026-01-03",
+                    "grouping_dimension": "SECTOR",
+                    "group_key": "SECTOR_TECH",
+                    "weight": 0.47,
+                },
+                {
+                    "date": "2026-01-03",
+                    "grouping_dimension": "SECTOR",
+                    "group_key": "SECTOR_HEALTH",
+                    "weight": 0.53,
+                },
+            ],
+            "attribution_options": {
+                "attribution_types": ["TOTAL_RISK", "ACTIVE_RISK"],
+                "metrics": ["VOLATILITY", "TRACKING_ERROR"],
+                "grouping_dimensions": ["SECTOR"],
+                "annualization_basis": 252,
+            },
+        },
+    }
+
+
 def test_e2e_smoke() -> None:
     client = TestClient(app)
     response = client.get("/health")
@@ -121,6 +203,18 @@ def test_e2e_rolling_metrics_stateless_happy_path() -> None:
     assert body["input_mode"] == "stateless"
     assert "YTD" in body["results"]
     assert body["results"]["YTD"]["window_results"][0]["window_length"] == 3
+
+
+def test_e2e_historical_attribution_stateless_happy_path() -> None:
+    client = TestClient(app)
+    response = client.post(
+        "/analytics/risk/historical-attribution",
+        json=_historical_attribution_payload(),
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["input_mode"] == "stateless"
+    assert "YTD" in body["results"]
 
 
 def test_e2e_concentration_stateless_payload() -> None:

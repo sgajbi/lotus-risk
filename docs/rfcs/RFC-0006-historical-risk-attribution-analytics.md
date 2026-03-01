@@ -2,7 +2,7 @@
 
 ## Status
 
-- Proposed
+- Accepted (Slice A implemented: stateless mode)
 - Owner: lotus-risk
 - Date: 2026-03-01
 

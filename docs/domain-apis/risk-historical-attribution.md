@@ -2,7 +2,7 @@
 
 ## Endpoint
 
-- `POST /analytics/risk/historical-attribution` (proposed)
+- `POST /analytics/risk/historical-attribution`
 
 ## Purpose
 
@@ -12,18 +12,18 @@ Provide decomposition of historical realized risk and active risk into transpare
 
 ### Stateless (Slice A)
 
-- Status: planned
+- Status: implemented
 - Caller provides return/exposure/grouping inputs directly.
 
 ### Stateful (Slice B)
 
-- Status: planned
+- Status: planned (not implemented)
 - Caller provides identifiers and options; lotus-risk sources canonical inputs via lotus-performance.
 
 ### Simulation
 
-- Status: deferred
-- Explicit not-implemented mode until simulation-history contracts are finalized.
+- Status: deferred (not implemented)
+- Explicitly rejected in v1 until simulation-history contracts are finalized.
 
 ## Required Inputs
 

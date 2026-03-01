@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-03-01T11:07:10.280513+00:00",
+  "generatedAt": "2026-03-01T13:30:16.567479+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.alignment_policy",
@@ -44,7 +44,7 @@
       "semanticId": "lotus.annualization_basis",
       "canonicalTerm": "annualization_basis",
       "preferredName": "annualization_basis",
-      "description": "Annualization basis used for annualized rolling metrics.",
+      "description": "Annualization basis used for annualized metrics.",
       "example": 252,
       "type": "integer",
       "locations": [
@@ -102,8 +102,22 @@
       "semanticId": "lotus.contract_version",
       "canonicalTerm": "contract_version",
       "preferredName": "contract_version",
-      "description": "Drawdown analytics contract version.",
+      "description": "Historical attribution contract version.",
       "example": "v1",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.covariance_method",
+      "canonicalTerm": "covariance_method",
+      "preferredName": "covariance_method",
+      "description": "Covariance estimator used for attribution decomposition.",
+      "example": "EMPIRICAL",
       "type": "string",
       "locations": [
         "body"
@@ -305,11 +319,12 @@
       "preferredName": "input_mode",
       "description": "Canonical input mode used by lotus-risk APIs.",
       "example": "stateless",
-      "type": "ConcentrationInputMode",
+      "type": "AttributionInputMode",
       "locations": [
         "body"
       ],
       "observedTypes": [
+        "AttributionInputMode",
         "ConcentrationInputMode",
         "DrawdownInputMode",
         "RollingInputMode",
@@ -396,19 +411,16 @@
       "semanticId": "lotus.metadata",
       "canonicalTerm": "metadata",
       "preferredName": "metadata",
-      "description": "Execution metadata for stateful/simulation concentration calculations.",
+      "description": "Canonical metadata used by lotus-risk APIs.",
       "example": {
-        "as_of_date": "2026-02-27",
-        "portfolio_id": "DEMO_DPM_EUR_001",
-        "session_expires_at": "2026-02-28T10:30:00Z",
-        "simulation_session_id": "SIM_0001",
-        "simulation_session_version": 3
+        "key": "value"
       },
-      "type": "object",
+      "type": "HistoricalAttributionMetadata",
       "locations": [
         "body"
       ],
       "observedTypes": [
+        "HistoricalAttributionMetadata",
         "object",
         "DrawdownMetadata",
         "RollingMetadata"
@@ -418,8 +430,8 @@
       "semanticId": "lotus.methodology_version",
       "canonicalTerm": "methodology_version",
       "preferredName": "methodology_version",
-      "description": "Methodology version used for drawdown analytics formulas.",
-      "example": "drawdown.v1",
+      "description": "Methodology version used for historical attribution formulas.",
+      "example": "historical_attribution.v1",
       "type": "string",
       "locations": [
         "body"
@@ -516,15 +528,12 @@
       "semanticId": "lotus.results",
       "canonicalTerm": "results",
       "preferredName": "results",
-      "description": "Drawdown period results keyed by period name.",
+      "description": "Period-level attribution results keyed by period name.",
       "example": {
         "YTD": {
+          "attribution_sets": [],
           "end_date": "2026-02-28",
-          "episodes": [],
-          "start_date": "2026-01-01",
-          "summary": {
-            "max_drawdown": -0.124533
-          }
+          "start_date": "2026-01-01"
         }
       },
       "type": "object",
@@ -599,19 +608,16 @@
       "semanticId": "lotus.simulation_input",
       "canonicalTerm": "simulation_input",
       "preferredName": "simulation_input",
-      "description": "Simulation execution payload orchestrated through lotus-core simulation session APIs.",
+      "description": "Simulation payload. Reserved for a future slice.",
       "example": {
-        "as_of_date": "2026-02-27",
-        "expected_version": 3,
-        "portfolio_id": "DEMO_DPM_EUR_001",
-        "session_id": "SIM_0001",
-        "simulation_changes": [
+        "as_of_date": "2026-02-28",
+        "periods": [
           {
-            "security_id": "SEC_AAPL_US",
-            "transaction_type": "BUY"
+            "name": "YTD",
+            "type": "YTD"
           }
         ],
-        "top_n": 10
+        "portfolio_id": "DEMO_DPM_EUR_001"
       },
       "type": "object",
       "locations": [
@@ -655,14 +661,16 @@
       "semanticId": "lotus.stateful_input",
       "canonicalTerm": "stateful_input",
       "preferredName": "stateful_input",
-      "description": "Stateful execution payload with identifiers resolved through lotus-core.",
+      "description": "Stateful payload. Reserved for Slice B implementation.",
       "example": {
-        "as_of_date": "2026-02-27",
-        "include_cash_positions": true,
-        "include_zero_quantity_positions": false,
-        "portfolio_id": "DEMO_DPM_EUR_001",
-        "reporting_currency": "USD",
-        "top_n": 10
+        "as_of_date": "2026-02-28",
+        "periods": [
+          {
+            "name": "YTD",
+            "type": "YTD"
+          }
+        ],
+        "portfolio_id": "DEMO_DPM_EUR_001"
       },
       "type": "object",
       "locations": [
@@ -676,21 +684,32 @@
       "semanticId": "lotus.stateless_input",
       "canonicalTerm": "stateless_input",
       "preferredName": "stateless_input",
-      "description": "Stateless execution payload with fully supplied positions.",
+      "description": "Stateless payload with fully supplied returns and exposure history.",
       "example": {
-        "current_positions": [
+        "exposure_history": [
           {
-            "quantity": 1000.0,
-            "security_id": "AAPL.US"
+            "date": "2026-01-02",
+            "group_key": "SECTOR_TECH",
+            "grouping_dimension": "SECTOR",
+            "weight": 0.245
           }
         ],
-        "projected_positions": [
+        "periods": [
           {
-            "proposed_quantity": 1200.0,
-            "security_id": "AAPL.US"
+            "name": "YTD",
+            "type": "YTD"
           }
         ],
-        "top_n": 10
+        "returns": [
+          {
+            "date": "2026-01-02",
+            "value": 0.62
+          }
+        ],
+        "scope": {
+          "as_of_date": "2026-02-28",
+          "net_or_gross": "NET"
+        }
       },
       "type": "object",
       "locations": [
@@ -1270,6 +1289,149 @@
       },
       "response": {
         "fields": []
+      }
+    },
+    {
+      "domain": "risk_analytics",
+      "method": "POST",
+      "path": "/analytics/risk/historical-attribution",
+      "operationId": "analytics_risk_historical_attribution_analytics_risk_historical_attribution_post",
+      "summary": "Calculate historical risk attribution analytics",
+      "request": {
+        "fields": [
+          {
+            "name": "input_mode",
+            "location": "body",
+            "required": false,
+            "type": "AttributionInputMode",
+            "semanticId": "lotus.input_mode",
+            "attributeRef": "#/attributeCatalog/lotus.input_mode"
+          },
+          {
+            "name": "stateless_input",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.stateless_input",
+            "attributeRef": "#/attributeCatalog/lotus.stateless_input"
+          },
+          {
+            "name": "stateful_input",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.stateful_input",
+            "attributeRef": "#/attributeCatalog/lotus.stateful_input"
+          },
+          {
+            "name": "simulation_input",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.simulation_input",
+            "attributeRef": "#/attributeCatalog/lotus.simulation_input"
+          }
+        ]
+      },
+      "response": {
+        "fields": [
+          {
+            "name": "source_service",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.source_service",
+            "attributeRef": "#/attributeCatalog/lotus.source_service"
+          },
+          {
+            "name": "input_mode",
+            "location": "body",
+            "required": true,
+            "type": "AttributionInputMode",
+            "semanticId": "lotus.input_mode",
+            "attributeRef": "#/attributeCatalog/lotus.input_mode"
+          },
+          {
+            "name": "scope",
+            "location": "body",
+            "required": true,
+            "type": "RiskRequestScope",
+            "semanticId": "lotus.scope",
+            "attributeRef": "#/attributeCatalog/lotus.scope"
+          },
+          {
+            "name": "scope.as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.as_of_date"
+          },
+          {
+            "name": "scope.reporting_currency",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.reporting_currency",
+            "attributeRef": "#/attributeCatalog/lotus.reporting_currency"
+          },
+          {
+            "name": "scope.net_or_gross",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.net_or_gross",
+            "attributeRef": "#/attributeCatalog/lotus.net_or_gross"
+          },
+          {
+            "name": "results",
+            "location": "body",
+            "required": true,
+            "type": "object",
+            "semanticId": "lotus.results",
+            "attributeRef": "#/attributeCatalog/lotus.results"
+          },
+          {
+            "name": "metadata",
+            "location": "body",
+            "required": true,
+            "type": "HistoricalAttributionMetadata",
+            "semanticId": "lotus.metadata",
+            "attributeRef": "#/attributeCatalog/lotus.metadata"
+          },
+          {
+            "name": "metadata.contract_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.contract_version",
+            "attributeRef": "#/attributeCatalog/lotus.contract_version"
+          },
+          {
+            "name": "metadata.methodology_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.methodology_version",
+            "attributeRef": "#/attributeCatalog/lotus.methodology_version"
+          },
+          {
+            "name": "metadata.covariance_method",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.covariance_method",
+            "attributeRef": "#/attributeCatalog/lotus.covariance_method"
+          },
+          {
+            "name": "metadata.annualization_basis",
+            "location": "body",
+            "required": true,
+            "type": "integer",
+            "semanticId": "lotus.annualization_basis",
+            "attributeRef": "#/attributeCatalog/lotus.annualization_basis"
+          }
+        ]
       }
     },
     {
