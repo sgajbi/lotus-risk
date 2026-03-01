@@ -60,7 +60,7 @@ def _portfolio_open_date(series_points: list[ReturnPoint], *, as_of_date: date) 
 
 
 def _build_stateful_source_request(stateful: StatefulRiskInput) -> dict[str, Any]:
-    # Stateful risk currently uses canonical core-backed series path through lotus-performance.
+    include_benchmark = any(metric in _BENCHMARK_METRICS for metric in stateful.metrics)
     return {
         "portfolio_id": stateful.portfolio_id,
         "as_of_date": stateful.as_of_date.isoformat(),
@@ -70,7 +70,7 @@ def _build_stateful_source_request(stateful: StatefulRiskInput) -> dict[str, Any
         "reporting_currency": stateful.reporting_currency,
         "series_selection": {
             "include_portfolio": True,
-            "include_benchmark": False,
+            "include_benchmark": include_benchmark,
             "include_risk_free": False,
         },
         "data_policy": {
@@ -78,7 +78,8 @@ def _build_stateful_source_request(stateful: StatefulRiskInput) -> dict[str, Any
             "fill_method": "NONE",
             "calendar_policy": "BUSINESS",
         },
-        "source": {"input_mode": "core_api_ref"},
+        "input_mode": "stateful",
+        "stateful_input": {"consumer_system": "lotus-risk"},
     }
 
 

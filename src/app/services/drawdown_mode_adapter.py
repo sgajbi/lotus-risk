@@ -56,6 +56,8 @@ def _build_stateful_source_request(
     *,
     analysis_options: DrawdownAnalysisOptions,
 ) -> dict[str, Any]:
+    # keep options local to lotus-risk; returns-series only needs sourcing controls
+    _ = analysis_options
     return {
         "portfolio_id": stateful.portfolio_id,
         "as_of_date": stateful.as_of_date.isoformat(),
@@ -77,12 +79,8 @@ def _build_stateful_source_request(
             "fill_method": "NONE",
             "calendar_policy": "BUSINESS",
         },
-        "source": {"input_mode": "core_api_ref"},
-        "analysis_options": {
-            "include_underwater_series": analysis_options.include_underwater_series,
-            "include_episode_list": analysis_options.include_episode_list,
-            "top_n_episodes": analysis_options.top_n_episodes,
-        },
+        "input_mode": "stateful",
+        "stateful_input": {"consumer_system": "lotus-risk"},
     }
 
 

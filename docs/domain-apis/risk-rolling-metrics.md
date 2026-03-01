@@ -49,7 +49,7 @@ Provide windowed historical risk diagnostics for PB/WM portfolios with instituti
   - alignment/lineage metadata
 
 - lotus-core:
-  - indirect via lotus-performance `core_api_ref` where relevant to portfolio identity/context.
+  - indirect via lotus-performance stateful sourcing where relevant to portfolio identity/reference context.
 
 ## Expected Output Structure
 

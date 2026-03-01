@@ -54,7 +54,7 @@
 
 ## Risk Calculate Mode Support
 - `stateless`: caller supplies full return series.
-- `stateful`: caller supplies identifiers + risk metric specification; lotus-risk sources canonical portfolio returns from lotus-performance (`/integration/returns/series`, `source.input_mode=core_api_ref`) and computes with the same engine.
+- `stateful`: caller supplies identifiers + risk metric specification; lotus-risk sources canonical portfolio/benchmark/risk-free series from lotus-performance (`/integration/returns/series`, `input_mode=stateful`, `stateful_input.consumer_system=lotus-risk`) and computes with the same engine.
 - `simulation`: reserved and not implemented for risk/calculate.
 
 ## Drawdown Details
@@ -66,7 +66,7 @@
 ## Realized Drawdown Endpoint
 - `POST /analytics/risk/drawdown` supports:
   - `stateless`: caller supplies return series
-  - `stateful`: lotus-risk resolves canonical returns through lotus-performance (`core_api_ref`)
+  - `stateful`: lotus-risk resolves canonical returns through lotus-performance stateful integration mode
   - `simulation`: reserved/not yet implemented
 - Output includes:
   - period-level drawdown summary (`max_drawdown`, timing, TUW, ulcer index, DaR/CDaR)

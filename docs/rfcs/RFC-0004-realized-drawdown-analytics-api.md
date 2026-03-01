@@ -80,7 +80,7 @@ The design and metric set follow widely used market practices and literature:
 ## Modes
 
 1. `stateless`: caller supplies return series directly.
-2. `stateful`: caller supplies identifiers; lotus-risk resolves return series via lotus-performance (`/integration/returns/series`, `core_api_ref`).
+2. `stateful`: caller supplies identifiers; lotus-risk resolves return series via lotus-performance (`/integration/returns/series`, `input_mode=stateful`, `stateful_input.consumer_system=lotus-risk`).
 3. `simulation`: not in RFC-0004 scope (reserved for later RFC).
 
 ## Request Envelope (Canonical)
@@ -209,7 +209,7 @@ Methodology versioning:
 1. `lotus-performance` (primary for stateful):
  - `/integration/returns/series`
  - supports canonical source/provenance and date-windowing
-2. `lotus-core` (indirect via lotus-performance `core_api_ref` path):
+2. `lotus-core` (indirect via lotus-performance stateful sourcing path):
  - portfolio identity, valuation lineage, baseline data quality ownership
 
 ### Downstream

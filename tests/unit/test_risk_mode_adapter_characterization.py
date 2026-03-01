@@ -82,7 +82,8 @@ def test_portfolio_open_date_falls_back_to_as_of_date_when_empty() -> None:
 
 def test_stateful_source_payload_characterization() -> None:
     payload = _build_stateful_source_request(_stateful_input())
-    assert payload["source"] == {"input_mode": "core_api_ref"}
+    assert payload["input_mode"] == "stateful"
+    assert payload["stateful_input"] == {"consumer_system": "lotus-risk"}
     assert payload["window"] == {"mode": "RELATIVE", "period": "SI"}
     assert payload["frequency"] == "DAILY"
     assert payload["metric_basis"] == "NET"
