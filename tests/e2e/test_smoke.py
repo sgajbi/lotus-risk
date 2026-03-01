@@ -350,7 +350,8 @@ class _FakeLotusPerformanceClient:
         request_payload: dict[str, object],
         correlation_id: str | None,
     ) -> dict[str, object]:
-        assert request_payload["source"] == {"input_mode": "core_api_ref"}
+        assert request_payload["input_mode"] == "stateful"
+        assert request_payload["stateful_input"] == {"consumer_system": "lotus-risk"}
         return {
             "series": {
                 "portfolio_returns": [

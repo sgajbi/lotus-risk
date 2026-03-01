@@ -156,7 +156,8 @@ def test_rolling_metrics_endpoint_stateful_uses_lotus_performance() -> None:
     assert recorder.calls[0]["correlation_id"] == "corr-rolling-stateful"
     payload = recorder.calls[0]["request_payload"]
     assert isinstance(payload, dict)
-    assert payload["source"] == {"input_mode": "core_api_ref"}
+    assert payload["input_mode"] == "stateful"
+    assert payload["stateful_input"] == {"consumer_system": "lotus-risk"}
     assert payload["series_selection"]["include_benchmark"] is True
     assert payload["series_selection"]["include_risk_free"] is True
     assert response.json()["input_mode"] == "stateful"

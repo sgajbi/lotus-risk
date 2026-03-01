@@ -106,8 +106,8 @@ All formulas operate in decimal units internally. API values follow platform rou
 ### Stateful Inputs
 
 1. `portfolio_id`, `as_of_date`, period definitions, attribution options.
-2. lotus-risk sources canonical series and exposure snapshots via lotus-performance contracts.
-3. lotus-performance may internally reference lotus-core (`core_api_ref`) for identity-consistent snapshots.
+2. lotus-risk sources canonical return series via lotus-performance contracts.
+3. lotus-risk sources canonical exposure snapshots and hierarchy enrichment directly from lotus-core contracts.
 
 ## Upstream Contracts Required
 
@@ -115,13 +115,12 @@ All formulas operate in decimal units internally. API values follow platform rou
 
 1. Portfolio historical returns series.
 2. Benchmark series for active attribution.
-3. Historical exposure snapshots keyed by date and grouping dimension.
-4. Data lineage metadata:
+3. Data lineage metadata:
    - source references
    - alignment policy used
    - missing data handling markers
 
-### lotus-core (indirect via lotus-performance)
+### lotus-core (required)
 
 1. Canonical instrument and hierarchy mappings for grouping dimensions.
 2. Portfolio state snapshots where needed for exposure history.

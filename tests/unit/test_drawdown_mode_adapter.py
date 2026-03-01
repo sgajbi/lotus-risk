@@ -63,7 +63,8 @@ def test_drawdown_stateful_adapter_happy_path() -> None:
         )
     )
     assert client.payload is not None
-    assert client.payload["source"] == {"input_mode": "core_api_ref"}
+    assert client.payload["input_mode"] == "stateful"
+    assert client.payload["stateful_input"] == {"consumer_system": "lotus-risk"}
     assert client.correlation_id == "corr-dd"
     assert "YTD" in response.results
 

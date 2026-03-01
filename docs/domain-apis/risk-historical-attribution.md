@@ -49,11 +49,11 @@ Provide decomposition of historical realized risk and active risk into transpare
 - lotus-performance:
   - portfolio returns series
   - benchmark series
-  - exposure snapshots by date and grouping dimensions
-  - lineage/alignment metadata
+  - lineage/alignment metadata for return series
 
 - lotus-core:
-  - indirect via lotus-performance `core_api_ref` for canonical instrument and hierarchy mapping.
+  - canonical exposure snapshots by date/grouping dimension (system of record)
+  - canonical instrument and hierarchy mapping for grouping dimensions (issuer/sector/asset class)
 
 ## Expected Output Structure
 

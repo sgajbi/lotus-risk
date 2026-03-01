@@ -27,7 +27,7 @@
 - Status: implemented
 - Behavior:
   - caller provides identifiers and period config
-  - lotus-risk sources canonical return series from lotus-performance (`/integration/returns/series`, `core_api_ref`)
+  - lotus-risk sources canonical return series from lotus-performance (`/integration/returns/series`, `input_mode=stateful`, `stateful_input.consumer_system=lotus-risk`)
   - lotus-risk computes drawdown analytics on sourced series
 
 ### Simulation
@@ -67,7 +67,7 @@
 
 - Upstream:
   - lotus-performance returns-series API for stateful mode
-  - lotus-core indirectly through lotus-performance `core_api_ref`
+  - lotus-core indirectly through lotus-performance stateful sourcing and reference contracts
 - Downstream:
   - lotus-report
   - lotus-gateway

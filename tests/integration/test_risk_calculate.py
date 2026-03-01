@@ -28,7 +28,12 @@ class _RecordingLotusPerformanceClient:
                     {"date": "2025-01-06", "return_value": "-0.0100"},
                     {"date": "2025-01-07", "return_value": "0.0050"},
                 ],
-                "benchmark_returns": None,
+                "benchmark_returns": [
+                    {"date": "2025-01-02", "return_value": "0.0090"},
+                    {"date": "2025-01-03", "return_value": "0.0150"},
+                    {"date": "2025-01-06", "return_value": "-0.0080"},
+                    {"date": "2025-01-07", "return_value": "0.0040"},
+                ],
             }
         }
 
@@ -160,18 +165,18 @@ def test_risk_calculate_stateful_mode_uses_lotus_performance_returns_series() ->
     payload = performance_client.calls[0]["request_payload"]
     assert isinstance(payload, dict)
     assert payload["portfolio_id"] == "DEMO_DPM_EUR_001"
-    assert payload["source"] == {"input_mode": "core_api_ref"}
+    assert payload["input_mode"] == "stateful"
+    assert payload["stateful_input"] == {"consumer_system": "lotus-risk"}
     assert payload["window"] == {"mode": "RELATIVE", "period": "SI"}
     assert payload["series_selection"] == {
         "include_portfolio": True,
-        "include_benchmark": False,
+        "include_benchmark": True,
         "include_risk_free": False,
     }
     assert performance_client.calls[0]["correlation_id"] == "corr-risk-stateful"
     metrics = response.json()["results"]["YTD"]["metrics"]
     assert metrics["VOLATILITY"]["value"] is not None
-    assert metrics["BETA"]["value"] is None
-    assert "Benchmark returns required" in metrics["BETA"]["details"]["error"]
+    assert metrics["BETA"]["value"] is not None
 
 
 def test_risk_calculate_stateful_mode_autowires_lotus_performance_client() -> None:

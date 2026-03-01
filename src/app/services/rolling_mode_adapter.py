@@ -73,7 +73,8 @@ def _build_stateful_source_request(stateful: RollingStatefulInput) -> dict[str, 
             "fill_method": "NONE",
             "calendar_policy": "BUSINESS",
         },
-        "source": {"input_mode": "core_api_ref"},
+        "input_mode": "stateful",
+        "stateful_input": {"consumer_system": "lotus-risk"},
     }
 
 

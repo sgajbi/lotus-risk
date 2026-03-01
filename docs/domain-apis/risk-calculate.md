@@ -22,7 +22,7 @@
 - Status: implemented in lotus-risk.
 - Current behavior:
   - caller supplies identifiers plus risk metric specification (`periods`, `metrics`, `options`).
-  - lotus-risk sources canonical portfolio return series from `lotus-performance` using `source.input_mode=core_api_ref`.
+  - lotus-risk sources canonical return series from `lotus-performance` using `input_mode=stateful` and `stateful_input.consumer_system=lotus-risk`.
   - lotus-risk computes with the same risk engine used by stateless mode.
 
 ### Simulation
@@ -59,7 +59,7 @@
 |---|---|---|---|
 | Portfolio baseline snapshot (`portfolioId`, holdings, valuation context) | lotus-core (`/integration/portfolios/{id}/core-snapshot`) | Exists | Already used by other services. |
 | Raw valuation/performance input points | lotus-core (`/integration/portfolios/{id}/performance-input`) | Exists | Provides valuation points and metadata. |
-| Daily return series normalized for risk engine | lotus-performance (`/integration/returns/series` with `core_api_ref`) | Exists | Implemented stateful path in lotus-risk; decimal returns converted to percentage-point risk engine input. |
+| Daily return series normalized for risk engine | lotus-performance (`/integration/returns/series` with `input_mode=stateful`) | Exists | Implemented stateful path in lotus-risk; decimal returns converted to percentage-point risk engine input. |
 | Benchmark return series | lotus-performance / market data integration | Needs enhancement | no direct lotus-risk-managed benchmark source contract today. |
 | Simulation projected positions/summary | lotus-core simulation APIs (`/simulation-sessions/*/projected-*`) | Exists | currently consumed via gateway patterns, not lotus-risk. |
 | Scenario overrides schema | lotus-risk-owned request contract | Needs enhancement | no simulation contract yet in lotus-risk. |
@@ -86,6 +86,6 @@
 
 ## Gaps and Decisions Required
 
-1. Benchmark/risk-free sourcing in `core_api_ref` mode remains upstream-dependent; stateful benchmark metrics currently degrade deterministically when benchmark series is absent.
+1. Benchmark/risk-free sourcing remains upstream-dependent on lotus-performance + lotus-core reference-data availability; stateful benchmark metrics degrade deterministically when benchmark series is absent.
 2. Define simulation override schema and merge semantics for `/analytics/risk/calculate`.
 3. Standardize response metadata additions (for example `correlationId`, `contractVersion`, `asOfDate`) if this endpoint must fully match cross-platform response envelope conventions.
