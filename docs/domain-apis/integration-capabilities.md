@@ -35,11 +35,13 @@
   - `risk.analytics.risk_analytics`
   - `risk.analytics.drawdown`
   - `risk.analytics.concentration`
+  - `risk.analytics.rolling_metrics`
   - `risk.analytics.metrics`
 - `workflows`:
   - `risk_snapshot`
   - `drawdown_analytics`
   - `concentration_risk`
+  - `rolling_risk_analytics`
 
 ## Upstream/Downstream Dependency Notes
 

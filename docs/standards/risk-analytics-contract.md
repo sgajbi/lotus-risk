@@ -4,6 +4,7 @@
 - `GET /ops`
 - `POST /analytics/risk/calculate`
 - `POST /analytics/risk/drawdown`
+- `POST /analytics/risk/rolling-metrics`
 - `POST /analytics/risk/concentration`
 - `GET /integration/capabilities`
 
@@ -14,11 +15,13 @@
 - `features`:
   - `risk.analytics.risk_analytics`
   - `risk.analytics.drawdown`
+  - `risk.analytics.rolling_metrics`
   - `risk.analytics.concentration`
   - `risk.analytics.metrics`
 - `workflows`:
   - `risk_snapshot`
   - `drawdown_analytics`
+  - `rolling_risk_analytics`
   - `concentration_risk`
 
 ## Supported Period Types
@@ -66,6 +69,16 @@
   - period-level drawdown summary (`max_drawdown`, timing, TUW, ulcer index, DaR/CDaR)
   - worst drawdown episodes list (policy-driven top-N)
   - optional underwater series and benchmark-relative summary
+
+## Rolling Metrics Endpoint
+- `POST /analytics/risk/rolling-metrics` supports:
+  - `stateless`: caller supplies return/reference series and rolling options
+  - `stateful`: reserved/not yet implemented
+  - `simulation`: reserved/not yet implemented
+- Output includes:
+  - per-window summaries for rolling volatility, Sharpe, beta, tracking error, information ratio, and rolling max drawdown
+  - optional rolling time-series points
+  - deterministic quality flags for non-computable windows/alignments
 
 ## Concentration Risk
 - Concentration endpoint supports all execution modes:
