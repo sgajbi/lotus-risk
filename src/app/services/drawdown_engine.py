@@ -61,11 +61,8 @@ def _filter_period(df: pd.DataFrame, *, start: date, end: date) -> pd.Series:
 def _build_episodes(drawdown: pd.Series, *, duration_unit: str) -> list[_EpisodeRecord]:
     if drawdown.empty:
         return []
-    wealth = (1 + drawdown).cumprod()
-    running_peak = wealth.cummax()
     dates = [cast(pd.Timestamp, index).date() for index in drawdown.index]
     values = [float(value) for value in drawdown]
-    peaks = [float(value) for value in running_peak]
 
     episodes: list[_EpisodeRecord] = []
     in_episode = False
