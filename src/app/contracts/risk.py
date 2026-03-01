@@ -348,7 +348,11 @@ class RiskAnalyticsRequest(BaseModel):
         description="Stateless execution payload with fully supplied return series.",
         json_schema_extra={
             "example": {
-                "scope": {"as_of_date": "2025-03-31", "reporting_currency": "USD", "net_or_gross": "NET"},
+                "scope": {
+                    "as_of_date": "2025-03-31",
+                    "reporting_currency": "USD",
+                    "net_or_gross": "NET",
+                },
                 "periods": [{"type": "YTD", "name": "YTD"}],
                 "metrics": ["VOLATILITY", "VAR"],
                 "portfolio_open_date": "2024-01-01",
