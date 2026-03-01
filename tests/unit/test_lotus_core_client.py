@@ -103,10 +103,21 @@ async def test_client_supports_add_changes_and_snapshot_routes(
         security_ids=["SEC_A", "SEC_B"],
         correlation_id=None,
     )
+    position_timeseries_response = await client.get_position_analytics_timeseries(
+        portfolio_id="DEMO_DPM_EUR_001",
+        request_payload={"as_of_date": "2026-02-28"},
+        correlation_id=None,
+    )
 
     assert add_response == {"ok": True}
     assert snapshot_response == {"ok": True}
     assert enrichment_response == {"ok": True}
+    assert position_timeseries_response == {"ok": True}
+    assert _FakeAsyncClient.last_request is not None
+    assert (
+        _FakeAsyncClient.last_request["url"]
+        == "http://core.local/integration/portfolios/DEMO_DPM_EUR_001/analytics/position-timeseries"
+    )
 
 
 @pytest.mark.asyncio

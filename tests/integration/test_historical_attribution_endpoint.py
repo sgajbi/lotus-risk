@@ -193,7 +193,100 @@ def test_historical_attribution_stateless_happy_path() -> None:
     assert len(ytd["attribution_sets"]) == 4
 
 
-def test_historical_attribution_stateful_rejected_in_slice_a() -> None:
+def test_historical_attribution_stateful_total_risk_happy_path() -> None:
+    class _FakeLotusPerformanceClient:
+        async def get_returns_series(
+            self,
+            *,
+            request_payload: dict[str, object],
+            correlation_id: str | None,
+        ) -> dict[str, object]:
+            assert request_payload["input_mode"] == "stateful"
+            assert request_payload["stateful_input"] == {"consumer_system": "lotus-risk"}
+            return {
+                "series": {
+                    "portfolio_returns": [
+                        {"date": "2026-01-02", "return_value": "0.0100"},
+                        {"date": "2026-01-03", "return_value": "-0.0050"},
+                        {"date": "2026-01-04", "return_value": "0.0040"},
+                    ]
+                }
+            }
+
+    class _FakeLotusCoreClient:
+        async def get_position_analytics_timeseries(
+            self,
+            *,
+            portfolio_id: str,
+            request_payload: dict[str, object],
+            correlation_id: str | None,
+        ) -> dict[str, object]:
+            return {
+                "rows": [
+                    {
+                        "security_id": "SEC_A",
+                        "valuation_date": "2026-01-02",
+                        "dimensions": {"sector": "TECH", "asset_class": "EQUITY"},
+                        "ending_market_value_portfolio_currency": "60",
+                    },
+                    {
+                        "security_id": "SEC_B",
+                        "valuation_date": "2026-01-02",
+                        "dimensions": {"sector": "HEALTH", "asset_class": "EQUITY"},
+                        "ending_market_value_portfolio_currency": "40",
+                    },
+                    {
+                        "security_id": "SEC_A",
+                        "valuation_date": "2026-01-03",
+                        "dimensions": {"sector": "TECH", "asset_class": "EQUITY"},
+                        "ending_market_value_portfolio_currency": "65",
+                    },
+                    {
+                        "security_id": "SEC_B",
+                        "valuation_date": "2026-01-03",
+                        "dimensions": {"sector": "HEALTH", "asset_class": "EQUITY"},
+                        "ending_market_value_portfolio_currency": "35",
+                    },
+                ],
+                "page": {"next_page_token": None},
+            }
+
+        async def get_instrument_enrichment(
+            self,
+            *,
+            security_ids: list[str],
+            correlation_id: str | None,
+        ) -> dict[str, object]:
+            return {"records": []}
+
+    client = TestClient(app)
+    app.state.lotus_performance_client = _FakeLotusPerformanceClient()
+    app.state.lotus_core_client = _FakeLotusCoreClient()
+    response = client.post(
+        "/analytics/risk/historical-attribution",
+        json={
+            "input_mode": "stateful",
+            "stateful_input": {
+                "portfolio_id": "DEMO_DPM_EUR_001",
+                "as_of_date": "2026-01-04",
+                "periods": [{"type": "YTD", "name": "YTD"}],
+                "attribution_options": {
+                    "attribution_types": ["TOTAL_RISK"],
+                    "metrics": ["VOLATILITY"],
+                    "grouping_dimensions": ["SECTOR"],
+                },
+            },
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["input_mode"] == "stateful"
+    assert body["results"]["YTD"]["error"] is None
+
+
+def test_historical_attribution_stateful_rejects_active_risk_until_benchmark_exposure_contract() -> (
+    None
+):
     client = TestClient(app)
     response = client.post(
         "/analytics/risk/historical-attribution",
@@ -201,12 +294,17 @@ def test_historical_attribution_stateful_rejected_in_slice_a() -> None:
             "input_mode": "stateful",
             "stateful_input": {
                 "portfolio_id": "DEMO_DPM_EUR_001",
-                "as_of_date": "2026-02-28",
+                "as_of_date": "2026-01-04",
                 "periods": [{"type": "YTD", "name": "YTD"}],
+                "attribution_options": {
+                    "attribution_types": ["ACTIVE_RISK"],
+                    "metrics": ["TRACKING_ERROR"],
+                    "grouping_dimensions": ["SECTOR"],
+                },
             },
         },
     )
     assert response.status_code == 400
     error = response.json()["error"]
     assert error["code"] == "INVALID_INPUT"
-    assert "not implemented" in error["message"]
+    assert "benchmark exposure history contract" in error["message"]

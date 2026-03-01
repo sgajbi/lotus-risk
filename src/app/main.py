@@ -44,6 +44,7 @@ from app.integrations.lotus_performance_client import LotusPerformanceClient
 from app.middleware.correlation import CorrelationIdMiddleware
 from app.services.concentration_engine import calculate_concentration
 from app.services.attribution_engine import calculate_historical_attribution
+from app.services.attribution_mode_adapter import calculate_historical_attribution_stateful
 from app.services.drawdown_engine import calculate_drawdown
 from app.services.drawdown_mode_adapter import calculate_drawdown_stateful
 from app.services.rolling_engine import calculate_rolling_metrics
@@ -373,6 +374,7 @@ async def metrics() -> Response:
 )
 async def analytics_risk_historical_attribution(
     request_payload: HistoricalAttributionRequest,
+    request: Request,
 ) -> HistoricalAttributionResponse:
     if request_payload.input_mode == AttributionInputMode.STATELESS:
         stateless_input = request_payload.stateless_input
@@ -382,9 +384,25 @@ async def analytics_risk_historical_attribution(
             input_mode=AttributionInputMode.STATELESS,
         )
 
+    if request_payload.input_mode == AttributionInputMode.STATEFUL:
+        stateful_input = request_payload.stateful_input
+        assert stateful_input is not None
+        performance_client = getattr(app.state, "lotus_performance_client", None)
+        if performance_client is None:
+            performance_client = LotusPerformanceClient()
+        core_client = getattr(app.state, "lotus_core_client", None)
+        if core_client is None:
+            core_client = LotusCoreClient()
+        return await calculate_historical_attribution_stateful(
+            stateful_input,
+            performance_client=performance_client,
+            core_client=core_client,
+            correlation_id=request.headers.get("X-Correlation-Id"),
+        )
+
     raise ValueError(
         f"input_mode={request_payload.input_mode.value} is not implemented for /analytics/risk/historical-attribution yet. "
-        "Use input_mode=stateless in this slice."
+        "Use input_mode=stateless or input_mode=stateful in this slice."
     )
 
 

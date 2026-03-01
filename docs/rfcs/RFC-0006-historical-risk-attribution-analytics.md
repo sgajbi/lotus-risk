@@ -2,7 +2,7 @@
 
 ## Status
 
-- Accepted (Slice A implemented: stateless mode)
+- Accepted (Slice A implemented, Slice B in progress)
 - Owner: lotus-risk
 - Date: 2026-03-01
 
@@ -46,8 +46,8 @@ This RFC defines a quant-rigorous, audit-ready attribution framework and API con
 
 ### Execution Modes
 
-- `stateless`: v1 Slice A
-- `stateful`: v1 Slice B
+- `stateless`: v1 Slice A (implemented)
+- `stateful`: v1 Slice B (partially implemented)
 - `simulation`: deferred
 
 ### Request Envelope (Canonical)
@@ -208,6 +208,34 @@ All formulas operate in decimal units internally. API values follow platform rou
 2. Every request/response attribute requires description and realistic example.
 3. Vocabulary inventory regeneration and validation are mandatory for every schema change.
 4. No legacy aliases permitted in new attribution contract.
+
+## Implementation Progress and Pending Work
+
+### Implemented in lotus-risk
+
+1. Stateful adapter for `POST /analytics/risk/historical-attribution` is implemented for:
+   - `TOTAL_RISK`
+   - `VOLATILITY`
+   - grouping dimensions: `POSITION`, `SECTOR`, `ASSET_CLASS`, `ISSUER`
+2. Stateful adapter now sources:
+   - returns from lotus-performance (`/integration/returns/series`)
+   - position timeseries from lotus-core (`/integration/portfolios/{portfolio_id}/analytics/position-timeseries`)
+   - issuer enrichment from lotus-core (`/integration/instruments/enrichment-bulk`) when required.
+3. Deterministic guardrails are implemented for unsupported stateful combinations in current slice.
+
+### Pending work in lotus-risk
+
+1. Enable stateful `ACTIVE_RISK` and `TRACKING_ERROR` attribution after benchmark exposure-history contract is live.
+2. Add full benchmark-exposure mapping path in the stateful adapter.
+3. Add stateful e2e test coverage for active-risk path once upstream contract is available.
+4. Expand methodology documentation with final active-risk stateful behavior and quality flags.
+
+### Pending upstream dependencies
+
+1. lotus-core:
+   - benchmark exposure-history contract with pagination and canonical dimensions.
+2. lotus-performance:
+   - production-hardened benchmark return-series diagnostics and alignment metadata for attribution use.
 
 ## Open Decisions
 
