@@ -249,6 +249,35 @@ class _FakeLotusCoreClient:
         }
 
 
+class _FakeLotusPerformanceClient:
+    async def get_returns_series(
+        self,
+        *,
+        request_payload: dict[str, object],
+        correlation_id: str | None,
+    ) -> dict[str, object]:
+        assert request_payload["source"] == {"input_mode": "core_api_ref"}
+        return {
+            "series": {
+                "portfolio_returns": [
+                    {"date": "2026-01-02", "return_value": "0.0100"},
+                    {"date": "2026-01-03", "return_value": "-0.0200"},
+                    {"date": "2026-01-04", "return_value": "0.0050"},
+                ],
+                "benchmark_returns": [
+                    {"date": "2026-01-02", "return_value": "0.0080"},
+                    {"date": "2026-01-03", "return_value": "-0.0150"},
+                    {"date": "2026-01-04", "return_value": "0.0040"},
+                ],
+                "risk_free_returns": [
+                    {"date": "2026-01-02", "return_value": "0.0001"},
+                    {"date": "2026-01-03", "return_value": "0.0001"},
+                    {"date": "2026-01-04", "return_value": "0.0001"},
+                ],
+            }
+        }
+
+
 def test_e2e_concentration_stateful_mode() -> None:
     client = TestClient(app)
     app.state.lotus_core_client = _FakeLotusCoreClient()
@@ -287,3 +316,31 @@ def test_e2e_concentration_simulation_mode() -> None:
     assert body["input_mode"] == "simulation"
     assert body["metadata"]["simulation_session_id"] == "SIM_E2E_0001"
     assert body["metadata"]["simulation_session_version"] == 2
+
+
+def test_e2e_rolling_metrics_stateful_mode() -> None:
+    client = TestClient(app)
+    app.state.lotus_performance_client = _FakeLotusPerformanceClient()
+    response = client.post(
+        "/analytics/risk/rolling-metrics",
+        json={
+            "input_mode": "stateful",
+            "stateful_input": {
+                "portfolio_id": "DEMO_DPM_EUR_001",
+                "as_of_date": "2026-01-04",
+                "periods": [{"type": "YTD", "name": "YTD"}],
+                "rolling_options": {
+                    "window_lengths": [2],
+                    "metrics": [
+                        "ROLLING_VOLATILITY",
+                        "ROLLING_BETA",
+                        "ROLLING_SHARPE",
+                    ],
+                },
+            },
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["input_mode"] == "stateful"
+    assert "YTD" in body["results"]

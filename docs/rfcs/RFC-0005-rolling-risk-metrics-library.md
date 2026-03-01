@@ -2,7 +2,7 @@
 
 ## Status
 
-- Accepted (Slice A implemented)
+- Accepted (Slices A and B implemented; simulation deferred)
 - Owner: lotus-risk
 - Date: 2026-03-01
 

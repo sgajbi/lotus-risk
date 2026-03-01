@@ -17,7 +17,7 @@ Provide windowed historical risk diagnostics for PB/WM portfolios with instituti
 
 ### Stateful (v1)
 
-- Status: deferred to Slice B
+- Status: implemented
 - Caller provides identifiers and options; lotus-risk sources canonical series from lotus-performance.
 
 ### Simulation
@@ -46,7 +46,6 @@ Provide windowed historical risk diagnostics for PB/WM portfolios with instituti
 - lotus-performance:
   - portfolio returns series
   - benchmark reference series
-  - risk-free reference series
   - alignment/lineage metadata
 
 - lotus-core:
