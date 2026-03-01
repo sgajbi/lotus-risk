@@ -82,7 +82,9 @@ async def test_engine_characterization_merge_policy_prefers_caller_mapping() -> 
         ]
     )
 
-    response = await calculate_concentration(request, core_client=core_client, correlation_id="corr-1")
+    response = await calculate_concentration(
+        request, core_client=core_client, correlation_id="corr-1"
+    )
 
     assert response.issuer_concentration.hhi_current == 10000.0
     assert response.issuer_concentration.coverage_status.value == "complete"

@@ -143,7 +143,11 @@ def test_stateful_api_characterizes_lotus_core_snapshot_payload_contract() -> No
     assert snapshot_call["correlation_id"] == "corr-stateful"
     payload = snapshot_call["request_payload"]
     assert payload["snapshot_mode"] == "BASELINE"
-    assert payload["sections"] == ["positions_baseline", "portfolio_totals", "instrument_enrichment"]
+    assert payload["sections"] == [
+        "positions_baseline",
+        "portfolio_totals",
+        "instrument_enrichment",
+    ]
     assert payload["reporting_currency"] == "USD"
     assert payload["options"] == {
         "include_zero_quantity_positions": True,
