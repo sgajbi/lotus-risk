@@ -262,10 +262,10 @@ class StatefulRiskInput(BaseModel):
         description="Optional reporting currency override. Defaults to portfolio currency policy.",
         json_schema_extra={"example": "USD"},
     )
-    cif_id: str | None = Field(
+    client_id: str | None = Field(
         default=None,
         description="Optional client identifier used for upstream data access policy controls.",
-        json_schema_extra={"example": "CIF_1000123"},
+        json_schema_extra={"example": "CLIENT_1000123"},
     )
     net_or_gross: Literal["NET", "GROSS"] = Field(
         default="NET",
@@ -368,7 +368,7 @@ class RiskAnalyticsRequest(BaseModel):
                 "portfolio_id": "DEMO_DPM_EUR_001",
                 "as_of_date": "2026-02-27",
                 "reporting_currency": "USD",
-                "cif_id": "CIF_1000123",
+                "client_id": "CLIENT_1000123",
             }
         },
     )
