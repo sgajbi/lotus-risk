@@ -78,7 +78,9 @@ def _summary(values: pd.Series) -> RollingMetricSummary:
     )
 
 
-def _rolling_volatility(series_decimal: pd.Series, *, window_length: int, annualization_basis: int, min_obs: int) -> pd.Series:
+def _rolling_volatility(
+    series_decimal: pd.Series, *, window_length: int, annualization_basis: int, min_obs: int
+) -> pd.Series:
     return series_decimal.rolling(window=window_length, min_periods=min_obs).std(ddof=1) * sqrt(
         annualization_basis
     )
@@ -166,14 +168,18 @@ def _rolling_benchmark_metrics(
     raise ValueError(f"Unsupported rolling benchmark metric: {metric_name}")
 
 
-def _rolling_max_drawdown_metric(series_decimal: pd.Series, *, window_length: int, min_obs: int) -> pd.Series:
+def _rolling_max_drawdown_metric(
+    series_decimal: pd.Series, *, window_length: int, min_obs: int
+) -> pd.Series:
     return series_decimal.rolling(window=window_length, min_periods=min_obs).apply(
         _rolling_max_drawdown,
         raw=True,
     )
 
 
-def _window_series_points(metric_series_map: dict[str, pd.Series]) -> list[RollingMetricSeriesPoint]:
+def _window_series_points(
+    metric_series_map: dict[str, pd.Series],
+) -> list[RollingMetricSeriesPoint]:
     if not metric_series_map:
         return []
 
@@ -299,14 +305,11 @@ def calculate_rolling_metrics(
                     raise ValueError(f"Unsupported rolling metric: {metric_name}")
 
             summaries = {
-                metric_name: _summary(series)
-                for metric_name, series in metric_series_map.items()
+                metric_name: _summary(series) for metric_name, series in metric_series_map.items()
             }
 
             metric_points = (
-                _window_series_points(metric_series_map)
-                if options.include_time_series
-                else None
+                _window_series_points(metric_series_map) if options.include_time_series else None
             )
 
             window_results.append(
