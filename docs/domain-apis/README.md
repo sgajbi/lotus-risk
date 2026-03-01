@@ -37,6 +37,7 @@ This package documents the current `lotus-risk` API surface and evaluates it aga
 - `POST /analytics/risk/drawdown`
 - `POST /analytics/risk/concentration`
 - `POST /analytics/risk/rolling-metrics`
+- `POST /analytics/risk/historical-attribution` (proposed by RFC-0006)
 
 ## Current Dependency Summary
 
@@ -65,4 +66,5 @@ See per-endpoint detail:
 - `docs/domain-apis/risk-drawdown.md`
 - `docs/domain-apis/risk-concentration.md`
 - `docs/domain-apis/risk-rolling-metrics.md`
+- `docs/domain-apis/risk-historical-attribution.md`
 - `docs/domain-apis/lotus-core-requirements-for-issuer-concentration.md`
