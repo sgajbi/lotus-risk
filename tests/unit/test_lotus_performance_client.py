@@ -101,3 +101,42 @@ async def test_client_maps_http_status_error_with_detail(monkeypatch: pytest.Mon
             request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
             correlation_id=None,
         )
+
+
+@pytest.mark.asyncio
+async def test_client_maps_http_transport_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    class _BrokenAsyncClient(_FakeAsyncClient):
+        async def post(
+            self, url: str, *, json: dict[str, Any], headers: dict[str, str]
+        ) -> httpx.Response:
+            raise httpx.ConnectError("network down", request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(httpx, "AsyncClient", _BrokenAsyncClient)
+    client = LotusPerformanceClient(base_url="http://performance.local")
+
+    with pytest.raises(ValueError, match="unavailable"):
+        await client.get_returns_series(
+            request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
+            correlation_id=None,
+        )
+
+
+def test_client_extract_error_detail_variants() -> None:
+    response_plain = httpx.Response(
+        status_code=500,
+        text="plain text",
+        request=httpx.Request("POST", "http://x"),
+    )
+    assert LotusPerformanceClient._extract_error_detail(response_plain) == "plain text"
+
+    response_detail_str = _ok_response({"detail": "simple detail"})
+    assert LotusPerformanceClient._extract_error_detail(response_detail_str) == "simple detail"
+
+    response_error_obj = _ok_response({"error": {"message": "error message"}})
+    assert LotusPerformanceClient._extract_error_detail(response_error_obj) == "error message"
+
+
+def test_client_defaults_base_url_when_env_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("LOTUS_PERFORMANCE_BASE_URL", raising=False)
+    client = LotusPerformanceClient()
+    assert client._base_url == "http://localhost:8002"

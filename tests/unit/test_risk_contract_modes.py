@@ -25,6 +25,16 @@ def test_risk_contract_requires_stateless_input_for_stateless_mode() -> None:
         RiskAnalyticsRequest.model_validate({"input_mode": "stateless"})
 
 
+def test_risk_contract_requires_stateful_input_for_stateful_mode() -> None:
+    with pytest.raises(ValueError, match="stateful_input is required"):
+        RiskAnalyticsRequest.model_validate({"input_mode": "stateful"})
+
+
+def test_risk_contract_requires_simulation_input_for_simulation_mode() -> None:
+    with pytest.raises(ValueError, match="simulation_input is required"):
+        RiskAnalyticsRequest.model_validate({"input_mode": "simulation"})
+
+
 def test_risk_contract_rejects_duplicate_period_names() -> None:
     payload = _stateless_payload()
     stateless = payload["stateless_input"]

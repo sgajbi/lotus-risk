@@ -32,6 +32,31 @@ class _RecordingLotusPerformanceClient:
         }
 
 
+class _AutoWiredLotusPerformanceClient:
+    calls: list[dict[str, object]] = []
+
+    async def get_returns_series(
+        self,
+        *,
+        request_payload: dict[str, object],
+        correlation_id: str | None,
+    ) -> dict[str, object]:
+        _AutoWiredLotusPerformanceClient.calls.append(
+            {
+                "request_payload": request_payload,
+                "correlation_id": correlation_id,
+            }
+        )
+        return {
+            "series": {
+                "portfolio_returns": [
+                    {"date": "2025-01-02", "return_value": "0.0100"},
+                    {"date": "2025-01-03", "return_value": "0.0200"},
+                ]
+            }
+        }
+
+
 def _request_payload() -> dict[str, object]:
     return {
         "input_mode": "stateless",
@@ -146,6 +171,52 @@ def test_risk_calculate_stateful_mode_uses_lotus_performance_returns_series() ->
     assert metrics["VOLATILITY"]["value"] is not None
     assert metrics["BETA"]["value"] is None
     assert "Benchmark returns required" in metrics["BETA"]["details"]["error"]
+
+
+def test_risk_calculate_stateful_mode_autowires_lotus_performance_client() -> None:
+    import app.main as main_module
+
+    original_client = main_module.LotusPerformanceClient
+    try:
+        main_module.LotusPerformanceClient = _AutoWiredLotusPerformanceClient
+        app.state.lotus_performance_client = None
+        _AutoWiredLotusPerformanceClient.calls = []
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/calculate",
+            headers={"X-Correlation-Id": "corr-autowire"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2025-01-03",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "metrics": ["VOLATILITY"],
+                },
+            },
+        )
+        assert response.status_code == 200
+        assert _AutoWiredLotusPerformanceClient.calls[0]["correlation_id"] == "corr-autowire"
+    finally:
+        main_module.LotusPerformanceClient = original_client
+
+
+def test_risk_calculate_simulation_mode_returns_not_implemented_error() -> None:
+    client = TestClient(app)
+    response = client.post(
+        "/analytics/risk/calculate",
+        json={
+            "input_mode": "simulation",
+            "simulation_input": {
+                "portfolio_id": "DEMO_DPM_EUR_001",
+                "as_of_date": "2026-02-27",
+                "periods": [{"type": "YTD", "name": "YTD"}],
+                "metrics": ["VOLATILITY"],
+            },
+        },
+    )
+    assert response.status_code == 400
+    assert "not implemented" in response.json()["error"]["message"]
 
 
 def test_metrics_endpoint_exposes_risk_metric_observability() -> None:
