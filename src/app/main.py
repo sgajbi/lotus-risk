@@ -18,7 +18,7 @@ from app.contracts.capabilities import (
 from app.contracts.concentration import ConcentrationRequest, ConcentrationResponse
 from app.contracts.error import ErrorResponse
 from app.contracts.ops import OpsChecks, OpsResponse
-from app.contracts.risk import RiskCalculationRequest, RiskResponse
+from app.contracts.risk import RiskAnalyticsRequest, RiskInputMode, RiskResponse
 from app.enterprise_readiness import (
     build_enterprise_audit_middleware,
     validate_enterprise_runtime_config,
@@ -376,5 +376,12 @@ async def analytics_risk_concentration(
         "all VaR methods (HISTORICAL/GAUSSIAN/CORNISH_FISHER), and benchmark-aware metrics."
     ),
 )
-async def analytics_risk_calculate(request: RiskCalculationRequest) -> RiskResponse:
-    return calculate_risk(request)
+async def analytics_risk_calculate(request: RiskAnalyticsRequest) -> RiskResponse:
+    if request.input_mode != RiskInputMode.STATELESS:
+        raise ValueError(
+            f"input_mode={request.input_mode.value} is not implemented for /analytics/risk/calculate yet. "
+            "Use input_mode=stateless in this slice."
+        )
+    stateless_input = request.stateless_input
+    assert stateless_input is not None
+    return calculate_risk(stateless_input)

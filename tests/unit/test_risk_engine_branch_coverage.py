@@ -140,11 +140,14 @@ def test_endpoint_error_path_returns_400() -> None:
         response = client.post(
             "/analytics/risk/calculate",
             json={
-                "scope": {"as_of_date": "2025-03-31", "net_or_gross": "NET"},
-                "portfolio_open_date": "2024-01-01",
-                "periods": [{"type": "YTD"}],
-                "metrics": ["VOLATILITY"],
-                "returns": [{"date": "2025-01-01", "value": 0.1}],
+                "input_mode": "stateless",
+                "stateless_input": {
+                    "scope": {"as_of_date": "2025-03-31", "net_or_gross": "NET"},
+                    "portfolio_open_date": "2024-01-01",
+                    "periods": [{"type": "YTD"}],
+                    "metrics": ["VOLATILITY"],
+                    "returns": [{"date": "2025-01-01", "value": 0.1}],
+                },
             },
             headers={"X-Correlation-Id": "corr-400"},
         )

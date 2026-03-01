@@ -5,34 +5,37 @@ from app.main import app
 
 def _request_payload() -> dict[str, object]:
     return {
-        "scope": {"as_of_date": "2025-03-31", "net_or_gross": "NET"},
-        "portfolio_open_date": "2024-01-01",
-        "periods": [
-            {
-                "type": "EXPLICIT",
-                "name": "Explicit",
-                "from_date": "2025-01-01",
-                "to_date": "2025-03-31",
-            }
-        ],
-        "metrics": ["VOLATILITY", "SHARPE", "VAR"],
-        "options": {
-            "frequency": "DAILY",
-            "risk_free_mode": "ANNUAL_RATE",
-            "risk_free_annual_rate": 0.01,
-            "var": {
-                "method": "HISTORICAL",
-                "confidence": 0.95,
-                "horizon_days": 1,
-                "include_expected_shortfall": True,
+        "input_mode": "stateless",
+        "stateless_input": {
+            "scope": {"as_of_date": "2025-03-31", "net_or_gross": "NET"},
+            "portfolio_open_date": "2024-01-01",
+            "periods": [
+                {
+                    "type": "EXPLICIT",
+                    "name": "Explicit",
+                    "from_date": "2025-01-01",
+                    "to_date": "2025-03-31",
+                }
+            ],
+            "metrics": ["VOLATILITY", "SHARPE", "VAR"],
+            "options": {
+                "frequency": "DAILY",
+                "risk_free_mode": "ANNUAL_RATE",
+                "risk_free_annual_rate": 0.01,
+                "var": {
+                    "method": "HISTORICAL",
+                    "confidence": 0.95,
+                    "horizon_days": 1,
+                    "include_expected_shortfall": True,
+                },
             },
+            "returns": [
+                {"date": "2025-01-02", "value": 1.0},
+                {"date": "2025-01-03", "value": 2.0},
+                {"date": "2025-01-06", "value": -1.0},
+                {"date": "2025-01-07", "value": 0.5},
+            ],
         },
-        "returns": [
-            {"date": "2025-01-02", "value": 1.0},
-            {"date": "2025-01-03", "value": 2.0},
-            {"date": "2025-01-06", "value": -1.0},
-            {"date": "2025-01-07", "value": 0.5},
-        ],
     }
 
 
@@ -69,13 +72,28 @@ def test_risk_calculate_endpoint_rejects_invalid_explicit_period() -> None:
 def test_risk_calculate_benchmark_requirement_behavior() -> None:
     client = TestClient(app)
     payload = _request_payload()
-    payload["metrics"] = ["BETA", "TRACKING_ERROR", "INFORMATION_RATIO"]
-    payload["benchmark_returns"] = []
+    stateless_input = payload["stateless_input"]
+    assert isinstance(stateless_input, dict)
+    stateless_input["metrics"] = ["BETA", "TRACKING_ERROR", "INFORMATION_RATIO"]
+    stateless_input["benchmark_returns"] = []
     response = client.post("/analytics/risk/calculate", json=payload)
     assert response.status_code == 200
     metrics = response.json()["results"]["Explicit"]["metrics"]
     assert metrics["BETA"]["value"] is None
     assert "Benchmark returns required" in metrics["BETA"]["details"]["error"]
+
+
+def test_risk_calculate_rejects_non_stateless_modes_in_slice_one() -> None:
+    client = TestClient(app)
+    response = client.post(
+        "/analytics/risk/calculate",
+        json={
+            "input_mode": "stateful",
+            "stateful_input": {"portfolio_id": "DEMO_DPM_EUR_001", "as_of_date": "2026-02-27"},
+        },
+    )
+    assert response.status_code == 400
+    assert "not implemented" in response.json()["error"]["message"]
 
 
 def test_metrics_endpoint_exposes_risk_metric_observability() -> None:

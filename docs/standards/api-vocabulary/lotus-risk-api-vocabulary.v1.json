@@ -8,22 +8,8 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-02-27T12:44:12.810949+00:00",
+  "generatedAt": "2026-03-01T03:32:18.181180+00:00",
   "attributeCatalog": [
-    {
-      "semanticId": "lotus.annualization_factor",
-      "canonicalTerm": "annualization_factor",
-      "preferredName": "annualization_factor",
-      "description": "Optional annualization factor override.",
-      "example": 252,
-      "type": "object",
-      "locations": [
-        "body"
-      ],
-      "observedTypes": [
-        "object"
-      ]
-    },
     {
       "semanticId": "lotus.as_of_date",
       "canonicalTerm": "as_of_date",
@@ -36,25 +22,6 @@
       ],
       "observedTypes": [
         "string"
-      ]
-    },
-    {
-      "semanticId": "lotus.benchmark_returns",
-      "canonicalTerm": "benchmark_returns",
-      "preferredName": "benchmark_returns",
-      "description": "Benchmark return observations for benchmark-dependent metrics.",
-      "example": [
-        {
-          "date": "2025-01-02",
-          "value": 0.75
-        }
-      ],
-      "type": "array",
-      "locations": [
-        "body"
-      ],
-      "observedTypes": [
-        "array"
       ]
     },
     {
@@ -71,20 +38,6 @@
       ],
       "observedTypes": [
         "OpsChecks"
-      ]
-    },
-    {
-      "semanticId": "lotus.confidence",
-      "canonicalTerm": "confidence",
-      "preferredName": "confidence",
-      "description": "Confidence level used for Value-at-Risk.",
-      "example": 0.95,
-      "type": "number",
-      "locations": [
-        "body"
-      ],
-      "observedTypes": [
-        "number"
       ]
     },
     {
@@ -127,20 +80,6 @@
       ],
       "observedTypes": [
         "integer"
-      ]
-    },
-    {
-      "semanticId": "lotus.date",
-      "canonicalTerm": "date",
-      "preferredName": "date",
-      "description": "Date of return observation.",
-      "example": "2025-01-02",
-      "type": "string",
-      "locations": [
-        "body"
-      ],
-      "observedTypes": [
-        "string"
       ]
     },
     {
@@ -205,34 +144,6 @@
       ]
     },
     {
-      "semanticId": "lotus.frequency",
-      "canonicalTerm": "frequency",
-      "preferredName": "frequency",
-      "description": "Return sampling frequency.",
-      "example": "DAILY",
-      "type": "string",
-      "locations": [
-        "body"
-      ],
-      "observedTypes": [
-        "string"
-      ]
-    },
-    {
-      "semanticId": "lotus.from_date",
-      "canonicalTerm": "from_date",
-      "preferredName": "from_date",
-      "description": "Explicit period start date (required when type=EXPLICIT).",
-      "example": "2025-01-01",
-      "type": "object",
-      "locations": [
-        "body"
-      ],
-      "observedTypes": [
-        "object"
-      ]
-    },
-    {
       "semanticId": "lotus.hhi_current",
       "canonicalTerm": "hhi_current",
       "preferredName": "hhi_current",
@@ -275,34 +186,6 @@
       ]
     },
     {
-      "semanticId": "lotus.horizon_days",
-      "canonicalTerm": "horizon_days",
-      "preferredName": "horizon_days",
-      "description": "Time horizon (in days) used for VaR scaling.",
-      "example": 1,
-      "type": "integer",
-      "locations": [
-        "body"
-      ],
-      "observedTypes": [
-        "integer"
-      ]
-    },
-    {
-      "semanticId": "lotus.include_expected_shortfall",
-      "canonicalTerm": "include_expected_shortfall",
-      "preferredName": "include_expected_shortfall",
-      "description": "Whether expected shortfall should be included in VAR details.",
-      "example": true,
-      "type": "boolean",
-      "locations": [
-        "body"
-      ],
-      "observedTypes": [
-        "boolean"
-      ]
-    },
-    {
       "semanticId": "lotus.input_mode",
       "canonicalTerm": "input_mode",
       "preferredName": "input_mode",
@@ -313,7 +196,8 @@
         "body"
       ],
       "observedTypes": [
-        "ConcentrationInputMode"
+        "ConcentrationInputMode",
+        "RiskInputMode"
       ]
     },
     {
@@ -393,20 +277,6 @@
       ]
     },
     {
-      "semanticId": "lotus.mar_annual_rate",
-      "canonicalTerm": "mar_annual_rate",
-      "preferredName": "mar_annual_rate",
-      "description": "Annualized minimum acceptable return used for Sortino ratio.",
-      "example": 0.0,
-      "type": "number",
-      "locations": [
-        "body"
-      ],
-      "observedTypes": [
-        "number"
-      ]
-    },
-    {
       "semanticId": "lotus.metadata",
       "canonicalTerm": "metadata",
       "preferredName": "metadata",
@@ -418,52 +288,6 @@
         "simulation_session_id": "SIM_0001",
         "simulation_session_version": 3
       },
-      "type": "object",
-      "locations": [
-        "body"
-      ],
-      "observedTypes": [
-        "object"
-      ]
-    },
-    {
-      "semanticId": "lotus.method",
-      "canonicalTerm": "method",
-      "preferredName": "method",
-      "description": "Value-at-Risk calculation method.",
-      "example": "HISTORICAL",
-      "type": "string",
-      "locations": [
-        "body"
-      ],
-      "observedTypes": [
-        "string"
-      ]
-    },
-    {
-      "semanticId": "lotus.metrics",
-      "canonicalTerm": "metrics",
-      "preferredName": "metrics",
-      "description": "Requested risk metrics.",
-      "example": [
-        "VOLATILITY",
-        "SHARPE",
-        "VAR"
-      ],
-      "type": "array",
-      "locations": [
-        "body"
-      ],
-      "observedTypes": [
-        "array"
-      ]
-    },
-    {
-      "semanticId": "lotus.name",
-      "canonicalTerm": "name",
-      "preferredName": "name",
-      "description": "Optional display label for this period.",
-      "example": "explicit_q1_2025",
       "type": "object",
       "locations": [
         "body"
@@ -501,61 +325,11 @@
       ]
     },
     {
-      "semanticId": "lotus.options",
-      "canonicalTerm": "options",
-      "preferredName": "options",
-      "description": "Canonical options used by lotus-risk APIs.",
-      "example": {
-        "key": "value"
-      },
-      "type": "RiskOptions",
-      "locations": [
-        "body"
-      ],
-      "observedTypes": [
-        "RiskOptions"
-      ]
-    },
-    {
-      "semanticId": "lotus.periods",
-      "canonicalTerm": "periods",
-      "preferredName": "periods",
-      "description": "List of periods to evaluate.",
-      "example": [
-        {
-          "from_date": "2025-01-01",
-          "to_date": "2025-03-31",
-          "type": "EXPLICIT"
-        }
-      ],
-      "type": "array",
-      "locations": [
-        "body"
-      ],
-      "observedTypes": [
-        "array"
-      ]
-    },
-    {
       "semanticId": "lotus.policy_version",
       "canonicalTerm": "policy_version",
       "preferredName": "policy_version",
       "description": "Capabilities policy version used by this service.",
       "example": "risk.v1",
-      "type": "string",
-      "locations": [
-        "body"
-      ],
-      "observedTypes": [
-        "string"
-      ]
-    },
-    {
-      "semanticId": "lotus.portfolio_open_date",
-      "canonicalTerm": "portfolio_open_date",
-      "preferredName": "portfolio_open_date",
-      "description": "Portfolio inception date used for SI period handling.",
-      "example": "2024-01-01",
       "type": "string",
       "locations": [
         "body"
@@ -614,53 +388,6 @@
       ],
       "observedTypes": [
         "object"
-      ]
-    },
-    {
-      "semanticId": "lotus.returns",
-      "canonicalTerm": "returns",
-      "preferredName": "returns",
-      "description": "Portfolio return observations.",
-      "example": [
-        {
-          "date": "2025-01-02",
-          "value": 1.0
-        }
-      ],
-      "type": "array",
-      "locations": [
-        "body"
-      ],
-      "observedTypes": [
-        "array"
-      ]
-    },
-    {
-      "semanticId": "lotus.risk_free_annual_rate",
-      "canonicalTerm": "risk_free_annual_rate",
-      "preferredName": "risk_free_annual_rate",
-      "description": "Annualized risk-free rate when risk_free_mode=ANNUAL_RATE.",
-      "example": 0.01,
-      "type": "object",
-      "locations": [
-        "body"
-      ],
-      "observedTypes": [
-        "object"
-      ]
-    },
-    {
-      "semanticId": "lotus.risk_free_mode",
-      "canonicalTerm": "risk_free_mode",
-      "preferredName": "risk_free_mode",
-      "description": "Risk-free rate mode used for Sharpe calculations.",
-      "example": "ANNUAL_RATE",
-      "type": "string",
-      "locations": [
-        "body"
-      ],
-      "observedTypes": [
-        "string"
       ]
     },
     {
@@ -861,20 +588,6 @@
       ]
     },
     {
-      "semanticId": "lotus.to_date",
-      "canonicalTerm": "to_date",
-      "preferredName": "to_date",
-      "description": "Explicit period end date (required when type=EXPLICIT).",
-      "example": "2025-03-31",
-      "type": "object",
-      "locations": [
-        "body"
-      ],
-      "observedTypes": [
-        "object"
-      ]
-    },
-    {
       "semanticId": "lotus.top_issuer_weight_current",
       "canonicalTerm": "top_issuer_weight_current",
       "preferredName": "top_issuer_weight_current",
@@ -1043,34 +756,6 @@
       ]
     },
     {
-      "semanticId": "lotus.type",
-      "canonicalTerm": "type",
-      "preferredName": "type",
-      "description": "Period type used for metric aggregation.",
-      "example": "EXPLICIT",
-      "type": "string",
-      "locations": [
-        "body"
-      ],
-      "observedTypes": [
-        "string"
-      ]
-    },
-    {
-      "semanticId": "lotus.use_log_returns",
-      "canonicalTerm": "use_log_returns",
-      "preferredName": "use_log_returns",
-      "description": "Whether to transform arithmetic returns to log returns.",
-      "example": false,
-      "type": "boolean",
-      "locations": [
-        "body"
-      ],
-      "observedTypes": [
-        "boolean"
-      ]
-    },
-    {
       "semanticId": "lotus.valuation_context",
       "canonicalTerm": "valuation_context",
       "preferredName": "valuation_context",
@@ -1087,36 +772,6 @@
       ],
       "observedTypes": [
         "object"
-      ]
-    },
-    {
-      "semanticId": "lotus.value",
-      "canonicalTerm": "value",
-      "preferredName": "value",
-      "description": "Return value in percentage points.",
-      "example": 0.85,
-      "type": "number",
-      "locations": [
-        "body"
-      ],
-      "observedTypes": [
-        "number"
-      ]
-    },
-    {
-      "semanticId": "lotus.var",
-      "canonicalTerm": "var",
-      "preferredName": "var",
-      "description": "Canonical var used by lotus-risk APIs.",
-      "example": {
-        "key": "value"
-      },
-      "type": "VaROptions",
-      "locations": [
-        "body"
-      ],
-      "observedTypes": [
-        "VaROptions"
       ]
     },
     {
@@ -1164,20 +819,6 @@
       ],
       "observedTypes": [
         "array"
-      ]
-    },
-    {
-      "semanticId": "lotus.year",
-      "canonicalTerm": "year",
-      "preferredName": "year",
-      "description": "Calendar year (required when type=YEAR).",
-      "example": 2025,
-      "type": "object",
-      "locations": [
-        "body"
-      ],
-      "observedTypes": [
-        "object"
       ]
     }
   ],
@@ -1776,244 +1417,36 @@
       "request": {
         "fields": [
           {
-            "name": "scope",
-            "location": "body",
-            "required": true,
-            "type": "RiskRequestScope",
-            "semanticId": "lotus.scope",
-            "attributeRef": "#/attributeCatalog/lotus.scope"
-          },
-          {
-            "name": "scope.as_of_date",
+            "name": "input_mode",
             "location": "body",
             "required": false,
-            "type": "string",
-            "semanticId": "lotus.as_of_date",
-            "attributeRef": "#/attributeCatalog/lotus.as_of_date"
+            "type": "RiskInputMode",
+            "semanticId": "lotus.input_mode",
+            "attributeRef": "#/attributeCatalog/lotus.input_mode"
           },
           {
-            "name": "scope.reporting_currency",
+            "name": "stateless_input",
             "location": "body",
             "required": false,
             "type": "object",
-            "semanticId": "lotus.reporting_currency",
-            "attributeRef": "#/attributeCatalog/lotus.reporting_currency"
+            "semanticId": "lotus.stateless_input",
+            "attributeRef": "#/attributeCatalog/lotus.stateless_input"
           },
           {
-            "name": "scope.net_or_gross",
-            "location": "body",
-            "required": false,
-            "type": "string",
-            "semanticId": "lotus.net_or_gross",
-            "attributeRef": "#/attributeCatalog/lotus.net_or_gross"
-          },
-          {
-            "name": "periods",
-            "location": "body",
-            "required": true,
-            "type": "array",
-            "semanticId": "lotus.periods",
-            "attributeRef": "#/attributeCatalog/lotus.periods"
-          },
-          {
-            "name": "periods[].type",
-            "location": "body",
-            "required": true,
-            "type": "string",
-            "semanticId": "lotus.type",
-            "attributeRef": "#/attributeCatalog/lotus.type"
-          },
-          {
-            "name": "periods[].name",
+            "name": "stateful_input",
             "location": "body",
             "required": false,
             "type": "object",
-            "semanticId": "lotus.name",
-            "attributeRef": "#/attributeCatalog/lotus.name"
+            "semanticId": "lotus.stateful_input",
+            "attributeRef": "#/attributeCatalog/lotus.stateful_input"
           },
           {
-            "name": "periods[].from_date",
+            "name": "simulation_input",
             "location": "body",
             "required": false,
             "type": "object",
-            "semanticId": "lotus.from_date",
-            "attributeRef": "#/attributeCatalog/lotus.from_date"
-          },
-          {
-            "name": "periods[].to_date",
-            "location": "body",
-            "required": false,
-            "type": "object",
-            "semanticId": "lotus.to_date",
-            "attributeRef": "#/attributeCatalog/lotus.to_date"
-          },
-          {
-            "name": "periods[].year",
-            "location": "body",
-            "required": false,
-            "type": "object",
-            "semanticId": "lotus.year",
-            "attributeRef": "#/attributeCatalog/lotus.year"
-          },
-          {
-            "name": "metrics",
-            "location": "body",
-            "required": true,
-            "type": "array",
-            "semanticId": "lotus.metrics",
-            "attributeRef": "#/attributeCatalog/lotus.metrics"
-          },
-          {
-            "name": "options",
-            "location": "body",
-            "required": false,
-            "type": "RiskOptions",
-            "semanticId": "lotus.options",
-            "attributeRef": "#/attributeCatalog/lotus.options"
-          },
-          {
-            "name": "options.frequency",
-            "location": "body",
-            "required": false,
-            "type": "string",
-            "semanticId": "lotus.frequency",
-            "attributeRef": "#/attributeCatalog/lotus.frequency"
-          },
-          {
-            "name": "options.annualization_factor",
-            "location": "body",
-            "required": false,
-            "type": "object",
-            "semanticId": "lotus.annualization_factor",
-            "attributeRef": "#/attributeCatalog/lotus.annualization_factor"
-          },
-          {
-            "name": "options.use_log_returns",
-            "location": "body",
-            "required": false,
-            "type": "boolean",
-            "semanticId": "lotus.use_log_returns",
-            "attributeRef": "#/attributeCatalog/lotus.use_log_returns"
-          },
-          {
-            "name": "options.risk_free_mode",
-            "location": "body",
-            "required": false,
-            "type": "string",
-            "semanticId": "lotus.risk_free_mode",
-            "attributeRef": "#/attributeCatalog/lotus.risk_free_mode"
-          },
-          {
-            "name": "options.risk_free_annual_rate",
-            "location": "body",
-            "required": false,
-            "type": "object",
-            "semanticId": "lotus.risk_free_annual_rate",
-            "attributeRef": "#/attributeCatalog/lotus.risk_free_annual_rate"
-          },
-          {
-            "name": "options.mar_annual_rate",
-            "location": "body",
-            "required": false,
-            "type": "number",
-            "semanticId": "lotus.mar_annual_rate",
-            "attributeRef": "#/attributeCatalog/lotus.mar_annual_rate"
-          },
-          {
-            "name": "options.var",
-            "location": "body",
-            "required": false,
-            "type": "VaROptions",
-            "semanticId": "lotus.var",
-            "attributeRef": "#/attributeCatalog/lotus.var"
-          },
-          {
-            "name": "options.var.method",
-            "location": "body",
-            "required": false,
-            "type": "string",
-            "semanticId": "lotus.method",
-            "attributeRef": "#/attributeCatalog/lotus.method"
-          },
-          {
-            "name": "options.var.confidence",
-            "location": "body",
-            "required": false,
-            "type": "number",
-            "semanticId": "lotus.confidence",
-            "attributeRef": "#/attributeCatalog/lotus.confidence"
-          },
-          {
-            "name": "options.var.horizon_days",
-            "location": "body",
-            "required": false,
-            "type": "integer",
-            "semanticId": "lotus.horizon_days",
-            "attributeRef": "#/attributeCatalog/lotus.horizon_days"
-          },
-          {
-            "name": "options.var.include_expected_shortfall",
-            "location": "body",
-            "required": false,
-            "type": "boolean",
-            "semanticId": "lotus.include_expected_shortfall",
-            "attributeRef": "#/attributeCatalog/lotus.include_expected_shortfall"
-          },
-          {
-            "name": "portfolio_open_date",
-            "location": "body",
-            "required": true,
-            "type": "string",
-            "semanticId": "lotus.portfolio_open_date",
-            "attributeRef": "#/attributeCatalog/lotus.portfolio_open_date"
-          },
-          {
-            "name": "returns",
-            "location": "body",
-            "required": true,
-            "type": "array",
-            "semanticId": "lotus.returns",
-            "attributeRef": "#/attributeCatalog/lotus.returns"
-          },
-          {
-            "name": "returns[].date",
-            "location": "body",
-            "required": true,
-            "type": "string",
-            "semanticId": "lotus.date",
-            "attributeRef": "#/attributeCatalog/lotus.date"
-          },
-          {
-            "name": "returns[].value",
-            "location": "body",
-            "required": true,
-            "type": "number",
-            "semanticId": "lotus.value",
-            "attributeRef": "#/attributeCatalog/lotus.value"
-          },
-          {
-            "name": "benchmark_returns",
-            "location": "body",
-            "required": false,
-            "type": "array",
-            "semanticId": "lotus.benchmark_returns",
-            "attributeRef": "#/attributeCatalog/lotus.benchmark_returns"
-          },
-          {
-            "name": "benchmark_returns[].date",
-            "location": "body",
-            "required": true,
-            "type": "string",
-            "semanticId": "lotus.date",
-            "attributeRef": "#/attributeCatalog/lotus.date"
-          },
-          {
-            "name": "benchmark_returns[].value",
-            "location": "body",
-            "required": true,
-            "type": "number",
-            "semanticId": "lotus.value",
-            "attributeRef": "#/attributeCatalog/lotus.value"
+            "semanticId": "lotus.simulation_input",
+            "attributeRef": "#/attributeCatalog/lotus.simulation_input"
           }
         ]
       },
