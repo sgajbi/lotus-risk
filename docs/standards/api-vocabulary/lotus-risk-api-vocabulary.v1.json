@@ -8,8 +8,24 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-03-01T03:32:18.181180+00:00",
+  "generatedAt": "2026-03-01T06:11:21.687295+00:00",
   "attributeCatalog": [
+    {
+      "semanticId": "lotus.analysis_options",
+      "canonicalTerm": "analysis_options",
+      "preferredName": "analysis_options",
+      "description": "Canonical analysis options used by lotus-risk APIs.",
+      "example": {
+        "key": "value"
+      },
+      "type": "DrawdownAnalysisOptions",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "DrawdownAnalysisOptions"
+      ]
+    },
     {
       "semanticId": "lotus.as_of_date",
       "canonicalTerm": "as_of_date",
@@ -22,6 +38,20 @@
       ],
       "observedTypes": [
         "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.cdar_alpha",
+      "canonicalTerm": "cdar_alpha",
+      "preferredName": "cdar_alpha",
+      "description": "Confidence level used for drawdown-at-risk and conditional drawdown-at-risk metrics.",
+      "example": 0.95,
+      "type": "number",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "number"
       ]
     },
     {
@@ -38,6 +68,20 @@
       ],
       "observedTypes": [
         "OpsChecks"
+      ]
+    },
+    {
+      "semanticId": "lotus.contract_version",
+      "canonicalTerm": "contract_version",
+      "preferredName": "contract_version",
+      "description": "Drawdown analytics contract version.",
+      "example": "v1",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
       ]
     },
     {
@@ -94,6 +138,20 @@
       ],
       "observedTypes": [
         "boolean"
+      ]
+    },
+    {
+      "semanticId": "lotus.duration_unit",
+      "canonicalTerm": "duration_unit",
+      "preferredName": "duration_unit",
+      "description": "Duration convention used for drawdown episode timing metrics.",
+      "example": "BUSINESS_DAYS",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
       ]
     },
     {
@@ -186,6 +244,34 @@
       ]
     },
     {
+      "semanticId": "lotus.include_episode_list",
+      "canonicalTerm": "include_episode_list",
+      "preferredName": "include_episode_list",
+      "description": "Whether drawdown episodes should be returned in responses.",
+      "example": true,
+      "type": "boolean",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "boolean"
+      ]
+    },
+    {
+      "semanticId": "lotus.include_underwater_series",
+      "canonicalTerm": "include_underwater_series",
+      "preferredName": "include_underwater_series",
+      "description": "Whether underwater drawdown time series points should be included in responses.",
+      "example": false,
+      "type": "boolean",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "boolean"
+      ]
+    },
+    {
       "semanticId": "lotus.input_mode",
       "canonicalTerm": "input_mode",
       "preferredName": "input_mode",
@@ -197,6 +283,7 @@
       ],
       "observedTypes": [
         "ConcentrationInputMode",
+        "DrawdownInputMode",
         "RiskInputMode"
       ]
     },
@@ -293,7 +380,36 @@
         "body"
       ],
       "observedTypes": [
-        "object"
+        "object",
+        "DrawdownMetadata"
+      ]
+    },
+    {
+      "semanticId": "lotus.methodology_version",
+      "canonicalTerm": "methodology_version",
+      "preferredName": "methodology_version",
+      "description": "Methodology version used for drawdown analytics formulas.",
+      "example": "drawdown.v1",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.minimum_episode_depth_bps",
+      "canonicalTerm": "minimum_episode_depth_bps",
+      "preferredName": "minimum_episode_depth_bps",
+      "description": "Minimum episode depth (in basis points) required to include an episode in the list.",
+      "example": 25.0,
+      "type": "number",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "number"
       ]
     },
     {
@@ -370,16 +486,15 @@
       "semanticId": "lotus.results",
       "canonicalTerm": "results",
       "preferredName": "results",
-      "description": "Risk results keyed by period name or period type.",
+      "description": "Drawdown period results keyed by period name.",
       "example": {
-        "explicit_q1_2025": {
-          "end_date": "2025-03-31",
-          "metrics": {
-            "VOLATILITY": {
-              "value": 0.23
-            }
-          },
-          "start_date": "2025-01-01"
+        "YTD": {
+          "end_date": "2026-02-28",
+          "episodes": [],
+          "start_date": "2026-01-01",
+          "summary": {
+            "max_drawdown": -0.124533
+          }
         }
       },
       "type": "object",
@@ -683,6 +798,20 @@
       ],
       "observedTypes": [
         "number"
+      ]
+    },
+    {
+      "semanticId": "lotus.top_n_episodes",
+      "canonicalTerm": "top_n_episodes",
+      "preferredName": "top_n_episodes",
+      "description": "Maximum number of worst drawdown episodes to return per period.",
+      "example": 5,
+      "type": "integer",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "integer"
       ]
     },
     {
@@ -1404,6 +1533,189 @@
             "type": "object",
             "semanticId": "lotus.metadata",
             "attributeRef": "#/attributeCatalog/lotus.metadata"
+          }
+        ]
+      }
+    },
+    {
+      "domain": "risk_analytics",
+      "method": "POST",
+      "path": "/analytics/risk/drawdown",
+      "operationId": "analytics_risk_drawdown_analytics_risk_drawdown_post",
+      "summary": "Calculate realized drawdown analytics",
+      "request": {
+        "fields": [
+          {
+            "name": "input_mode",
+            "location": "body",
+            "required": false,
+            "type": "DrawdownInputMode",
+            "semanticId": "lotus.input_mode",
+            "attributeRef": "#/attributeCatalog/lotus.input_mode"
+          },
+          {
+            "name": "stateless_input",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.stateless_input",
+            "attributeRef": "#/attributeCatalog/lotus.stateless_input"
+          },
+          {
+            "name": "stateful_input",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.stateful_input",
+            "attributeRef": "#/attributeCatalog/lotus.stateful_input"
+          },
+          {
+            "name": "simulation_input",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.simulation_input",
+            "attributeRef": "#/attributeCatalog/lotus.simulation_input"
+          },
+          {
+            "name": "analysis_options",
+            "location": "body",
+            "required": false,
+            "type": "DrawdownAnalysisOptions",
+            "semanticId": "lotus.analysis_options",
+            "attributeRef": "#/attributeCatalog/lotus.analysis_options"
+          },
+          {
+            "name": "analysis_options.include_underwater_series",
+            "location": "body",
+            "required": false,
+            "type": "boolean",
+            "semanticId": "lotus.include_underwater_series",
+            "attributeRef": "#/attributeCatalog/lotus.include_underwater_series"
+          },
+          {
+            "name": "analysis_options.include_episode_list",
+            "location": "body",
+            "required": false,
+            "type": "boolean",
+            "semanticId": "lotus.include_episode_list",
+            "attributeRef": "#/attributeCatalog/lotus.include_episode_list"
+          },
+          {
+            "name": "analysis_options.top_n_episodes",
+            "location": "body",
+            "required": false,
+            "type": "integer",
+            "semanticId": "lotus.top_n_episodes",
+            "attributeRef": "#/attributeCatalog/lotus.top_n_episodes"
+          },
+          {
+            "name": "analysis_options.cdar_alpha",
+            "location": "body",
+            "required": false,
+            "type": "number",
+            "semanticId": "lotus.cdar_alpha",
+            "attributeRef": "#/attributeCatalog/lotus.cdar_alpha"
+          },
+          {
+            "name": "analysis_options.minimum_episode_depth_bps",
+            "location": "body",
+            "required": false,
+            "type": "number",
+            "semanticId": "lotus.minimum_episode_depth_bps",
+            "attributeRef": "#/attributeCatalog/lotus.minimum_episode_depth_bps"
+          },
+          {
+            "name": "analysis_options.duration_unit",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.duration_unit",
+            "attributeRef": "#/attributeCatalog/lotus.duration_unit"
+          }
+        ]
+      },
+      "response": {
+        "fields": [
+          {
+            "name": "source_service",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.source_service",
+            "attributeRef": "#/attributeCatalog/lotus.source_service"
+          },
+          {
+            "name": "input_mode",
+            "location": "body",
+            "required": true,
+            "type": "DrawdownInputMode",
+            "semanticId": "lotus.input_mode",
+            "attributeRef": "#/attributeCatalog/lotus.input_mode"
+          },
+          {
+            "name": "scope",
+            "location": "body",
+            "required": true,
+            "type": "RiskRequestScope",
+            "semanticId": "lotus.scope",
+            "attributeRef": "#/attributeCatalog/lotus.scope"
+          },
+          {
+            "name": "scope.as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.as_of_date"
+          },
+          {
+            "name": "scope.reporting_currency",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.reporting_currency",
+            "attributeRef": "#/attributeCatalog/lotus.reporting_currency"
+          },
+          {
+            "name": "scope.net_or_gross",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.net_or_gross",
+            "attributeRef": "#/attributeCatalog/lotus.net_or_gross"
+          },
+          {
+            "name": "results",
+            "location": "body",
+            "required": true,
+            "type": "object",
+            "semanticId": "lotus.results",
+            "attributeRef": "#/attributeCatalog/lotus.results"
+          },
+          {
+            "name": "metadata",
+            "location": "body",
+            "required": false,
+            "type": "DrawdownMetadata",
+            "semanticId": "lotus.metadata",
+            "attributeRef": "#/attributeCatalog/lotus.metadata"
+          },
+          {
+            "name": "metadata.contract_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.contract_version",
+            "attributeRef": "#/attributeCatalog/lotus.contract_version"
+          },
+          {
+            "name": "metadata.methodology_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.methodology_version",
+            "attributeRef": "#/attributeCatalog/lotus.methodology_version"
           }
         ]
       }

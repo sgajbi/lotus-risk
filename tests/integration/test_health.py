@@ -32,10 +32,11 @@ def test_integration_capabilities_contract() -> None:
     assert feature_keys == {
         "risk.analytics.risk_analytics",
         "risk.analytics.concentration",
+        "risk.analytics.drawdown",
         "risk.analytics.metrics",
     }
     workflow_keys = {workflow["workflow_key"] for workflow in body["workflows"]}
-    assert workflow_keys == {"risk_snapshot", "concentration_risk"}
+    assert workflow_keys == {"risk_snapshot", "concentration_risk", "drawdown_analytics"}
 
 
 def _concentration_payload() -> dict[str, object]:
@@ -101,6 +102,7 @@ def test_openapi_hides_legacy_proxy_and_exposes_concentration() -> None:
     client = TestClient(app)
     spec = client.get("/openapi.json").json()
     assert "/analytics/risk/concentration" in spec["paths"]
+    assert "/analytics/risk/drawdown" in spec["paths"]
     assert "/ops" in spec["paths"]
     assert "/analytics/workbench/risk-proxy" not in spec["paths"]
 
@@ -128,8 +130,9 @@ def test_openapi_declares_standard_error_models_for_risk_endpoints() -> None:
     spec = client.get("/openapi.json").json()
     calculate_responses = spec["paths"]["/analytics/risk/calculate"]["post"]["responses"]
     concentration_responses = spec["paths"]["/analytics/risk/concentration"]["post"]["responses"]
+    drawdown_responses = spec["paths"]["/analytics/risk/drawdown"]["post"]["responses"]
 
-    for responses in (calculate_responses, concentration_responses):
+    for responses in (calculate_responses, concentration_responses, drawdown_responses):
         for status_code in ("400", "403", "404", "422"):
             schema_ref = responses[status_code]["content"]["application/json"]["schema"]["$ref"]
             assert schema_ref.endswith("/ErrorResponse")

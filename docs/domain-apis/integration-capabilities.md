@@ -33,10 +33,12 @@
 - `supportedInputModes: ["stateless", "stateful", "simulation"]`
 - `features`:
   - `risk.analytics.risk_analytics`
+  - `risk.analytics.drawdown`
   - `risk.analytics.concentration`
   - `risk.analytics.metrics`
 - `workflows`:
   - `risk_snapshot`
+  - `drawdown_analytics`
   - `concentration_risk`
 
 ## Upstream/Downstream Dependency Notes

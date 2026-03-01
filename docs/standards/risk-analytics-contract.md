@@ -3,6 +3,7 @@
 ## Endpoints
 - `GET /ops`
 - `POST /analytics/risk/calculate`
+- `POST /analytics/risk/drawdown`
 - `POST /analytics/risk/concentration`
 - `GET /integration/capabilities`
 
@@ -12,10 +13,12 @@
 - `supportedInputModes`: `["stateless", "stateful", "simulation"]`
 - `features`:
   - `risk.analytics.risk_analytics`
+  - `risk.analytics.drawdown`
   - `risk.analytics.concentration`
   - `risk.analytics.metrics`
 - `workflows`:
   - `risk_snapshot`
+  - `drawdown_analytics`
   - `concentration_risk`
 
 ## Supported Period Types
@@ -53,6 +56,16 @@
 - `peak_date`
 - `trough_date`
 - `max_drawdown_date` (compatibility alias to trough date)
+
+## Realized Drawdown Endpoint
+- `POST /analytics/risk/drawdown` supports:
+  - `stateless`: caller supplies return series
+  - `stateful`: lotus-risk resolves canonical returns through lotus-performance (`core_api_ref`)
+  - `simulation`: reserved/not yet implemented
+- Output includes:
+  - period-level drawdown summary (`max_drawdown`, timing, TUW, ulcer index, DaR/CDaR)
+  - worst drawdown episodes list (policy-driven top-N)
+  - optional underwater series and benchmark-relative summary
 
 ## Concentration Risk
 - Concentration endpoint supports all execution modes:
