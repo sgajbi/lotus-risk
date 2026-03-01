@@ -73,7 +73,14 @@ def test_rolling_engine_returns_window_results_and_metadata() -> None:
 def test_rolling_engine_returns_period_error_when_insufficient_period_data() -> None:
     payload = {
         "scope": {"as_of_date": "2026-01-08", "net_or_gross": "NET"},
-        "periods": [{"type": "EXPLICIT", "name": "SHORT", "from_date": "2026-01-08", "to_date": "2026-01-08"}],
+        "periods": [
+            {
+                "type": "EXPLICIT",
+                "name": "SHORT",
+                "from_date": "2026-01-08",
+                "to_date": "2026-01-08",
+            }
+        ],
         "returns": [
             {"date": "2026-01-08", "value": 0.3},
         ],
