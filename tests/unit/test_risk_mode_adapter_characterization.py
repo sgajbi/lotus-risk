@@ -2,10 +2,14 @@ from __future__ import annotations
 
 import asyncio
 
+import pytest
+
 from app.contracts.risk import StatefulRiskInput
 from app.services.risk_mode_adapter import (
     _build_stateful_source_request,
     _decimal_return_to_percentage_points,
+    _portfolio_open_date,
+    _to_return_points,
     calculate_risk_stateful,
 )
 
@@ -52,6 +56,30 @@ def test_decimal_return_conversion_characterization() -> None:
     assert _decimal_return_to_percentage_points("0.0125") == 1.25
 
 
+def test_decimal_return_conversion_rejects_invalid_values() -> None:
+    with pytest.raises(ValueError, match="Invalid return value"):
+        _decimal_return_to_percentage_points("not-a-number")
+
+
+def test_to_return_points_skips_non_dict_and_invalid_date_rows() -> None:
+    points = _to_return_points(
+        [
+            {"date": "2025-01-02", "return_value": "0.0010"},
+            "invalid-row",
+            {"date": 123, "return_value": "0.0010"},
+        ]
+    )
+    assert len(points) == 1
+    assert points[0].value == 0.1
+
+
+def test_portfolio_open_date_falls_back_to_as_of_date_when_empty() -> None:
+    assert (
+        _portfolio_open_date([], as_of_date=_stateful_input().as_of_date)
+        == _stateful_input().as_of_date
+    )
+
+
 def test_stateful_source_payload_characterization() -> None:
     payload = _build_stateful_source_request(_stateful_input())
     assert payload["source"] == {"input_mode": "core_api_ref"}
@@ -75,3 +103,43 @@ def test_calculate_risk_stateful_characterization() -> None:
     metrics = response.results["YTD"].metrics
     assert metrics["VOLATILITY"].value is not None
     assert metrics["VAR"].value is not None
+
+
+def test_calculate_risk_stateful_requires_series_payload() -> None:
+    class _MissingSeriesClient:
+        async def get_returns_series(
+            self,
+            *,
+            request_payload: dict[str, object],
+            correlation_id: str | None,
+        ) -> dict[str, object]:
+            return {}
+
+    with pytest.raises(ValueError, match="missing 'series' object"):
+        asyncio.run(
+            calculate_risk_stateful(
+                _stateful_input(),
+                performance_client=_MissingSeriesClient(),
+                correlation_id="corr-risk-stateful",
+            )
+        )
+
+
+def test_calculate_risk_stateful_requires_portfolio_returns() -> None:
+    class _EmptySeriesClient:
+        async def get_returns_series(
+            self,
+            *,
+            request_payload: dict[str, object],
+            correlation_id: str | None,
+        ) -> dict[str, object]:
+            return {"series": {"portfolio_returns": []}}
+
+    with pytest.raises(ValueError, match="no portfolio returns"):
+        asyncio.run(
+            calculate_risk_stateful(
+                _stateful_input(),
+                performance_client=_EmptySeriesClient(),
+                correlation_id="corr-risk-stateful",
+            )
+        )

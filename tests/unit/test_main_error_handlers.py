@@ -1,10 +1,12 @@
 import asyncio
 import json
+from types import SimpleNamespace
 
 from fastapi import HTTPException
+import pytest
 from starlette.requests import Request
 
-from app.main import _default_error_code, handle_http_exception
+from app.main import _default_error_code, analytics_risk_calculate, handle_http_exception
 
 
 def _request_with_correlation(correlation_id: str = "corr-123") -> Request:
@@ -32,3 +34,10 @@ def test_handle_http_exception_returns_platform_error_envelope() -> None:
     assert body["error"]["code"] == "INVALID_INPUT"
     assert body["error"]["message"] == "bad_input"
     assert body["error"]["correlation_id"] == "corr-123"
+
+
+def test_analytics_risk_calculate_unsupported_mode_guard_branch() -> None:
+    request_payload = SimpleNamespace(input_mode=SimpleNamespace(value="unsupported_mode"))
+    request = Request({"type": "http", "method": "POST", "path": "/", "headers": []})
+    with pytest.raises(ValueError, match="Unsupported input_mode=unsupported_mode"):
+        asyncio.run(analytics_risk_calculate(request_payload, request))
