@@ -28,7 +28,9 @@ class _FakeAsyncClient:
     ) -> None:
         return None
 
-    async def post(self, url: str, *, json: dict[str, Any], headers: dict[str, str]) -> httpx.Response:
+    async def post(
+        self, url: str, *, json: dict[str, Any], headers: dict[str, str]
+    ) -> httpx.Response:
         _FakeAsyncClient.last_request = {
             "url": url,
             "json": json,
@@ -53,7 +55,9 @@ async def test_client_builds_headers_and_payload_for_returns_series(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(httpx, "AsyncClient", _FakeAsyncClient)
-    _FakeAsyncClient.response_factory = lambda **_: _ok_response({"series": {"portfolio_returns": []}})
+    _FakeAsyncClient.response_factory = lambda **_: _ok_response(
+        {"series": {"portfolio_returns": []}}
+    )
 
     client = LotusPerformanceClient(base_url="http://performance.local", timeout_seconds=5)
     response = await client.get_returns_series(
