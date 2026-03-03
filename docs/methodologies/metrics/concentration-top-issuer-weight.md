@@ -8,30 +8,41 @@
 - supported_modes: stateless, stateful, simulation
 
 ## Inputs
-- Issuer-aggregated valuation buckets.
+- Issuer-bucketed values for current/proposed states.
 
 ## Upstream Data Sources
-- Derived from issuer aggregation pipeline.
+- Derived from issuer mapping and issuer aggregation path.
 
 ## Unit Conventions
 - Return inputs are percentage points (pp): `1.0` means `+1%`.
-- Engine converts to decimal when needed: `r_decimal = r_pp / 100`.
-- Output unit follows metric contract (ratio, annualized decimal, drawdown decimal, or HHI scale).
+- Engine converts to decimal when required: `r_decimal = r_pp / 100`.
+- Output units are metric-specific (ratio, annualized pp, decimal drawdown, or HHI scale).
+
+## Variable Dictionary
+- `issuer_value_k`: aggregate value for issuer `k`.
+- `W_issuer = sum_k |issuer_value_k|`.
+- `w_k = |issuer_value_k|/W_issuer`.
+- `TOP_ISSUER = max_k(w_k)`.
+- `TOP_ISSUER_delta = TOP_ISSUER_proposed - TOP_ISSUER_current`.
 
 ## Methodology and Formulas
-1. Aggregate values by issuer bucket.
-2. Compute issuer weights: `w_k = |issuer_value_k| / sum_j |issuer_value_j|`.
-3. Top issuer metric: `TOP_ISSUER = max_k(w_k)`.
-4. Delta: `TOP_ISSUER_delta = TOP_ISSUER_proposed - TOP_ISSUER_current`.
+1. Aggregate values by issuer.
+2. Normalize to issuer weights.
+3. Take max issuer weight for each state.
+4. Compute delta.
 
 ## Step-by-Step Computation
-1. Resolve issuer mapping and aggregate values per issuer.
-2. Normalize issuer totals into weights.
-3. Select maximum issuer weight for each state.
+1. Resolve issuer buckets.
+2. Compute issuer weights.
+3. Select max weight current/proposed.
 4. Emit delta and coverage context.
 
+## Validation and Failure Behavior
+- Empty issuer buckets yield top issuer weight `0`.
+- Coverage flags indicate mapping completeness.
+
 ## Configuration Options
-- Inherited from issuer mapping options.
+- Inherited from issuer options (grouping/enrichment).
 
 ## Outputs
 - `issuer_concentration.top_issuer_weight_current`
@@ -39,8 +50,10 @@
 - `issuer_concentration.top_issuer_weight_delta`
 
 ## Worked Example
-- Issuer totals example: X=80, Y=20.
-- Total issuer value `100` gives weights X=`0.80`, Y=`0.20`.
-- Top issuer weight current = `0.80`.
-- If proposed totals are X=70, Y=30, top issuer weight proposed = `0.70`.
-- Delta = `0.70 - 0.80 = -0.10`.
+Issuer weights current `[0.80,0.20]`, proposed `[0.70,0.30]`.
+| State | Issuer Weights | Top Issuer Weight |
+|---|---|---:|
+| Current | `[0.80,0.20]` | `0.80` |
+| Proposed | `[0.70,0.30]` | `0.70` |
+Delta: `-0.10`.
+Output mapping: `..._current=0.80`, `..._proposed=0.70`, `..._delta=-0.10`.

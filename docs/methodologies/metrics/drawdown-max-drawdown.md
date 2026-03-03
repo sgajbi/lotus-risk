@@ -24,36 +24,50 @@
   - `r_decimal = r_percentage_points / 100`
 - `MAX_DRAWDOWN` output is in decimal drawdown units (for example `-0.10` means `-10%`).
 
+## Variable Dictionary
+- `t`: observation index in chronological order.
+- `r_t_pp`: period return at index `t` in percentage points.
+- `r_t`: period return at index `t` in decimal (`r_t = r_t_pp / 100`).
+- `W_t`: cumulative wealth index up to `t`.
+- `P_t`: running peak wealth up to `t`.
+- `DD_t`: drawdown at `t`.
+- `MDD`: maximum drawdown over the analysis window.
+
 ## Methodology and Formulas
-1. Convert API returns to decimal:
-- `r_t(decimal) = r_t(percentage_points) / 100`
-
-2. Build cumulative wealth path:
-- `wealth_t = ∏(1 + r_i)`, for `i=1..t`
-
-3. Build running peak path:
-- `peak_t = max(wealth_1..wealth_t)`
-
-4. Build underwater (drawdown) series:
-- `drawdown_t = (wealth_t / peak_t) - 1`
-
-5. Compute maximum drawdown:
-- `MAX_DRAWDOWN = min_t(drawdown_t)`
-- Result is negative or zero.
-
-6. Peak/trough/recovery attribution:
-- episode starts when drawdown moves below zero
-- trough is minimum drawdown point in that episode
-- recovery is first date where drawdown returns to `>= 0`
-- if not recovered before period end, recovery date is `null`
+1. Convert returns from pp to decimal:
+`r_t = r_t_pp / 100`.
+2. Construct cumulative wealth path:
+`W_t = ∏_{i=1..t}(1 + r_i)`.
+3. Construct running peak path:
+`P_t = max(W_1, W_2, ..., W_t)`.
+4. Construct drawdown path:
+`DD_t = (W_t / P_t) - 1`.
+5. Maximum drawdown:
+`MDD = min_t(DD_t)`.
+6. Episode attribution:
+- Peak date is the date of `argmax(W_i)` over `i <= trough_index`.
+- Trough date is the date of `argmin(DD_t)`.
+- Recovery date is first date after trough where `DD_t >= 0`; else `null`.
 
 ## Step-by-Step Computation
 1. Resolve the analysis period and extract portfolio returns for that period.
-2. Convert return values from percentage-point contract units to decimal.
-3. Build cumulative wealth path (`wealth_t`), running peak path (`peak_t`), and drawdown path (`drawdown_t`).
-4. Select `min(drawdown_t)` as `MAX_DRAWDOWN`.
-5. Identify episode boundaries and map peak/trough/recovery dates for summary fields.
-6. Return metric values and episode metadata in response fields.
+2. Sort observations ascending by date; discard points outside the resolved period.
+3. Validate minimum data:
+- if no points are present, period result is returned with error (`Insufficient data`);
+- if only one point exists, drawdown path is degenerate and summary fields follow engine fallback.
+4. Convert pp returns to decimal.
+5. Compute `W_t`, `P_t`, and `DD_t` for each date.
+6. Compute `MDD = min_t(DD_t)`.
+7. Find trough index from `argmin(DD_t)`.
+8. Find peak index from `argmax(W_i)` where `i <= trough_index`.
+9. Determine recovery date as first post-trough date with `DD_t >= 0`, else `null`.
+10. Map values into response summary fields.
+
+## Validation and Failure Behavior
+- Missing return series for the period: return period error `Insufficient data`.
+- Non-numeric return entries: rejected at request-contract validation layer before engine math.
+- Episode recovery not reached before period end: `max_drawdown_recovery_date = null`, `is_recovered = false`.
+- Configuration options (`top_n_episodes`, `minimum_episode_depth_bps`) do not alter numeric `max_drawdown`, only episode list payload.
 
 ## Configuration Options
 - `analysis_options.duration_unit`:
@@ -76,8 +90,18 @@
 - `results[period].summary.days_to_recovery`
 
 ## Worked Example
-- Input returns (percentage points): Day1 `+5.00`, Day2 `-10.00`, Day3 `+2.00`, Day4 `+4.00`.
-- Convert to decimal: `[0.0500, -0.1000, 0.0200, 0.0400]`.
-- Wealth path: `[1.050000, 0.945000, 0.963900, 1.002456]`; running peak stays `[1.050000, 1.050000, 1.050000, 1.050000]`.
-- Drawdown path (`wealth/peak - 1`): `[0.000000, -0.100000, -0.082000, -0.045280]`.
-- Maximum drawdown is `-0.100000` (equivalent to `-10.00%`), with peak Day1 and trough Day2.
+Input return sequence (pp): Day1 `+5.00`, Day2 `-10.00`, Day3 `+2.00`, Day4 `+4.00`.
+
+| Date | `r_t_pp` | `r_t` (decimal) | `W_t` | `P_t` | `DD_t = W_t/P_t - 1` |
+|---|---:|---:|---:|---:|---:|
+| Day1 | 5.00 | 0.0500 | 1.050000 | 1.050000 | 0.000000 |
+| Day2 | -10.00 | -0.1000 | 0.945000 | 1.050000 | -0.100000 |
+| Day3 | 2.00 | 0.0200 | 0.963900 | 1.050000 | -0.082000 |
+| Day4 | 4.00 | 0.0400 | 1.002456 | 1.050000 | -0.045280 |
+
+Derived outputs:
+- `max_drawdown = min(DD_t) = -0.100000` (`-10.00%`).
+- `max_drawdown_peak_date = Day1`.
+- `max_drawdown_trough_date = Day2`.
+- `max_drawdown_recovery_date = null` (drawdown never returned to `>= 0` by Day4).
+- `is_recovered = false`.
