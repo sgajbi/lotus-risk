@@ -8,51 +8,45 @@
 - supported_modes: stateless, stateful
 
 ## Inputs
-- Portfolio return series
-- VaR method/confidence/horizon
+- Portfolio return series in pp.
+- VaR method, confidence, horizon, ES flag.
 
 ## Upstream Data Sources
-- Stateless: caller returns[]
-- Stateful: lotus-performance portfolio_returns
+- Stateless caller.
+- Stateful lotus-performance.
 
 ## Unit Conventions
-- Return contracts are usually in percentage-point units unless the endpoint contract states otherwise.
-- Statistical formulas may normalize to decimal returns (r_decimal = r_pp / 100) before computation.
-- Output units follow endpoint schema semantics (for example ratio, decimal drawdown, or HHI scale).
+- Return inputs are percentage points (pp): `1.0` means `+1%`.
+- Engine converts to decimal when needed: `r_decimal = r_pp / 100`.
+- Output unit follows metric contract (ratio, annualized decimal, drawdown decimal, or HHI scale).
 
 ## Methodology and Formulas
-- HISTORICAL: percentile(alpha)
-- GAUSSIAN: mean + std*z_alpha
-- CORNISH_FISHER: adjusted z using skew/kurtosis
-- scaled_var = base_var*sqrt(horizon_days)
-- ES optional as tail mean
+1. `alpha=1-confidence`.
+2. Historical VaR = percentile(alpha).
+3. Gaussian VaR = mean + std*z(alpha).
+4. Cornish-Fisher VaR = mean + std*z_cf(alpha,skew,kurtosis).
+5. Scale horizon by `sqrt(horizon_days)`.
+6. ES (optional) = mean(return <= VaR).
 
 ## Step-by-Step Computation
-1. Resolve period/filter window and applicable alignment policy from the request options.
-2. Normalize units and prepare aligned series/matrices required by the metric formula.
-3. Apply: HISTORICAL: percentile(alpha)
-4. Apply: GAUSSIAN: mean + std*z_alpha
-5. Apply: CORNISH_FISHER: adjusted z using skew/kurtosis
-6. Apply: scaled_var = base_var*sqrt(horizon_days)
-7. Apply: ES optional as tail mean
-8. Map computed values to response fields and include deterministic error/quality signals when applicable.
+1. Compute one-day VaR by configured method.
+2. Apply square-root-of-time scaling.
+3. Optionally compute expected shortfall.
+4. Emit value and details.
 
 ## Configuration Options
-- options.var.method
-- options.var.confidence
-- options.var.horizon_days
-- options.var.include_expected_shortfall
+- `options.var.method`
+- `options.var.confidence`
+- `options.var.horizon_days`
+- `options.var.include_expected_shortfall`
 
 ## Outputs
-- results[period].metrics.VAR.value
-- details.expected_shortfall when enabled
+- `results[period].metrics.VAR.value`
+- `...details.expected_shortfall`
 
 ## Worked Example
-Given:
-- Returns [%]: [-2,-1,0,1,2], confidence=95%
-- Historical VaR ~= -1.8, horizon=4 => -3.6
-Apply:
-- Execute the formulas above in the listed order after unit normalization.
-Result:
-- Populate output fields exactly as listed in the Outputs section.
-
+- Returns pp `[-2,-1,0,1,2]`, confidence `95%`.
+- Historical one-day VaR at 5th percentile is `-1.8` pp.
+- With horizon `4`, scaled VaR `=-1.8*sqrt(4)=-3.6` pp.
+- If ES enabled, tail mean at or below VaR gives one-day ES (here near `-2.0` pp).
+- Scaled ES for 4-day horizon is about `-4.0` pp.

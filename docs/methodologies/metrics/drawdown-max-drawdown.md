@@ -76,42 +76,8 @@
 - `results[period].summary.days_to_recovery`
 
 ## Worked Example
-Input returns (percentage points):
-- Day 1: `+5.00`
-- Day 2: `-10.00`
-- Day 3: `+2.00`
-- Day 4: `+4.00`
-
-Step 1. Convert to decimal:
-- Day 1: `0.0500`
-- Day 2: `-0.1000`
-- Day 3: `0.0200`
-- Day 4: `0.0400`
-
-Step 2. Wealth path (`wealth_t = ∏(1+r_t)`):
-- Day 1: `1.050000`
-- Day 2: `1.050000 * 0.900000 = 0.945000`
-- Day 3: `0.945000 * 1.020000 = 0.963900`
-- Day 4: `0.963900 * 1.040000 = 1.002456`
-
-Step 3. Running peak:
-- Day 1: `1.050000`
-- Day 2: `1.050000`
-- Day 3: `1.050000`
-- Day 4: `1.050000`
-
-Step 4. Drawdown series (`wealth/peak - 1`):
-- Day 1: `1.050000/1.050000 - 1 = 0.000000`
-- Day 2: `0.945000/1.050000 - 1 = -0.100000`
-- Day 3: `0.963900/1.050000 - 1 = -0.082000`
-- Day 4: `1.002456/1.050000 - 1 = -0.045280`
-
-Step 5. Maximum drawdown:
-- `min(drawdown_t) = -0.100000`
-- Final metric value: `max_drawdown = -0.10` (equivalent to `-10.00%`).
-
-Step 6. Peak/trough/recovery:
-- peak date: Day 1
-- trough date: Day 2
-- recovery date: `null` in this sample (drawdown never returned to non-negative)
-
+- Input returns (percentage points): Day1 `+5.00`, Day2 `-10.00`, Day3 `+2.00`, Day4 `+4.00`.
+- Convert to decimal: `[0.0500, -0.1000, 0.0200, 0.0400]`.
+- Wealth path: `[1.050000, 0.945000, 0.963900, 1.002456]`; running peak stays `[1.050000, 1.050000, 1.050000, 1.050000]`.
+- Drawdown path (`wealth/peak - 1`): `[0.000000, -0.100000, -0.082000, -0.045280]`.
+- Maximum drawdown is `-0.100000` (equivalent to `-10.00%`), with peak Day1 and trough Day2.

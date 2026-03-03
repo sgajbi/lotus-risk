@@ -1,63 +1,52 @@
-# Historical Attribution Methodology - Volatility Attribution
+# Historical Attribution Methodology - Volatility Contribution
 
 ## Metric
-- metric_id: ATTRIBUTION_VOLATILITY
+- metric_id: VOLATILITY_ATTRIBUTION
 
 ## Endpoint and Mode Coverage
 - endpoint: /analytics/risk/historical-attribution
 - supported_modes: stateless, stateful
 
 ## Inputs
-- Portfolio returns
-- Portfolio exposure history by grouping dimension
-- Periods and annualization basis
+- Portfolio returns.
+- Exposure history by grouping.
+- Annualization basis.
 
 ## Upstream Data Sources
-- Stateless: caller returns + exposure_history
-- Stateful: lotus-performance returns + lotus-core position-timeseries + enrichment
+- Stateless caller datasets.
+- Stateful integrated data contracts.
 
 ## Unit Conventions
-- Return contracts are usually in percentage-point units unless the endpoint contract states otherwise.
-- Statistical formulas may normalize to decimal returns (r_decimal = r_pp / 100) before computation.
-- Output units follow endpoint schema semantics (for example ratio, decimal drawdown, or HHI scale).
+- Return inputs are percentage points (pp): `1.0` means `+1%`.
+- Engine converts to decimal when needed: `r_decimal = r_pp / 100`.
+- Output unit follows metric contract (ratio, annualized decimal, drawdown decimal, or HHI scale).
 
 ## Methodology and Formulas
-- metric_series = portfolio returns (decimal)
-- group_matrix = exposure_weight * metric_series
-- total_value = std(metric_series)*sqrt(annualization_basis)
-- component_i = cov(group_i,metric_series)/std(metric_series)*sqrt(annualization_basis)
-- marginal_i = component_i/avg_weight_i
-- percent_i = component_i/total_value
+1. `m_t=r_t/100`.
+2. `g_{k,t}=w_{k,t}*m_t`.
+3. Total `sigma=std(m_t)*sqrt(annualization_basis)`.
+4. Contribution `CC_k = cov(g_k,m)/std(m)*sqrt(annualization_basis)`.
 
 ## Step-by-Step Computation
-1. Resolve period/filter window and applicable alignment policy from the request options.
-2. Normalize units and prepare aligned series/matrices required by the metric formula.
-3. Apply: metric_series = portfolio returns (decimal)
-4. Apply: group_matrix = exposure_weight * metric_series
-5. Apply: total_value = std(metric_series)*sqrt(annualization_basis)
-6. Apply: component_i = cov(group_i,metric_series)/std(metric_series)*sqrt(annualization_basis)
-7. Apply: marginal_i = component_i/avg_weight_i
-8. Apply: percent_i = component_i/total_value
-9. Map computed values to response fields and include deterministic error/quality signals when applicable.
+1. Pivot exposure history into date x group matrix.
+2. Build group pseudo-return matrix.
+3. Compute per-group component contributions.
+4. Reconcile sum and residual against total volatility.
 
 ## Configuration Options
-- attribution_options.attribution_types includes TOTAL_RISK
-- metrics includes VOLATILITY
-- grouping_dimensions
-- annualization_basis
-- covariance_method=EMPIRICAL
+- `attribution_options.grouping_dimensions`
+- `attribution_options.metrics`
+- `attribution_options.annualization_basis`
 
 ## Outputs
-- attribution_sets[].total_value
-- reconciled_sum
-- residual
-- contributors[].marginal_contribution/component_contribution/percent_contribution
+- `attribution_sets[].contributors[]`
+- `total_value`
+- `reconciled_sum`
+- `residual`
 
 ## Worked Example
-Given:
-- Components [0.08,0.04] reconcile to total 0.12 => percents 66.7%/33.3%
-Apply:
-- Execute the formulas above in the listed order after unit normalization.
-Result:
-- Populate output fields exactly as listed in the Outputs section.
-
+- Compute metric series `m_t = r_t/100` over aligned dates.
+- For each group k, build pseudo series `g_{k,t}=w_{k,t}*m_t`.
+- Compute each component: `CC_k=cov(g_k,m)/std(m)*sqrt(annualization_basis)`.
+- Example total volatility `0.182`, components `0.110` and `0.070`.
+- Reconciled sum `0.180`, residual `0.002` reported explicitly.

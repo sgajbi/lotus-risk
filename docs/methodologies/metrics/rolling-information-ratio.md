@@ -8,42 +8,43 @@
 - supported_modes: stateless, stateful
 
 ## Inputs
-- Portfolio returns
-- Benchmark returns
+- Portfolio and benchmark returns.
+- Window lengths.
+- Annualization basis.
 
 ## Upstream Data Sources
-- Stateless: caller
-- Stateful: lotus-performance
+- Stateless caller.
+- Stateful lotus-performance.
 
 ## Unit Conventions
-- Return contracts are usually in percentage-point units unless the endpoint contract states otherwise.
-- Statistical formulas may normalize to decimal returns (r_decimal = r_pp / 100) before computation.
-- Output units follow endpoint schema semantics (for example ratio, decimal drawdown, or HHI scale).
+- Return inputs are percentage points (pp): `1.0` means `+1%`.
+- Engine converts to decimal when needed: `r_decimal = r_pp / 100`.
+- Output unit follows metric contract (ratio, annualized decimal, drawdown decimal, or HHI scale).
 
 ## Methodology and Formulas
-- active_t = Rp_t - Rb_t
-- rolling_mean(active)/rolling_std(active)*sqrt(annualization_basis)
+1. Active return vector: `a_t = r_portfolio_t - r_benchmark_t`.
+2. Rolling active mean: `mu_a_t(W)=mean(a_{t-W+1..t})`.
+3. Rolling active std: `sigma_a_t(W)=std(a_{t-W+1..t},ddof=1)`.
+4. Rolling information ratio: `RIR_t(W)=(mu_a_t/sigma_a_t)*sqrt(annualization_basis)`.
 
 ## Step-by-Step Computation
-1. Resolve period/filter window and applicable alignment policy from the request options.
-2. Normalize units and prepare aligned series/matrices required by the metric formula.
-3. Apply: active_t = Rp_t - Rb_t
-4. Apply: rolling_mean(active)/rolling_std(active)*sqrt(annualization_basis)
-5. Map computed values to response fields and include deterministic error/quality signals when applicable.
+1. Align series and compute active return stream.
+2. Compute rolling active mean and std per window length.
+3. Compute ratio and annualize by configured basis.
+4. Null zero-std points and emit quality flags.
+5. Return summary distribution and optional full series.
 
 ## Configuration Options
-- window_lengths
-- annualization_basis
+- `rolling_options.window_lengths`
+- `rolling_options.annualization_basis`
 
 ## Outputs
-- window_results[].metric_summaries.ROLLING_INFORMATION_RATIO
-- quality flag metric:ROLLING_INFORMATION_RATIO:zero_tracking_error_window
+- `window_results[].metric_summaries.ROLLING_INFORMATION_RATIO`
+- `quality_flags`
 
 ## Worked Example
-Given:
-- Computed per rolling window on active return stream
-Apply:
-- Execute the formulas above in the listed order after unit normalization.
-Result:
-- Populate output fields exactly as listed in the Outputs section.
-
+- Window=3, active decimal returns `[0.002,0.001,-0.001]`.
+- Rolling mean `0.000667` and sample std `0.001528`.
+- Point IR `=(0.000667/0.001528)*sqrt(252)=6.928`.
+- If rolling std is zero, value is null and quality flag is emitted.
+- Summary aggregates valid window points.

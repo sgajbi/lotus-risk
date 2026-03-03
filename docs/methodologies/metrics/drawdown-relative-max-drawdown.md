@@ -1,4 +1,4 @@
-# Drawdown Methodology - Relative Max Drawdown vs Benchmark
+# Drawdown Methodology - Relative Maximum Drawdown
 
 ## Metric
 - metric_id: RELATIVE_MAX_DRAWDOWN
@@ -8,43 +8,38 @@
 - supported_modes: stateless, stateful
 
 ## Inputs
-- Portfolio returns
-- Benchmark returns
+- Portfolio and benchmark return series.
 
 ## Upstream Data Sources
-- Stateless: caller benchmark_returns
-- Stateful: lotus-performance benchmark_returns
+- Stateless caller or stateful lotus-performance.
 
 ## Unit Conventions
-- Return contracts are usually in percentage-point units unless the endpoint contract states otherwise.
-- Statistical formulas may normalize to decimal returns (r_decimal = r_pp / 100) before computation.
-- Output units follow endpoint schema semantics (for example ratio, decimal drawdown, or HHI scale).
+- Return inputs are percentage points (pp): `1.0` means `+1%`.
+- Engine converts to decimal when needed: `r_decimal = r_pp / 100`.
+- Output unit follows metric contract (ratio, annualized decimal, drawdown decimal, or HHI scale).
 
 ## Methodology and Formulas
-- active_t = portfolio_t - benchmark_t
-- Compute drawdown path on active return wealth index
+1. Active return path: `a_t = Rp_t - Rb_t` (pp).
+2. Active wealth path: `AW_t = Π(1 + a_t/100)`.
+3. Active running peak: `AP_t = cummax(AW_t)`.
+4. Active drawdown path: `ADD_t = AW_t / AP_t - 1`.
+5. Relative maximum drawdown: `REL_MAX_DD = min(ADD_t)`.
 
 ## Step-by-Step Computation
-1. Resolve period/filter window and applicable alignment policy from the request options.
-2. Normalize units and prepare aligned series/matrices required by the metric formula.
-3. Apply: active_t = portfolio_t - benchmark_t
-4. Apply: Compute drawdown path on active return wealth index
-5. Map computed values to response fields and include deterministic error/quality signals when applicable.
+1. Align portfolio and benchmark returns on common dates.
+2. Compute active return, wealth, and drawdown paths.
+3. Identify minimum active drawdown value.
+4. Map corresponding peak and trough dates into relative summary fields.
 
 ## Configuration Options
-- stateful benchmark_policy.include_benchmark
-- stateful benchmark_policy.missing_benchmark_policy
+- Benchmark data must be present.
 
 ## Outputs
-- relative_to_benchmark.max_drawdown
-- relative_to_benchmark.max_drawdown_peak_date
-- relative_to_benchmark.max_drawdown_trough_date
+- `results[period].relative_to_benchmark.max_drawdown` and date fields.
 
 ## Worked Example
-Given:
-- Active returns(dec): [0.01,-0.03,0.005] => relative max drawdown around -0.03
-Apply:
-- Execute the formulas above in the listed order after unit normalization.
-Result:
-- Populate output fields exactly as listed in the Outputs section.
-
+- Portfolio pp `[1.0,-2.0,0.5]`, benchmark pp `[0.5,-1.0,0.2]`.
+- Active pp `[0.5,-1.0,0.3]` -> decimal `[0.005,-0.010,0.003]`.
+- Active wealth `[1.005000,0.994950,0.997935]` with peak `1.005000`.
+- Active drawdown `[0.0000,-0.0100,-0.0070]`.
+- Relative max drawdown is `-0.0100` (=-1.00%).

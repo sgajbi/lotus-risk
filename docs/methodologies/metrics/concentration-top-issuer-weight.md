@@ -8,39 +8,39 @@
 - supported_modes: stateless, stateful, simulation
 
 ## Inputs
-- Issuer aggregated totals
+- Issuer-aggregated valuation buckets.
 
 ## Upstream Data Sources
-- Same as ISSUER_HHI
+- Derived from issuer aggregation pipeline.
 
 ## Unit Conventions
-- Return contracts are usually in percentage-point units unless the endpoint contract states otherwise.
-- Statistical formulas may normalize to decimal returns (r_decimal = r_pp / 100) before computation.
-- Output units follow endpoint schema semantics (for example ratio, decimal drawdown, or HHI scale).
+- Return inputs are percentage points (pp): `1.0` means `+1%`.
+- Engine converts to decimal when needed: `r_decimal = r_pp / 100`.
+- Output unit follows metric contract (ratio, annualized decimal, drawdown decimal, or HHI scale).
 
 ## Methodology and Formulas
-- issuer_weight_j = |issuer_total_j|/Σ|issuer_total|
-- Top issuer = max_j(issuer_weight_j)
+1. Aggregate values by issuer bucket.
+2. Compute issuer weights: `w_k = |issuer_value_k| / sum_j |issuer_value_j|`.
+3. Top issuer metric: `TOP_ISSUER = max_k(w_k)`.
+4. Delta: `TOP_ISSUER_delta = TOP_ISSUER_proposed - TOP_ISSUER_current`.
 
 ## Step-by-Step Computation
-1. Resolve period/filter window and applicable alignment policy from the request options.
-2. Normalize units and prepare aligned series/matrices required by the metric formula.
-3. Apply: issuer_weight_j = |issuer_total_j|/Σ|issuer_total|
-4. Apply: Top issuer = max_j(issuer_weight_j)
-5. Map computed values to response fields and include deterministic error/quality signals when applicable.
+1. Resolve issuer mapping and aggregate values per issuer.
+2. Normalize issuer totals into weights.
+3. Select maximum issuer weight for each state.
+4. Emit delta and coverage context.
 
 ## Configuration Options
-- issuer_grouping_level
-- enrichment_policy
+- Inherited from issuer mapping options.
 
 ## Outputs
-- issuer_concentration.top_issuer_weight_current/proposed/delta
+- `issuer_concentration.top_issuer_weight_current`
+- `issuer_concentration.top_issuer_weight_proposed`
+- `issuer_concentration.top_issuer_weight_delta`
 
 ## Worked Example
-Given:
-- Issuer totals [70,30] => top issuer weight=0.7
-Apply:
-- Execute the formulas above in the listed order after unit normalization.
-Result:
-- Populate output fields exactly as listed in the Outputs section.
-
+- Issuer totals example: X=80, Y=20.
+- Total issuer value `100` gives weights X=`0.80`, Y=`0.20`.
+- Top issuer weight current = `0.80`.
+- If proposed totals are X=70, Y=30, top issuer weight proposed = `0.70`.
+- Delta = `0.70 - 0.80 = -0.10`.
