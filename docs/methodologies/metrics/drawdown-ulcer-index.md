@@ -8,36 +8,44 @@
 - supported_modes: stateless, stateful
 
 ## Inputs
-- Full drawdown path
+- Drawdown path over period.
 
 ## Upstream Data Sources
-- Derived from return series
+- Derived in drawdown engine.
 
 ## Unit Conventions
-- Return contracts are usually in percentage-point units unless the endpoint contract states otherwise.
-- Statistical formulas may normalize to decimal returns (r_decimal = r_pp / 100) before computation.
-- Output units follow endpoint schema semantics (for example ratio, decimal drawdown, or HHI scale).
+- Return inputs are percentage points (pp): `1.0` means `+1%`.
+- Engine converts to decimal when needed: `r_decimal = r_pp / 100`.
+- Output unit follows metric contract (ratio, annualized decimal, drawdown decimal, or HHI scale).
 
 ## Methodology and Formulas
-- ULCER_INDEX = sqrt(mean(drawdown_t^2))
+1. Build wealth path:
+`W_t = Π(1 + r_t/100)`.
+2. Build running peak:
+`P_t = max(W_1..W_t)`.
+3. Build drawdown path:
+`DD_t = W_t / P_t - 1`.
+4. Square drawdown observations:
+`SQ_t = DD_t^2`.
+5. Ulcer Index:
+`UI = sqrt(mean(SQ_t))`.
 
 ## Step-by-Step Computation
-1. Resolve period/filter window and applicable alignment policy from the request options.
-2. Normalize units and prepare aligned series/matrices required by the metric formula.
-3. Apply: ULCER_INDEX = sqrt(mean(drawdown_t^2))
-4. Map computed values to response fields and include deterministic error/quality signals when applicable.
+1. Compute period drawdown series from the return path.
+2. Square each drawdown observation so larger drawdowns are penalized more.
+3. Take mean of squared drawdowns over the full period.
+4. Apply square root to restore drawdown scale.
+5. Return ulcer index as a non-negative decimal risk intensity measure.
 
 ## Configuration Options
-- None
+- No dedicated metric knob.
 
 ## Outputs
-- summary.ulcer_index
+- `results[period].summary.ulcer_index`
 
 ## Worked Example
-Given:
-- Drawdown [0,-0.02,-0.04] => ulcer index=0.0258
-Apply:
-- Execute the formulas above in the listed order after unit normalization.
-Result:
-- Populate output fields exactly as listed in the Outputs section.
-
+- Use drawdown path `[0.0000,-0.1000,-0.0820,-0.0453]`.
+- Square values: `[0.000000,0.010000,0.006724,0.002052]`.
+- Mean square = `0.004694`.
+- Ulcer Index = `sqrt(0.004694) = 0.0685`.
+- Output is decimal drawdown intensity.

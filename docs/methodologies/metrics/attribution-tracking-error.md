@@ -1,58 +1,49 @@
-# Historical Attribution Methodology - Tracking Error Attribution
+# Historical Attribution Methodology - Tracking Error Contribution
 
 ## Metric
-- metric_id: ATTRIBUTION_TRACKING_ERROR
+- metric_id: TRACKING_ERROR_ATTRIBUTION
 
 ## Endpoint and Mode Coverage
 - endpoint: /analytics/risk/historical-attribution
-- supported_modes: stateless, stateful (partial)
+- supported_modes: stateless, stateful
 
 ## Inputs
-- Portfolio returns
-- Benchmark returns
-- Portfolio and benchmark exposure histories
+- Portfolio and benchmark returns.
+- Portfolio and benchmark exposure history.
 
 ## Upstream Data Sources
-- Stateless: caller supplies all required series
-- Stateful: pending lotus-core benchmark exposure-history contract
+- Stateless caller datasets.
+- Stateful integrated contracts (including benchmark exposure history).
 
 ## Unit Conventions
-- Return contracts are usually in percentage-point units unless the endpoint contract states otherwise.
-- Statistical formulas may normalize to decimal returns (r_decimal = r_pp / 100) before computation.
-- Output units follow endpoint schema semantics (for example ratio, decimal drawdown, or HHI scale).
+- Return inputs are percentage points (pp): `1.0` means `+1%`.
+- Engine converts to decimal when needed: `r_decimal = r_pp / 100`.
+- Output unit follows metric contract (ratio, annualized decimal, drawdown decimal, or HHI scale).
 
 ## Methodology and Formulas
-- active_return_t = Rp_t - Rb_t
-- active_weight_{g,t} = w_p,{g,t} - w_b,{g,t}
-- group_matrix = active_weight * active_return
-- total_value = std(active_return)*sqrt(annualization_basis)
-- covariance-based component decomposition as in volatility attribution
+1. `a_t=(Rp_t-Rb_t)/100`.
+2. `aw_{k,t}=w_p_{k,t}-w_b_{k,t}`.
+3. `g_{k,t}=aw_{k,t}*a_t`.
+4. `TE=std(a_t)*sqrt(annualization_basis)`.
+5. `CC_k=cov(g_k,a)/std(a)*sqrt(annualization_basis)`.
 
 ## Step-by-Step Computation
-1. Resolve period/filter window and applicable alignment policy from the request options.
-2. Normalize units and prepare aligned series/matrices required by the metric formula.
-3. Apply: active_return_t = Rp_t - Rb_t
-4. Apply: active_weight_{g,t} = w_p,{g,t} - w_b,{g,t}
-5. Apply: group_matrix = active_weight * active_return
-6. Apply: total_value = std(active_return)*sqrt(annualization_basis)
-7. Apply: covariance-based component decomposition as in volatility attribution
-8. Map computed values to response fields and include deterministic error/quality signals when applicable.
+1. Align return and exposure series.
+2. Build active return and active weight matrices.
+3. Compute component contributions by group.
+4. Reconcile against total tracking error.
 
 ## Configuration Options
-- attribution_options.attribution_types includes ACTIVE_RISK
-- metrics includes TRACKING_ERROR
-- grouping_dimensions
-- annualization_basis
+- `attribution_options.attribution_types`
+- `attribution_options.metrics`
+- `attribution_options.annualization_basis`
 
 ## Outputs
-- attribution_sets for ACTIVE_RISK/TRACKING_ERROR
-- contributors and reconciliation fields
+- ACTIVE_RISK / TRACKING_ERROR attribution set with contributors and residual.
 
 ## Worked Example
-Given:
-- Active return and active-weight series produce contributor components that reconcile to total tracking error
-Apply:
-- Execute the formulas above in the listed order after unit normalization.
-Result:
-- Populate output fields exactly as listed in the Outputs section.
-
+- Compute active return `a_t=(Rp_t-Rb_t)/100` and active weights `aw_{k,t}`.
+- Build group pseudo-active series `g_{k,t}=aw_{k,t}*a_t`.
+- Component contribution: `CC_k=cov(g_k,a)/std(a)*sqrt(annualization_basis)`.
+- Example TE total `0.045`, contributors `0.030` and `0.013`.
+- Reconciled sum `0.043`, residual `0.002`.
