@@ -7,7 +7,10 @@ from typing import Any
 import httpx
 import pytest
 
-from app.integrations.lotus_core_client import LotusCoreClient
+from app.integrations.lotus_core_client import (
+    DEFAULT_LOTUS_CORE_BASE_URL,
+    LotusCoreClient,
+)
 
 
 class _FakeAsyncClient:
@@ -185,3 +188,13 @@ def test_extract_error_detail_variants() -> None:
 
     response_dict = _ok_response({"detail": {"message": "nested message"}})
     assert LotusCoreClient._extract_error_detail(response_dict) == "nested message"
+
+
+def test_client_defaults_to_canonical_core_service_identity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("LOTUS_CORE_BASE_URL", raising=False)
+
+    client = LotusCoreClient()
+
+    assert client._base_url == DEFAULT_LOTUS_CORE_BASE_URL

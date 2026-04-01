@@ -5,6 +5,8 @@ from typing import Any
 
 import httpx
 
+DEFAULT_LOTUS_PERFORMANCE_BASE_URL = "http://performance.dev.lotus"
+
 
 class LotusPerformanceClient:
     def __init__(
@@ -15,7 +17,7 @@ class LotusPerformanceClient:
     ) -> None:
         configured_base_url = base_url or os.getenv("LOTUS_PERFORMANCE_BASE_URL")
         if not configured_base_url:
-            configured_base_url = "http://localhost:8002"
+            configured_base_url = DEFAULT_LOTUS_PERFORMANCE_BASE_URL
         self._base_url = configured_base_url.rstrip("/")
         self._timeout = httpx.Timeout(
             timeout_seconds or float(os.getenv("LOTUS_PERFORMANCE_TIMEOUT_SECONDS", "10"))
