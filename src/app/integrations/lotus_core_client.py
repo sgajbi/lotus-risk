@@ -5,6 +5,8 @@ from typing import Any
 
 import httpx
 
+DEFAULT_LOTUS_CORE_BASE_URL = "http://core-query.dev.lotus"
+
 
 class LotusCoreClient:
     def __init__(
@@ -17,7 +19,7 @@ class LotusCoreClient:
         if configured_base_url is None:
             configured_base_url = os.getenv("LOTUS_CORE_BASE_URL")
         if not configured_base_url:
-            configured_base_url = "http://localhost:8000"
+            configured_base_url = DEFAULT_LOTUS_CORE_BASE_URL
         resolved_base_url = configured_base_url.rstrip("/")
         resolved_timeout = timeout_seconds or float(os.getenv("LOTUS_CORE_TIMEOUT_SECONDS", "10"))
         self._base_url = resolved_base_url

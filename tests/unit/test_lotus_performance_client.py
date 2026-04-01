@@ -7,7 +7,10 @@ from typing import Any
 import httpx
 import pytest
 
-from app.integrations.lotus_performance_client import LotusPerformanceClient
+from app.integrations.lotus_performance_client import (
+    DEFAULT_LOTUS_PERFORMANCE_BASE_URL,
+    LotusPerformanceClient,
+)
 
 
 class _FakeAsyncClient:
@@ -139,4 +142,4 @@ def test_client_extract_error_detail_variants() -> None:
 def test_client_defaults_base_url_when_env_missing(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("LOTUS_PERFORMANCE_BASE_URL", raising=False)
     client = LotusPerformanceClient()
-    assert client._base_url == "http://localhost:8002"
+    assert client._base_url == DEFAULT_LOTUS_PERFORMANCE_BASE_URL
