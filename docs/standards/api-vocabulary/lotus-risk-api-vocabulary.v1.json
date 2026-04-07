@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-04-07T23:18:24.808904+00:00",
+  "generatedAt": "2026-04-07T23:26:19.083497+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.alignment_policy",
@@ -1162,6 +1162,34 @@
       ]
     },
     {
+      "semanticId": "lotus.uncovered_position_count_current",
+      "canonicalTerm": "uncovered_position_count_current",
+      "preferredName": "uncovered_position_count_current",
+      "description": "Baseline positions without issuer coverage after enrichment resolution.",
+      "example": 5,
+      "type": "integer",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "integer"
+      ]
+    },
+    {
+      "semanticId": "lotus.uncovered_position_count_proposed",
+      "canonicalTerm": "uncovered_position_count_proposed",
+      "preferredName": "uncovered_position_count_proposed",
+      "description": "Proposed positions without issuer coverage after enrichment resolution.",
+      "example": 4,
+      "type": "integer",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "integer"
+      ]
+    },
+    {
       "semanticId": "lotus.valuation_context",
       "canonicalTerm": "valuation_context",
       "preferredName": "valuation_context",
@@ -2111,6 +2139,22 @@
             "type": "integer",
             "semanticId": "lotus.total_position_count_proposed",
             "attributeRef": "#/attributeCatalog/lotus.total_position_count_proposed"
+          },
+          {
+            "name": "issuer_concentration.uncovered_position_count_current",
+            "location": "body",
+            "required": true,
+            "type": "integer",
+            "semanticId": "lotus.uncovered_position_count_current",
+            "attributeRef": "#/attributeCatalog/lotus.uncovered_position_count_current"
+          },
+          {
+            "name": "issuer_concentration.uncovered_position_count_proposed",
+            "location": "body",
+            "required": true,
+            "type": "integer",
+            "semanticId": "lotus.uncovered_position_count_proposed",
+            "attributeRef": "#/attributeCatalog/lotus.uncovered_position_count_proposed"
           },
           {
             "name": "issuer_concentration.coverage_ratio_current",

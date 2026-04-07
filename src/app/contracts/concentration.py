@@ -573,6 +573,14 @@ class IssuerConcentration(BaseModel):
         description="Total proposed positions evaluated for issuer coverage.",
         json_schema_extra={"example": 31},
     )
+    uncovered_position_count_current: int = Field(
+        description="Baseline positions without issuer coverage after enrichment resolution.",
+        json_schema_extra={"example": 5},
+    )
+    uncovered_position_count_proposed: int = Field(
+        description="Proposed positions without issuer coverage after enrichment resolution.",
+        json_schema_extra={"example": 4},
+    )
     coverage_ratio_current: float = Field(
         description="Covered baseline positions divided by total baseline positions.",
         json_schema_extra={"example": 0.833333},
@@ -731,6 +739,8 @@ class ConcentrationResponse(BaseModel):
                 "covered_position_count_proposed": 27,
                 "total_position_count_current": 30,
                 "total_position_count_proposed": 31,
+                "uncovered_position_count_current": 5,
+                "uncovered_position_count_proposed": 4,
                 "coverage_ratio_current": 0.833333,
                 "coverage_ratio_proposed": 0.870968,
                 "note": "issuer_id missing in lotus-core instrument_enrichment",
@@ -819,6 +829,8 @@ class ConcentrationResponse(BaseModel):
                         "covered_position_count_proposed": 11,
                         "total_position_count_current": 11,
                         "total_position_count_proposed": 11,
+                        "uncovered_position_count_current": 0,
+                        "uncovered_position_count_proposed": 0,
                         "coverage_ratio_current": 1.0,
                         "coverage_ratio_proposed": 1.0,
                         "note": None,

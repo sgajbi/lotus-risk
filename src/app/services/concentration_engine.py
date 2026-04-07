@@ -300,6 +300,10 @@ def _coverage_ratio(covered: int, total: int) -> float:
     return _round(covered / total)
 
 
+def _uncovered_count(covered: int, total: int) -> int:
+    return max(total - covered, 0)
+
+
 def _build_response(payload: ConcentrationComputationInput) -> ConcentrationResponse:
     current_values = _values(payload.current_positions)
     proposed_values = _values(payload.proposed_positions)
@@ -389,6 +393,14 @@ def _build_response(payload: ConcentrationComputationInput) -> ConcentrationResp
             covered_position_count_proposed=payload.covered_position_count_proposed,
             total_position_count_current=payload.total_position_count_current,
             total_position_count_proposed=payload.total_position_count_proposed,
+            uncovered_position_count_current=_uncovered_count(
+                payload.covered_position_count_current,
+                payload.total_position_count_current,
+            ),
+            uncovered_position_count_proposed=_uncovered_count(
+                payload.covered_position_count_proposed,
+                payload.total_position_count_proposed,
+            ),
             coverage_ratio_current=_coverage_ratio(
                 payload.covered_position_count_current,
                 payload.total_position_count_current,
