@@ -6,6 +6,10 @@ import pytest
 from app.contracts.attribution import HistoricalAttributionStatefulInput
 from app.services import attribution_mode_adapter as adapter
 from app.services.attribution_mode_adapter import calculate_historical_attribution_stateful
+from app.services.stateful_returns_series_parser import (
+    decimal_return_to_percentage_points,
+    to_return_points,
+)
 
 
 class _StubPerformanceClient:
@@ -337,12 +341,12 @@ def test_stateful_attribution_rejects_empty_exposure_history() -> None:
 
 
 def test_helper_branch_coverage_for_conversion_and_grouping() -> None:
-    assert adapter._to_return_points("bad") == []
-    assert adapter._to_return_points(
+    assert to_return_points("bad") == []
+    assert to_return_points(
         [1, {"date": None}, {"date": "2026-01-02", "return_value": "0.01"}]
     )[0].date == date(2026, 1, 2)
     with pytest.raises(ValueError, match="Invalid return value"):
-        adapter._decimal_return_to_percentage_points("nan%")
+        decimal_return_to_percentage_points("nan%")
     with pytest.raises(ValueError, match="Invalid market value"):
         adapter._as_decimal("invalid")
 

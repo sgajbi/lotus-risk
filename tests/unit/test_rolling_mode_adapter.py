@@ -5,8 +5,6 @@ import pytest
 from app.contracts.rolling import RollingStatefulInput
 from app.services.rolling_mode_adapter import (
     _build_stateful_source_request,
-    _decimal_return_to_percentage_points,
-    _to_return_points,
     calculate_rolling_metrics_stateful,
 )
 
@@ -82,19 +80,6 @@ def test_build_stateful_source_request_selection_flags() -> None:
     assert selection["include_portfolio"] is True
     assert selection["include_benchmark"] is True
     assert selection["include_risk_free"] is True
-
-
-def test_decimal_conversion_and_to_return_points() -> None:
-    assert _decimal_return_to_percentage_points("0.0125") == 1.25
-    points = _to_return_points(
-        [
-            {"date": "2026-01-02", "return_value": "0.0100"},
-            {"date": "2026-01-03", "return_value": "-0.0200"},
-            "bad-row",
-        ]
-    )
-    assert len(points) == 2
-    assert points[0].value == 1.0
 
 
 def test_stateful_adapter_happy_path() -> None:

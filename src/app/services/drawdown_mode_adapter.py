@@ -1,19 +1,15 @@
 from __future__ import annotations
 
-from datetime import date
-from decimal import Decimal, InvalidOperation
 from typing import Any, Protocol
 
-from app.contracts.drawdown import (
-    DrawdownAnalysisOptions,
-    DrawdownInputMode,
-    DrawdownResponse,
-    DrawdownStatefulInput,
-    DrawdownStatelessInput,
-)
-from app.contracts.risk import ReturnPoint, RiskRequestScope
+from app.contracts.drawdown import DrawdownAnalysisOptions, DrawdownInputMode, DrawdownResponse, DrawdownStatefulInput, DrawdownStatelessInput
+from app.contracts.risk import RiskRequestScope
 from app.services.drawdown_engine import calculate_drawdown
 from app.services.stateful_returns_request import build_stateful_returns_series_request
+from app.services.stateful_returns_series_parser import (
+    extract_required_portfolio_returns,
+    to_return_points,
+)
 
 
 class LotusPerformanceClientProtocol(Protocol):
@@ -23,33 +19,6 @@ class LotusPerformanceClientProtocol(Protocol):
         request_payload: dict[str, Any],
         correlation_id: str | None,
     ) -> dict[str, Any]: ...
-
-
-def _decimal_return_to_percentage_points(value: Any) -> float:
-    try:
-        decimal_value = Decimal(str(value))
-    except (InvalidOperation, ValueError) as exc:
-        raise ValueError(f"Invalid return value from lotus-performance: {value}") from exc
-    return float(decimal_value * Decimal("100"))
-
-
-def _to_return_points(series: Any) -> list[ReturnPoint]:
-    if not isinstance(series, list):
-        return []
-    result: list[ReturnPoint] = []
-    for row in series:
-        if not isinstance(row, dict):
-            continue
-        raw_date = row.get("date")
-        if not isinstance(raw_date, str):
-            continue
-        result.append(
-            ReturnPoint(
-                date=date.fromisoformat(raw_date),
-                value=_decimal_return_to_percentage_points(row.get("return_value")),
-            )
-        )
-    return result
 
 
 def _build_stateful_source_request(
@@ -88,14 +57,8 @@ async def calculate_drawdown_stateful(
         request_payload=source_payload,
         correlation_id=correlation_id,
     )
-    series = source_response.get("series")
-    if not isinstance(series, dict):
-        raise ValueError("lotus-performance returns-series payload missing 'series' object")
-
-    portfolio_points = _to_return_points(series.get("portfolio_returns"))
-    if not portfolio_points:
-        raise ValueError("lotus-performance returns-series returned no portfolio returns")
-    benchmark_points = _to_return_points(series.get("benchmark_returns"))
+    series, portfolio_points = extract_required_portfolio_returns(source_response)
+    benchmark_points = to_return_points(series.get("benchmark_returns"))
     if stateful.benchmark_policy.include_benchmark and not benchmark_points:
         if stateful.benchmark_policy.missing_benchmark_policy == "REQUIRE":
             raise ValueError(

@@ -5,13 +5,7 @@ import asyncio
 import pytest
 
 from app.contracts.risk import StatefulRiskInput
-from app.services.risk_mode_adapter import (
-    _build_stateful_source_request,
-    _decimal_return_to_percentage_points,
-    _portfolio_open_date,
-    _to_return_points,
-    calculate_risk_stateful,
-)
+from app.services.risk_mode_adapter import _build_stateful_source_request, _portfolio_open_date, calculate_risk_stateful
 
 
 class _StubPerformanceClient:
@@ -50,27 +44,6 @@ def _stateful_input() -> StatefulRiskInput:
             "options": {"frequency": "DAILY"},
         }
     )
-
-
-def test_decimal_return_conversion_characterization() -> None:
-    assert _decimal_return_to_percentage_points("0.0125") == 1.25
-
-
-def test_decimal_return_conversion_rejects_invalid_values() -> None:
-    with pytest.raises(ValueError, match="Invalid return value"):
-        _decimal_return_to_percentage_points("not-a-number")
-
-
-def test_to_return_points_skips_non_dict_and_invalid_date_rows() -> None:
-    points = _to_return_points(
-        [
-            {"date": "2025-01-02", "return_value": "0.0010"},
-            "invalid-row",
-            {"date": 123, "return_value": "0.0010"},
-        ]
-    )
-    assert len(points) == 1
-    assert points[0].value == 0.1
 
 
 def test_portfolio_open_date_falls_back_to_as_of_date_when_empty() -> None:
