@@ -473,6 +473,16 @@ class DrawdownPeriodResult(BaseModel):
         description="Resolved period end date.",
         json_schema_extra={"example": "2026-02-28"},
     )
+    portfolio_observation_count: int = Field(
+        default=0,
+        description="Number of portfolio return observations included in this period result.",
+        json_schema_extra={"example": 90},
+    )
+    benchmark_observation_count: int = Field(
+        default=0,
+        description="Number of benchmark return observations available in this period result.",
+        json_schema_extra={"example": 90},
+    )
     summary: DrawdownSummary | None = Field(
         default=None,
         description="Summary drawdown metrics for this period.",
@@ -684,6 +694,8 @@ class DrawdownResponse(BaseModel):
                         "YTD": {
                             "start_date": "2026-01-01",
                             "end_date": "2026-03-31",
+                            "portfolio_observation_count": 90,
+                            "benchmark_observation_count": 90,
                             "summary": {
                                 "max_drawdown": -0.084211,
                                 "max_drawdown_peak_date": "2026-01-11",

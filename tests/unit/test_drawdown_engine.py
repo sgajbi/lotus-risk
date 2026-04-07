@@ -50,6 +50,8 @@ def test_drawdown_engine_returns_period_summary_episode_and_underwater() -> None
     )
     period = response.results["YTD"]
     assert period.error is None
+    assert period.portfolio_observation_count == 7
+    assert period.benchmark_observation_count == 7
     assert period.summary is not None
     assert period.summary.max_drawdown is not None
     assert period.summary.max_drawdown < 0
@@ -164,6 +166,8 @@ def test_drawdown_engine_sets_period_error_when_window_has_no_observations() -> 
         include_benchmark=True,
     )
     assert response.results["empty"].error == "Insufficient data"
+    assert response.results["empty"].portfolio_observation_count == 0
+    assert response.results["empty"].benchmark_observation_count == 0
     assert response.results["empty"].relative_to_benchmark_context.requested is True
     assert response.results["empty"].relative_to_benchmark_context.applied is False
     assert response.results["empty"].relative_to_benchmark_context.reason == "BENCHMARK_UNAVAILABLE"
@@ -188,6 +192,8 @@ def test_drawdown_engine_reports_unapplied_relative_context_when_benchmark_missi
         include_benchmark=True,
     )
     period = response.results["YTD"]
+    assert period.portfolio_observation_count == 2
+    assert period.benchmark_observation_count == 0
     assert period.relative_to_benchmark is None
     assert period.relative_to_benchmark_context.requested is True
     assert period.relative_to_benchmark_context.applied is False
@@ -217,6 +223,8 @@ def test_drawdown_engine_reports_no_aligned_observations_reason() -> None:
         include_benchmark=True,
     )
     period = response.results["YTD"]
+    assert period.portfolio_observation_count == 2
+    assert period.benchmark_observation_count == 2
     assert period.relative_to_benchmark is None
     assert period.relative_to_benchmark_context.requested is True
     assert period.relative_to_benchmark_context.applied is False

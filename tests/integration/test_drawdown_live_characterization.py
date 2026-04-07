@@ -121,6 +121,8 @@ def test_live_stateful_drawdown_reconciles_with_upstream_returns() -> None:
     summary = period["summary"]
     relative = period["relative_to_benchmark"]
 
+    assert period["portfolio_observation_count"] == len(portfolio_returns)
+    assert period["benchmark_observation_count"] == len(benchmark_returns)
     assert summary["max_drawdown"] == pytest.approx(_max_drawdown(portfolio_drawdowns), abs=1e-12)
     assert summary["ulcer_index"] == pytest.approx(_ulcer_index(portfolio_drawdowns), abs=1e-12)
     assert summary["time_under_water_days"] == _time_under_water(portfolio_drawdowns)

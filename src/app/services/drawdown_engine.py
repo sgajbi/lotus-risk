@@ -247,6 +247,8 @@ def calculate_drawdown(
             results[_period_name(period)] = DrawdownPeriodResult(
                 start_date=start,
                 end_date=end,
+                portfolio_observation_count=0,
+                benchmark_observation_count=0,
                 summary=None,
                 episodes=[],
                 relative_to_benchmark=None,
@@ -344,6 +346,8 @@ def calculate_drawdown(
         results[_period_name(period)] = DrawdownPeriodResult(
             start_date=start,
             end_date=end,
+            portfolio_observation_count=len(portfolio_series),
+            benchmark_observation_count=len(benchmark_series) if not benchmark_df.empty else 0,
             summary=summary,
             episodes=episode_models,
             relative_to_benchmark=relative_summary,

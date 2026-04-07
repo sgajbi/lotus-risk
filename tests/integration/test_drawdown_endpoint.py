@@ -86,6 +86,10 @@ def test_drawdown_endpoint_stateful_uses_lotus_performance() -> None:
     assert payload["series_selection"]["include_benchmark"] is True
     body = response.json()
     assert body["input_mode"] == "stateful"
+    assert body["results"]["YTD"]["portfolio_observation_count"] == len(JAN_2026_PORTFOLIO_RETURNS)
+    assert body["results"]["YTD"]["benchmark_observation_count"] == len(
+        JAN_2026_DRAWDOWN_BENCHMARK_RETURNS
+    )
     assert body["metadata"]["include_benchmark"] is True
     assert body["metadata"]["missing_benchmark_policy"] == "REQUIRE"
     assert body["metadata"]["top_n_episodes"] == 3

@@ -57,6 +57,8 @@
 - `results[period_name]`
   - `start_date`
   - `end_date`
+  - `portfolio_observation_count`
+  - `benchmark_observation_count`
   - `summary` (max drawdown, timing, TUW, ulcer, DaR/CDaR)
   - `episodes[]` (top-N worst by depth)
   - `relative_to_benchmark` (optional; active drawdown depth plus timing/recovery fields)
@@ -108,6 +110,7 @@ The response metadata now echoes the applied drawdown configuration so consumers
   - `BENCHMARK_UNAVAILABLE`
   - `NO_ALIGNED_OBSERVATIONS`
   - `APPLIED`
+- `portfolio_observation_count` and `benchmark_observation_count` show how much realized history supported the period result and should be checked before over-interpreting short windows.
 - `time_under_water_days` counts observations below the running peak. It is a persistence signal, not simply the gap between peak and trough dates.
 - `is_recovered = false` means the path had not returned to its prior peak by period end. In that case `max_drawdown_recovery_date` and `days_to_recovery` remain `null`.
 - `episodes[]` is filtered by `minimum_episode_depth_bps` and truncated by `top_n_episodes`, so it is a ranked decision support view rather than a full event ledger unless the caller requests it that way.
