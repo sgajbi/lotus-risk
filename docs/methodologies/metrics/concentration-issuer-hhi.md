@@ -30,6 +30,7 @@
 - `w_k = |issuer_value_k|/W_issuer`: issuer weight.
 - `ISSUER_HHI = sum_k(w_k^2)*10000`.
 - Coverage counters: covered vs total position count for each state.
+- `coverage_ratio = covered_position_count / total_position_count` when total count is non-zero, else `0`.
 
 ## Methodology and Formulas
 1. Resolve issuer key per position.
@@ -44,11 +45,13 @@
 3. Normalize to weights.
 4. Compute HHI current/proposed/delta.
 5. Emit coverage status and counts.
+6. Emit coverage ratios for current and proposed states.
 
 ## Validation and Failure Behavior
 - Partial mapping yields `coverage_status=PARTIAL`.
 - No mapped issuer values produce HHI `0` with non-complete coverage.
 - The metric is computed on the covered subset only; coverage counters explain data quality.
+- If total position count is `0`, coverage ratio is emitted as `0`.
 
 ## Configuration Options
 - `issuer_grouping_level`
@@ -66,6 +69,8 @@
 - `issuer_concentration.covered_position_count_proposed`
 - `issuer_concentration.total_position_count_current`
 - `issuer_concentration.total_position_count_proposed`
+- `issuer_concentration.coverage_ratio_current`
+- `issuer_concentration.coverage_ratio_proposed`
 - `issuer_concentration.note`
 - `issuer_concentration.top_issuer_current`
 - `issuer_concentration.top_issuer_proposed`
@@ -81,4 +86,6 @@ Output mapping:
 - `issuer_concentration.hhi_current=6800`
 - `issuer_concentration.hhi_proposed=5800`
 - `issuer_concentration.hhi_delta=-1000`
+- `issuer_concentration.coverage_ratio_current=1.0`
+- `issuer_concentration.coverage_ratio_proposed=1.0`
 - if both issuer buckets are fully mapped, `issuer_concentration.coverage_status=complete`

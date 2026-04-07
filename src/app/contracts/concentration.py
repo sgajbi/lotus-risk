@@ -573,6 +573,14 @@ class IssuerConcentration(BaseModel):
         description="Total proposed positions evaluated for issuer coverage.",
         json_schema_extra={"example": 31},
     )
+    coverage_ratio_current: float = Field(
+        description="Covered baseline positions divided by total baseline positions.",
+        json_schema_extra={"example": 0.833333},
+    )
+    coverage_ratio_proposed: float = Field(
+        description="Covered proposed positions divided by total proposed positions.",
+        json_schema_extra={"example": 0.870968},
+    )
     note: str | None = Field(
         default=None,
         description="Optional diagnostics note when issuer coverage is partial or unavailable.",
@@ -705,6 +713,8 @@ class ConcentrationResponse(BaseModel):
                 "covered_position_count_proposed": 27,
                 "total_position_count_current": 30,
                 "total_position_count_proposed": 31,
+                "coverage_ratio_current": 0.833333,
+                "coverage_ratio_proposed": 0.870968,
                 "note": "issuer_id missing in lotus-core instrument_enrichment",
                 "top_issuer_current": {
                     "issuer_id": "ULTIMATE_PIMCO",
@@ -787,6 +797,8 @@ class ConcentrationResponse(BaseModel):
                         "covered_position_count_proposed": 11,
                         "total_position_count_current": 11,
                         "total_position_count_proposed": 11,
+                        "coverage_ratio_current": 1.0,
+                        "coverage_ratio_proposed": 1.0,
                         "note": None,
                         "top_issuer_current": {
                             "issuer_id": "ULTIMATE_BLACKROCK",

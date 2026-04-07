@@ -79,6 +79,8 @@ async def test_calculate_concentration_stateless_uses_projected_values_when_prov
         "issuer_name": None,
         "weight": 0.75,
     }
+    assert response["issuer_concentration"]["coverage_ratio_current"] == 1.0
+    assert response["issuer_concentration"]["coverage_ratio_proposed"] == 1.0
 
 
 @pytest.mark.asyncio

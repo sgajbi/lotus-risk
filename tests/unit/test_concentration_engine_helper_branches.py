@@ -13,6 +13,7 @@ from app.services.concentration_engine import (
     IssuerEntry,
     IssuerIdentity,
     PositionEntry,
+    _coverage_ratio,
     _caller_issuer_map,
     _extract_issuer_map,
     _extract_values_with_issuer_from_snapshot,
@@ -114,6 +115,11 @@ def test_extract_values_with_issuer_handles_fallback_and_non_dict_rows() -> None
     assert total == 1
 
 
+def test_coverage_ratio_handles_zero_and_rounding() -> None:
+    assert _coverage_ratio(0, 0) == 0.0
+    assert _coverage_ratio(2, 3) == 0.666667
+
+
 @pytest.mark.asyncio
 async def test_stateless_concentration_handles_malformed_core_enrichment_records() -> None:
     request = ConcentrationRequest.model_validate(
@@ -144,3 +150,5 @@ async def test_stateless_concentration_sets_note_when_core_records_shape_invalid
     assert (
         response.issuer_concentration.note == "lotus-core enrichment payload missing records list"
     )
+    assert response.issuer_concentration.coverage_ratio_current == 0.0
+    assert response.issuer_concentration.coverage_ratio_proposed == 0.0

@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-04-07T23:11:55.887092+00:00",
+  "generatedAt": "2026-04-07T23:18:24.808904+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.alignment_policy",
@@ -152,6 +152,34 @@
       ],
       "observedTypes": [
         "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.coverage_ratio_current",
+      "canonicalTerm": "coverage_ratio_current",
+      "preferredName": "coverage_ratio_current",
+      "description": "Covered baseline positions divided by total baseline positions.",
+      "example": 0.833333,
+      "type": "number",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "number"
+      ]
+    },
+    {
+      "semanticId": "lotus.coverage_ratio_proposed",
+      "canonicalTerm": "coverage_ratio_proposed",
+      "preferredName": "coverage_ratio_proposed",
+      "description": "Covered proposed positions divided by total proposed positions.",
+      "example": 0.870968,
+      "type": "number",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "number"
       ]
     },
     {
@@ -2083,6 +2111,22 @@
             "type": "integer",
             "semanticId": "lotus.total_position_count_proposed",
             "attributeRef": "#/attributeCatalog/lotus.total_position_count_proposed"
+          },
+          {
+            "name": "issuer_concentration.coverage_ratio_current",
+            "location": "body",
+            "required": true,
+            "type": "number",
+            "semanticId": "lotus.coverage_ratio_current",
+            "attributeRef": "#/attributeCatalog/lotus.coverage_ratio_current"
+          },
+          {
+            "name": "issuer_concentration.coverage_ratio_proposed",
+            "location": "body",
+            "required": true,
+            "type": "number",
+            "semanticId": "lotus.coverage_ratio_proposed",
+            "attributeRef": "#/attributeCatalog/lotus.coverage_ratio_proposed"
           },
           {
             "name": "issuer_concentration.note",

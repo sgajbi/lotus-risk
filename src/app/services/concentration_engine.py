@@ -270,6 +270,12 @@ def _round(value: float) -> float:
     return round(value, _ROUND_PRECISION)
 
 
+def _coverage_ratio(covered: int, total: int) -> float:
+    if total <= 0:
+        return 0.0
+    return _round(covered / total)
+
+
 def _build_response(payload: ConcentrationComputationInput) -> ConcentrationResponse:
     current_values = _values(payload.current_positions)
     proposed_values = _values(payload.proposed_positions)
@@ -359,6 +365,14 @@ def _build_response(payload: ConcentrationComputationInput) -> ConcentrationResp
             covered_position_count_proposed=payload.covered_position_count_proposed,
             total_position_count_current=payload.total_position_count_current,
             total_position_count_proposed=payload.total_position_count_proposed,
+            coverage_ratio_current=_coverage_ratio(
+                payload.covered_position_count_current,
+                payload.total_position_count_current,
+            ),
+            coverage_ratio_proposed=_coverage_ratio(
+                payload.covered_position_count_proposed,
+                payload.total_position_count_proposed,
+            ),
             note=payload.issuer_note,
             top_issuer_current=current_top_issuer,
             top_issuer_proposed=proposed_top_issuer,

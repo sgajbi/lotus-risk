@@ -176,6 +176,8 @@ Coverage fields:
 - `covered_position_count_proposed`
 - `total_position_count_current`
 - `total_position_count_proposed`
+- `coverage_ratio_current`
+- `coverage_ratio_proposed`
 - `note`
 
 Interpretation:
@@ -186,6 +188,8 @@ Interpretation:
    - at least one position was mapped, but some were not
 3. `unavailable`
    - no issuer mapping coverage was available for the counted positions
+
+`coverage_ratio_current` and `coverage_ratio_proposed` provide the same information in decimal form for faster consumer-side decisioning and thresholding.
 
 No silent fallback is allowed. If issuer enrichment is incomplete, the response makes that explicit through coverage fields.
 
@@ -260,6 +264,7 @@ There is no lotus-performance dependency for concentration.
 - `top_issuer_weight_delta`
 - `coverage_status`
 - coverage counters
+- coverage ratios
 - `note`
 - `top_issuer_current`
 - `top_issuer_proposed`

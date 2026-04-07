@@ -187,6 +187,8 @@ def test_stateful_api_characterizes_lotus_core_snapshot_payload_contract() -> No
         "issuer_name": "Alpha Group",
         "weight": 0.6,
     }
+    assert body["issuer_concentration"]["coverage_ratio_current"] == 1.0
+    assert body["issuer_concentration"]["coverage_ratio_proposed"] == 1.0
 
 
 def test_simulation_api_characterizes_session_creation_and_snapshot_contract() -> None:
@@ -247,3 +249,5 @@ def test_simulation_api_characterizes_session_creation_and_snapshot_contract() -
         "issuer_name": "Alpha Group",
         "weight": 0.7,
     }
+    assert body["issuer_concentration"]["coverage_ratio_current"] == 1.0
+    assert body["issuer_concentration"]["coverage_ratio_proposed"] == 1.0
