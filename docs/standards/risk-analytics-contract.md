@@ -54,7 +54,7 @@
 
 ## Risk Calculate Mode Support
 - `stateless`: caller supplies full return series.
-- `stateful`: caller supplies identifiers + risk metric specification; lotus-risk sources canonical portfolio/benchmark/risk-free series from lotus-performance (`/integration/returns/series`, `input_mode=stateful`, `stateful_input.consumer_system=lotus-risk`) and computes with the same engine.
+- `stateful`: caller supplies identifiers + risk metric specification; lotus-risk sources canonical portfolio/benchmark/risk-free series from lotus-performance (`/integration/returns/series`, `input_mode=stateful`, `stateful_input is an empty envelope; consumer identity is stamped by lotus-performance server-side`) and computes with the same engine.
 - `simulation`: reserved and not implemented for risk/calculate.
 
 ## Drawdown Details
@@ -116,3 +116,4 @@
   - optional `error.details`
 - Period/model validation errors return `422` with `error.code=INVALID_REQUEST`.
 - Calculation-level invalid period or method errors return `400` with `error.code=INVALID_INPUT`.
+

@@ -80,7 +80,7 @@ The design and metric set follow widely used market practices and literature:
 ## Modes
 
 1. `stateless`: caller supplies return series directly.
-2. `stateful`: caller supplies identifiers; lotus-risk resolves return series via lotus-performance (`/integration/returns/series`, `input_mode=stateful`, `stateful_input.consumer_system=lotus-risk`).
+2. `stateful`: caller supplies identifiers; lotus-risk resolves return series via lotus-performance (`/integration/returns/series`, `input_mode=stateful`, `stateful_input is an empty envelope; consumer identity is stamped by lotus-performance server-side`).
 3. `simulation`: not in RFC-0004 scope (reserved for later RFC).
 
 ## Request Envelope (Canonical)
@@ -295,4 +295,5 @@ After Realized Drawdown Analytics is fully delivered, execute next initiatives i
  - portfolio and segment-level realized shock impact analytics
 
 Each backlog item should have its own RFC and dedicated contract-governance cycle before implementation.
+
 

@@ -19,6 +19,8 @@ Provide windowed historical risk diagnostics for PB/WM portfolios with instituti
 
 - Status: implemented
 - Caller provides identifiers and options; lotus-risk sources canonical series from lotus-performance.
+- lotus-risk resolves the longest required source window from the requested periods and sends an explicit `window` to lotus-performance unless `SI` is requested.
+- when `ROLLING_SHARPE` is requested and `reporting_currency` is omitted, lotus-risk resolves portfolio/reporting currency from lotus-core core-snapshot before calling lotus-performance.
 
 ### Simulation
 
@@ -46,10 +48,12 @@ Provide windowed historical risk diagnostics for PB/WM portfolios with instituti
 - lotus-performance:
   - portfolio returns series
   - benchmark reference series
+  - risk-free reference series
   - alignment/lineage metadata
 
 - lotus-core:
-  - indirect via lotus-performance stateful sourcing where relevant to portfolio identity/reference context.
+  - indirect via lotus-performance stateful sourcing where relevant to portfolio identity/reference context
+  - direct `core-snapshot` lookup for portfolio/reporting currency when stateful rolling Sharpe requires risk-free series and caller omitted `reporting_currency`
 
 ## Expected Output Structure
 
@@ -81,3 +85,4 @@ Provide windowed historical risk diagnostics for PB/WM portfolios with instituti
 2. Implement simulation mode after historical simulation data contract finalization.
 3. Evaluate whether annualization basis should support both 252 and 260 in v2.
 4. Confirm final benchmark/risk-free selector standardization in upstream contracts.
+5. lotus-performance currently returns a deterministic upstream validation error when risk-free series is unavailable for the resolved currency/window; rolling Sharpe therefore remains data-dependent even though the integration contract is now aligned.

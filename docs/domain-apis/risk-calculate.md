@@ -22,7 +22,7 @@
 - Status: implemented in lotus-risk.
 - Current behavior:
   - caller supplies identifiers plus risk metric specification (`periods`, `metrics`, `options`).
-  - lotus-risk sources canonical return series from `lotus-performance` using `input_mode=stateful` and `stateful_input.consumer_system=lotus-risk`.
+  - lotus-risk sources canonical return series from `lotus-performance` using `input_mode=stateful` and `stateful_input is an empty envelope; consumer identity is stamped by lotus-performance server-side`.
   - lotus-risk computes with the same risk engine used by stateless mode.
 
 ### Simulation
@@ -89,3 +89,4 @@
 1. Benchmark/risk-free sourcing remains upstream-dependent on lotus-performance + lotus-core reference-data availability; stateful benchmark metrics degrade deterministically when benchmark series is absent.
 2. Define simulation override schema and merge semantics for `/analytics/risk/calculate`.
 3. Standardize response metadata additions (for example `correlationId`, `contractVersion`, `asOfDate`) if this endpoint must fully match cross-platform response envelope conventions.
+

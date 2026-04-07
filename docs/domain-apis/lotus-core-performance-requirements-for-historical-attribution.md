@@ -249,3 +249,4 @@ Required behavior:
 4. Contract tests validate required fields and type/shape guarantees.
 5. Characterization tests lock numerical behavior for stable fixtures.
 6. OpenAPI docs include full descriptions and realistic examples for all attributes.
+
