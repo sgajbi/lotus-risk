@@ -87,6 +87,10 @@ async def test_stateful_mode_includes_reporting_currency_and_metadata() -> None:
 
     assert response.metadata is not None
     assert response.metadata.portfolio_id == "DEMO_DPM_EUR_001"
+    assert response.metadata.issuer_grouping_level.value == "ultimate_parent"
+    assert response.metadata.enrichment_policy.value == "merge_caller_then_core"
+    assert response.metadata.include_cash_positions is True
+    assert response.metadata.include_zero_quantity_positions is False
     assert response.risk_proxy.hhi_current == 6800.0
     assert client.last_snapshot_payload is not None
     assert client.last_snapshot_payload["reporting_currency"] == "USD"
@@ -179,6 +183,10 @@ async def test_simulation_mode_falls_back_to_baseline_and_parses_metadata() -> N
     assert response.metadata.simulation_session_id == "SIM_0001"
     assert response.metadata.simulation_session_version == 4
     assert isinstance(response.metadata.session_expires_at, datetime)
+    assert response.metadata.issuer_grouping_level.value == "ultimate_parent"
+    assert response.metadata.enrichment_policy.value == "merge_caller_then_core"
+    assert response.metadata.include_cash_positions is True
+    assert response.metadata.include_zero_quantity_positions is False
     assert response.risk_proxy.hhi_current == response.risk_proxy.hhi_proposed
     assert client.last_snapshot_payload is not None
     assert client.last_snapshot_payload["reporting_currency"] == "USD"

@@ -657,6 +657,24 @@ class ConcentrationMetadata(BaseModel):
         description="Session expiration timestamp returned by lotus-core when session lifecycle is created.",
         json_schema_extra={"example": "2026-02-28T10:30:00Z"},
     )
+    issuer_grouping_level: IssuerGroupingLevel = Field(
+        description="Issuer grouping level applied to issuer concentration calculations.",
+        json_schema_extra={"example": "ultimate_parent"},
+    )
+    enrichment_policy: EnrichmentPolicy = Field(
+        description="Issuer enrichment policy applied for issuer concentration calculations.",
+        json_schema_extra={"example": "merge_caller_then_core"},
+    )
+    include_cash_positions: bool | None = Field(
+        default=None,
+        description="Whether cash positions were included in the evaluated concentration universe.",
+        json_schema_extra={"example": True},
+    )
+    include_zero_quantity_positions: bool | None = Field(
+        default=None,
+        description="Whether zero-quantity positions were included in the evaluated concentration universe.",
+        json_schema_extra={"example": False},
+    )
 
 
 class ConcentrationResponse(BaseModel):
@@ -751,6 +769,10 @@ class ConcentrationResponse(BaseModel):
                 "simulation_session_id": "SIM_0001",
                 "simulation_session_version": 3,
                 "session_expires_at": "2026-02-28T10:30:00Z",
+                "issuer_grouping_level": "ultimate_parent",
+                "enrichment_policy": "merge_caller_then_core",
+                "include_cash_positions": True,
+                "include_zero_quantity_positions": False,
             }
         },
     )
@@ -823,6 +845,10 @@ class ConcentrationResponse(BaseModel):
                         "simulation_session_id": None,
                         "simulation_session_version": None,
                         "session_expires_at": None,
+                        "issuer_grouping_level": "ultimate_parent",
+                        "enrichment_policy": "merge_caller_then_core",
+                        "include_cash_positions": True,
+                        "include_zero_quantity_positions": False,
                     },
                 }
             ]

@@ -285,3 +285,9 @@ Depending on mode:
 - `portfolio_id`
 - `as_of_date`
 - simulation session metadata
+- `issuer_grouping_level`
+- `enrichment_policy`
+- `include_cash_positions`
+- `include_zero_quantity_positions`
+
+These fields make the response self-describing. Consumers do not need to infer which issuer grouping or enrichment policy produced the issuer concentration output.

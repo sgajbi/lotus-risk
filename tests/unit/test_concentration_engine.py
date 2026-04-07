@@ -81,6 +81,17 @@ async def test_calculate_concentration_stateless_uses_projected_values_when_prov
     }
     assert response["issuer_concentration"]["coverage_ratio_current"] == 1.0
     assert response["issuer_concentration"]["coverage_ratio_proposed"] == 1.0
+    assert response["metadata"] == {
+        "as_of_date": None,
+        "portfolio_id": None,
+        "simulation_session_id": None,
+        "simulation_session_version": None,
+        "session_expires_at": None,
+        "issuer_grouping_level": "ultimate_parent",
+        "enrichment_policy": "merge_caller_then_core",
+        "include_cash_positions": None,
+        "include_zero_quantity_positions": None,
+    }
 
 
 @pytest.mark.asyncio
@@ -106,3 +117,5 @@ async def test_calculate_concentration_falls_back_to_current_when_no_projected()
     assert response["risk_proxy"]["hhi_current"] == 10000.0
     assert response["risk_proxy"]["hhi_proposed"] == 10000.0
     assert response["risk_proxy"]["hhi_delta"] == 0.0
+    assert response["metadata"]["issuer_grouping_level"] == "ultimate_parent"
+    assert response["metadata"]["enrichment_policy"] == "merge_caller_then_core"

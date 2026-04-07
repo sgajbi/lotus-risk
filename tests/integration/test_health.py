@@ -328,6 +328,8 @@ def test_concentration_stateful_mode_uses_lotus_core_snapshot() -> None:
     assert body["input_mode"] == "stateful"
     assert body["risk_proxy"]["hhi_current"] == 6800.0
     assert body["metadata"]["portfolio_id"] == "DEMO_DPM_EUR_001"
+    assert body["metadata"]["issuer_grouping_level"] == "ultimate_parent"
+    assert body["metadata"]["enrichment_policy"] == "merge_caller_then_core"
 
 
 def test_concentration_simulation_mode_reuses_or_creates_session_and_returns_metadata() -> None:
@@ -358,3 +360,5 @@ def test_concentration_simulation_mode_reuses_or_creates_session_and_returns_met
     assert body["risk_proxy"]["hhi_proposed"] == 8200.0
     assert body["metadata"]["simulation_session_id"] == "SIM_0001"
     assert body["metadata"]["simulation_session_version"] == 3
+    assert body["metadata"]["issuer_grouping_level"] == "ultimate_parent"
+    assert body["metadata"]["enrichment_policy"] == "merge_caller_then_core"

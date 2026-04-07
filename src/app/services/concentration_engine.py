@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any, Protocol
 
@@ -97,6 +97,30 @@ class ConcentrationComputationInput:
     issuer_note: str | None = None
     valuation_context: ConcentrationValuationContext | None = None
     metadata: ConcentrationMetadata | None = None
+
+
+def _build_metadata(
+    *,
+    request: ConcentrationRequest,
+    as_of_date: date | None = None,
+    portfolio_id: str | None = None,
+    simulation_session_id: str | None = None,
+    simulation_session_version: int | None = None,
+    session_expires_at: datetime | None = None,
+    include_cash_positions: bool | None = None,
+    include_zero_quantity_positions: bool | None = None,
+) -> ConcentrationMetadata:
+    return ConcentrationMetadata(
+        as_of_date=as_of_date,
+        portfolio_id=portfolio_id,
+        simulation_session_id=simulation_session_id,
+        simulation_session_version=simulation_session_version,
+        session_expires_at=session_expires_at,
+        issuer_grouping_level=request.issuer_grouping_level,
+        enrichment_policy=request.enrichment_policy,
+        include_cash_positions=include_cash_positions,
+        include_zero_quantity_positions=include_zero_quantity_positions,
+    )
 
 
 def _to_decimal(value: Any) -> Decimal | None:
@@ -563,9 +587,12 @@ async def _resolve_stateful(
         )
     )
     valuation = _extract_valuation_context(snapshot.get("valuation_context"))
-    metadata = ConcentrationMetadata(
+    metadata = _build_metadata(
+        request=request,
         as_of_date=stateful.as_of_date,
         portfolio_id=stateful.portfolio_id,
+        include_cash_positions=stateful.include_cash_positions,
+        include_zero_quantity_positions=stateful.include_zero_quantity_positions,
     )
     return ConcentrationComputationInput(
         input_mode=ConcentrationInputMode.STATEFUL,
@@ -733,12 +760,15 @@ async def _resolve_simulation(
         session_version = _as_int(snapshot_simulation.get("version")) or session_version
 
     valuation = _extract_valuation_context(snapshot.get("valuation_context"))
-    metadata = ConcentrationMetadata(
+    metadata = _build_metadata(
+        request=request,
         as_of_date=simulation.as_of_date,
         portfolio_id=simulation.portfolio_id,
         simulation_session_id=session_id,
         simulation_session_version=session_version,
         session_expires_at=session_expires_at,
+        include_cash_positions=simulation.include_cash_positions,
+        include_zero_quantity_positions=simulation.include_zero_quantity_positions,
     )
     return ConcentrationComputationInput(
         input_mode=ConcentrationInputMode.SIMULATION,
@@ -874,6 +904,11 @@ async def calculate_concentration(
             total_position_count_current=total_current,
             total_position_count_proposed=(total_proposed if proposed_positions else total_current),
             issuer_note=issuer_note,
+            metadata=_build_metadata(
+                request=request,
+                include_cash_positions=None,
+                include_zero_quantity_positions=None,
+            ),
         )
         return _build_response(payload)
 
