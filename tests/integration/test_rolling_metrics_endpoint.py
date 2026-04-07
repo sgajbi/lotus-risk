@@ -3,6 +3,12 @@ from typing import Any, cast
 from fastapi.testclient import TestClient
 
 from app.main import app
+from tests.support.returns_series_payloads import (
+    JAN_2026_PORTFOLIO_RETURNS,
+    JAN_2026_RISK_FREE_RETURNS,
+    JAN_2026_ROLLING_BENCHMARK_RETURNS,
+    build_returns_series_response,
+)
 
 
 class _RecordingLotusPerformanceClient:
@@ -21,25 +27,11 @@ class _RecordingLotusPerformanceClient:
                 "correlation_id": correlation_id,
             }
         )
-        return {
-            "series": {
-                "portfolio_returns": [
-                    {"date": "2026-01-02", "return_value": "0.0100"},
-                    {"date": "2026-01-03", "return_value": "-0.0200"},
-                    {"date": "2026-01-04", "return_value": "0.0050"},
-                ],
-                "benchmark_returns": [
-                    {"date": "2026-01-02", "return_value": "0.0080"},
-                    {"date": "2026-01-03", "return_value": "-0.0150"},
-                    {"date": "2026-01-04", "return_value": "0.0040"},
-                ],
-                "risk_free_returns": [
-                    {"date": "2026-01-02", "return_value": "0.0001"},
-                    {"date": "2026-01-03", "return_value": "0.0001"},
-                    {"date": "2026-01-04", "return_value": "0.0001"},
-                ],
-            }
-        }
+        return build_returns_series_response(
+            portfolio_returns=JAN_2026_PORTFOLIO_RETURNS,
+            benchmark_returns=JAN_2026_ROLLING_BENCHMARK_RETURNS,
+            risk_free_returns=JAN_2026_RISK_FREE_RETURNS,
+        )
 
 
 class _AutoWiredLotusPerformanceClient:
@@ -57,20 +49,10 @@ class _AutoWiredLotusPerformanceClient:
                 "correlation_id": correlation_id,
             }
         )
-        return {
-            "series": {
-                "portfolio_returns": [
-                    {"date": "2026-01-02", "return_value": "0.0100"},
-                    {"date": "2026-01-03", "return_value": "-0.0200"},
-                    {"date": "2026-01-04", "return_value": "0.0050"},
-                ],
-                "benchmark_returns": [
-                    {"date": "2026-01-02", "return_value": "0.0080"},
-                    {"date": "2026-01-03", "return_value": "-0.0150"},
-                    {"date": "2026-01-04", "return_value": "0.0040"},
-                ],
-            }
-        }
+        return build_returns_series_response(
+            portfolio_returns=JAN_2026_PORTFOLIO_RETURNS,
+            benchmark_returns=JAN_2026_ROLLING_BENCHMARK_RETURNS,
+        )
 
 
 class _AutoWiredLotusCoreClient:

@@ -2,6 +2,11 @@ from fastapi.testclient import TestClient
 from typing import Any, cast
 
 from app.main import app
+from tests.support.returns_series_payloads import (
+    RISK_STATEFUL_BENCHMARK_RETURNS,
+    RISK_STATEFUL_RETURNS,
+    build_returns_series_response,
+)
 
 
 class _RecordingLotusPerformanceClient:
@@ -20,22 +25,10 @@ class _RecordingLotusPerformanceClient:
                 "correlation_id": correlation_id,
             }
         )
-        return {
-            "series": {
-                "portfolio_returns": [
-                    {"date": "2025-01-02", "return_value": "0.0100"},
-                    {"date": "2025-01-03", "return_value": "0.0200"},
-                    {"date": "2025-01-06", "return_value": "-0.0100"},
-                    {"date": "2025-01-07", "return_value": "0.0050"},
-                ],
-                "benchmark_returns": [
-                    {"date": "2025-01-02", "return_value": "0.0090"},
-                    {"date": "2025-01-03", "return_value": "0.0150"},
-                    {"date": "2025-01-06", "return_value": "-0.0080"},
-                    {"date": "2025-01-07", "return_value": "0.0040"},
-                ],
-            }
-        }
+        return build_returns_series_response(
+            portfolio_returns=RISK_STATEFUL_RETURNS,
+            benchmark_returns=RISK_STATEFUL_BENCHMARK_RETURNS,
+        )
 
 
 class _AutoWiredLotusPerformanceClient:
@@ -53,14 +46,9 @@ class _AutoWiredLotusPerformanceClient:
                 "correlation_id": correlation_id,
             }
         )
-        return {
-            "series": {
-                "portfolio_returns": [
-                    {"date": "2025-01-02", "return_value": "0.0100"},
-                    {"date": "2025-01-03", "return_value": "0.0200"},
-                ]
-            }
-        }
+        return build_returns_series_response(
+            portfolio_returns=RISK_STATEFUL_RETURNS[:2],
+        )
 
 
 def _request_payload() -> dict[str, object]:

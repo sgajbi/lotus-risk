@@ -2,6 +2,11 @@ from fastapi.testclient import TestClient
 from typing import Any, cast
 
 from app.main import app
+from tests.support.returns_series_payloads import (
+    JAN_2026_DRAWDOWN_BENCHMARK_RETURNS,
+    JAN_2026_PORTFOLIO_RETURNS,
+    build_returns_series_response,
+)
 
 
 class _RecordingLotusPerformanceClient:
@@ -20,20 +25,10 @@ class _RecordingLotusPerformanceClient:
                 "correlation_id": correlation_id,
             }
         )
-        return {
-            "series": {
-                "portfolio_returns": [
-                    {"date": "2026-01-02", "return_value": "0.0100"},
-                    {"date": "2026-01-03", "return_value": "-0.0200"},
-                    {"date": "2026-01-04", "return_value": "0.0050"},
-                ],
-                "benchmark_returns": [
-                    {"date": "2026-01-02", "return_value": "0.0070"},
-                    {"date": "2026-01-03", "return_value": "-0.0100"},
-                    {"date": "2026-01-04", "return_value": "0.0040"},
-                ],
-            }
-        }
+        return build_returns_series_response(
+            portfolio_returns=JAN_2026_PORTFOLIO_RETURNS,
+            benchmark_returns=JAN_2026_DRAWDOWN_BENCHMARK_RETURNS,
+        )
 
 
 class _AutoWiredLotusPerformanceClient:
@@ -51,14 +46,9 @@ class _AutoWiredLotusPerformanceClient:
                 "correlation_id": correlation_id,
             }
         )
-        return {
-            "series": {
-                "portfolio_returns": [
-                    {"date": "2026-01-02", "return_value": "0.0100"},
-                    {"date": "2026-01-03", "return_value": "-0.0200"},
-                ]
-            }
-        }
+        return build_returns_series_response(
+            portfolio_returns=JAN_2026_PORTFOLIO_RETURNS[:2],
+        )
 
 
 def _stateless_payload() -> dict[str, object]:
