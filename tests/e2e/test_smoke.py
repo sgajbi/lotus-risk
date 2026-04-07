@@ -1,5 +1,12 @@
 from fastapi.testclient import TestClient
 from app.main import app
+from tests.support.app_runtime import override_app_runtime
+from tests.support.returns_series_payloads import (
+    JAN_2026_PORTFOLIO_RETURNS,
+    JAN_2026_RISK_FREE_RETURNS,
+    JAN_2026_ROLLING_BENCHMARK_RETURNS,
+    build_returns_series_response,
+)
 
 
 def _risk_payload() -> dict[str, object]:
@@ -352,37 +359,26 @@ class _FakeLotusPerformanceClient:
     ) -> dict[str, object]:
         assert request_payload["input_mode"] == "stateful"
         assert request_payload["stateful_input"] == {}
-        return {
-            "series": {
-                "portfolio_returns": [
-                    {"date": "2026-01-02", "return_value": "0.0100"},
-                    {"date": "2026-01-03", "return_value": "-0.0200"},
-                    {"date": "2026-01-04", "return_value": "0.0050"},
-                ],
-                "benchmark_returns": [
-                    {"date": "2026-01-02", "return_value": "0.0080"},
-                    {"date": "2026-01-03", "return_value": "-0.0150"},
-                    {"date": "2026-01-04", "return_value": "0.0040"},
-                ],
-                "risk_free_returns": [
-                    {"date": "2026-01-02", "return_value": "0.0001"},
-                    {"date": "2026-01-03", "return_value": "0.0001"},
-                    {"date": "2026-01-04", "return_value": "0.0001"},
-                ],
-            }
-        }
+        return build_returns_series_response(
+            portfolio_returns=JAN_2026_PORTFOLIO_RETURNS,
+            benchmark_returns=JAN_2026_ROLLING_BENCHMARK_RETURNS,
+            risk_free_returns=JAN_2026_RISK_FREE_RETURNS,
+        )
 
 
 def test_e2e_concentration_stateful_mode() -> None:
-    client = TestClient(app)
-    app.state.lotus_core_client = _FakeLotusCoreClient()
-    response = client.post(
-        "/analytics/risk/concentration",
-        json={
-            "input_mode": "stateful",
-            "stateful_input": {"portfolio_id": "DEMO_DPM_EUR_001", "as_of_date": "2026-02-27"},
-        },
-    )
+    with override_app_runtime(lotus_core_client=_FakeLotusCoreClient()):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/concentration",
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-02-27",
+                },
+            },
+        )
     assert response.status_code == 200
     body = response.json()
     assert body["input_mode"] == "stateful"
@@ -391,21 +387,21 @@ def test_e2e_concentration_stateful_mode() -> None:
 
 
 def test_e2e_concentration_simulation_mode() -> None:
-    client = TestClient(app)
-    app.state.lotus_core_client = _FakeLotusCoreClient()
-    response = client.post(
-        "/analytics/risk/concentration",
-        json={
-            "input_mode": "simulation",
-            "simulation_input": {
-                "portfolio_id": "DEMO_DPM_EUR_001",
-                "as_of_date": "2026-02-27",
-                "simulation_changes": [
-                    {"security_id": "SEC_A", "transaction_type": "BUY", "quantity": 10}
-                ],
+    with override_app_runtime(lotus_core_client=_FakeLotusCoreClient()):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/concentration",
+            json={
+                "input_mode": "simulation",
+                "simulation_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-02-27",
+                    "simulation_changes": [
+                        {"security_id": "SEC_A", "transaction_type": "BUY", "quantity": 10}
+                    ],
+                },
             },
-        },
-    )
+        )
     assert response.status_code == 200
     body = response.json()
     assert body["input_mode"] == "simulation"
@@ -414,27 +410,30 @@ def test_e2e_concentration_simulation_mode() -> None:
 
 
 def test_e2e_rolling_metrics_stateful_mode() -> None:
-    client = TestClient(app)
-    app.state.lotus_performance_client = _FakeLotusPerformanceClient()
-    response = client.post(
-        "/analytics/risk/rolling-metrics",
-        json={
-            "input_mode": "stateful",
-            "stateful_input": {
-                "portfolio_id": "DEMO_DPM_EUR_001",
-                "as_of_date": "2026-01-04",
-                "periods": [{"type": "YTD", "name": "YTD"}],
-                "rolling_options": {
-                    "window_lengths": [2],
-                    "metrics": [
-                        "ROLLING_VOLATILITY",
-                        "ROLLING_BETA",
-                        "ROLLING_SHARPE",
-                    ],
+    with override_app_runtime(
+        lotus_performance_client=_FakeLotusPerformanceClient(),
+        lotus_core_client=_FakeLotusCoreClient(),
+    ):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/rolling-metrics",
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-04",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "rolling_options": {
+                        "window_lengths": [2],
+                        "metrics": [
+                            "ROLLING_VOLATILITY",
+                            "ROLLING_BETA",
+                            "ROLLING_SHARPE",
+                        ],
+                    },
                 },
             },
-        },
-    )
+        )
     assert response.status_code == 200
     body = response.json()
     assert body["input_mode"] == "stateful"
