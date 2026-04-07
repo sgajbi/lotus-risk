@@ -311,6 +311,11 @@ def calculate_drawdown(
                     max_drawdown=active_summary.max_drawdown,
                     max_drawdown_peak_date=active_summary.max_drawdown_peak_date,
                     max_drawdown_trough_date=active_summary.max_drawdown_trough_date,
+                    max_drawdown_recovery_date=active_summary.max_drawdown_recovery_date,
+                    is_recovered=active_summary.is_recovered,
+                    days_to_trough=active_summary.days_to_trough,
+                    days_to_recovery=active_summary.days_to_recovery,
+                    time_under_water_days=active_summary.time_under_water_days or 0,
                 )
 
         results[_period_name(period)] = DrawdownPeriodResult(

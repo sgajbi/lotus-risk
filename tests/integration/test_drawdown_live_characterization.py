@@ -28,11 +28,11 @@ AS_OF_DATE = os.getenv("LOTUS_RISK_LIVE_AS_OF_DATE", "2026-03-31")
 
 def _wealth_drawdown(return_series: Sequence[float]) -> list[float]:
     wealth = 1.0
-    running_peak = 1.0
+    running_peak: float | None = None
     drawdowns: list[float] = []
     for daily_return in return_series:
         wealth *= 1.0 + daily_return
-        running_peak = max(running_peak, wealth)
+        running_peak = wealth if running_peak is None else max(running_peak, wealth)
         drawdowns.append(wealth / running_peak - 1.0)
     return drawdowns
 
@@ -125,5 +125,6 @@ def test_live_stateful_drawdown_reconciles_with_upstream_returns() -> None:
     assert summary["ulcer_index"] == pytest.approx(_ulcer_index(portfolio_drawdowns), abs=1e-12)
     assert summary["time_under_water_days"] == _time_under_water(portfolio_drawdowns)
     assert relative["max_drawdown"] == pytest.approx(_max_drawdown(active_drawdowns), abs=1e-12)
+    assert relative["time_under_water_days"] == _time_under_water(active_drawdowns)
     assert drawdown_body["metadata"]["include_benchmark"] is True
     assert drawdown_body["metadata"]["include_underwater_series"] is True

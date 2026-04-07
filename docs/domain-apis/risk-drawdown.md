@@ -59,7 +59,7 @@
   - `end_date`
   - `summary` (max drawdown, timing, TUW, ulcer, DaR/CDaR)
   - `episodes[]` (top-N worst by depth)
-  - `relative_to_benchmark` (optional)
+  - `relative_to_benchmark` (optional; active drawdown depth plus timing/recovery fields)
   - `underwater_series` (optional)
   - `error` (period-level deterministic error when data is insufficient)
 - `metadata`

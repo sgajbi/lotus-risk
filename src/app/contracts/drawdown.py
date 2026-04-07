@@ -337,6 +337,31 @@ class RelativeDrawdownSummary(BaseModel):
         description="Trough date associated with relative maximum drawdown.",
         json_schema_extra={"example": "2026-02-01"},
     )
+    max_drawdown_recovery_date: dt.date | None = Field(
+        default=None,
+        description="Recovery date for the relative maximum drawdown episode, if recovered.",
+        json_schema_extra={"example": "2026-02-18"},
+    )
+    is_recovered: bool = Field(
+        default=False,
+        description="Whether the relative maximum drawdown episode recovered before period end.",
+        json_schema_extra={"example": True},
+    )
+    days_to_trough: int | None = Field(
+        default=None,
+        description="Number of duration-unit days from relative peak to trough.",
+        json_schema_extra={"example": 15},
+    )
+    days_to_recovery: int | None = Field(
+        default=None,
+        description="Number of duration-unit days from relative trough to recovery, if recovered.",
+        json_schema_extra={"example": 9},
+    )
+    time_under_water_days: int = Field(
+        default=0,
+        description="Number of duration-unit observations where active drawdown remained below zero.",
+        json_schema_extra={"example": 21},
+    )
 
 
 class DrawdownPeriodResult(BaseModel):
@@ -380,6 +405,11 @@ class DrawdownPeriodResult(BaseModel):
                 "max_drawdown": -0.0821,
                 "max_drawdown_peak_date": "2026-01-11",
                 "max_drawdown_trough_date": "2026-02-01",
+                "max_drawdown_recovery_date": "2026-02-18",
+                "is_recovered": True,
+                "days_to_trough": 15,
+                "days_to_recovery": 9,
+                "time_under_water_days": 21,
             }
         },
     )

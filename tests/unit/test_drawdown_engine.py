@@ -61,6 +61,9 @@ def test_drawdown_engine_returns_period_summary_episode_and_underwater() -> None
     assert period.underwater_series is not None
     assert len(period.underwater_series) > 0
     assert period.relative_to_benchmark is not None
+    assert period.relative_to_benchmark.max_drawdown is not None
+    assert period.relative_to_benchmark.days_to_trough is not None
+    assert period.relative_to_benchmark.time_under_water_days >= 0
     assert response.metadata.include_underwater_series is True
     assert response.metadata.include_episode_list is True
     assert response.metadata.top_n_episodes == 5
