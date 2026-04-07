@@ -13,7 +13,7 @@ from app.contracts.drawdown import (
 )
 from app.contracts.risk import ReturnPoint, RiskRequestScope
 from app.services.drawdown_engine import calculate_drawdown
-from app.services.source_window import build_returns_series_window
+from app.services.stateful_returns_request import build_stateful_returns_series_request
 
 
 class LotusPerformanceClientProtocol(Protocol):
@@ -59,33 +59,21 @@ def _build_stateful_source_request(
 ) -> dict[str, Any]:
     # keep options local to lotus-risk; returns-series only needs sourcing controls
     _ = analysis_options
-    return {
-        "portfolio_id": stateful.portfolio_id,
-        "as_of_date": stateful.as_of_date.isoformat(),
-        "window": build_returns_series_window(
-            periods=stateful.periods,
-            as_of_date=stateful.as_of_date,
+    return build_stateful_returns_series_request(
+        portfolio_id=stateful.portfolio_id,
+        as_of_date=stateful.as_of_date,
+        periods=stateful.periods,
+        frequency="DAILY",
+        metric_basis=stateful.net_or_gross,
+        reporting_currency=stateful.reporting_currency,
+        include_benchmark=stateful.benchmark_policy.include_benchmark,
+        include_risk_free=False,
+        missing_data_policy=(
+            "FAIL_FAST"
+            if stateful.benchmark_policy.missing_benchmark_policy == "REQUIRE"
+            else "ALLOW_PARTIAL"
         ),
-        "frequency": "DAILY",
-        "metric_basis": stateful.net_or_gross,
-        "reporting_currency": stateful.reporting_currency,
-        "series_selection": {
-            "include_portfolio": True,
-            "include_benchmark": stateful.benchmark_policy.include_benchmark,
-            "include_risk_free": False,
-        },
-        "data_policy": {
-            "missing_data_policy": (
-                "FAIL_FAST"
-                if stateful.benchmark_policy.missing_benchmark_policy == "REQUIRE"
-                else "ALLOW_PARTIAL"
-            ),
-            "fill_method": "NONE",
-            "calendar_policy": "BUSINESS",
-        },
-        "input_mode": "stateful",
-        "stateful_input": {},
-    }
+    )
 
 
 async def calculate_drawdown_stateful(

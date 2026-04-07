@@ -13,7 +13,7 @@ from app.contracts.rolling import (
     RollingStatelessInput,
 )
 from app.services.rolling_engine import ROLLING_SHARPE_METRIC, calculate_rolling_metrics
-from app.services.source_window import build_returns_series_window
+from app.services.stateful_returns_request import build_stateful_returns_series_request
 
 
 class LotusPerformanceClientProtocol(Protocol):
@@ -67,29 +67,17 @@ def _build_stateful_source_request(stateful: RollingStatefulInput) -> dict[str, 
         metric in ROLLING_BENCHMARK_METRICS for metric in stateful.rolling_options.metrics
     )
     include_risk_free = ROLLING_SHARPE_METRIC in stateful.rolling_options.metrics
-    return {
-        "portfolio_id": stateful.portfolio_id,
-        "as_of_date": stateful.as_of_date.isoformat(),
-        "window": build_returns_series_window(
-            periods=stateful.periods,
-            as_of_date=stateful.as_of_date,
-        ),
-        "frequency": "DAILY",
-        "metric_basis": stateful.net_or_gross,
-        "reporting_currency": stateful.reporting_currency,
-        "series_selection": {
-            "include_portfolio": True,
-            "include_benchmark": include_benchmark,
-            "include_risk_free": include_risk_free,
-        },
-        "data_policy": {
-            "missing_data_policy": "ALLOW_PARTIAL",
-            "fill_method": "NONE",
-            "calendar_policy": "BUSINESS",
-        },
-        "input_mode": "stateful",
-        "stateful_input": {},
-    }
+    return build_stateful_returns_series_request(
+        portfolio_id=stateful.portfolio_id,
+        as_of_date=stateful.as_of_date,
+        periods=stateful.periods,
+        frequency="DAILY",
+        metric_basis=stateful.net_or_gross,
+        reporting_currency=stateful.reporting_currency,
+        include_benchmark=include_benchmark,
+        include_risk_free=include_risk_free,
+        missing_data_policy="ALLOW_PARTIAL",
+    )
 
 
 async def _resolve_reporting_currency(

@@ -12,7 +12,7 @@ from app.contracts.risk import (
     StatefulRiskInput,
 )
 from app.services.risk_engine import calculate_risk
-from app.services.source_window import build_returns_series_window
+from app.services.stateful_returns_request import build_stateful_returns_series_request
 
 
 class LotusPerformanceClientProtocol(Protocol):
@@ -62,29 +62,17 @@ def _portfolio_open_date(series_points: list[ReturnPoint], *, as_of_date: date) 
 
 def _build_stateful_source_request(stateful: StatefulRiskInput) -> dict[str, Any]:
     include_benchmark = any(metric in _BENCHMARK_METRICS for metric in stateful.metrics)
-    return {
-        "portfolio_id": stateful.portfolio_id,
-        "as_of_date": stateful.as_of_date.isoformat(),
-        "window": build_returns_series_window(
-            periods=stateful.periods,
-            as_of_date=stateful.as_of_date,
-        ),
-        "frequency": stateful.options.frequency,
-        "metric_basis": stateful.net_or_gross,
-        "reporting_currency": stateful.reporting_currency,
-        "series_selection": {
-            "include_portfolio": True,
-            "include_benchmark": include_benchmark,
-            "include_risk_free": False,
-        },
-        "data_policy": {
-            "missing_data_policy": "ALLOW_PARTIAL",
-            "fill_method": "NONE",
-            "calendar_policy": "BUSINESS",
-        },
-        "input_mode": "stateful",
-        "stateful_input": {},
-    }
+    return build_stateful_returns_series_request(
+        portfolio_id=stateful.portfolio_id,
+        as_of_date=stateful.as_of_date,
+        periods=stateful.periods,
+        frequency=stateful.options.frequency,
+        metric_basis=stateful.net_or_gross,
+        reporting_currency=stateful.reporting_currency,
+        include_benchmark=include_benchmark,
+        include_risk_free=False,
+        missing_data_policy="ALLOW_PARTIAL",
+    )
 
 
 async def calculate_risk_stateful(

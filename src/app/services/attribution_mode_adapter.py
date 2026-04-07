@@ -14,7 +14,7 @@ from app.contracts.attribution import (
 )
 from app.contracts.risk import ReturnPoint, RiskRequestScope
 from app.services.attribution_engine import calculate_historical_attribution
-from app.services.source_window import build_returns_series_window
+from app.services.stateful_returns_request import build_stateful_returns_series_request
 
 
 class LotusPerformanceClientProtocol(Protocol):
@@ -71,29 +71,17 @@ def _to_return_points(series: Any) -> list[ReturnPoint]:
 
 
 def _build_stateful_returns_request(stateful: HistoricalAttributionStatefulInput) -> dict[str, Any]:
-    return {
-        "portfolio_id": stateful.portfolio_id,
-        "as_of_date": stateful.as_of_date.isoformat(),
-        "window": build_returns_series_window(
-            periods=stateful.periods,
-            as_of_date=stateful.as_of_date,
-        ),
-        "frequency": "DAILY",
-        "metric_basis": stateful.net_or_gross,
-        "reporting_currency": stateful.reporting_currency,
-        "series_selection": {
-            "include_portfolio": True,
-            "include_benchmark": False,
-            "include_risk_free": False,
-        },
-        "data_policy": {
-            "missing_data_policy": "ALLOW_PARTIAL",
-            "fill_method": "NONE",
-            "calendar_policy": "BUSINESS",
-        },
-        "input_mode": "stateful",
-        "stateful_input": {},
-    }
+    return build_stateful_returns_series_request(
+        portfolio_id=stateful.portfolio_id,
+        as_of_date=stateful.as_of_date,
+        periods=stateful.periods,
+        frequency="DAILY",
+        metric_basis=stateful.net_or_gross,
+        reporting_currency=stateful.reporting_currency,
+        include_benchmark=False,
+        include_risk_free=False,
+        missing_data_policy="ALLOW_PARTIAL",
+    )
 
 
 def _group_key_and_label(
