@@ -10,6 +10,9 @@ from app.contracts.concentration import (
     IssuerMappingInput,
 )
 from app.services.concentration_engine import (
+    IssuerEntry,
+    IssuerIdentity,
+    PositionEntry,
     _caller_issuer_map,
     _extract_issuer_map,
     _extract_values_with_issuer_from_snapshot,
@@ -70,7 +73,7 @@ def test_helper_extract_issuer_map_branches() -> None:
         grouping_level=IssuerGroupingLevel.LEGAL_ISSUER,
     )
     assert note is None
-    assert issuer_map["SEC_A"] == "ISSUER_A"
+    assert issuer_map["SEC_A"] == IssuerIdentity(issuer_id="ISSUER_A", issuer_name=None)
 
     empty_map, empty_note = _extract_issuer_map(
         {"instrument_enrichment": [{"security_id": "SEC_A"}]},
@@ -92,7 +95,7 @@ def test_helper_caller_issuer_map_ultimate_parent_branch() -> None:
         mappings=mappings,
         grouping_level=IssuerGroupingLevel.ULTIMATE_PARENT,
     )
-    assert issuer_map["SEC_A"] == "PARENT_A"
+    assert issuer_map["SEC_A"] == IssuerIdentity(issuer_id="PARENT_A", issuer_name=None)
 
 
 def test_extract_values_with_issuer_handles_fallback_and_non_dict_rows() -> None:
@@ -103,10 +106,10 @@ def test_extract_values_with_issuer_handles_fallback_and_non_dict_rows() -> None
     ]
     values, issuer_values, covered, total = _extract_values_with_issuer_from_snapshot(
         cast(list[dict[str, Any]] | None, rows),
-        {"SEC_A": "ISSUER_A"},
+        {"SEC_A": IssuerIdentity(issuer_id="ISSUER_A", issuer_name=None)},
     )
-    assert values == [10.0]
-    assert issuer_values == [10.0]
+    assert values == [PositionEntry(security_id="SEC_A", security_name=None, value=10.0)]
+    assert issuer_values == [IssuerEntry(issuer_id="ISSUER_A", issuer_name=None, value=10.0)]
     assert covered == 1
     assert total == 1
 

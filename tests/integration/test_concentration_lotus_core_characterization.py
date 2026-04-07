@@ -77,8 +77,18 @@ class _RecordingLotusCoreClient:
                         },
                     ],
                     "instrument_enrichment": [
-                        {"security_id": "SEC_A", "issuer_id": "ISSUER_A"},
-                        {"security_id": "SEC_B", "issuer_id": "ISSUER_B"},
+                        {
+                            "security_id": "SEC_A",
+                            "instrument_name": "Alpha Global Equity",
+                            "issuer_id": "ISSUER_A",
+                            "issuer_name": "Alpha Group",
+                        },
+                        {
+                            "security_id": "SEC_B",
+                            "instrument_name": "Beta Income Fund",
+                            "issuer_id": "ISSUER_B",
+                            "issuer_name": "Beta Group",
+                        },
                     ],
                 },
             }
@@ -94,8 +104,18 @@ class _RecordingLotusCoreClient:
                     {"security_id": "SEC_B", "market_value_base": "30"},
                 ],
                 "instrument_enrichment": [
-                    {"security_id": "SEC_A", "issuer_id": "ISSUER_A"},
-                    {"security_id": "SEC_B", "issuer_id": "ISSUER_B"},
+                    {
+                        "security_id": "SEC_A",
+                        "instrument_name": "Alpha Global Equity",
+                        "issuer_id": "ISSUER_A",
+                        "issuer_name": "Alpha Group",
+                    },
+                    {
+                        "security_id": "SEC_B",
+                        "instrument_name": "Beta Income Fund",
+                        "issuer_id": "ISSUER_B",
+                        "issuer_name": "Beta Group",
+                    },
                 ],
             },
         }
@@ -156,6 +176,17 @@ def test_stateful_api_characterizes_lotus_core_snapshot_payload_contract() -> No
         "position_basis": "market_value_base",
         "weight_basis": "total_market_value_base",
     }
+    body = response.json()
+    assert body["single_position_concentration"]["top_position_current"] == {
+        "security_id": "SEC_A",
+        "security_name": "Alpha Global Equity",
+        "weight": 0.6,
+    }
+    assert body["issuer_concentration"]["top_issuer_current"] == {
+        "issuer_id": "ISSUER_A",
+        "issuer_name": "Alpha Group",
+        "weight": 0.6,
+    }
 
 
 def test_simulation_api_characterizes_session_creation_and_snapshot_contract() -> None:
@@ -200,3 +231,19 @@ def test_simulation_api_characterizes_session_creation_and_snapshot_contract() -
         "portfolio_totals",
         "instrument_enrichment",
     ]
+    body = response.json()
+    assert body["single_position_concentration"]["top_position_current"] == {
+        "security_id": "SEC_A",
+        "security_name": "Alpha Global Equity",
+        "weight": 0.6,
+    }
+    assert body["single_position_concentration"]["top_position_proposed"] == {
+        "security_id": "SEC_A",
+        "security_name": "Alpha Global Equity",
+        "weight": 0.7,
+    }
+    assert body["issuer_concentration"]["top_issuer_proposed"] == {
+        "issuer_id": "ISSUER_A",
+        "issuer_name": "Alpha Group",
+        "weight": 0.7,
+    }

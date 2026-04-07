@@ -20,12 +20,32 @@ async def test_calculate_concentration_stateless_uses_projected_values_when_prov
             "input_mode": "stateless",
             "stateless_input": {
                 "current_positions": [
-                    {"security_id": "A", "quantity": 10},
-                    {"security_id": "B", "quantity": 10},
+                    {
+                        "security_id": "A",
+                        "security_name": "Alpha Holdings",
+                        "quantity": 10,
+                        "issuer_id": "ISSUER_ALPHA",
+                    },
+                    {
+                        "security_id": "B",
+                        "security_name": "Beta Bonds",
+                        "quantity": 10,
+                        "issuer_id": "ISSUER_BETA",
+                    },
                 ],
                 "projected_positions": [
-                    {"security_id": "A", "proposed_quantity": 15},
-                    {"security_id": "B", "proposed_quantity": 5},
+                    {
+                        "security_id": "A",
+                        "security_name": "Alpha Holdings",
+                        "proposed_quantity": 15,
+                        "issuer_id": "ISSUER_ALPHA",
+                    },
+                    {
+                        "security_id": "B",
+                        "security_name": "Beta Bonds",
+                        "proposed_quantity": 5,
+                        "issuer_id": "ISSUER_BETA",
+                    },
                 ],
                 "top_n": 2,
             },
@@ -39,6 +59,26 @@ async def test_calculate_concentration_stateless_uses_projected_values_when_prov
     assert response["single_position_concentration"]["top_n"] == 2
     assert response["single_position_concentration"]["top_position_weight_current"] == 0.5
     assert response["single_position_concentration"]["top_position_weight_proposed"] == 0.75
+    assert response["single_position_concentration"]["top_position_current"] == {
+        "security_id": "B",
+        "security_name": "Beta Bonds",
+        "weight": 0.5,
+    }
+    assert response["single_position_concentration"]["top_position_proposed"] == {
+        "security_id": "A",
+        "security_name": "Alpha Holdings",
+        "weight": 0.75,
+    }
+    assert response["issuer_concentration"]["top_issuer_current"] == {
+        "issuer_id": "ISSUER_BETA",
+        "issuer_name": None,
+        "weight": 0.5,
+    }
+    assert response["issuer_concentration"]["top_issuer_proposed"] == {
+        "issuer_id": "ISSUER_ALPHA",
+        "issuer_name": None,
+        "weight": 0.75,
+    }
 
 
 @pytest.mark.asyncio

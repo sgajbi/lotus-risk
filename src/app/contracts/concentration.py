@@ -28,6 +28,11 @@ class CurrentPosition(BaseModel):
         description="Canonical security identifier in the baseline portfolio state.",
         json_schema_extra={"example": "AAPL.US"},
     )
+    security_name: str | None = Field(
+        default=None,
+        description="Optional security display name for user-facing concentration interpretation.",
+        json_schema_extra={"example": "Apple Inc."},
+    )
     quantity: float | None = Field(
         default=None,
         description="Baseline quantity for the position.",
@@ -59,6 +64,11 @@ class ProjectedPosition(BaseModel):
     security_id: str = Field(
         description="Canonical security identifier in the projected portfolio state.",
         json_schema_extra={"example": "AAPL.US"},
+    )
+    security_name: str | None = Field(
+        default=None,
+        description="Optional projected security display name for user-facing concentration interpretation.",
+        json_schema_extra={"example": "Apple Inc."},
     )
     proposed_quantity: float | None = Field(
         default=None,
@@ -385,6 +395,60 @@ class SinglePositionConcentration(BaseModel):
         description="Top-N parameter used for cumulative concentration calculations.",
         json_schema_extra={"example": 10},
     )
+    top_position_current: "TopPositionDriver" = Field(
+        description="Top baseline position driver with identifier and display metadata.",
+        json_schema_extra={
+            "example": {
+                "security_id": "FO_FUND_PIMCO_INC",
+                "security_name": "PIMCO GIS Income Fund",
+                "weight": 0.23014,
+            }
+        },
+    )
+    top_position_proposed: "TopPositionDriver" = Field(
+        description="Top proposed position driver with identifier and display metadata.",
+        json_schema_extra={
+            "example": {
+                "security_id": "FO_FUND_PIMCO_INC",
+                "security_name": "PIMCO GIS Income Fund",
+                "weight": 0.22968,
+            }
+        },
+    )
+
+
+class TopPositionDriver(BaseModel):
+    security_id: str | None = Field(
+        default=None,
+        description="Security identifier of the top concentration-driving position.",
+        json_schema_extra={"example": "FO_FUND_PIMCO_INC"},
+    )
+    security_name: str | None = Field(
+        default=None,
+        description="Display name of the top concentration-driving position when available.",
+        json_schema_extra={"example": "PIMCO GIS Income Fund"},
+    )
+    weight: float = Field(
+        description="Portfolio weight of the top concentration-driving position.",
+        json_schema_extra={"example": 0.23014},
+    )
+
+
+class TopIssuerDriver(BaseModel):
+    issuer_id: str | None = Field(
+        default=None,
+        description="Issuer identifier of the top concentration-driving issuer bucket.",
+        json_schema_extra={"example": "ULTIMATE_PIMCO"},
+    )
+    issuer_name: str | None = Field(
+        default=None,
+        description="Display name of the top concentration-driving issuer bucket when available.",
+        json_schema_extra={"example": "Pacific Investment Management Company LLC"},
+    )
+    weight: float = Field(
+        description="Portfolio weight of the top concentration-driving issuer bucket.",
+        json_schema_extra={"example": 0.245075},
+    )
 
 
 class IssuerCoverageStatus(str, Enum):
@@ -442,6 +506,26 @@ class IssuerConcentration(BaseModel):
         default=None,
         description="Optional diagnostics note when issuer coverage is partial or unavailable.",
         json_schema_extra={"example": "issuer_id missing in lotus-core instrument_enrichment"},
+    )
+    top_issuer_current: TopIssuerDriver = Field(
+        description="Top baseline issuer concentration driver with identifier and display metadata.",
+        json_schema_extra={
+            "example": {
+                "issuer_id": "ULTIMATE_PIMCO",
+                "issuer_name": "Pacific Investment Management Company LLC",
+                "weight": 0.245075,
+            }
+        },
+    )
+    top_issuer_proposed: TopIssuerDriver = Field(
+        description="Top proposed issuer concentration driver with identifier and display metadata.",
+        json_schema_extra={
+            "example": {
+                "issuer_id": "ULTIMATE_PIMCO",
+                "issuer_name": "Pacific Investment Management Company LLC",
+                "weight": 0.244585,
+            }
+        },
     )
 
 
@@ -522,6 +606,16 @@ class ConcentrationResponse(BaseModel):
                 "top_n_cumulative_weight_proposed": 0.4551,
                 "top_n_cumulative_weight_delta": 0.0428,
                 "top_n": 10,
+                "top_position_current": {
+                    "security_id": "FO_FUND_PIMCO_INC",
+                    "security_name": "PIMCO GIS Income Fund",
+                    "weight": 0.1245,
+                },
+                "top_position_proposed": {
+                    "security_id": "FO_FUND_PIMCO_INC",
+                    "security_name": "PIMCO GIS Income Fund",
+                    "weight": 0.142,
+                },
             }
         },
     )
@@ -541,6 +635,16 @@ class ConcentrationResponse(BaseModel):
                 "total_position_count_current": 30,
                 "total_position_count_proposed": 31,
                 "note": "issuer_id missing in lotus-core instrument_enrichment",
+                "top_issuer_current": {
+                    "issuer_id": "ULTIMATE_PIMCO",
+                    "issuer_name": "Pacific Investment Management Company LLC",
+                    "weight": 0.18,
+                },
+                "top_issuer_proposed": {
+                    "issuer_id": "ULTIMATE_PIMCO",
+                    "issuer_name": "Pacific Investment Management Company LLC",
+                    "weight": 0.21,
+                },
             }
         },
     )
