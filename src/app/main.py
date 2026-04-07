@@ -551,8 +551,10 @@ async def analytics_risk_historical_attribution(
     summary="Calculate concentration risk analytics",
     tags=["risk-analytics"],
     description=(
-        "Calculates concentration-risk HHI metrics from current and projected position "
-        "weights. Returns current, proposed, and delta concentration."
+        "Calculates portfolio, single-position, and issuer concentration analytics across "
+        "stateless, stateful, and simulation modes. Returns position-level HHI, top-position "
+        "weight, top-N cumulative weight, issuer-level HHI, top-issuer weight, issuer coverage "
+        "diagnostics, and top concentration drivers for current and proposed states."
     ),
 )
 async def analytics_risk_concentration(

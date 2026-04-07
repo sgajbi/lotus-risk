@@ -15,9 +15,10 @@
 - Same source path as concentration HHI.
 
 ## Unit Conventions
-- Return inputs are percentage points (pp): `1.0` means `+1%`.
-- Engine converts to decimal when required: `r_decimal = r_pp / 100`.
-- Output units are metric-specific (ratio, annualized pp, decimal drawdown, or HHI scale).
+- Position inputs are non-negative portfolio amounts:
+  - `market_value_base` when available
+  - `quantity` as fallback when market value is unavailable
+- Output weights are decimals in `[0, 1]`.
 
 ## Variable Dictionary
 - `v_i`: position value.
@@ -43,7 +44,9 @@
 - Zero denominator yields `0`.
 
 ## Configuration Options
-- `concentration_options.top_n`
+- `stateless_input.top_n`
+- `stateful_input.top_n`
+- `simulation_input.top_n`
 
 ## Outputs
 - `single_position_concentration.top_n_cumulative_weight_current`
@@ -53,9 +56,13 @@
 
 ## Worked Example
 Current weights `[0.50,0.30,0.20]`, proposed `[0.60,0.25,0.15]`, `top_n=2`.
-| State | Sorted Weights | Top-2 Cumulative Weight |
-|---|---|---:|
-| Current | `[0.50,0.30,0.20]` | `0.80` |
-| Proposed | `[0.60,0.25,0.15]` | `0.85` |
+| State | Sorted Weights | Sum of Largest 2 Weights | Top-2 Cumulative Weight |
+|---|---|---|---:|
+| Current | `[0.50,0.30,0.20]` | `0.50 + 0.30` | `0.80` |
+| Proposed | `[0.60,0.25,0.15]` | `0.60 + 0.25` | `0.85` |
 Delta: `0.05`.
-Output mapping: `..._current=0.80`, `..._proposed=0.85`, `..._delta=0.05`.
+Output mapping:
+- `single_position_concentration.top_n_cumulative_weight_current=0.80`
+- `single_position_concentration.top_n_cumulative_weight_proposed=0.85`
+- `single_position_concentration.top_n_cumulative_weight_delta=0.05`
+- `single_position_concentration.top_n=2`

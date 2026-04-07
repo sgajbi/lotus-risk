@@ -14,9 +14,10 @@
 - Derived from issuer mapping and issuer aggregation path.
 
 ## Unit Conventions
-- Return inputs are percentage points (pp): `1.0` means `+1%`.
-- Engine converts to decimal when required: `r_decimal = r_pp / 100`.
-- Output units are metric-specific (ratio, annualized pp, decimal drawdown, or HHI scale).
+- Position inputs are non-negative portfolio amounts:
+  - `market_value_base` when available
+  - `quantity` as fallback when market value is unavailable
+- Issuer weights are decimals in `[0, 1]`.
 
 ## Variable Dictionary
 - `issuer_value_k`: aggregate value for issuer `k`.
@@ -42,18 +43,28 @@
 - Coverage flags indicate mapping completeness.
 
 ## Configuration Options
-- Inherited from issuer options (grouping/enrichment).
+- `issuer_grouping_level`
+- `enrichment_policy`
+- Stateful and simulation portfolio-state options can change the covered universe:
+  - `include_cash_positions`
+  - `include_zero_quantity_positions`
 
 ## Outputs
 - `issuer_concentration.top_issuer_weight_current`
 - `issuer_concentration.top_issuer_weight_proposed`
 - `issuer_concentration.top_issuer_weight_delta`
+- `issuer_concentration.top_issuer_current`
+- `issuer_concentration.top_issuer_proposed`
 
 ## Worked Example
 Issuer weights current `[0.80,0.20]`, proposed `[0.70,0.30]`.
-| State | Issuer Weights | Top Issuer Weight |
-|---|---|---:|
-| Current | `[0.80,0.20]` | `0.80` |
-| Proposed | `[0.70,0.30]` | `0.70` |
+| State | Issuer Weights | Selected Top Issuer | Top Issuer Weight |
+|---|---|---|---:|
+| Current | `[0.80,0.20]` | issuer X | `0.80` |
+| Proposed | `[0.70,0.30]` | issuer X | `0.70` |
 Delta: `-0.10`.
-Output mapping: `..._current=0.80`, `..._proposed=0.70`, `..._delta=-0.10`.
+Output mapping:
+- `issuer_concentration.top_issuer_weight_current=0.80`
+- `issuer_concentration.top_issuer_weight_proposed=0.70`
+- `issuer_concentration.top_issuer_weight_delta=-0.10`
+- `issuer_concentration.top_issuer_current` identifies the current top issuer

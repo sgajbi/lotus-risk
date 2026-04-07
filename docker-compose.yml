@@ -6,8 +6,8 @@ services:
     env_file:
       - .env
     environment:
-      LOTUS_CORE_BASE_URL: ${LOTUS_CORE_BASE_URL:-http://core-query.dev.lotus}
-      LOTUS_PERFORMANCE_BASE_URL: ${LOTUS_PERFORMANCE_BASE_URL:-http://performance.dev.lotus}
+      LOTUS_CORE_BASE_URL: ${LOTUS_CORE_BASE_URL:-http://core-query.dev.lotus:8202}
+      LOTUS_PERFORMANCE_BASE_URL: ${LOTUS_PERFORMANCE_BASE_URL:-http://performance.dev.lotus:8002}
     extra_hosts:
       - "core-query.dev.lotus:host-gateway"
       - "performance.dev.lotus:host-gateway"

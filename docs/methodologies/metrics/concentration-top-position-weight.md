@@ -14,9 +14,10 @@
 - Same source path as position HHI.
 
 ## Unit Conventions
-- Return inputs are percentage points (pp): `1.0` means `+1%`.
-- Engine converts to decimal when required: `r_decimal = r_pp / 100`.
-- Output units are metric-specific (ratio, annualized pp, decimal drawdown, or HHI scale).
+- Position inputs are non-negative portfolio amounts:
+  - `market_value_base` when available
+  - `quantity` as fallback when market value is unavailable
+- Output weights are decimals in `[0, 1]`.
 
 ## Variable Dictionary
 - `v_i`: position value.
@@ -41,18 +42,26 @@
 - Non-numeric position values are ignored/rejected upstream.
 
 ## Configuration Options
-- No dedicated option beyond underlying position extraction.
+- No dedicated formula option exists beyond the underlying portfolio state:
+  - `top_n` does not affect this metric
+  - `include_cash_positions` and `include_zero_quantity_positions` can change the input universe
 
 ## Outputs
 - `single_position_concentration.top_position_weight_current`
 - `single_position_concentration.top_position_weight_proposed`
 - `single_position_concentration.top_position_weight_delta`
+- `single_position_concentration.top_position_current`
+- `single_position_concentration.top_position_proposed`
 
 ## Worked Example
 Values current `[50,30,20]`, proposed `[60,25,15]`.
-| State | Weights | Top Position Weight |
-|---|---|---:|
-| Current | `[0.50,0.30,0.20]` | `0.50` |
-| Proposed | `[0.60,0.25,0.15]` | `0.60` |
+| State | Weights | Selected Top Position | Top Position Weight |
+|---|---|---|---:|
+| Current | `[0.50,0.30,0.20]` | position 1 | `0.50` |
+| Proposed | `[0.60,0.25,0.15]` | position 1 | `0.60` |
 Delta: `0.60 - 0.50 = 0.10`.
-Output mapping: `top_position_weight_current=0.50`, `..._proposed=0.60`, `..._delta=0.10`.
+Output mapping:
+- `single_position_concentration.top_position_weight_current=0.50`
+- `single_position_concentration.top_position_weight_proposed=0.60`
+- `single_position_concentration.top_position_weight_delta=0.10`
+- `single_position_concentration.top_position_current` identifies the current top position
