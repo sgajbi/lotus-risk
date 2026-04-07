@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.upstream_errors import UpstreamServiceError
 from tests.support.app_runtime import override_app_runtime
 from tests.support.historical_attribution_fakes import (
     RecordingHistoricalAttributionCoreClient,
@@ -484,3 +485,86 @@ def test_historical_attribution_stateful_active_risk_rejects_bad_benchmark_conte
     assert body["code"] == "UPSTREAM_INVALID_RESPONSE"
     assert "benchmark exposure context payload missing" in body["message"]
     assert body["correlation_id"] == "corr-attr-bad-bmk-context"
+
+
+def test_historical_attribution_stateful_active_risk_maps_benchmark_context_500_to_upstream_failure() -> None:
+    class _BenchmarkContextFailurePerformanceClient:
+        def __init__(self) -> None:
+            self.calls: list[dict[str, object]] = []
+            self.benchmark_exposure_context_calls: list[dict[str, object]] = []
+
+        async def get_returns_series(
+            self,
+            *,
+            request_payload: dict[str, object],
+            correlation_id: str | None,
+        ) -> dict[str, object]:
+            self.calls.append(
+                {
+                    "request_payload": request_payload,
+                    "correlation_id": correlation_id,
+                }
+            )
+            return build_stateful_attribution_returns_client().response_payload
+
+        async def get_benchmark_exposure_context(
+            self,
+            *,
+            request_payload: dict[str, object],
+            correlation_id: str | None,
+        ) -> dict[str, object]:
+            self.benchmark_exposure_context_calls.append(
+                {
+                    "request_payload": request_payload,
+                    "correlation_id": correlation_id,
+                }
+            )
+            raise UpstreamServiceError(
+                service="lotus-performance",
+                operation="/integration/benchmarks/exposure-context",
+                status_code=502,
+                code="UPSTREAM_FAILURE",
+                message=(
+                    "lotus-performance /integration/benchmarks/exposure-context failed (500): "
+                    "Internal Server Error"
+                ),
+                details={
+                    "service": "lotus-performance",
+                    "operation": "/integration/benchmarks/exposure-context",
+                    "upstream_status_code": 500,
+                },
+                retryable=True,
+            )
+
+    performance_client = _BenchmarkContextFailurePerformanceClient()
+    with override_app_runtime(
+        lotus_performance_client=performance_client,
+        lotus_core_client=RecordingHistoricalAttributionCoreClient(),
+    ):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/historical-attribution",
+            headers={"X-Correlation-Id": "corr-attr-bmk-context-500"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-04",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "attribution_options": {
+                        "attribution_types": ["ACTIVE_RISK"],
+                        "metrics": ["TRACKING_ERROR"],
+                        "grouping_dimensions": ["SECTOR"],
+                    },
+                },
+            },
+        )
+
+    assert response.status_code == 502
+    body = response.json()["error"]
+    assert body["code"] == "UPSTREAM_FAILURE"
+    assert body["correlation_id"] == "corr-attr-bmk-context-500"
+    assert body["details"]["service"] == "lotus-performance"
+    assert body["details"]["operation"] == "/integration/benchmarks/exposure-context"
+    assert body["details"]["upstream_status_code"] == 500
+    assert performance_client.benchmark_exposure_context_calls[0]["correlation_id"] == "corr-attr-bmk-context-500"
