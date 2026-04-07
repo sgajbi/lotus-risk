@@ -12,7 +12,7 @@ from app.contracts.attribution import (
     HistoricalAttributionStatefulInput,
     HistoricalAttributionStatelessInput,
 )
-from app.contracts.risk import RiskRequestScope
+from app.contracts.risk import ReturnPoint, RiskRequestScope
 from app.services.attribution_engine import calculate_historical_attribution
 from app.services.benchmark_exposure_history import fetch_benchmark_exposure_history
 from app.services.stateful_returns_request import build_stateful_returns_series_request
@@ -58,6 +58,22 @@ class LotusCoreClientProtocol(Protocol):
 def _requires_active_attribution(stateful: HistoricalAttributionStatefulInput) -> bool:
     options = stateful.attribution_options
     return "ACTIVE_RISK" in options.attribution_types or "TRACKING_ERROR" in options.metrics
+
+
+def _validate_benchmark_exposure_alignment(
+    *,
+    benchmark_returns: list[ReturnPoint],
+    benchmark_exposure_history: list[ExposurePoint],
+) -> None:
+    return_dates = {point.date for point in benchmark_returns}
+    exposure_dates = {point.date for point in benchmark_exposure_history}
+    missing_dates = sorted(return_dates - exposure_dates)
+    if missing_dates:
+        sample = ", ".join(date_value.isoformat() for date_value in missing_dates[:5])
+        raise ValueError(
+            "lotus-performance benchmark exposure context missing rows for benchmark return dates: "
+            f"{sample}"
+        )
 
 
 def _build_stateful_returns_request(stateful: HistoricalAttributionStatefulInput) -> dict[str, Any]:
@@ -321,6 +337,12 @@ async def calculate_historical_attribution_stateful(
         if requires_active
         else []
     )
+
+    if requires_active:
+        _validate_benchmark_exposure_alignment(
+            benchmark_returns=benchmark_returns,
+            benchmark_exposure_history=benchmark_exposure_history,
+        )
 
     stateless_input = HistoricalAttributionStatelessInput(
         scope=RiskRequestScope(

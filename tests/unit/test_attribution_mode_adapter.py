@@ -319,6 +319,37 @@ def test_stateful_attribution_rejects_active_risk_issuer_grouping_until_benchmar
         )
 
 
+def test_stateful_attribution_rejects_benchmark_exposure_date_misalignment() -> None:
+    class _MisalignedBenchmarkExposurePerformanceClient(_StubPerformanceClient):
+        async def get_benchmark_exposure_context(
+            self,
+            *,
+            request_payload: dict[str, object],  # noqa: ARG002
+            correlation_id: str | None,  # noqa: ARG002
+        ) -> dict[str, object]:
+            payload = build_benchmark_exposure_context_response()
+            rows = payload["rows"]
+            assert isinstance(rows, list)
+            return {
+                **payload,
+                "rows": [row for row in rows if row.get("valuation_date") != "2026-01-04"],
+            }
+
+    with pytest.raises(ValueError, match="missing rows for benchmark return dates: 2026-01-04"):
+        asyncio.run(
+            calculate_historical_attribution_stateful(
+                _stateful_input(
+                    grouping_dimensions=["SECTOR"],
+                    attribution_types=["ACTIVE_RISK"],
+                    metrics=["TRACKING_ERROR"],
+                ),
+                performance_client=_MisalignedBenchmarkExposurePerformanceClient(),
+                core_client=_StubCoreClient(),
+                correlation_id="corr-attr",
+            )
+        )
+
+
 def test_stateful_attribution_rejects_bad_benchmark_exposure_context_shape() -> None:
     class _BadBenchmarkExposurePerformanceClient(_StubPerformanceClient):
         async def get_benchmark_exposure_context(
