@@ -172,7 +172,9 @@ def test_health_ready_and_ops_surface_dependency_degradation() -> None:
     assert ops_body["status"] == "degraded"
     assert ops_body["checks"]["ready"] is True
     performance_dependency = next(
-        dependency for dependency in ops_body["dependencies"] if dependency["service"] == "lotus-performance"
+        dependency
+        for dependency in ops_body["dependencies"]
+        if dependency["service"] == "lotus-performance"
     )
     assert performance_dependency["detail"] == "high_latency"
     assert performance_dependency["category"] == "transport"
@@ -216,14 +218,18 @@ def test_health_ready_and_ops_surface_structured_data_gap_metadata() -> None:
 
     assert readiness.status_code == 200
     readiness_dependency = next(
-        dependency for dependency in readiness.json()["dependencies"] if dependency["service"] == "lotus-core"
+        dependency
+        for dependency in readiness.json()["dependencies"]
+        if dependency["service"] == "lotus-core"
     )
     assert readiness_dependency["status"] == "degraded"
     assert readiness_dependency["category"] == "data_gap"
     assert readiness_dependency["issue_code"] == "RISK_FREE_SERIES_EMPTY"
 
     ops_dependency = next(
-        dependency for dependency in ops.json()["dependencies"] if dependency["service"] == "lotus-core"
+        dependency
+        for dependency in ops.json()["dependencies"]
+        if dependency["service"] == "lotus-core"
     )
     assert ops_dependency["detail"] == "risk_free_series_missing_for_usd_ytd"
     assert ops_dependency["category"] == "data_gap"

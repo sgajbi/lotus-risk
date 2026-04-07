@@ -63,8 +63,7 @@ def _validate_lineage(response: dict[str, Any]) -> None:
             service="lotus-performance",
             operation="/integration/benchmarks/exposure-context",
             message=(
-                "lotus-performance benchmark exposure context missing "
-                "served_by=lotus-performance"
+                "lotus-performance benchmark exposure context missing served_by=lotus-performance"
             ),
         )
 
