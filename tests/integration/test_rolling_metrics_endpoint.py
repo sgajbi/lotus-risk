@@ -146,6 +146,51 @@ def test_rolling_metrics_endpoint_stateful_uses_lotus_performance() -> None:
     assert response.json()["input_mode"] == "stateful"
 
 
+def test_rolling_metrics_endpoint_stateful_surfaces_missing_risk_free_after_currency_resolution() -> None:
+    recorder = RecordingLotusPerformanceClient(
+        response_payload=build_returns_series_response(
+            portfolio_returns=JAN_2026_PORTFOLIO_RETURNS,
+            benchmark_returns=JAN_2026_ROLLING_BENCHMARK_RETURNS,
+        )
+    )
+    with override_app_runtime(
+        lotus_performance_client=recorder,
+        lotus_core_client=_AutoWiredLotusCoreClient(),
+    ):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/rolling-metrics",
+            headers={"X-Correlation-Id": "corr-rolling-missing-rf"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-04",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "rolling_options": {
+                        "window_lengths": [2],
+                        "metrics": ["ROLLING_SHARPE"],
+                    },
+                },
+            },
+        )
+
+    assert response.status_code == 400
+    body = response.json()["error"]
+    assert body["code"] == "INVALID_INPUT"
+    assert "no risk-free returns" in body["message"]
+    assert body["correlation_id"] == "corr-rolling-missing-rf"
+    assert len(recorder.calls) == 1
+    payload = recorder.calls[0]["request_payload"]
+    assert isinstance(payload, dict)
+    assert payload["reporting_currency"] == "USD"
+    assert payload["series_selection"] == {
+        "include_portfolio": True,
+        "include_benchmark": False,
+        "include_risk_free": True,
+    }
+
+
 def test_rolling_metrics_endpoint_stateful_autowires_performance_client() -> None:
     with override_app_runtime(
         lotus_performance_client=None,
