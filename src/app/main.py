@@ -27,7 +27,7 @@ from app.contracts.drawdown import (
     DrawdownResponse,
 )
 from app.contracts.error import ErrorResponse
-from app.contracts.ops import OpsChecks, OpsResponse
+from app.contracts.ops import DependencyStatus, OpsChecks, OpsResponse
 from app.contracts.rolling import (
     RollingAnalyticsRequest,
     RollingInputMode,
@@ -42,6 +42,7 @@ from app.error_response import error_response
 from app.integrations.lotus_core_client import LotusCoreClient
 from app.integrations.lotus_performance_client import LotusPerformanceClient
 from app.middleware.correlation import CorrelationIdMiddleware
+from app.ops_runtime import resolve_ops_status, resolve_readiness_status
 from app.services.concentration_engine import calculate_concentration
 from app.services.attribution_engine import calculate_historical_attribution
 from app.services.attribution_mode_adapter import calculate_historical_attribution_stateful
@@ -51,6 +52,7 @@ from app.services.rolling_engine import calculate_rolling_metrics
 from app.services.rolling_mode_adapter import calculate_rolling_metrics_stateful
 from app.services.risk_engine import calculate_risk
 from app.services.risk_mode_adapter import calculate_risk_stateful
+from app.upstream_errors import UpstreamServiceError
 
 SERVICE_NAME = "lotus-risk"
 SERVICE_VERSION = "0.1.0"
@@ -86,6 +88,19 @@ class ReadinessResponse(BaseModel):
     status: str = Field(
         description="Readiness state.",
         json_schema_extra={"example": "ready"},
+    )
+    dependencies: list[DependencyStatus] = Field(
+        description="Dependency runtime states used to determine readiness.",
+        json_schema_extra={
+            "example": [
+                {
+                    "service": "lotus-performance",
+                    "base_url": "http://performance.dev.lotus",
+                    "status": "ok",
+                    "detail": "configured",
+                }
+            ]
+        },
     )
 
 
@@ -185,9 +200,91 @@ ERROR_RESPONSE_DEFAULT: dict[str, Any] = {
 }
 STANDARD_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     400: ERROR_RESPONSE_400,
+    424: {
+        "model": ErrorResponse,
+        "description": "Dependency rejected the request or did not provide required data.",
+        "content": {
+            "application/json": {
+                "example": {
+                    "error": {
+                        "code": "FAILED_DEPENDENCY",
+                        "message": "lotus-performance /integration/returns/series rejected request (404): missing benchmark assignment",
+                        "correlation_id": "corr-123",
+                        "details": {
+                            "service": "lotus-performance",
+                            "operation": "/integration/returns/series",
+                            "upstream_status_code": 404,
+                            "retryable": False,
+                        },
+                    }
+                }
+            }
+        },
+    },
     403: ERROR_RESPONSE_403,
     404: ERROR_RESPONSE_404,
     422: ERROR_RESPONSE_422,
+    502: {
+        "model": ErrorResponse,
+        "description": "Dependency returned an invalid or failing upstream response.",
+        "content": {
+            "application/json": {
+                "example": {
+                    "error": {
+                        "code": "UPSTREAM_FAILURE",
+                        "message": "lotus-performance /integration/returns/series failed (503): upstream failed",
+                        "correlation_id": "corr-123",
+                        "details": {
+                            "service": "lotus-performance",
+                            "operation": "/integration/returns/series",
+                            "upstream_status_code": 503,
+                            "retryable": True,
+                        },
+                    }
+                }
+            }
+        },
+    },
+    503: {
+        "model": ErrorResponse,
+        "description": "Dependency is unavailable or service is draining.",
+        "content": {
+            "application/json": {
+                "example": {
+                    "error": {
+                        "code": "UPSTREAM_UNAVAILABLE",
+                        "message": "lotus-core /integration/reference/risk-free-series unavailable: network down",
+                        "correlation_id": "corr-123",
+                        "details": {
+                            "service": "lotus-core",
+                            "operation": "/integration/reference/risk-free-series",
+                            "retryable": True,
+                        },
+                    }
+                }
+            }
+        },
+    },
+    504: {
+        "model": ErrorResponse,
+        "description": "Dependency request timed out.",
+        "content": {
+            "application/json": {
+                "example": {
+                    "error": {
+                        "code": "UPSTREAM_TIMEOUT",
+                        "message": "lotus-core /integration/reference/risk-free-series timed out: request timed out",
+                        "correlation_id": "corr-123",
+                        "details": {
+                            "service": "lotus-core",
+                            "operation": "/integration/reference/risk-free-series",
+                            "retryable": True,
+                        },
+                    }
+                }
+            }
+        },
+    },
     "default": ERROR_RESPONSE_DEFAULT,
 }
 
@@ -197,9 +294,9 @@ def _default_error_code(status_code: int) -> str:
         return "RESOURCE_NOT_FOUND"
     if status_code == status.HTTP_403_FORBIDDEN:
         return "AUTHORIZATION_DENIED"
-    if status_code == status.HTTP_413_REQUEST_ENTITY_TOO_LARGE:
+    if status_code == status.HTTP_413_CONTENT_TOO_LARGE:
         return "PAYLOAD_TOO_LARGE"
-    if status_code == status.HTTP_422_UNPROCESSABLE_ENTITY:
+    if status_code == status.HTTP_422_UNPROCESSABLE_CONTENT:
         return "INVALID_REQUEST"
     if status_code == status.HTTP_400_BAD_REQUEST:
         return "INVALID_INPUT"
@@ -210,7 +307,7 @@ def _default_error_code(status_code: int) -> str:
 async def handle_validation_error(request: Request, exc: RequestValidationError) -> Response:
     return error_response(
         request,
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         code="INVALID_REQUEST",
         message="Request validation failed",
         details=exc.errors(),
@@ -249,6 +346,21 @@ async def handle_value_error(request: Request, exc: ValueError) -> Response:
     )
 
 
+@app.exception_handler(UpstreamServiceError)
+async def handle_upstream_service_error(
+    request: Request, exc: UpstreamServiceError
+) -> Response:
+    details = dict(exc.details)
+    details["retryable"] = exc.retryable
+    return error_response(
+        request,
+        status_code=exc.status_code,
+        code=exc.code,
+        message=exc.message,
+        details=details,
+    )
+
+
 @app.get(
     "/health",
     response_model=HealthResponse,
@@ -282,10 +394,22 @@ async def health_live() -> LivenessResponse:
     responses=STANDARD_ERROR_RESPONSES,
 )
 async def health_ready(response: Response) -> ReadinessResponse:
-    if bool(getattr(app.state, "is_draining", False)):
-        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-        return ReadinessResponse(status="draining")
-    return ReadinessResponse(status="ready")
+    status_code, readiness_status, dependencies = resolve_readiness_status(app)
+    response.status_code = status_code
+    return ReadinessResponse(
+        status=readiness_status,
+        dependencies=[
+            DependencyStatus(
+                service=dependency.service,
+                base_url=dependency.base_url,
+                status=dependency.status,
+                detail=dependency.detail,
+                category=dependency.category,
+                issue_code=dependency.issue_code,
+            )
+            for dependency in dependencies
+        ],
+    )
 
 
 @app.get(
@@ -313,13 +437,30 @@ async def metadata() -> MetadataResponse:
     responses=STANDARD_ERROR_RESPONSES,
 )
 async def ops() -> OpsResponse:
+    readiness_status_code, _, dependencies = resolve_readiness_status(app)
+    ops_status, _ = resolve_ops_status(app)
     is_draining = bool(getattr(app.state, "is_draining", False))
     return OpsResponse(
         service=SERVICE_NAME,
         version=SERVICE_VERSION,
-        status="degraded" if is_draining else "ok",
-        checks=OpsChecks(live=True, ready=not is_draining, draining=is_draining),
+        status=ops_status,
+        checks=OpsChecks(
+            live=True,
+            ready=readiness_status_code == status.HTTP_200_OK,
+            draining=is_draining,
+        ),
         input_modes=list(SUPPORTED_INPUT_MODES),
+        dependencies=[
+            DependencyStatus(
+                service=dependency.service,
+                base_url=dependency.base_url,
+                status=dependency.status,
+                detail=dependency.detail,
+                category=dependency.category,
+                issue_code=dependency.issue_code,
+            )
+            for dependency in dependencies
+        ],
     )
 
 
@@ -401,8 +542,7 @@ async def analytics_risk_historical_attribution(
         )
 
     raise ValueError(
-        f"input_mode={request_payload.input_mode.value} is not implemented for /analytics/risk/historical-attribution yet. "
-        "Use input_mode=stateless or input_mode=stateful in this slice."
+        f"Unsupported input_mode={request_payload.input_mode.value} for /analytics/risk/historical-attribution"
     )
 
 
@@ -470,8 +610,7 @@ async def analytics_risk_drawdown(
         )
 
     raise ValueError(
-        f"input_mode={request_payload.input_mode.value} is not implemented for /analytics/risk/drawdown yet. "
-        "Use input_mode=stateless or input_mode=stateful in this slice."
+        f"Unsupported input_mode={request_payload.input_mode.value} for /analytics/risk/drawdown"
     )
 
 
@@ -504,15 +643,18 @@ async def analytics_risk_rolling_metrics(
         performance_client = getattr(app.state, "lotus_performance_client", None)
         if performance_client is None:
             performance_client = LotusPerformanceClient()
+        core_client = getattr(app.state, "lotus_core_client", None)
+        if core_client is None:
+            core_client = LotusCoreClient()
         return await calculate_rolling_metrics_stateful(
             stateful_input,
             performance_client=performance_client,
+            core_client=core_client,
             correlation_id=request.headers.get("X-Correlation-Id"),
         )
 
     raise ValueError(
-        f"input_mode={request_payload.input_mode.value} is not implemented for /analytics/risk/rolling-metrics yet. "
-        "Use input_mode=stateless or input_mode=stateful in this slice."
+        f"Unsupported input_mode={request_payload.input_mode.value} for /analytics/risk/rolling-metrics"
     )
 
 
@@ -547,12 +689,6 @@ async def analytics_risk_calculate(
             stateful_input,
             performance_client=performance_client,
             correlation_id=request.headers.get("X-Correlation-Id"),
-        )
-
-    if request_payload.input_mode == RiskInputMode.SIMULATION:
-        raise ValueError(
-            f"input_mode={request_payload.input_mode.value} is not implemented for /analytics/risk/calculate yet. "
-            "Use input_mode=stateless or input_mode=stateful in this slice."
         )
 
     raise ValueError(

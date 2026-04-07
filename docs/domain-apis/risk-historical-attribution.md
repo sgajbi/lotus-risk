@@ -17,13 +17,18 @@ Provide decomposition of historical realized risk and active risk into transpare
 
 ### Stateful (Slice B)
 
-- Status: planned (not implemented)
-- Caller provides identifiers and options; lotus-risk sources canonical inputs via lotus-performance.
+- Status: implemented for approved v1 stateful scope
+- Current behavior:
+  - `TOTAL_RISK` stateful path is implemented
+  - `ACTIVE_RISK` stateful path is implemented for `POSITION`, `SECTOR`, and `ASSET_CLASS` grouping dimensions through the lotus-performance benchmark exposure context derived view
+  - `ACTIVE_RISK` + `ISSUER` remains gated until benchmark issuer exposure semantics are explicitly available
 
 ### Simulation
 
-- Status: deferred (not implemented)
-- Explicitly rejected in v1 until simulation-history contracts are finalized.
+- Status: intentionally unsupported in the current production contract
+- Reason:
+  - historical attribution depends on realized return and exposure history
+  - projected holdings snapshots do not by themselves create a valid historical attribution series
 
 ## Required Inputs
 
@@ -50,10 +55,12 @@ Provide decomposition of historical realized risk and active risk into transpare
   - portfolio returns series
   - benchmark series
   - lineage/alignment metadata for return series
+  - benchmark exposure context used to align benchmark returns and benchmark exposure weights
 
 - lotus-core:
   - canonical exposure snapshots by date/grouping dimension (system of record)
   - canonical instrument and hierarchy mapping for grouping dimensions (issuer/sector/asset class)
+  - benchmark composition, assignment, and classification data as the authoritative source behind lotus-performance's derived benchmark exposure context
 
 ## Expected Output Structure
 
@@ -95,3 +102,4 @@ Provide decomposition of historical realized risk and active risk into transpare
 2. v1 grouping dimension set.
 3. residual tolerance policy.
 4. rolling-window attribution inclusion in v1 or v2.
+5. benchmark issuer exposure semantics for stateful `ACTIVE_RISK` + `ISSUER`.

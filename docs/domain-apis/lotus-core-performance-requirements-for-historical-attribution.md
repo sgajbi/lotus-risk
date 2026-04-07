@@ -11,14 +11,16 @@ This is aligned with RFC-0006 and RFC-0067 governance.
 
 ## Ownership Boundaries (Non-Negotiable)
 
-1. `lotus-performance` is the system of record for historical return series:
+1. `lotus-performance` owns performance-aligned analytical series:
 - portfolio returns
 - benchmark returns
+- benchmark exposure context as a derived, performance-aligned view used with benchmark returns
 
 2. `lotus-core` is the system of record for canonical domain/master data:
 - position history and market values
 - instrument metadata and issuer hierarchy
 - security classification dimensions
+- benchmark assignment, benchmark composition, and benchmark classification metadata
 
 3. `lotus-risk` only computes risk attribution. It must not reconstruct master data that belongs to `lotus-core` or return series that belongs to `lotus-performance`.
 
@@ -91,6 +93,72 @@ Required behavior:
 2. Benchmark returns are required when `ACTIVE_RISK` or `TRACKING_ERROR` attribution is requested.
 3. `return_value` must be decimal return (not percentage); lotus-risk converts to internal risk units.
 4. All rows must use ISO date format and deterministic ordering.
+5. Correlation ID must be propagated end-to-end.
+
+Endpoint 2:
+
+- `POST /integration/benchmarks/exposure-context` (implemented in lotus-performance)
+
+Purpose:
+
+- return benchmark exposure history aligned to benchmark return calculation context for stateful active-risk attribution.
+- `lotus-performance` exposes this as a derived view only; `lotus-core` remains the source of record for benchmark composition and classifications.
+
+Minimum request contract expected by lotus-risk:
+
+```json
+{
+  "portfolio_id": "PORT_ABC_001",
+  "benchmark_id": "BMK_PB_GLOBAL_BALANCED_60_40",
+  "as_of_date": "2026-02-28",
+  "window": {
+    "start_date": "2026-01-02",
+    "end_date": "2026-02-28"
+  },
+  "frequency": "DAILY",
+  "reporting_currency": "USD",
+  "grouping_dimensions": ["POSITION", "SECTOR", "ASSET_CLASS"],
+  "page": {
+    "page_size": 1000,
+    "page_token": null
+  }
+}
+```
+
+Minimum response contract required:
+
+```json
+{
+  "benchmark_id": "BMK_PB_GLOBAL_BALANCED_60_40",
+  "benchmark_version": "2026-02-28",
+  "rows": [
+    {
+      "valuation_date": "2026-01-02",
+      "component_id": "IDX_GLOBAL_EQUITY",
+      "grouping_dimension": "ASSET_CLASS",
+      "group_key": "EQUITY",
+      "group_label": "Equity",
+      "weight": "0.600000"
+    }
+  ],
+  "page": {
+    "next_page_token": null
+  },
+  "metadata": {
+    "source_system": "lotus-core",
+    "served_by": "lotus-performance",
+    "calculation_run_id": "PERF_RUN_20260228_001",
+    "contract_version": "v1"
+  }
+}
+```
+
+Required behavior:
+
+1. Exposure rows must align to the same benchmark date grid used by benchmark return history.
+2. `weight` must be a decimal fraction, not a percentage.
+3. `benchmark_id`, `benchmark_version`, and lineage metadata must be stable and auditable.
+4. Empty, partial, and invalid grouping responses must use deterministic Lotus error semantics.
 5. Correlation ID must be propagated end-to-end.
 
 ### B) lotus-core (Required)
@@ -207,7 +275,8 @@ Required behavior:
 2. `ACTIVE_RISK + TRACKING_ERROR` stateful:
 - needs `portfolio_returns` and `benchmark_returns` from lotus-performance
 - needs portfolio exposure timeseries from lotus-core
-- needs benchmark exposure timeseries contract (currently gap if not yet available)
+- needs benchmark exposure context from lotus-performance as the performance-aligned derived view backed by lotus-core lineage
+- issuer active-risk remains gated until benchmark issuer exposure semantics are available
 
 3. `grouping_dimension=ISSUER`:
 - needs instrument enrichment-bulk from lotus-core
@@ -217,8 +286,8 @@ Required behavior:
 
 ## Gaps to Resolve (if not already live)
 
-1. Benchmark exposure history contract for active attribution in stateful mode:
-- required to fully support `ACTIVE_RISK` decomposition by grouping dimension.
+1. Benchmark issuer exposure semantics for active attribution in stateful mode:
+- required to fully support `ACTIVE_RISK` decomposition by issuer grouping.
 
 2. Explicit response metadata in both upstream services:
 - lineage and contract version fields should be stable and documented.
@@ -233,6 +302,7 @@ Required behavior:
 
 2. Performance:
 - support at least 5,000 rows per page in `position-timeseries`.
+- benchmark exposure context uses `page_size=1000` for deterministic paging through lotus-performance.
 
 3. Resilience:
 - standard Lotus error envelope, clear message, correlation ID echo.
@@ -244,8 +314,8 @@ Required behavior:
 ## Acceptance Checklist
 
 1. Stateful `TOTAL_RISK` attribution succeeds end-to-end using upstream data only.
-2. Stateful `ACTIVE_RISK` attribution succeeds end-to-end when benchmark exposure history is available.
-3. `ISSUER` grouping succeeds with enrichment-bulk.
+2. Stateful `ACTIVE_RISK` attribution succeeds end-to-end for POSITION, SECTOR, and ASSET_CLASS using the lotus-performance benchmark exposure context.
+3. `ISSUER` grouping succeeds for `TOTAL_RISK` with enrichment-bulk and remains gated for `ACTIVE_RISK` until benchmark issuer exposure semantics are available.
 4. Contract tests validate required fields and type/shape guarantees.
 5. Characterization tests lock numerical behavior for stable fixtures.
 6. OpenAPI docs include full descriptions and realistic examples for all attributes.

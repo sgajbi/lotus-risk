@@ -1,6 +1,8 @@
 from fastapi.testclient import TestClient
 
 from app.main import app
+from tests.support.app_runtime import override_app_runtime
+from tests.support.lotus_core_fakes import SimulationLotusCoreClient
 
 
 def test_health_endpoints() -> None:
@@ -64,8 +66,14 @@ def _concentration_payload() -> dict[str, object]:
 
 
 def test_concentration_risk_endpoint() -> None:
-    client = TestClient(app)
-    response = client.post("/analytics/risk/concentration", json=_concentration_payload())
+    with override_app_runtime(
+        lotus_core_client=SimulationLotusCoreClient(
+            session_id="SIM_HEALTH_0001",
+            simulation_version=1,
+        )
+    ):
+        client = TestClient(app)
+        response = client.post("/analytics/risk/concentration", json=_concentration_payload())
     assert response.status_code == 200
     body = response.json()
     assert body["source_service"] == "lotus-risk"
@@ -133,6 +141,93 @@ def test_metadata_and_ops_contract_shape() -> None:
     assert ops_body["checks"]["ready"] is True
     assert ops_body["checks"]["draining"] is False
     assert ops_body["input_modes"] == ["stateless", "stateful", "simulation"]
+    assert [dependency["service"] for dependency in ops_body["dependencies"]] == [
+        "lotus-core",
+        "lotus-performance",
+    ]
+    assert all(dependency["status"] == "ok" for dependency in ops_body["dependencies"])
+    assert all(dependency["category"] is None for dependency in ops_body["dependencies"])
+    assert all(dependency["issue_code"] is None for dependency in ops_body["dependencies"])
+
+
+def test_health_ready_and_ops_surface_dependency_degradation() -> None:
+    with override_app_runtime(
+        dependency_statuses={
+            "lotus-performance": {
+                "status": "degraded",
+                "detail": "high_latency",
+                "category": "transport",
+                "issue_code": "UPSTREAM_HIGH_LATENCY",
+            }
+        }
+    ):
+        client = TestClient(app)
+        readiness = client.get("/health/ready")
+        ops = client.get("/ops")
+
+    assert readiness.status_code == 200
+    assert readiness.json()["status"] == "degraded"
+    assert ops.status_code == 200
+    ops_body = ops.json()
+    assert ops_body["status"] == "degraded"
+    assert ops_body["checks"]["ready"] is True
+    performance_dependency = next(
+        dependency for dependency in ops_body["dependencies"] if dependency["service"] == "lotus-performance"
+    )
+    assert performance_dependency["detail"] == "high_latency"
+    assert performance_dependency["category"] == "transport"
+    assert performance_dependency["issue_code"] == "UPSTREAM_HIGH_LATENCY"
+
+
+def test_health_ready_fails_when_dependency_is_unavailable() -> None:
+    with override_app_runtime(
+        dependency_statuses={
+            "lotus-core": {"status": "unavailable", "detail": "connection_refused"}
+        }
+    ):
+        client = TestClient(app)
+        readiness = client.get("/health/ready")
+        ops = client.get("/ops")
+
+    assert readiness.status_code == 503
+    readiness_body = readiness.json()
+    assert readiness_body["status"] == "dependency_unavailable"
+    assert any(
+        dependency["service"] == "lotus-core" and dependency["status"] == "unavailable"
+        for dependency in readiness_body["dependencies"]
+    )
+    assert ops.json()["checks"]["ready"] is False
+
+
+def test_health_ready_and_ops_surface_structured_data_gap_metadata() -> None:
+    with override_app_runtime(
+        dependency_statuses={
+            "lotus-core": {
+                "status": "degraded",
+                "detail": "risk_free_series_missing_for_usd_ytd",
+                "category": "data_gap",
+                "issue_code": "RISK_FREE_SERIES_EMPTY",
+            }
+        }
+    ):
+        client = TestClient(app)
+        readiness = client.get("/health/ready")
+        ops = client.get("/ops")
+
+    assert readiness.status_code == 200
+    readiness_dependency = next(
+        dependency for dependency in readiness.json()["dependencies"] if dependency["service"] == "lotus-core"
+    )
+    assert readiness_dependency["status"] == "degraded"
+    assert readiness_dependency["category"] == "data_gap"
+    assert readiness_dependency["issue_code"] == "RISK_FREE_SERIES_EMPTY"
+
+    ops_dependency = next(
+        dependency for dependency in ops.json()["dependencies"] if dependency["service"] == "lotus-core"
+    )
+    assert ops_dependency["detail"] == "risk_free_series_missing_for_usd_ytd"
+    assert ops_dependency["category"] == "data_gap"
+    assert ops_dependency["issue_code"] == "RISK_FREE_SERIES_EMPTY"
 
 
 def test_openapi_declares_standard_error_models_for_risk_endpoints() -> None:
@@ -153,7 +248,7 @@ def test_openapi_declares_standard_error_models_for_risk_endpoints() -> None:
         drawdown_responses,
         rolling_responses,
     ):
-        for status_code in ("400", "403", "404", "422"):
+        for status_code in ("400", "403", "404", "422", "424", "502", "503", "504"):
             schema_ref = responses[status_code]["content"]["application/json"]["schema"]["$ref"]
             assert schema_ref.endswith("/ErrorResponse")
         assert responses["400"]["content"]["application/json"]["example"]["error"]["code"] == (
@@ -167,6 +262,18 @@ def test_openapi_declares_standard_error_models_for_risk_endpoints() -> None:
         )
         assert responses["422"]["content"]["application/json"]["example"]["error"]["code"] == (
             "INVALID_REQUEST"
+        )
+        assert responses["424"]["content"]["application/json"]["example"]["error"]["code"] == (
+            "FAILED_DEPENDENCY"
+        )
+        assert responses["502"]["content"]["application/json"]["example"]["error"]["code"] == (
+            "UPSTREAM_FAILURE"
+        )
+        assert responses["503"]["content"]["application/json"]["example"]["error"]["code"] == (
+            "UPSTREAM_UNAVAILABLE"
+        )
+        assert responses["504"]["content"]["application/json"]["example"]["error"]["code"] == (
+            "UPSTREAM_TIMEOUT"
         )
 
 
@@ -192,114 +299,24 @@ def test_concentration_rejects_legacy_payload_shape() -> None:
     assert response.status_code == 422
 
 
-class _FakeLotusCoreClient:
-    async def create_simulation_session(
-        self,
-        *,
-        portfolio_id: str,
-        ttl_hours: int | None,
-        created_by: str | None,
-        correlation_id: str | None,
-    ) -> dict[str, object]:
-        return {
-            "session": {
-                "session_id": "SIM_0001",
-                "portfolio_id": portfolio_id,
-                "status": "ACTIVE",
-                "version": 1,
-                "created_by": created_by,
-                "created_at": "2026-02-27T10:30:00Z",
-                "expires_at": "2026-02-28T10:30:00Z",
-            }
-        }
-
-    async def add_simulation_changes(
-        self,
-        *,
-        session_id: str,
-        changes: list[dict[str, object]],
-        correlation_id: str | None,
-    ) -> dict[str, object]:
-        assert session_id == "SIM_0001"
-        assert len(changes) == 1
-        return {"session_id": session_id, "version": 3, "changes": []}
-
-    async def get_core_snapshot(
-        self,
-        *,
-        portfolio_id: str,
-        request_payload: dict[str, object],
-        correlation_id: str | None,
-    ) -> dict[str, object]:
-        if request_payload.get("snapshot_mode") == "BASELINE":
-            return {
-                "portfolio_id": portfolio_id,
-                "as_of_date": "2026-02-27",
-                "snapshot_mode": "BASELINE",
-                "valuation_context": {
-                    "portfolio_currency": "EUR",
-                    "reporting_currency": "USD",
-                    "position_basis": "market_value_base",
-                    "weight_basis": "total_market_value_base",
-                },
-                "sections": {
-                    "positions_baseline": [
-                        {"security_id": "SEC_A", "market_value_base": "80"},
-                        {"security_id": "SEC_B", "market_value_base": "20"},
-                    ]
-                },
-            }
-        return {
-            "portfolio_id": portfolio_id,
-            "as_of_date": "2026-02-27",
-            "snapshot_mode": "SIMULATION",
-            "valuation_context": {
-                "portfolio_currency": "EUR",
-                "reporting_currency": "USD",
-                "position_basis": "market_value_base",
-                "weight_basis": "total_market_value_base",
-            },
-            "simulation": {
-                "session_id": "SIM_0001",
-                "version": 3,
-                "baseline_as_of_date": "2026-02-27",
-            },
-            "sections": {
-                "positions_baseline": [
-                    {"security_id": "SEC_A", "market_value_base": "60"},
-                    {"security_id": "SEC_B", "market_value_base": "40"},
-                ],
-                "positions_projected": [
-                    {"security_id": "SEC_A", "market_value_base": "90"},
-                    {"security_id": "SEC_B", "market_value_base": "10"},
-                ],
-            },
-        }
-
-    async def get_instrument_enrichment(
-        self,
-        *,
-        security_ids: list[str],
-        correlation_id: str | None,
-    ) -> dict[str, object]:
-        return {
-            "records": [
-                {"security_id": security_id, "issuer_id": f"ISSUER_{security_id}"}
-                for security_id in security_ids
-            ]
-        }
-
-
 def test_concentration_stateful_mode_uses_lotus_core_snapshot() -> None:
-    client = TestClient(app)
-    app.state.lotus_core_client = _FakeLotusCoreClient()
-    response = client.post(
-        "/analytics/risk/concentration",
-        json={
-            "input_mode": "stateful",
-            "stateful_input": {"portfolio_id": "DEMO_DPM_EUR_001", "as_of_date": "2026-02-27"},
-        },
-    )
+    with override_app_runtime(
+        lotus_core_client=SimulationLotusCoreClient(
+            session_id="SIM_0001",
+            simulation_version=3,
+        )
+    ):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/concentration",
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-02-27",
+                },
+            },
+        )
     assert response.status_code == 200
     body = response.json()
     assert body["input_mode"] == "stateful"
@@ -308,21 +325,26 @@ def test_concentration_stateful_mode_uses_lotus_core_snapshot() -> None:
 
 
 def test_concentration_simulation_mode_reuses_or_creates_session_and_returns_metadata() -> None:
-    client = TestClient(app)
-    app.state.lotus_core_client = _FakeLotusCoreClient()
-    response = client.post(
-        "/analytics/risk/concentration",
-        json={
-            "input_mode": "simulation",
-            "simulation_input": {
-                "portfolio_id": "DEMO_DPM_EUR_001",
-                "as_of_date": "2026-02-27",
-                "simulation_changes": [
-                    {"security_id": "SEC_A", "transaction_type": "BUY", "quantity": 10}
-                ],
+    with override_app_runtime(
+        lotus_core_client=SimulationLotusCoreClient(
+            session_id="SIM_0001",
+            simulation_version=3,
+        )
+    ):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/concentration",
+            json={
+                "input_mode": "simulation",
+                "simulation_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-02-27",
+                    "simulation_changes": [
+                        {"security_id": "SEC_A", "transaction_type": "BUY", "quantity": 10}
+                    ],
+                },
             },
-        },
-    )
+        )
     assert response.status_code == 200
     body = response.json()
     assert body["input_mode"] == "simulation"

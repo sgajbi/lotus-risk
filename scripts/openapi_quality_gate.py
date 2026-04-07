@@ -6,9 +6,13 @@ import sys
 from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-SRC_PATH = str(PROJECT_ROOT / "src")
-if SRC_PATH not in sys.path:
-    sys.path.insert(0, SRC_PATH)
+SCRIPT_PATH = str(PROJECT_ROOT / "scripts")
+if SCRIPT_PATH not in sys.path:
+    sys.path.insert(0, SCRIPT_PATH)
+
+from _repo_imports import force_repo_src_first  # noqa: E402
+
+force_repo_src_first(PROJECT_ROOT)
 
 from app.main import app  # noqa: E402
 

@@ -1,9 +1,10 @@
 import copy
 
 import pytest
+from pydantic import ValidationError
 from typing import Any, cast
 
-from app.contracts.rolling import RollingAnalyticsRequest, RollingInputMode
+from app.contracts.rolling import RollingAnalyticsRequest, RollingInputMode, RollingOptions
 
 
 BASE_STATELESS_PAYLOAD = {
@@ -58,8 +59,8 @@ def test_rolling_contract_requires_stateful_input() -> None:
         RollingAnalyticsRequest.model_validate({"input_mode": "stateful"})
 
 
-def test_rolling_contract_requires_simulation_input() -> None:
-    with pytest.raises(ValueError, match="simulation_input is required"):
+def test_rolling_contract_rejects_simulation_mode_from_public_contract() -> None:
+    with pytest.raises(ValidationError):
         RollingAnalyticsRequest.model_validate({"input_mode": "simulation"})
 
 
@@ -102,3 +103,47 @@ def test_rolling_contract_rejects_duplicate_window_lengths() -> None:
 
     with pytest.raises(ValueError, match="window_lengths must be unique"):
         RollingAnalyticsRequest.model_validate(payload)
+
+
+def test_rolling_options_default_metrics_are_populated() -> None:
+    options = RollingOptions()
+    assert options.metrics == [
+        "ROLLING_VOLATILITY",
+        "ROLLING_SHARPE",
+        "ROLLING_BETA",
+        "ROLLING_TRACKING_ERROR",
+        "ROLLING_INFORMATION_RATIO",
+        "ROLLING_MAX_DRAWDOWN",
+    ]
+
+
+def test_rolling_contract_rejects_empty_and_too_short_window_lengths() -> None:
+    for window_lengths, expected_message in [
+        ([], "window_lengths must contain at least one window"),
+        ([1], "window_lengths must be greater than 1"),
+    ]:
+        payload = copy.deepcopy(BASE_STATELESS_PAYLOAD)
+        stateless_input = cast(dict[str, Any], payload["stateless_input"])
+        rolling_options = copy.deepcopy(cast(dict[str, Any], stateless_input["rolling_options"]))
+        rolling_options["window_lengths"] = window_lengths
+        stateless_input["rolling_options"] = rolling_options
+
+        with pytest.raises(ValueError, match=expected_message):
+            RollingAnalyticsRequest.model_validate(payload)
+
+
+def test_rolling_contract_rejects_duplicate_stateful_period_names() -> None:
+    with pytest.raises(ValueError, match="Duplicate period names"):
+        RollingAnalyticsRequest.model_validate(
+            {
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-02-28",
+                    "periods": [
+                        {"type": "YTD", "name": "P1"},
+                        {"type": "MTD", "name": "P1"},
+                    ],
+                },
+            }
+        )

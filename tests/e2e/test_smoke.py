@@ -1,5 +1,19 @@
 from fastapi.testclient import TestClient
 from app.main import app
+from tests.support.app_runtime import override_app_runtime
+from tests.support.historical_attribution_fakes import (
+    RecordingHistoricalAttributionCoreClient,
+    build_stateful_attribution_returns_client,
+)
+from tests.support.lotus_core_fakes import SimulationLotusCoreClient
+from tests.support.lotus_performance_fakes import RecordingLotusPerformanceClient
+from tests.support.returns_series_payloads import (
+    JAN_2026_DRAWDOWN_BENCHMARK_RETURNS,
+    JAN_2026_PORTFOLIO_RETURNS,
+    JAN_2026_RISK_FREE_RETURNS,
+    JAN_2026_ROLLING_BENCHMARK_RETURNS,
+    build_returns_series_response,
+)
 
 
 def _risk_payload() -> dict[str, object]:
@@ -174,6 +188,33 @@ def test_e2e_risk_calculate_happy_path() -> None:
     assert metrics["VAR"]["value"] is not None
 
 
+def test_e2e_risk_calculate_stateful_mode() -> None:
+    performance_client = RecordingLotusPerformanceClient(
+        response_payload=build_returns_series_response(
+            portfolio_returns=JAN_2026_PORTFOLIO_RETURNS,
+        )
+    )
+    with override_app_runtime(lotus_performance_client=performance_client):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/calculate",
+            headers={"X-Correlation-Id": "corr-e2e-risk-stateful"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-04",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "metrics": ["VOLATILITY"],
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()["results"]["YTD"]["metrics"]["VOLATILITY"]["value"] is not None
+    assert performance_client.calls[0]["correlation_id"] == "corr-e2e-risk-stateful"
+
+
 def test_e2e_risk_calculate_invalid_period_contract() -> None:
     client = TestClient(app)
     payload = _risk_payload()
@@ -241,148 +282,25 @@ def test_e2e_concentration_stateless_payload() -> None:
     assert body["risk_proxy"]["hhi_proposed"] == 6250.0
 
 
-class _FakeLotusCoreClient:
-    async def create_simulation_session(
-        self,
-        *,
-        portfolio_id: str,
-        ttl_hours: int | None,
-        created_by: str | None,
-        correlation_id: str | None,
-    ) -> dict[str, object]:
-        return {
-            "session": {
-                "session_id": "SIM_E2E_0001",
-                "portfolio_id": portfolio_id,
-                "status": "ACTIVE",
-                "version": 1,
-                "created_by": created_by,
-                "created_at": "2026-02-27T10:30:00Z",
-                "expires_at": "2026-02-28T10:30:00Z",
-            }
-        }
-
-    async def add_simulation_changes(
-        self,
-        *,
-        session_id: str,
-        changes: list[dict[str, object]],
-        correlation_id: str | None,
-    ) -> dict[str, object]:
-        assert session_id == "SIM_E2E_0001"
-        assert len(changes) == 1
-        return {"session_id": session_id, "version": 2, "changes": []}
-
-    async def get_core_snapshot(
-        self,
-        *,
-        portfolio_id: str,
-        request_payload: dict[str, object],
-        correlation_id: str | None,
-    ) -> dict[str, object]:
-        if request_payload.get("snapshot_mode") == "BASELINE":
-            return {
-                "portfolio_id": portfolio_id,
-                "as_of_date": "2026-02-27",
-                "snapshot_mode": "BASELINE",
-                "valuation_context": {
-                    "portfolio_currency": "EUR",
-                    "reporting_currency": "USD",
-                    "position_basis": "market_value_base",
-                    "weight_basis": "total_market_value_base",
-                },
-                "sections": {
-                    "positions_baseline": [
-                        {"security_id": "SEC_A", "market_value_base": "80"},
-                        {"security_id": "SEC_B", "market_value_base": "20"},
-                    ]
-                },
-            }
-        return {
-            "portfolio_id": portfolio_id,
-            "as_of_date": "2026-02-27",
-            "snapshot_mode": "SIMULATION",
-            "valuation_context": {
-                "portfolio_currency": "EUR",
-                "reporting_currency": "USD",
-                "position_basis": "market_value_base",
-                "weight_basis": "total_market_value_base",
-            },
-            "simulation": {
-                "session_id": "SIM_E2E_0001",
-                "version": 2,
-                "baseline_as_of_date": "2026-02-27",
-            },
-            "sections": {
-                "positions_baseline": [
-                    {"security_id": "SEC_A", "market_value_base": "60"},
-                    {"security_id": "SEC_B", "market_value_base": "40"},
-                ],
-                "positions_projected": [
-                    {"security_id": "SEC_A", "market_value_base": "90"},
-                    {"security_id": "SEC_B", "market_value_base": "10"},
-                ],
-            },
-        }
-
-    async def get_instrument_enrichment(
-        self,
-        *,
-        security_ids: list[str],
-        correlation_id: str | None,
-    ) -> dict[str, object]:
-        return {
-            "records": [
-                {
-                    "security_id": security_id,
-                    "issuer_id": f"ISSUER_{security_id}",
-                    "ultimate_parent_issuer_id": f"UPI_{security_id}",
-                }
-                for security_id in security_ids
-            ]
-        }
-
-
-class _FakeLotusPerformanceClient:
-    async def get_returns_series(
-        self,
-        *,
-        request_payload: dict[str, object],
-        correlation_id: str | None,
-    ) -> dict[str, object]:
-        assert request_payload["input_mode"] == "stateful"
-        assert request_payload["stateful_input"] == {"consumer_system": "lotus-risk"}
-        return {
-            "series": {
-                "portfolio_returns": [
-                    {"date": "2026-01-02", "return_value": "0.0100"},
-                    {"date": "2026-01-03", "return_value": "-0.0200"},
-                    {"date": "2026-01-04", "return_value": "0.0050"},
-                ],
-                "benchmark_returns": [
-                    {"date": "2026-01-02", "return_value": "0.0080"},
-                    {"date": "2026-01-03", "return_value": "-0.0150"},
-                    {"date": "2026-01-04", "return_value": "0.0040"},
-                ],
-                "risk_free_returns": [
-                    {"date": "2026-01-02", "return_value": "0.0001"},
-                    {"date": "2026-01-03", "return_value": "0.0001"},
-                    {"date": "2026-01-04", "return_value": "0.0001"},
-                ],
-            }
-        }
-
-
 def test_e2e_concentration_stateful_mode() -> None:
-    client = TestClient(app)
-    app.state.lotus_core_client = _FakeLotusCoreClient()
-    response = client.post(
-        "/analytics/risk/concentration",
-        json={
-            "input_mode": "stateful",
-            "stateful_input": {"portfolio_id": "DEMO_DPM_EUR_001", "as_of_date": "2026-02-27"},
-        },
-    )
+    with override_app_runtime(
+        lotus_core_client=SimulationLotusCoreClient(
+            session_id="SIM_E2E_0001",
+            simulation_version=2,
+            include_ultimate_parent_issuer_id=True,
+        )
+    ):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/concentration",
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-02-27",
+                },
+            },
+        )
     assert response.status_code == 200
     body = response.json()
     assert body["input_mode"] == "stateful"
@@ -391,21 +309,27 @@ def test_e2e_concentration_stateful_mode() -> None:
 
 
 def test_e2e_concentration_simulation_mode() -> None:
-    client = TestClient(app)
-    app.state.lotus_core_client = _FakeLotusCoreClient()
-    response = client.post(
-        "/analytics/risk/concentration",
-        json={
-            "input_mode": "simulation",
-            "simulation_input": {
-                "portfolio_id": "DEMO_DPM_EUR_001",
-                "as_of_date": "2026-02-27",
-                "simulation_changes": [
-                    {"security_id": "SEC_A", "transaction_type": "BUY", "quantity": 10}
-                ],
+    with override_app_runtime(
+        lotus_core_client=SimulationLotusCoreClient(
+            session_id="SIM_E2E_0001",
+            simulation_version=2,
+            include_ultimate_parent_issuer_id=True,
+        )
+    ):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/concentration",
+            json={
+                "input_mode": "simulation",
+                "simulation_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-02-27",
+                    "simulation_changes": [
+                        {"security_id": "SEC_A", "transaction_type": "BUY", "quantity": 10}
+                    ],
+                },
             },
-        },
-    )
+        )
     assert response.status_code == 200
     body = response.json()
     assert body["input_mode"] == "simulation"
@@ -414,28 +338,113 @@ def test_e2e_concentration_simulation_mode() -> None:
 
 
 def test_e2e_rolling_metrics_stateful_mode() -> None:
-    client = TestClient(app)
-    app.state.lotus_performance_client = _FakeLotusPerformanceClient()
-    response = client.post(
-        "/analytics/risk/rolling-metrics",
-        json={
-            "input_mode": "stateful",
-            "stateful_input": {
-                "portfolio_id": "DEMO_DPM_EUR_001",
-                "as_of_date": "2026-01-04",
-                "periods": [{"type": "YTD", "name": "YTD"}],
-                "rolling_options": {
-                    "window_lengths": [2],
-                    "metrics": [
-                        "ROLLING_VOLATILITY",
-                        "ROLLING_BETA",
-                        "ROLLING_SHARPE",
-                    ],
+    with override_app_runtime(
+        lotus_performance_client=RecordingLotusPerformanceClient(
+            response_payload=build_returns_series_response(
+                portfolio_returns=JAN_2026_PORTFOLIO_RETURNS,
+                benchmark_returns=JAN_2026_ROLLING_BENCHMARK_RETURNS,
+                risk_free_returns=JAN_2026_RISK_FREE_RETURNS,
+            )
+        ),
+        lotus_core_client=SimulationLotusCoreClient(
+            session_id="SIM_E2E_0001",
+            simulation_version=2,
+            include_ultimate_parent_issuer_id=True,
+        ),
+    ):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/rolling-metrics",
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-04",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "rolling_options": {
+                        "window_lengths": [2],
+                        "metrics": [
+                            "ROLLING_VOLATILITY",
+                            "ROLLING_BETA",
+                            "ROLLING_SHARPE",
+                        ],
+                    },
                 },
             },
-        },
-    )
+        )
     assert response.status_code == 200
     body = response.json()
     assert body["input_mode"] == "stateful"
     assert "YTD" in body["results"]
+
+
+def test_e2e_drawdown_stateful_mode_with_benchmark() -> None:
+    performance_client = RecordingLotusPerformanceClient(
+        response_payload=build_returns_series_response(
+            portfolio_returns=JAN_2026_PORTFOLIO_RETURNS,
+            benchmark_returns=JAN_2026_DRAWDOWN_BENCHMARK_RETURNS,
+        )
+    )
+    with override_app_runtime(lotus_performance_client=performance_client):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/drawdown",
+            headers={"X-Correlation-Id": "corr-e2e-dd-stateful"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-04",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "benchmark_policy": {
+                        "include_benchmark": True,
+                        "missing_benchmark_policy": "REQUIRE",
+                    },
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()["input_mode"] == "stateful"
+    assert performance_client.calls[0]["request_payload"]["series_selection"] == {
+        "include_portfolio": True,
+        "include_benchmark": True,
+        "include_risk_free": False,
+    }
+
+
+def test_e2e_historical_attribution_stateful_active_risk_mode() -> None:
+    performance_client = build_stateful_attribution_returns_client()
+    core_client = RecordingHistoricalAttributionCoreClient()
+
+    with override_app_runtime(
+        lotus_performance_client=performance_client,
+        lotus_core_client=core_client,
+    ):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/historical-attribution",
+            headers={"X-Correlation-Id": "corr-e2e-attr-active"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-04",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "attribution_options": {
+                        "attribution_types": ["ACTIVE_RISK"],
+                        "metrics": ["TRACKING_ERROR"],
+                        "grouping_dimensions": ["SECTOR"],
+                    },
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["input_mode"] == "stateful"
+    attribution_set = body["results"]["YTD"]["attribution_sets"][0]
+    assert attribution_set["attribution_type"] == "ACTIVE_RISK"
+    assert attribution_set["contributors"]
+    assert performance_client.benchmark_exposure_context_calls
+    assert not hasattr(core_client, "get_benchmark_market_series")

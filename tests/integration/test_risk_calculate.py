@@ -1,66 +1,23 @@
 from fastapi.testclient import TestClient
-from typing import Any, cast
 
 from app.main import app
+from tests.support.app_runtime import override_app_runtime
+from tests.support.lotus_performance_fakes import (
+    RecordingLotusPerformanceClient,
+    build_autowired_lotus_performance_client_class,
+)
+from app.upstream_errors import UpstreamServiceError
+from tests.support.returns_series_payloads import (
+    RISK_STATEFUL_BENCHMARK_RETURNS,
+    RISK_STATEFUL_RETURNS,
+    build_returns_series_response,
+)
 
-
-class _RecordingLotusPerformanceClient:
-    def __init__(self) -> None:
-        self.calls: list[dict[str, object]] = []
-
-    async def get_returns_series(
-        self,
-        *,
-        request_payload: dict[str, object],
-        correlation_id: str | None,
-    ) -> dict[str, object]:
-        self.calls.append(
-            {
-                "request_payload": request_payload,
-                "correlation_id": correlation_id,
-            }
-        )
-        return {
-            "series": {
-                "portfolio_returns": [
-                    {"date": "2025-01-02", "return_value": "0.0100"},
-                    {"date": "2025-01-03", "return_value": "0.0200"},
-                    {"date": "2025-01-06", "return_value": "-0.0100"},
-                    {"date": "2025-01-07", "return_value": "0.0050"},
-                ],
-                "benchmark_returns": [
-                    {"date": "2025-01-02", "return_value": "0.0090"},
-                    {"date": "2025-01-03", "return_value": "0.0150"},
-                    {"date": "2025-01-06", "return_value": "-0.0080"},
-                    {"date": "2025-01-07", "return_value": "0.0040"},
-                ],
-            }
-        }
-
-
-class _AutoWiredLotusPerformanceClient:
-    calls: list[dict[str, object]] = []
-
-    async def get_returns_series(
-        self,
-        *,
-        request_payload: dict[str, object],
-        correlation_id: str | None,
-    ) -> dict[str, object]:
-        _AutoWiredLotusPerformanceClient.calls.append(
-            {
-                "request_payload": request_payload,
-                "correlation_id": correlation_id,
-            }
-        )
-        return {
-            "series": {
-                "portfolio_returns": [
-                    {"date": "2025-01-02", "return_value": "0.0100"},
-                    {"date": "2025-01-03", "return_value": "0.0200"},
-                ]
-            }
-        }
+_AutoWiredLotusPerformanceClient = build_autowired_lotus_performance_client_class(
+    response_factory=lambda: build_returns_series_response(
+        portfolio_returns=RISK_STATEFUL_RETURNS[:2],
+    )
+)
 
 
 def _request_payload() -> dict[str, object]:
@@ -144,30 +101,39 @@ def test_risk_calculate_benchmark_requirement_behavior() -> None:
 
 
 def test_risk_calculate_stateful_mode_uses_lotus_performance_returns_series() -> None:
-    performance_client = _RecordingLotusPerformanceClient()
-    app.state.lotus_performance_client = performance_client
-    client = TestClient(app)
-    response = client.post(
-        "/analytics/risk/calculate",
-        headers={"X-Correlation-Id": "corr-risk-stateful"},
-        json={
-            "input_mode": "stateful",
-            "stateful_input": {
-                "portfolio_id": "DEMO_DPM_EUR_001",
-                "as_of_date": "2025-01-07",
-                "net_or_gross": "NET",
-                "periods": [{"type": "YTD", "name": "YTD"}],
-                "metrics": ["VOLATILITY", "BETA"],
-            },
-        },
+    performance_client = RecordingLotusPerformanceClient(
+        response_payload=build_returns_series_response(
+            portfolio_returns=RISK_STATEFUL_RETURNS,
+            benchmark_returns=RISK_STATEFUL_BENCHMARK_RETURNS,
+        )
     )
+    with override_app_runtime(lotus_performance_client=performance_client):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/calculate",
+            headers={"X-Correlation-Id": "corr-risk-stateful"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2025-01-07",
+                    "net_or_gross": "NET",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "metrics": ["VOLATILITY", "BETA"],
+                },
+            },
+        )
     assert response.status_code == 200
     payload = performance_client.calls[0]["request_payload"]
     assert isinstance(payload, dict)
     assert payload["portfolio_id"] == "DEMO_DPM_EUR_001"
     assert payload["input_mode"] == "stateful"
-    assert payload["stateful_input"] == {"consumer_system": "lotus-risk"}
-    assert payload["window"] == {"mode": "RELATIVE", "period": "SI"}
+    assert payload["stateful_input"] == {}
+    assert payload["window"] == {
+        "mode": "EXPLICIT",
+        "from_date": "2025-01-01",
+        "to_date": "2025-01-07",
+    }
     assert payload["series_selection"] == {
         "include_portfolio": True,
         "include_benchmark": True,
@@ -179,14 +145,43 @@ def test_risk_calculate_stateful_mode_uses_lotus_performance_returns_series() ->
     assert metrics["BETA"]["value"] is not None
 
 
-def test_risk_calculate_stateful_mode_autowires_lotus_performance_client() -> None:
-    import app.main as main_module
+def test_risk_calculate_stateful_mode_preserves_gross_metric_basis_and_currency() -> None:
+    performance_client = RecordingLotusPerformanceClient(
+        response_payload=build_returns_series_response(
+            portfolio_returns=RISK_STATEFUL_RETURNS,
+        )
+    )
+    with override_app_runtime(lotus_performance_client=performance_client):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/calculate",
+            headers={"X-Correlation-Id": "corr-risk-stateful-gross"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2025-01-07",
+                    "reporting_currency": "CHF",
+                    "net_or_gross": "GROSS",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "metrics": ["VOLATILITY"],
+                },
+            },
+        )
 
-    main_module_any = cast(Any, main_module)
-    original_client = main_module_any.LotusPerformanceClient
-    try:
-        main_module_any.LotusPerformanceClient = _AutoWiredLotusPerformanceClient
-        app.state.lotus_performance_client = None
+    assert response.status_code == 200
+    payload = performance_client.calls[0]["request_payload"]
+    assert isinstance(payload, dict)
+    assert payload["metric_basis"] == "GROSS"
+    assert payload["reporting_currency"] == "CHF"
+    assert payload["series_selection"]["include_benchmark"] is False
+
+
+def test_risk_calculate_stateful_mode_autowires_lotus_performance_client() -> None:
+    with override_app_runtime(
+        lotus_performance_client=None,
+        lotus_performance_class=_AutoWiredLotusPerformanceClient,
+    ):
         _AutoWiredLotusPerformanceClient.calls = []
         client = TestClient(app)
         response = client.post(
@@ -204,11 +199,54 @@ def test_risk_calculate_stateful_mode_autowires_lotus_performance_client() -> No
         )
         assert response.status_code == 200
         assert _AutoWiredLotusPerformanceClient.calls[0]["correlation_id"] == "corr-autowire"
-    finally:
-        main_module_any.LotusPerformanceClient = original_client
 
 
-def test_risk_calculate_simulation_mode_returns_not_implemented_error() -> None:
+def test_risk_calculate_stateful_surfaces_upstream_unavailable_with_dependency_error() -> None:
+    class _UnavailablePerformanceClient:
+        async def get_returns_series(
+            self,
+            *,
+            request_payload: dict[str, object],
+            correlation_id: str | None,
+        ) -> dict[str, object]:
+            raise UpstreamServiceError(
+                service="lotus-performance",
+                operation="/integration/returns/series",
+                status_code=503,
+                code="UPSTREAM_UNAVAILABLE",
+                message="lotus-performance /integration/returns/series unavailable: network down",
+                details={
+                    "service": "lotus-performance",
+                    "operation": "/integration/returns/series",
+                },
+                retryable=True,
+            )
+
+    with override_app_runtime(lotus_performance_client=_UnavailablePerformanceClient()):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/calculate",
+            headers={"X-Correlation-Id": "corr-risk-upstream-down"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2025-01-07",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "metrics": ["VOLATILITY"],
+                },
+            },
+        )
+
+    assert response.status_code == 503
+    body = response.json()["error"]
+    assert body["code"] == "UPSTREAM_UNAVAILABLE"
+    assert body["correlation_id"] == "corr-risk-upstream-down"
+    assert body["details"]["service"] == "lotus-performance"
+    assert body["details"]["retryable"] is True
+
+
+def test_risk_calculate_simulation_mode_is_rejected_by_contract() -> None:
     client = TestClient(app)
     response = client.post(
         "/analytics/risk/calculate",
@@ -222,8 +260,8 @@ def test_risk_calculate_simulation_mode_returns_not_implemented_error() -> None:
             },
         },
     )
-    assert response.status_code == 400
-    assert "not implemented" in response.json()["error"]["message"]
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "INVALID_REQUEST"
 
 
 def test_metrics_endpoint_exposes_risk_metric_observability() -> None:

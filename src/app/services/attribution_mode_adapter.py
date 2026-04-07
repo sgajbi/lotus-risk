@@ -14,10 +14,24 @@ from app.contracts.attribution import (
 )
 from app.contracts.risk import ReturnPoint, RiskRequestScope
 from app.services.attribution_engine import calculate_historical_attribution
+from app.services.benchmark_exposure_history import fetch_benchmark_exposure_history
+from app.services.stateful_returns_request import build_stateful_returns_series_request
+from app.services.stateful_returns_series_parser import (
+    extract_required_portfolio_returns,
+    to_return_points,
+)
+from app.upstream_errors import invalid_upstream_payload, missing_upstream_data
 
 
 class LotusPerformanceClientProtocol(Protocol):
     async def get_returns_series(
+        self,
+        *,
+        request_payload: dict[str, Any],
+        correlation_id: str | None,
+    ) -> dict[str, Any]: ...
+
+    async def get_benchmark_exposure_context(
         self,
         *,
         request_payload: dict[str, Any],
@@ -42,54 +56,43 @@ class LotusCoreClientProtocol(Protocol):
     ) -> dict[str, Any]: ...
 
 
-def _decimal_return_to_percentage_points(value: Any) -> float:
-    try:
-        decimal_value = Decimal(str(value))
-    except (InvalidOperation, ValueError) as exc:
-        raise ValueError(f"Invalid return value from lotus-performance: {value}") from exc
-    return float(decimal_value * Decimal("100"))
+def _requires_active_attribution(stateful: HistoricalAttributionStatefulInput) -> bool:
+    options = stateful.attribution_options
+    return "ACTIVE_RISK" in options.attribution_types or "TRACKING_ERROR" in options.metrics
 
 
-def _to_return_points(series: Any) -> list[ReturnPoint]:
-    if not isinstance(series, list):
-        return []
-    result: list[ReturnPoint] = []
-    for row in series:
-        if not isinstance(row, dict):
-            continue
-        raw_date = row.get("date")
-        if not isinstance(raw_date, str):
-            continue
-        result.append(
-            ReturnPoint(
-                date=date.fromisoformat(raw_date),
-                value=_decimal_return_to_percentage_points(row.get("return_value")),
-            )
+def _validate_benchmark_exposure_alignment(
+    *,
+    benchmark_returns: list[ReturnPoint],
+    benchmark_exposure_history: list[ExposurePoint],
+) -> None:
+    return_dates = {point.date for point in benchmark_returns}
+    exposure_dates = {point.date for point in benchmark_exposure_history}
+    missing_dates = sorted(return_dates - exposure_dates)
+    if missing_dates:
+        sample = ", ".join(date_value.isoformat() for date_value in missing_dates[:5])
+        raise missing_upstream_data(
+            service="lotus-performance",
+            operation="/integration/benchmarks/exposure-context",
+            message=(
+                "lotus-performance benchmark exposure context missing rows for benchmark "
+                f"return dates: {sample}"
+            ),
         )
-    return result
 
 
 def _build_stateful_returns_request(stateful: HistoricalAttributionStatefulInput) -> dict[str, Any]:
-    return {
-        "portfolio_id": stateful.portfolio_id,
-        "as_of_date": stateful.as_of_date.isoformat(),
-        "window": {"mode": "RELATIVE", "period": "SI"},
-        "frequency": "DAILY",
-        "metric_basis": stateful.net_or_gross,
-        "reporting_currency": stateful.reporting_currency,
-        "series_selection": {
-            "include_portfolio": True,
-            "include_benchmark": False,
-            "include_risk_free": False,
-        },
-        "data_policy": {
-            "missing_data_policy": "ALLOW_PARTIAL",
-            "fill_method": "NONE",
-            "calendar_policy": "BUSINESS",
-        },
-        "input_mode": "stateful",
-        "stateful_input": {"consumer_system": "lotus-risk"},
-    }
+    return build_stateful_returns_series_request(
+        portfolio_id=stateful.portfolio_id,
+        as_of_date=stateful.as_of_date,
+        periods=stateful.periods,
+        frequency="DAILY",
+        metric_basis=stateful.net_or_gross,
+        reporting_currency=stateful.reporting_currency,
+        include_benchmark=_requires_active_attribution(stateful),
+        include_risk_free=False,
+        missing_data_policy="ALLOW_PARTIAL",
+    )
 
 
 def _group_key_and_label(
@@ -218,7 +221,11 @@ async def _fetch_position_timeseries_rows(
         )
         batch = response.get("rows")
         if not isinstance(batch, list):
-            raise ValueError("lotus-core position-timeseries payload missing 'rows' list")
+            raise invalid_upstream_payload(
+                service="lotus-core",
+                operation=f"/integration/portfolios/{portfolio_id}/analytics/position-timeseries",
+                message="lotus-core position-timeseries payload missing 'rows' list",
+            )
         for row in batch:
             if isinstance(row, dict):
                 rows.append(row)
@@ -252,7 +259,11 @@ async def _build_issuer_map(
     )
     records = response.get("records")
     if not isinstance(records, list):
-        raise ValueError("lotus-core enrichment payload missing 'records' list")
+        raise invalid_upstream_payload(
+            service="lotus-core",
+            operation="/integration/instruments/enrichment-bulk",
+            message="lotus-core enrichment payload missing 'records' list",
+        )
     issuer_map: dict[str, tuple[str, str | None]] = {}
     for record in records:
         if not isinstance(record, dict):
@@ -283,25 +294,23 @@ async def calculate_historical_attribution_stateful(
             "stateful historical-attribution does not support grouping_dimension=CUSTOM"
         )
 
-    requires_active = (
-        "ACTIVE_RISK" in options.attribution_types or "TRACKING_ERROR" in options.metrics
-    )
-    if requires_active:
-        raise ValueError(
-            "stateful ACTIVE_RISK/TRACKING_ERROR attribution is blocked until benchmark exposure history contract is available"
-        )
+    requires_active = _requires_active_attribution(stateful)
 
     returns_response = await performance_client.get_returns_series(
         request_payload=_build_stateful_returns_request(stateful),
         correlation_id=correlation_id,
     )
-    series = returns_response.get("series")
-    if not isinstance(series, dict):
-        raise ValueError("lotus-performance returns-series payload missing 'series' object")
-
-    portfolio_returns = _to_return_points(series.get("portfolio_returns"))
-    if not portfolio_returns:
-        raise ValueError("lotus-performance returns-series returned no portfolio returns")
+    series, portfolio_returns = extract_required_portfolio_returns(returns_response)
+    benchmark_returns = to_return_points(series.get("benchmark_returns"))
+    if requires_active and not benchmark_returns:
+        raise missing_upstream_data(
+            service="lotus-performance",
+            operation="/integration/returns/series",
+            message=(
+                "lotus-performance returns-series returned no benchmark returns for "
+                "requested stateful active-risk attribution"
+            ),
+        )
     start_date = min(point.date for point in portfolio_returns)
 
     rows = await _fetch_position_timeseries_rows(
@@ -314,7 +323,11 @@ async def calculate_historical_attribution_stateful(
         correlation_id=correlation_id,
     )
     if not rows:
-        raise ValueError("lotus-core position-timeseries returned no rows")
+        raise missing_upstream_data(
+            service="lotus-core",
+            operation=f"/integration/portfolios/{stateful.portfolio_id}/analytics/position-timeseries",
+            message="lotus-core position-timeseries returned no rows",
+        )
 
     issuer_map = (
         await _build_issuer_map(
@@ -331,7 +344,31 @@ async def calculate_historical_attribution_stateful(
         issuer_map=issuer_map,
     )
     if not exposure_history:
-        raise ValueError("unable to build exposure history from lotus-core position-timeseries")
+        raise missing_upstream_data(
+            service="lotus-core",
+            operation=f"/integration/portfolios/{stateful.portfolio_id}/analytics/position-timeseries",
+            message="unable to build exposure history from lotus-core position-timeseries",
+        )
+
+    benchmark_exposure_history = (
+        await fetch_benchmark_exposure_history(
+            performance_client=performance_client,
+            portfolio_id=stateful.portfolio_id,
+            as_of_date=stateful.as_of_date,
+            start_date=start_date,
+            reporting_currency=stateful.reporting_currency,
+            grouping_dimensions=requested_groupings,
+            correlation_id=correlation_id,
+        )
+        if requires_active
+        else []
+    )
+
+    if requires_active:
+        _validate_benchmark_exposure_alignment(
+            benchmark_returns=benchmark_returns,
+            benchmark_exposure_history=benchmark_exposure_history,
+        )
 
     stateless_input = HistoricalAttributionStatelessInput(
         scope=RiskRequestScope(
@@ -341,9 +378,9 @@ async def calculate_historical_attribution_stateful(
         ),
         periods=stateful.periods,
         returns=portfolio_returns,
-        benchmark_returns=[],
+        benchmark_returns=benchmark_returns,
         exposure_history=exposure_history,
-        benchmark_exposure_history=[],
+        benchmark_exposure_history=benchmark_exposure_history,
         attribution_options=options,
     )
     return calculate_historical_attribution(

@@ -5,6 +5,7 @@ from typing import Any
 from fastapi.testclient import TestClient
 
 from app.main import app
+from tests.support.app_runtime import override_app_runtime
 
 
 class _RecordingLotusCoreClient:
@@ -115,26 +116,26 @@ class _RecordingLotusCoreClient:
 
 def test_stateful_api_characterizes_lotus_core_snapshot_payload_contract() -> None:
     core_client = _RecordingLotusCoreClient()
-    app.state.lotus_core_client = core_client
-    client = TestClient(app)
+    with override_app_runtime(lotus_core_client=core_client):
+        client = TestClient(app)
 
-    response = client.post(
-        "/analytics/risk/concentration",
-        headers={"X-Correlation-Id": "corr-stateful"},
-        json={
-            "input_mode": "stateful",
-            "issuer_grouping_level": "legal_issuer",
-            "enrichment_policy": "core_only",
-            "stateful_input": {
-                "portfolio_id": "DEMO_DPM_EUR_001",
-                "as_of_date": "2026-02-27",
-                "reporting_currency": "USD",
-                "include_cash_positions": False,
-                "include_zero_quantity_positions": True,
-                "top_n": 5,
+        response = client.post(
+            "/analytics/risk/concentration",
+            headers={"X-Correlation-Id": "corr-stateful"},
+            json={
+                "input_mode": "stateful",
+                "issuer_grouping_level": "legal_issuer",
+                "enrichment_policy": "core_only",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-02-27",
+                    "reporting_currency": "USD",
+                    "include_cash_positions": False,
+                    "include_zero_quantity_positions": True,
+                    "top_n": 5,
+                },
             },
-        },
-    )
+        )
 
     assert response.status_code == 200
     assert len(core_client.snapshot_calls) == 1
@@ -159,24 +160,24 @@ def test_stateful_api_characterizes_lotus_core_snapshot_payload_contract() -> No
 
 def test_simulation_api_characterizes_session_creation_and_snapshot_contract() -> None:
     core_client = _RecordingLotusCoreClient()
-    app.state.lotus_core_client = core_client
-    client = TestClient(app)
+    with override_app_runtime(lotus_core_client=core_client):
+        client = TestClient(app)
 
-    response = client.post(
-        "/analytics/risk/concentration",
-        headers={"X-Correlation-Id": "corr-sim", "X-Actor-Id": "risk-tester"},
-        json={
-            "input_mode": "simulation",
-            "simulation_input": {
-                "portfolio_id": "DEMO_DPM_EUR_001",
-                "as_of_date": "2026-02-27",
-                "session_ttl_hours": 24,
-                "simulation_changes": [
-                    {"security_id": "SEC_A", "transaction_type": "BUY", "quantity": 10}
-                ],
+        response = client.post(
+            "/analytics/risk/concentration",
+            headers={"X-Correlation-Id": "corr-sim", "X-Actor-Id": "risk-tester"},
+            json={
+                "input_mode": "simulation",
+                "simulation_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-02-27",
+                    "session_ttl_hours": 24,
+                    "simulation_changes": [
+                        {"security_id": "SEC_A", "transaction_type": "BUY", "quantity": 10}
+                    ],
+                },
             },
-        },
-    )
+        )
 
     assert response.status_code == 200
     assert len(core_client.create_calls) == 1

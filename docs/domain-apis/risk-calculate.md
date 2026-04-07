@@ -22,16 +22,15 @@
 - Status: implemented in lotus-risk.
 - Current behavior:
   - caller supplies identifiers plus risk metric specification (`periods`, `metrics`, `options`).
-  - lotus-risk sources canonical return series from `lotus-performance` using `input_mode=stateful` and `stateful_input.consumer_system=lotus-risk`.
+  - lotus-risk sources canonical return series from `lotus-performance` using `input_mode=stateful` and `stateful_input is an empty envelope; consumer identity is stamped by lotus-performance server-side`.
   - lotus-risk computes with the same risk engine used by stateless mode.
 
 ### Simulation
 
-- Status: not implemented in lotus-risk.
-- Target behavior:
-  - lotus-risk sources baseline state from upstream.
-  - caller provides scenario/override deltas.
-  - service computes adjusted risk analytics.
+- Status: intentionally unsupported in the current production contract.
+- Reason:
+  - current metric set is primarily realized historical-return analytics
+  - a projected holdings snapshot does not produce a valid realized return history for these metrics
 
 ## Stateless Inputs (Current)
 
@@ -61,9 +60,6 @@
 | Raw valuation/performance input points | lotus-core (`/integration/portfolios/{id}/performance-input`) | Exists | Provides valuation points and metadata. |
 | Daily return series normalized for risk engine | lotus-performance (`/integration/returns/series` with `input_mode=stateful`) | Exists | Implemented stateful path in lotus-risk; decimal returns converted to percentage-point risk engine input. |
 | Benchmark return series | lotus-performance / market data integration | Needs enhancement | no direct lotus-risk-managed benchmark source contract today. |
-| Simulation projected positions/summary | lotus-core simulation APIs (`/simulation-sessions/*/projected-*`) | Exists | currently consumed via gateway patterns, not lotus-risk. |
-| Scenario overrides schema | lotus-risk-owned request contract | Needs enhancement | no simulation contract yet in lotus-risk. |
-
 ## Expected Output Structure
 
 - `scope` (echoed normalized request scope)
@@ -80,12 +76,12 @@
 ## Alignment Assessment
 
 - Bounded context ownership: aligned (`lotus-risk` is correct owner per RFC-0065).
-- API mode support: partial (`stateless` + `stateful` implemented; `simulation` pending).
+- API mode support: finalized for current scope (`stateless` + `stateful` only; `simulation` intentionally unsupported).
 - Cross-service integration posture: integrated with `lotus-performance` for stateful return sourcing.
 - Naming/vocabulary: aligned with canonical `client_id` naming and RFC-0067 guardrails.
 
 ## Gaps and Decisions Required
 
 1. Benchmark/risk-free sourcing remains upstream-dependent on lotus-performance + lotus-core reference-data availability; stateful benchmark metrics degrade deterministically when benchmark series is absent.
-2. Define simulation override schema and merge semantics for `/analytics/risk/calculate`.
-3. Standardize response metadata additions (for example `correlationId`, `contractVersion`, `asOfDate`) if this endpoint must fully match cross-platform response envelope conventions.
+2. Standardize response metadata additions (for example `correlationId`, `contractVersion`, `asOfDate`) if this endpoint must fully match cross-platform response envelope conventions.
+

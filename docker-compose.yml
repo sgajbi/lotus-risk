@@ -5,9 +5,11 @@ services:
       - "8130:8130"
     env_file:
       - .env
+    environment:
+      LOTUS_CORE_BASE_URL: ${LOTUS_CORE_BASE_URL:-http://host.docker.internal:8202}
+      LOTUS_PERFORMANCE_BASE_URL: ${LOTUS_PERFORMANCE_BASE_URL:-http://host.docker.internal:8002}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8130/health/ready')"]
       interval: 15s
       timeout: 3s
       retries: 10
-

@@ -1,0 +1,231 @@
+from __future__ import annotations
+
+
+class SimulationLotusCoreClient:
+    def __init__(
+        self,
+        *,
+        session_id: str,
+        simulation_version: int,
+        include_ultimate_parent_issuer_id: bool = False,
+    ) -> None:
+        self._session_id = session_id
+        self._simulation_version = simulation_version
+        self._include_ultimate_parent_issuer_id = include_ultimate_parent_issuer_id
+
+    async def create_simulation_session(
+        self,
+        *,
+        portfolio_id: str,
+        ttl_hours: int | None,
+        created_by: str | None,
+        correlation_id: str | None,
+    ) -> dict[str, object]:
+        return {
+            "session": {
+                "session_id": self._session_id,
+                "portfolio_id": portfolio_id,
+                "status": "ACTIVE",
+                "version": 1,
+                "created_by": created_by,
+                "created_at": "2026-02-27T10:30:00Z",
+                "expires_at": "2026-02-28T10:30:00Z",
+            }
+        }
+
+    async def add_simulation_changes(
+        self,
+        *,
+        session_id: str,
+        changes: list[dict[str, object]],
+        correlation_id: str | None,
+    ) -> dict[str, object]:
+        assert session_id == self._session_id
+        assert len(changes) == 1
+        return {"session_id": session_id, "version": self._simulation_version, "changes": []}
+
+    async def get_core_snapshot(
+        self,
+        *,
+        portfolio_id: str,
+        request_payload: dict[str, object],
+        correlation_id: str | None,
+    ) -> dict[str, object]:
+        if request_payload.get("snapshot_mode") == "BASELINE":
+            return {
+                "portfolio_id": portfolio_id,
+                "as_of_date": "2026-02-27",
+                "snapshot_mode": "BASELINE",
+                "valuation_context": {
+                    "portfolio_currency": "EUR",
+                    "reporting_currency": "USD",
+                    "position_basis": "market_value_base",
+                    "weight_basis": "total_market_value_base",
+                },
+                "sections": {
+                    "positions_baseline": [
+                        {"security_id": "SEC_A", "market_value_base": "80"},
+                        {"security_id": "SEC_B", "market_value_base": "20"},
+                    ]
+                },
+            }
+        return {
+            "portfolio_id": portfolio_id,
+            "as_of_date": "2026-02-27",
+            "snapshot_mode": "SIMULATION",
+            "valuation_context": {
+                "portfolio_currency": "EUR",
+                "reporting_currency": "USD",
+                "position_basis": "market_value_base",
+                "weight_basis": "total_market_value_base",
+            },
+            "simulation": {
+                "session_id": self._session_id,
+                "version": self._simulation_version,
+                "baseline_as_of_date": "2026-02-27",
+            },
+            "sections": {
+                "positions_baseline": [
+                    {"security_id": "SEC_A", "market_value_base": "60"},
+                    {"security_id": "SEC_B", "market_value_base": "40"},
+                ],
+                "positions_projected": [
+                    {"security_id": "SEC_A", "market_value_base": "90"},
+                    {"security_id": "SEC_B", "market_value_base": "10"},
+                ],
+            },
+        }
+
+    async def get_instrument_enrichment(
+        self,
+        *,
+        security_ids: list[str],
+        correlation_id: str | None,
+    ) -> dict[str, object]:
+        records: list[dict[str, object]] = []
+        for security_id in security_ids:
+            record: dict[str, object] = {
+                "security_id": security_id,
+                "issuer_id": f"ISSUER_{security_id}",
+            }
+            if self._include_ultimate_parent_issuer_id:
+                record["ultimate_parent_issuer_id"] = f"UPI_{security_id}"
+            records.append(record)
+        return {"records": records}
+
+    async def get_risk_free_series(
+        self,
+        *,
+        request_payload: dict[str, object],
+        correlation_id: str | None,
+    ) -> dict[str, object]:
+        return {
+            "currency": request_payload.get("currency", "USD"),
+            "as_of_date": request_payload.get("as_of_date", "2026-01-04"),
+            "series_mode": request_payload.get("series_mode", "annualized_rate_series"),
+            "resolved_window": request_payload.get(
+                "window",
+                {"start_date": "2026-01-01", "end_date": "2026-01-04"},
+            ),
+            "frequency": request_payload.get("frequency", "daily"),
+            "request_fingerprint": "sim-core-risk-free",
+            "points": [
+                {
+                    "series_date": "2026-01-02",
+                    "value": "0.0365",
+                    "value_convention": "annualized_rate",
+                },
+                {
+                    "series_date": "2026-01-03",
+                    "value": "0.0365",
+                    "value_convention": "annualized_rate",
+                },
+                {
+                    "series_date": "2026-01-04",
+                    "value": "0.0365",
+                    "value_convention": "annualized_rate",
+                },
+            ],
+        }
+
+
+class RecordingLotusCoreReferenceClient:
+    def __init__(
+        self,
+        *,
+        snapshot_response: dict[str, object] | None = None,
+        risk_free_response: dict[str, object] | None = None,
+        risk_free_coverage_response: dict[str, object] | None = None,
+    ) -> None:
+        self.snapshot_response = snapshot_response or {
+            "valuation_context": {
+                "portfolio_currency": "USD",
+                "reporting_currency": "USD",
+            }
+        }
+        self.risk_free_response = risk_free_response or {"points": []}
+        self.risk_free_coverage_response = risk_free_coverage_response or {
+            "request_fingerprint": "risk-free-coverage-fp",
+            "observed_start_date": None,
+            "observed_end_date": None,
+            "expected_start_date": "2026-01-01",
+            "expected_end_date": "2026-01-04",
+            "total_points": 0,
+            "missing_dates_count": 4,
+            "missing_dates_sample": [
+                "2026-01-01",
+                "2026-01-02",
+                "2026-01-03",
+                "2026-01-04",
+            ],
+            "quality_status_distribution": {},
+        }
+        self.snapshot_calls: list[dict[str, object]] = []
+        self.risk_free_calls: list[dict[str, object]] = []
+        self.risk_free_coverage_calls: list[dict[str, object]] = []
+
+    async def get_core_snapshot(
+        self,
+        *,
+        portfolio_id: str,
+        request_payload: dict[str, object],
+        correlation_id: str | None,
+    ) -> dict[str, object]:
+        self.snapshot_calls.append(
+            {
+                "portfolio_id": portfolio_id,
+                "request_payload": request_payload,
+                "correlation_id": correlation_id,
+            }
+        )
+        return self.snapshot_response
+
+    async def get_risk_free_series(
+        self,
+        *,
+        request_payload: dict[str, object],
+        correlation_id: str | None,
+    ) -> dict[str, object]:
+        self.risk_free_calls.append(
+            {
+                "request_payload": request_payload,
+                "correlation_id": correlation_id,
+            }
+        )
+        return self.risk_free_response
+
+    async def get_risk_free_coverage(
+        self,
+        *,
+        currency: str,
+        request_payload: dict[str, object],
+        correlation_id: str | None,
+    ) -> dict[str, object]:
+        self.risk_free_coverage_calls.append(
+            {
+                "currency": currency,
+                "request_payload": request_payload,
+                "correlation_id": correlation_id,
+            }
+        )
+        return self.risk_free_coverage_response

@@ -1,15 +1,26 @@
 import asyncio
 from datetime import date
+from typing import Any, cast
 
 import pytest
 
 from app.contracts.attribution import HistoricalAttributionStatefulInput
 from app.services import attribution_mode_adapter as adapter
 from app.services.attribution_mode_adapter import calculate_historical_attribution_stateful
+from app.services.stateful_returns_series_parser import (
+    decimal_return_to_percentage_points,
+    to_return_points,
+)
+from tests.support.historical_attribution_fakes import (
+    RecordingHistoricalAttributionCoreClient,
+    build_benchmark_exposure_context_response,
+    build_stateful_attribution_returns_client,
+)
 
 
 class _StubPerformanceClient:
     def __init__(self) -> None:
+        self._client = build_stateful_attribution_returns_client()
         self.payload: dict[str, object] | None = None
 
     async def get_returns_series(
@@ -19,61 +30,32 @@ class _StubPerformanceClient:
         correlation_id: str | None,
     ) -> dict[str, object]:
         self.payload = request_payload
-        return {
-            "series": {
-                "portfolio_returns": [
-                    {"date": "2026-01-02", "return_value": "0.0100"},
-                    {"date": "2026-01-03", "return_value": "-0.0050"},
-                    {"date": "2026-01-04", "return_value": "0.0040"},
-                ]
-            }
-        }
+        return await self._client.get_returns_series(
+            request_payload=request_payload,
+            correlation_id=correlation_id,
+        )
 
-
-class _StubCoreClient:
-    def __init__(self) -> None:
-        self.position_payloads: list[dict[str, object]] = []
-        self.enrichment_calls: list[list[str]] = []
-
-    async def get_position_analytics_timeseries(
+    async def get_benchmark_exposure_context(
         self,
         *,
-        portfolio_id: str,
         request_payload: dict[str, object],
         correlation_id: str | None,
     ) -> dict[str, object]:
-        self.position_payloads.append(request_payload)
-        page = request_payload.get("page")
-        page_token = page.get("page_token") if isinstance(page, dict) else None
-        if page_token:
-            return {
-                "rows": [
-                    {
-                        "security_id": "SEC_B",
-                        "valuation_date": "2026-01-03",
-                        "dimensions": {"sector": "HEALTH", "asset_class": "EQUITY"},
-                        "ending_market_value_portfolio_currency": "40",
-                    }
-                ],
-                "page": {"next_page_token": None},
-            }
-        return {
-            "rows": [
-                {
-                    "security_id": "SEC_A",
-                    "valuation_date": "2026-01-02",
-                    "dimensions": {"sector": "TECH", "asset_class": "EQUITY"},
-                    "ending_market_value_portfolio_currency": "60",
-                },
-                {
-                    "security_id": "SEC_B",
-                    "valuation_date": "2026-01-02",
-                    "dimensions": {"sector": "HEALTH", "asset_class": "EQUITY"},
-                    "ending_market_value_portfolio_currency": "40",
-                },
-            ],
-            "page": {"next_page_token": "NEXT_1"},
-        }
+        return await self._client.get_benchmark_exposure_context(
+            request_payload=request_payload,
+            correlation_id=correlation_id,
+        )
+
+    @property
+    def benchmark_exposure_context_calls(self) -> list[dict[str, object]]:
+        return self._client.benchmark_exposure_context_calls
+
+
+class _StubCoreClient(RecordingHistoricalAttributionCoreClient):
+    def __init__(self) -> None:
+        super().__init__()
+        self.position_payloads = self.position_calls
+        self.enrichment_calls: list[list[str]] = []
 
     async def get_instrument_enrichment(
         self,
@@ -164,7 +146,10 @@ class _StubPerformanceClientEmptyReturns(_StubPerformanceClient):
 
 
 def _stateful_input(
-    *, grouping_dimensions: list[str], attribution_types: list[str]
+    *,
+    grouping_dimensions: list[str],
+    attribution_types: list[str],
+    metrics: list[str] | None = None,
 ) -> HistoricalAttributionStatefulInput:
     return HistoricalAttributionStatefulInput.model_validate(
         {
@@ -173,7 +158,7 @@ def _stateful_input(
             "periods": [{"type": "YTD", "name": "YTD"}],
             "attribution_options": {
                 "attribution_types": attribution_types,
-                "metrics": ["VOLATILITY"],
+                "metrics": metrics or ["VOLATILITY"],
                 "grouping_dimensions": grouping_dimensions,
             },
         }
@@ -193,9 +178,14 @@ def test_stateful_attribution_total_risk_happy_path() -> None:
     )
     assert perf.payload is not None
     assert perf.payload["input_mode"] == "stateful"
-    assert perf.payload["stateful_input"] == {"consumer_system": "lotus-risk"}
-    assert len(core.position_payloads) == 2
-    first_payload = core.position_payloads[0]
+    assert perf.payload["stateful_input"] == {}
+    assert perf.payload["window"] == {
+        "mode": "EXPLICIT",
+        "from_date": "2026-01-01",
+        "to_date": "2026-01-04",
+    }
+    assert len(core.position_payloads) == 1
+    first_payload = core.position_payloads[0]["request_payload"]
     assert first_payload["dimensions"] == ["sector"]
     assert response.input_mode.value == "stateful"
     assert response.results["YTD"].error is None
@@ -215,8 +205,9 @@ def test_stateful_attribution_asset_class_and_reporting_currency() -> None:
         )
     )
     assert response.results["YTD"].error is None
-    assert core.position_payloads[0]["dimensions"] == ["asset_class"]
-    assert core.position_payloads[0]["reporting_currency"] == "USD"
+    first_payload = core.position_payloads[0]["request_payload"]
+    assert first_payload["dimensions"] == ["asset_class"]
+    assert first_payload["reporting_currency"] == "USD"
 
 
 def test_stateful_attribution_issuer_grouping_uses_enrichment() -> None:
@@ -247,12 +238,162 @@ def test_stateful_attribution_issuer_grouping_rejects_bad_enrichment_shape() -> 
         )
 
 
-def test_stateful_attribution_rejects_active_risk_without_benchmark_exposure_contract() -> None:
-    with pytest.raises(ValueError, match="benchmark exposure history contract"):
+def test_stateful_attribution_active_risk_sources_performance_benchmark_exposure_context() -> None:
+    perf = _StubPerformanceClient()
+    core = _StubCoreClient()
+    response = asyncio.run(
+        calculate_historical_attribution_stateful(
+            _stateful_input(
+                grouping_dimensions=["SECTOR"],
+                attribution_types=["ACTIVE_RISK"],
+                metrics=["TRACKING_ERROR"],
+            ),
+            performance_client=perf,
+            core_client=core,
+            correlation_id="corr-attr-active",
+        )
+    )
+
+    assert perf.payload is not None
+    series_selection = cast(dict[str, Any], perf.payload["series_selection"])
+    assert series_selection["include_benchmark"] is True
+    exposure_payload = perf.benchmark_exposure_context_calls[0]["request_payload"]
+    assert exposure_payload == {
+        "portfolio_id": "DEMO_DPM_EUR_001",
+        "as_of_date": "2026-01-04",
+        "window": {"start_date": "2026-01-02", "end_date": "2026-01-04"},
+        "frequency": "DAILY",
+        "grouping_dimensions": ["SECTOR"],
+        "page": {"page_size": 1000, "page_token": None},
+    }
+    assert not hasattr(core, "get_benchmark_market_series")
+    active_set = response.results["YTD"].attribution_sets[0]
+    assert active_set.attribution_type == "ACTIVE_RISK"
+    assert active_set.metric == "TRACKING_ERROR"
+    assert active_set.contributors
+
+
+def test_stateful_attribution_rejects_active_risk_when_benchmark_returns_missing() -> None:
+    class _NoBenchmarkPerformanceClient(_StubPerformanceClient):
+        async def get_returns_series(
+            self,
+            *,
+            request_payload: dict[str, object],
+            correlation_id: str | None,
+        ) -> dict[str, object]:
+            self.payload = request_payload
+            return {
+                "series": {"portfolio_returns": [{"date": "2026-01-02", "return_value": "0.010"}]}
+            }
+
+    with pytest.raises(ValueError, match="no benchmark returns"):
         asyncio.run(
             calculate_historical_attribution_stateful(
-                _stateful_input(grouping_dimensions=["SECTOR"], attribution_types=["ACTIVE_RISK"]),
+                _stateful_input(
+                    grouping_dimensions=["SECTOR"],
+                    attribution_types=["ACTIVE_RISK"],
+                    metrics=["TRACKING_ERROR"],
+                ),
+                performance_client=_NoBenchmarkPerformanceClient(),
+                core_client=_StubCoreClient(),
+                correlation_id="corr-attr",
+            )
+        )
+
+
+def test_stateful_attribution_rejects_active_risk_issuer_grouping_until_benchmark_mapping_exists() -> (
+    None
+):
+    with pytest.raises(ValueError, match="cannot source benchmark exposure history"):
+        asyncio.run(
+            calculate_historical_attribution_stateful(
+                _stateful_input(
+                    grouping_dimensions=["ISSUER"],
+                    attribution_types=["ACTIVE_RISK"],
+                    metrics=["TRACKING_ERROR"],
+                ),
                 performance_client=_StubPerformanceClient(),
+                core_client=_StubCoreClient(),
+                correlation_id="corr-attr",
+            )
+        )
+
+
+def test_stateful_attribution_rejects_benchmark_exposure_date_misalignment() -> None:
+    class _MisalignedBenchmarkExposurePerformanceClient(_StubPerformanceClient):
+        async def get_benchmark_exposure_context(
+            self,
+            *,
+            request_payload: dict[str, object],  # noqa: ARG002
+            correlation_id: str | None,  # noqa: ARG002
+        ) -> dict[str, object]:
+            payload = build_benchmark_exposure_context_response()
+            rows = payload["rows"]
+            assert isinstance(rows, list)
+            return {
+                **payload,
+                "rows": [row for row in rows if row.get("valuation_date") != "2026-01-04"],
+            }
+
+    with pytest.raises(ValueError, match="missing rows for benchmark return dates: 2026-01-04"):
+        asyncio.run(
+            calculate_historical_attribution_stateful(
+                _stateful_input(
+                    grouping_dimensions=["SECTOR"],
+                    attribution_types=["ACTIVE_RISK"],
+                    metrics=["TRACKING_ERROR"],
+                ),
+                performance_client=_MisalignedBenchmarkExposurePerformanceClient(),
+                core_client=_StubCoreClient(),
+                correlation_id="corr-attr",
+            )
+        )
+
+
+def test_stateful_attribution_rejects_bad_benchmark_exposure_context_shape() -> None:
+    class _BadBenchmarkExposurePerformanceClient(_StubPerformanceClient):
+        async def get_benchmark_exposure_context(
+            self,
+            *,
+            request_payload: dict[str, object],  # noqa: ARG002
+            correlation_id: str | None,  # noqa: ARG002
+        ) -> dict[str, object]:
+            return {**build_benchmark_exposure_context_response(), "rows": "bad"}
+
+    with pytest.raises(ValueError, match="benchmark exposure context payload missing 'rows' list"):
+        asyncio.run(
+            calculate_historical_attribution_stateful(
+                _stateful_input(
+                    grouping_dimensions=["SECTOR"],
+                    attribution_types=["ACTIVE_RISK"],
+                    metrics=["TRACKING_ERROR"],
+                ),
+                performance_client=_BadBenchmarkExposurePerformanceClient(),
+                core_client=_StubCoreClient(),
+                correlation_id="corr-attr",
+            )
+        )
+
+
+def test_stateful_attribution_rejects_missing_benchmark_exposure_lineage() -> None:
+    class _BadLineagePerformanceClient(_StubPerformanceClient):
+        async def get_benchmark_exposure_context(
+            self,
+            *,
+            request_payload: dict[str, object],  # noqa: ARG002
+            correlation_id: str | None,  # noqa: ARG002
+        ) -> dict[str, object]:
+            return {**build_benchmark_exposure_context_response(), "metadata": {}}
+
+    with pytest.raises(ValueError, match="lotus-core lineage"):
+        asyncio.run(
+            calculate_historical_attribution_stateful(
+                _stateful_input(
+                    grouping_dimensions=["SECTOR"],
+                    attribution_types=["ACTIVE_RISK"],
+                    metrics=["TRACKING_ERROR"],
+                ),
+                performance_client=_BadLineagePerformanceClient(),
                 core_client=_StubCoreClient(),
                 correlation_id="corr-attr",
             )
@@ -332,12 +473,12 @@ def test_stateful_attribution_rejects_empty_exposure_history() -> None:
 
 
 def test_helper_branch_coverage_for_conversion_and_grouping() -> None:
-    assert adapter._to_return_points("bad") == []
-    assert adapter._to_return_points(
-        [1, {"date": None}, {"date": "2026-01-02", "return_value": "0.01"}]
-    )[0].date == date(2026, 1, 2)
+    assert to_return_points("bad") == []
+    assert to_return_points([1, {"date": None}, {"date": "2026-01-02", "return_value": "0.01"}])[
+        0
+    ].date == date(2026, 1, 2)
     with pytest.raises(ValueError, match="Invalid return value"):
-        adapter._decimal_return_to_percentage_points("nan%")
+        decimal_return_to_percentage_points("nan%")
     with pytest.raises(ValueError, match="Invalid market value"):
         adapter._as_decimal("invalid")
 

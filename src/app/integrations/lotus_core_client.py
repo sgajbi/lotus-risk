@@ -5,6 +5,12 @@ from typing import Any
 
 import httpx
 
+from app.upstream_errors import (
+    classify_upstream_http_error,
+    classify_upstream_transport_error,
+    invalid_upstream_payload,
+)
+
 DEFAULT_LOTUS_CORE_BASE_URL = "http://core-query.dev.lotus"
 
 
@@ -24,6 +30,10 @@ class LotusCoreClient:
         resolved_timeout = timeout_seconds or float(os.getenv("LOTUS_CORE_TIMEOUT_SECONDS", "10"))
         self._base_url = resolved_base_url
         self._timeout = httpx.Timeout(resolved_timeout)
+
+    @property
+    def base_url(self) -> str:
+        return self._base_url
 
     async def create_simulation_session(
         self,
@@ -101,6 +111,33 @@ class LotusCoreClient:
             correlation_id=correlation_id,
         )
 
+    async def get_risk_free_series(
+        self,
+        *,
+        request_payload: dict[str, Any],
+        correlation_id: str | None,
+    ) -> dict[str, Any]:
+        return await self._request_json(
+            "POST",
+            "/integration/reference/risk-free-series",
+            json_payload=request_payload,
+            correlation_id=correlation_id,
+        )
+
+    async def get_risk_free_coverage(
+        self,
+        *,
+        currency: str,
+        request_payload: dict[str, Any],
+        correlation_id: str | None,
+    ) -> dict[str, Any]:
+        return await self._request_json(
+            "POST",
+            f"/integration/reference/risk-free-series/coverage?currency={currency}",
+            json_payload=request_payload,
+            correlation_id=correlation_id,
+        )
+
     async def _request_json(
         self,
         method: str,
@@ -125,15 +162,26 @@ class LotusCoreClient:
                 response.raise_for_status()
                 data = response.json()
                 if not isinstance(data, dict):
-                    raise ValueError(f"lotus-core returned invalid JSON payload for {path}")
+                    raise invalid_upstream_payload(
+                        service="lotus-core",
+                        operation=path,
+                        message=f"lotus-core returned invalid JSON payload for {path}",
+                    )
                 return data
         except httpx.HTTPStatusError as exc:
             detail = self._extract_error_detail(exc.response)
-            raise ValueError(
-                f"lotus-core {path} failed ({exc.response.status_code}): {detail}"
+            raise classify_upstream_http_error(
+                service="lotus-core",
+                operation=path,
+                response=exc.response,
+                detail=detail,
             ) from exc
         except httpx.HTTPError as exc:
-            raise ValueError(f"lotus-core {path} unavailable: {exc}") from exc
+            raise classify_upstream_transport_error(
+                service="lotus-core",
+                operation=path,
+                exc=exc,
+            ) from exc
 
     @staticmethod
     def _extract_error_detail(response: httpx.Response) -> str:

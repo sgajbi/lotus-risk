@@ -12,7 +12,6 @@ from app.contracts.risk import ReturnPoint, RiskRequestPeriod, RiskRequestScope
 class AttributionInputMode(str, Enum):
     STATELESS = "stateless"
     STATEFUL = "stateful"
-    SIMULATION = "simulation"
 
 
 AttributionType = Literal["TOTAL_RISK", "ACTIVE_RISK"]
@@ -272,18 +271,6 @@ class HistoricalAttributionRequest(BaseModel):
             }
         },
     )
-    simulation_input: HistoricalAttributionStatefulInput | None = Field(
-        default=None,
-        description="Simulation payload. Reserved for a future slice.",
-        json_schema_extra={
-            "example": {
-                "portfolio_id": "DEMO_DPM_EUR_001",
-                "as_of_date": "2026-02-28",
-                "periods": [{"type": "YTD", "name": "YTD"}],
-            }
-        },
-    )
-
     model_config = ConfigDict(extra="forbid")
 
     @model_validator(mode="after")
@@ -292,8 +279,6 @@ class HistoricalAttributionRequest(BaseModel):
             raise ValueError("stateless_input is required when input_mode=stateless")
         if self.input_mode == AttributionInputMode.STATEFUL and self.stateful_input is None:
             raise ValueError("stateful_input is required when input_mode=stateful")
-        if self.input_mode == AttributionInputMode.SIMULATION and self.simulation_input is None:
-            raise ValueError("simulation_input is required when input_mode=simulation")
         return self
 
 

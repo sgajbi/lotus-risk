@@ -18,12 +18,17 @@ Provide windowed historical risk diagnostics for PB/WM portfolios with instituti
 ### Stateful (v1)
 
 - Status: implemented
-- Caller provides identifiers and options; lotus-risk sources canonical series from lotus-performance.
+- Caller provides identifiers and options; lotus-risk sources portfolio and benchmark return series from lotus-performance.
+- lotus-risk resolves the longest required source window from the requested periods and sends an explicit `window` to lotus-performance unless `SI` is requested.
+- when `ROLLING_SHARPE` is requested, lotus-risk sources risk-free reference series from lotus-core.
+- when `ROLLING_SHARPE` is requested and `reporting_currency` is omitted, lotus-risk resolves portfolio/reporting currency from lotus-core core-snapshot before fetching risk-free series.
 
 ### Simulation
 
-- Status: deferred
-- Contract kept explicit; deterministic not-implemented response in RFC-0005 scope.
+- Status: intentionally unsupported in the current production contract
+- Reason:
+  - rolling analytics require realized historical return windows
+  - a projected holdings snapshot does not produce a valid historical rolling series
 
 ## Required Inputs (By Capability)
 
@@ -49,7 +54,8 @@ Provide windowed historical risk diagnostics for PB/WM portfolios with instituti
   - alignment/lineage metadata
 
 - lotus-core:
-  - indirect via lotus-performance stateful sourcing where relevant to portfolio identity/reference context.
+  - risk-free reference series
+  - direct `core-snapshot` lookup for portfolio/reporting currency when stateful rolling Sharpe requires risk-free series and caller omitted `reporting_currency`
 
 ## Expected Output Structure
 
@@ -78,6 +84,13 @@ Provide windowed historical risk diagnostics for PB/WM portfolios with instituti
 ## Gaps / Decisions Required
 
 1. Expand stateful lineage metadata in response contract (`source_window`, `data_quality`, `upstream_refs`).
-2. Implement simulation mode after historical simulation data contract finalization.
-3. Evaluate whether annualization basis should support both 252 and 260 in v2.
-4. Confirm final benchmark/risk-free selector standardization in upstream contracts.
+2. Evaluate whether annualization basis should support both 252 and 260 in v2.
+3. rolling Sharpe remains data-dependent on lotus-core risk-free availability for the resolved currency/window. Live validation confirmed the lotus-core contract is reachable but returned no risk-free points for tested USD/SGD windows.
+4. When lotus-core returns an empty risk-free series, lotus-risk now enriches the `424 FAILED_DEPENDENCY` error details with coverage diagnostics from `/integration/reference/risk-free-series/coverage` when available:
+   - `risk_free_currency`
+   - `risk_free_total_points`
+   - `risk_free_missing_dates_count`
+   - `risk_free_observed_start_date`
+   - `risk_free_observed_end_date`
+   - `risk_free_missing_dates_sample`
+   - `risk_free_coverage_request_fingerprint`

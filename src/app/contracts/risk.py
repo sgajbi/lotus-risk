@@ -21,7 +21,6 @@ RiskMetric = Literal[
 class RiskInputMode(str, Enum):
     STATELESS = "stateless"
     STATEFUL = "stateful"
-    SIMULATION = "simulation"
 
 
 class RiskRequestScope(BaseModel):
@@ -306,41 +305,10 @@ class StatefulRiskInput(BaseModel):
         return self
 
 
-class SimulationRiskInput(StatefulRiskInput):
-    session_id: str | None = Field(
-        default=None,
-        description="Optional existing simulation session identifier for iterative workflows.",
-        json_schema_extra={"example": "SIM_0001"},
-    )
-    start_new_session: bool = Field(
-        default=False,
-        description="When true, forces lotus-risk to create a new simulation session.",
-        json_schema_extra={"example": False},
-    )
-    session_ttl_hours: int | None = Field(
-        default=None,
-        ge=1,
-        le=168,
-        description="Optional simulation session TTL in hours when creating a new session.",
-        json_schema_extra={"example": 24},
-    )
-    expected_version: int | None = Field(
-        default=None,
-        ge=1,
-        description="Optional optimistic-lock version when reading simulation state.",
-        json_schema_extra={"example": 3},
-    )
-    simulation_changes: list[dict[str, object]] = Field(
-        default_factory=list,
-        description="Simulation delta set. Not implemented for risk/calculate in this slice.",
-        json_schema_extra={"example": [{"security_id": "SEC_A", "transaction_type": "BUY"}]},
-    )
-
-
 class RiskAnalyticsRequest(BaseModel):
     input_mode: RiskInputMode = Field(
         default=RiskInputMode.STATELESS,
-        description="Execution mode for risk analytics: stateless, stateful, or simulation.",
+        description="Execution mode for risk analytics: stateless or stateful.",
         json_schema_extra={"example": "stateless"},
     )
     stateless_input: StatelessRiskInput | None = Field(
@@ -372,19 +340,6 @@ class RiskAnalyticsRequest(BaseModel):
             }
         },
     )
-    simulation_input: SimulationRiskInput | None = Field(
-        default=None,
-        description="Simulation execution payload. Reserved for a future slice.",
-        json_schema_extra={
-            "example": {
-                "portfolio_id": "DEMO_DPM_EUR_001",
-                "as_of_date": "2026-02-27",
-                "session_id": "SIM_0001",
-                "simulation_changes": [{"security_id": "SEC_A", "transaction_type": "BUY"}],
-            }
-        },
-    )
-
     model_config = ConfigDict(extra="forbid")
 
     @model_validator(mode="after")
@@ -394,9 +349,6 @@ class RiskAnalyticsRequest(BaseModel):
 
         if self.input_mode == RiskInputMode.STATEFUL and self.stateful_input is None:
             raise ValueError("stateful_input is required when input_mode=stateful")
-
-        if self.input_mode == RiskInputMode.SIMULATION and self.simulation_input is None:
-            raise ValueError("simulation_input is required when input_mode=simulation")
 
         return self
 

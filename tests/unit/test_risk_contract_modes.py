@@ -30,8 +30,8 @@ def test_risk_contract_requires_stateful_input_for_stateful_mode() -> None:
         RiskAnalyticsRequest.model_validate({"input_mode": "stateful"})
 
 
-def test_risk_contract_requires_simulation_input_for_simulation_mode() -> None:
-    with pytest.raises(ValueError, match="simulation_input is required"):
+def test_risk_contract_rejects_simulation_mode_from_public_contract() -> None:
+    with pytest.raises(ValidationError):
         RiskAnalyticsRequest.model_validate({"input_mode": "simulation"})
 
 

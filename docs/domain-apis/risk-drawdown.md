@@ -27,12 +27,15 @@
 - Status: implemented
 - Behavior:
   - caller provides identifiers and period config
-  - lotus-risk sources canonical return series from lotus-performance (`/integration/returns/series`, `input_mode=stateful`, `stateful_input.consumer_system=lotus-risk`)
+  - lotus-risk sources canonical return series from lotus-performance (`/integration/returns/series`, `input_mode=stateful`, `stateful_input is an empty envelope; consumer identity is stamped by lotus-performance server-side`)
   - lotus-risk computes drawdown analytics on sourced series
 
 ### Simulation
 
-- Status: not implemented in this RFC slice
+- Status: intentionally unsupported in the current production contract
+- Reason:
+  - realized drawdown depends on a historical return path
+  - a projected holdings snapshot is not enough to produce a valid realized drawdown series
 
 ## Request Shape (Canonical)
 
@@ -81,5 +84,5 @@
 
 ## Remaining Gaps
 
-1. Simulation-mode drawdown is deferred to a later RFC slice.
-2. Relative drawdown expansion (full benchmark episode decomposition) can be enhanced in later slices.
+1. Relative drawdown expansion (full benchmark episode decomposition) can be enhanced in later slices.
+
