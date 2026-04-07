@@ -36,9 +36,7 @@ def _as_decimal(value: Any) -> Decimal:
     try:
         return Decimal(str(value))
     except (InvalidOperation, ValueError) as exc:
-        raise ValueError(
-            f"Invalid benchmark exposure weight from lotus-core: {value}"
-        ) from exc
+        raise ValueError(f"Invalid benchmark exposure weight from lotus-core: {value}") from exc
 
 
 async def _resolve_benchmark_id(
@@ -82,9 +80,7 @@ async def _build_index_classification_map(
         if not index_id_raw or not isinstance(labels_raw, dict):
             continue
         classifications[str(index_id_raw)] = {
-            str(key): str(value)
-            for key, value in labels_raw.items()
-            if value is not None
+            str(key): str(value) for key, value in labels_raw.items() if value is not None
         }
     return classifications
 
@@ -180,8 +176,7 @@ async def fetch_benchmark_exposure_history(
     if unsupported_groupings:
         raise ValueError(
             "stateful ACTIVE_RISK/TRACKING_ERROR attribution cannot source benchmark "
-            "exposure history for grouping_dimensions="
-            + ", ".join(unsupported_groupings)
+            "exposure history for grouping_dimensions=" + ", ".join(unsupported_groupings)
         )
 
     benchmark_id = await _resolve_benchmark_id(
@@ -222,7 +217,9 @@ async def fetch_benchmark_exposure_history(
         )
         batch = response.get("component_series")
         if not isinstance(batch, list):
-            raise ValueError("lotus-core benchmark market-series payload missing 'component_series' list")
+            raise ValueError(
+                "lotus-core benchmark market-series payload missing 'component_series' list"
+            )
         component_series.extend(component for component in batch if isinstance(component, dict))
 
         page = response.get("page")

@@ -194,4 +194,3 @@ def test_metrics_endpoint_exposes_risk_metric_observability() -> None:
     text = metrics_response.text
     assert "risk_metric_requested_total" in text
     assert "risk_metric_duration_seconds" in text
-

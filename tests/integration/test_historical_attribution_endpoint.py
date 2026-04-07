@@ -317,4 +317,3 @@ def test_historical_attribution_stateful_active_risk_uses_benchmark_contract_fam
         "component_weight"
     ]
     assert core_client.index_catalog_calls[0]["request_payload"] == {"as_of_date": "2026-01-04"}
-

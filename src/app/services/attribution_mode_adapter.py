@@ -47,6 +47,29 @@ class LotusCoreClientProtocol(Protocol):
         correlation_id: str | None,
     ) -> dict[str, Any]: ...
 
+    async def resolve_benchmark_assignment(
+        self,
+        *,
+        portfolio_id: str,
+        request_payload: dict[str, Any],
+        correlation_id: str | None,
+    ) -> dict[str, Any]: ...
+
+    async def get_benchmark_market_series(
+        self,
+        *,
+        benchmark_id: str,
+        request_payload: dict[str, Any],
+        correlation_id: str | None,
+    ) -> dict[str, Any]: ...
+
+    async def list_index_catalog(
+        self,
+        *,
+        request_payload: dict[str, Any],
+        correlation_id: str | None,
+    ) -> dict[str, Any]: ...
+
 
 def _requires_active_attribution(stateful: HistoricalAttributionStatefulInput) -> bool:
     options = stateful.attribution_options
@@ -332,4 +355,3 @@ async def calculate_historical_attribution_stateful(
         stateless_input,
         input_mode=AttributionInputMode.STATEFUL,
     )
-

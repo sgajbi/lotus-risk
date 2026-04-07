@@ -27,7 +27,9 @@ class _StubLotusCoreClientMissingValuationContext(RecordingLotusCoreReferenceCli
 class _StubLotusCoreClientMissingCurrencies(RecordingLotusCoreReferenceClient):
     def __init__(self) -> None:
         super().__init__(
-            snapshot_response={"valuation_context": {"portfolio_currency": "", "reporting_currency": ""}}
+            snapshot_response={
+                "valuation_context": {"portfolio_currency": "", "reporting_currency": ""}
+            }
         )
 
 

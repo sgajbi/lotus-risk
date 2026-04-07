@@ -20,6 +20,8 @@ _AutoWiredLotusPerformanceClient = build_autowired_lotus_performance_client_clas
         benchmark_returns=JAN_2026_ROLLING_BENCHMARK_RETURNS,
     )
 )
+
+
 def _stateless_payload() -> dict[str, object]:
     return {
         "input_mode": "stateless",
@@ -141,7 +143,9 @@ def test_rolling_metrics_endpoint_stateful_uses_lotus_performance() -> None:
     assert response.json()["input_mode"] == "stateful"
 
 
-def test_rolling_metrics_endpoint_stateful_surfaces_missing_risk_free_after_currency_resolution() -> None:
+def test_rolling_metrics_endpoint_stateful_surfaces_missing_risk_free_after_currency_resolution() -> (
+    None
+):
     recorder = RecordingLotusPerformanceClient(
         response_payload=build_returns_series_response(
             portfolio_returns=JAN_2026_PORTFOLIO_RETURNS,
@@ -247,4 +251,3 @@ def test_rolling_metrics_endpoint_rejects_simulation_mode_at_contract_boundary()
     )
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "INVALID_REQUEST"
-

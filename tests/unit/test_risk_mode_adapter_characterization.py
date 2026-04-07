@@ -5,7 +5,11 @@ import asyncio
 import pytest
 
 from app.contracts.risk import StatefulRiskInput
-from app.services.risk_mode_adapter import _build_stateful_source_request, _portfolio_open_date, calculate_risk_stateful
+from app.services.risk_mode_adapter import (
+    _build_stateful_source_request,
+    _portfolio_open_date,
+    calculate_risk_stateful,
+)
 from tests.support.lotus_performance_fakes import RecordingLotusPerformanceClient
 from tests.support.returns_series_payloads import build_returns_series_response
 
@@ -107,4 +111,3 @@ def test_calculate_risk_stateful_requires_portfolio_returns() -> None:
                 correlation_id="corr-risk-stateful",
             )
         )
-

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from tests.support.lotus_performance_fakes import RecordingLotusPerformanceClient
 from tests.support.returns_series_payloads import build_returns_series_response
 
@@ -53,10 +55,10 @@ def build_sector_position_timeseries_rows() -> list[dict[str, object]]:
 class RecordingHistoricalAttributionCoreClient:
     def __init__(self, *, rows: list[dict[str, object]] | None = None) -> None:
         self.rows = rows or build_sector_position_timeseries_rows()
-        self.position_calls: list[dict[str, object | None]] = []
-        self.assignment_calls: list[dict[str, object | None]] = []
-        self.market_series_calls: list[dict[str, object | None]] = []
-        self.index_catalog_calls: list[dict[str, object | None]] = []
+        self.position_calls: list[dict[str, Any]] = []
+        self.assignment_calls: list[dict[str, Any]] = []
+        self.market_series_calls: list[dict[str, Any]] = []
+        self.index_catalog_calls: list[dict[str, Any]] = []
 
     async def get_position_analytics_timeseries(
         self,

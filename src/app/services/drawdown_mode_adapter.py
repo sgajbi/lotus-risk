@@ -2,7 +2,13 @@ from __future__ import annotations
 
 from typing import Any, Protocol
 
-from app.contracts.drawdown import DrawdownAnalysisOptions, DrawdownInputMode, DrawdownResponse, DrawdownStatefulInput, DrawdownStatelessInput
+from app.contracts.drawdown import (
+    DrawdownAnalysisOptions,
+    DrawdownInputMode,
+    DrawdownResponse,
+    DrawdownStatefulInput,
+    DrawdownStatelessInput,
+)
 from app.contracts.risk import RiskRequestScope
 from app.services.drawdown_engine import calculate_drawdown
 from app.services.stateful_returns_request import build_stateful_returns_series_request
@@ -80,4 +86,3 @@ async def calculate_drawdown_stateful(
         input_mode=DrawdownInputMode.STATEFUL,
         analysis_options=analysis_options,
     )
-

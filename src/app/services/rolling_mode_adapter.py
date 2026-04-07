@@ -141,10 +141,14 @@ async def calculate_rolling_metrics_stateful(
     risk_free_response: dict[str, Any] | None = None
 
     if include_risk_free and core_client is None:
-        raise ValueError("lotus-core client is required for rolling Sharpe stateful risk-free sourcing")
+        raise ValueError(
+            "lotus-core client is required for rolling Sharpe stateful risk-free sourcing"
+        )
 
     if include_risk_free and explicit_window is not None:
         assert resolved_reporting_currency is not None
+        checked_core_client = core_client
+        assert checked_core_client is not None
         risk_free_request = build_risk_free_series_request(
             currency=resolved_reporting_currency,
             as_of_date=stateful.as_of_date,
@@ -156,7 +160,7 @@ async def calculate_rolling_metrics_stateful(
                 request_payload=source_payload,
                 correlation_id=correlation_id,
             ),
-            core_client.get_risk_free_series(
+            checked_core_client.get_risk_free_series(
                 request_payload=risk_free_request,
                 correlation_id=correlation_id,
             ),
@@ -218,4 +222,3 @@ async def calculate_rolling_metrics_stateful(
         rolling_options=stateful.rolling_options,
     )
     return calculate_rolling_metrics(stateless, input_mode=RollingInputMode.STATEFUL)
-

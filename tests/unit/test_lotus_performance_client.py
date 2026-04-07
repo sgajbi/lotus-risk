@@ -148,6 +148,7 @@ async def test_client_polls_async_returns_series_result_until_complete(
 ) -> None:
     monkeypatch.setattr(httpx, "AsyncClient", _FakeAsyncClient)
     _FakeAsyncClient.requests = []
+
     async def _no_sleep(*_: object) -> None:
         return None
 
@@ -220,7 +221,10 @@ async def test_client_surfaces_async_execution_failure(
                 url="http://performance.local/integration/returns/series",
             ),
             _ok_response(
-                {"status": "failed", "error_message": "No benchmark assignment found for portfolio."},
+                {
+                    "status": "failed",
+                    "error_message": "No benchmark assignment found for portfolio.",
+                },
                 url="http://performance.local/performance/executions/calc-1",
             ),
         ]
@@ -228,7 +232,10 @@ async def test_client_surfaces_async_execution_failure(
     _FakeAsyncClient.response_factory = lambda **_: next(responses)
 
     client = LotusPerformanceClient(base_url="http://performance.local")
-    with pytest.raises(ValueError, match="async returns-series failed: No benchmark assignment found for portfolio."):
+    with pytest.raises(
+        ValueError,
+        match="async returns-series failed: No benchmark assignment found for portfolio.",
+    ):
         await client.get_returns_series(
             request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
             correlation_id="corr-async-fail",

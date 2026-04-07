@@ -344,4 +344,3 @@ def test_e2e_rolling_metrics_stateful_mode() -> None:
     body = response.json()
     assert body["input_mode"] == "stateful"
     assert "YTD" in body["results"]
-

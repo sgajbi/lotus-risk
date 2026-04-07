@@ -122,4 +122,3 @@ def test_drawdown_endpoint_stateful_autowires_performance_client() -> None:
         )
         assert response.status_code == 200
         assert _AutoWiredLotusPerformanceClient.calls[0]["correlation_id"] == "corr-dd-auto"
-

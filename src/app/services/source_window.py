@@ -7,7 +7,9 @@ from app.contracts.risk import RiskRequestPeriod
 from app.services.risk_engine import _resolve_period
 
 
-def build_returns_series_window(*, periods: list[RiskRequestPeriod], as_of_date: date) -> dict[str, Any]:
+def build_returns_series_window(
+    *, periods: list[RiskRequestPeriod], as_of_date: date
+) -> dict[str, Any]:
     if any(period.type == "SI" for period in periods):
         return {"mode": "RELATIVE", "period": "SI"}
 

@@ -1,5 +1,6 @@
 import asyncio
 from datetime import date
+from typing import Any, cast
 
 import pytest
 
@@ -238,7 +239,8 @@ def test_stateful_attribution_active_risk_sources_benchmark_contract_family() ->
     )
 
     assert perf.payload is not None
-    assert perf.payload["series_selection"]["include_benchmark"] is True
+    series_selection = cast(dict[str, Any], perf.payload["series_selection"])
+    assert series_selection["include_benchmark"] is True
     assert core.assignment_calls[0]["portfolio_id"] == "DEMO_DPM_EUR_001"
     market_payload = core.market_series_calls[0]["request_payload"]
     assert market_payload["series_fields"] == ["component_weight"]
@@ -259,7 +261,9 @@ def test_stateful_attribution_rejects_active_risk_when_benchmark_returns_missing
             correlation_id: str | None,
         ) -> dict[str, object]:
             self.payload = request_payload
-            return {"series": {"portfolio_returns": [{"date": "2026-01-02", "return_value": "0.010"}]}}
+            return {
+                "series": {"portfolio_returns": [{"date": "2026-01-02", "return_value": "0.010"}]}
+            }
 
     with pytest.raises(ValueError, match="no benchmark returns"):
         asyncio.run(
@@ -276,7 +280,9 @@ def test_stateful_attribution_rejects_active_risk_when_benchmark_returns_missing
         )
 
 
-def test_stateful_attribution_rejects_active_risk_issuer_grouping_until_benchmark_mapping_exists() -> None:
+def test_stateful_attribution_rejects_active_risk_issuer_grouping_until_benchmark_mapping_exists() -> (
+    None
+):
     with pytest.raises(ValueError, match="cannot source benchmark exposure history"):
         asyncio.run(
             calculate_historical_attribution_stateful(
@@ -418,9 +424,9 @@ def test_stateful_attribution_rejects_empty_exposure_history() -> None:
 
 def test_helper_branch_coverage_for_conversion_and_grouping() -> None:
     assert to_return_points("bad") == []
-    assert to_return_points(
-        [1, {"date": None}, {"date": "2026-01-02", "return_value": "0.01"}]
-    )[0].date == date(2026, 1, 2)
+    assert to_return_points([1, {"date": None}, {"date": "2026-01-02", "return_value": "0.01"}])[
+        0
+    ].date == date(2026, 1, 2)
     with pytest.raises(ValueError, match="Invalid return value"):
         decimal_return_to_percentage_points("nan%")
     with pytest.raises(ValueError, match="Invalid market value"):
@@ -505,4 +511,3 @@ def test_build_issuer_map_skips_non_dict_and_missing_security_id_records() -> No
         )
     )
     assert issuer_map == {"SEC_A": ("ISSUER_A", None)}
-

@@ -25,7 +25,9 @@ def test_build_risk_free_series_request_uses_canonical_core_contract() -> None:
     }
 
 
-def test_to_risk_free_return_points_converts_annualized_rate_to_periodic_percentage_points() -> None:
+def test_to_risk_free_return_points_converts_annualized_rate_to_periodic_percentage_points() -> (
+    None
+):
     points = to_risk_free_return_points(
         {
             "points": [

@@ -60,8 +60,7 @@ def _parse_periodic_return(row: dict[str, Any], *, annualization_basis: int) -> 
         periodic_decimal = _annual_to_periodic(raw_value, annualization_basis)
     else:
         raise ValueError(
-            "Unsupported risk-free value_convention from lotus-core: "
-            f"{row.get('value_convention')}"
+            f"Unsupported risk-free value_convention from lotus-core: {row.get('value_convention')}"
         )
 
     return float(periodic_decimal * Decimal("100"))

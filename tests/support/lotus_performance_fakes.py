@@ -1,19 +1,19 @@
 from __future__ import annotations
 
-from typing import Callable
+from typing import Any, Callable
 
 
 class RecordingLotusPerformanceClient:
-    def __init__(self, *, response_payload: dict[str, object]) -> None:
+    def __init__(self, *, response_payload: dict[str, Any]) -> None:
         self.response_payload = response_payload
-        self.calls: list[dict[str, object | None]] = []
+        self.calls: list[dict[str, Any]] = []
 
     async def get_returns_series(
         self,
         *,
-        request_payload: dict[str, object],
+        request_payload: dict[str, Any],
         correlation_id: str | None,
-    ) -> dict[str, object]:
+    ) -> dict[str, Any]:
         self.calls.append(
             {
                 "request_payload": request_payload,
@@ -23,7 +23,7 @@ class RecordingLotusPerformanceClient:
         return self.response_payload
 
     @property
-    def request_payload(self) -> dict[str, object] | None:
+    def request_payload(self) -> dict[str, Any] | None:
         if not self.calls:
             return None
         payload = self.calls[-1]["request_payload"]
@@ -39,17 +39,17 @@ class RecordingLotusPerformanceClient:
 
 def build_autowired_lotus_performance_client_class(
     *,
-    response_factory: Callable[[], dict[str, object]],
-) -> type:
+    response_factory: Callable[[], dict[str, Any]],
+) -> type[Any]:
     class _AutoWiredLotusPerformanceClient:
-        calls: list[dict[str, object | None]] = []
+        calls: list[dict[str, Any]] = []
 
         async def get_returns_series(
             self,
             *,
-            request_payload: dict[str, object],
+            request_payload: dict[str, Any],
             correlation_id: str | None,
-        ) -> dict[str, object]:
+        ) -> dict[str, Any]:
             _AutoWiredLotusPerformanceClient.calls.append(
                 {
                     "request_payload": request_payload,

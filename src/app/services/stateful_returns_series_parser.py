@@ -41,7 +41,9 @@ def extract_series_payload(source_response: dict[str, Any]) -> dict[str, Any]:
     return series
 
 
-def extract_required_portfolio_returns(source_response: dict[str, Any]) -> tuple[dict[str, Any], list[ReturnPoint]]:
+def extract_required_portfolio_returns(
+    source_response: dict[str, Any],
+) -> tuple[dict[str, Any], list[ReturnPoint]]:
     series = extract_series_payload(source_response)
     portfolio_points = to_return_points(series.get("portfolio_returns"))
     if not portfolio_points:

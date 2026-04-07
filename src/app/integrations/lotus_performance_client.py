@@ -78,7 +78,9 @@ class LotusPerformanceClient:
             raise ValueError("lotus-performance async accepted payload missing result_path")
 
         poll_path = accepted_payload.get("poll_path")
-        if poll_path is not None and (not isinstance(poll_path, str) or not poll_path.startswith("/")):
+        if poll_path is not None and (
+            not isinstance(poll_path, str) or not poll_path.startswith("/")
+        ):
             raise ValueError("lotus-performance async accepted payload has invalid poll_path")
 
         last_status = "pending"

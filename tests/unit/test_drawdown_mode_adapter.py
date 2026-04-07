@@ -25,8 +25,7 @@ def _stateful() -> DrawdownStatefulInput:
 
 def test_drawdown_stateful_adapter_happy_path() -> None:
     client = RecordingLotusPerformanceClient(
-        response_payload=
-        {
+        response_payload={
             "series": {
                 "portfolio_returns": [
                     {"date": "2026-01-02", "return_value": "0.0100"},
@@ -87,8 +86,7 @@ def test_drawdown_stateful_adapter_requires_portfolio_returns() -> None:
 
 def test_drawdown_stateful_adapter_requires_benchmark_when_policy_requires() -> None:
     client = RecordingLotusPerformanceClient(
-        response_payload=
-        {
+        response_payload={
             "series": {
                 "portfolio_returns": [
                     {"date": "2026-01-02", "return_value": "0.0100"},
@@ -111,8 +109,7 @@ def test_drawdown_stateful_adapter_requires_benchmark_when_policy_requires() -> 
 
 def test_drawdown_stateful_adapter_rejects_invalid_portfolio_return_value() -> None:
     client = RecordingLotusPerformanceClient(
-        response_payload=
-        {
+        response_payload={
             "series": {
                 "portfolio_returns": [
                     {"date": "2026-01-02", "return_value": "bad"},
@@ -143,8 +140,7 @@ def test_drawdown_stateful_adapter_rejects_invalid_portfolio_return_value() -> N
 
 def test_drawdown_stateful_adapter_skips_malformed_rows_and_allows_optional_benchmark() -> None:
     client = RecordingLotusPerformanceClient(
-        response_payload=
-        {
+        response_payload={
             "series": {
                 "portfolio_returns": [
                     "bad-row",
@@ -174,4 +170,3 @@ def test_drawdown_stateful_adapter_skips_malformed_rows_and_allows_optional_benc
         )
     )
     assert "YTD" in response.results
-

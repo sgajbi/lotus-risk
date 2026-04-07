@@ -197,7 +197,7 @@ def _default_error_code(status_code: int) -> str:
         return "RESOURCE_NOT_FOUND"
     if status_code == status.HTTP_403_FORBIDDEN:
         return "AUTHORIZATION_DENIED"
-    if status_code == status.HTTP_413_REQUEST_ENTITY_TOO_LARGE:
+    if status_code == status.HTTP_413_CONTENT_TOO_LARGE:
         return "PAYLOAD_TOO_LARGE"
     if status_code == status.HTTP_422_UNPROCESSABLE_CONTENT:
         return "INVALID_REQUEST"
@@ -468,7 +468,9 @@ async def analytics_risk_drawdown(
             correlation_id=request.headers.get("X-Correlation-Id"),
         )
 
-    raise ValueError(f"Unsupported input_mode={request_payload.input_mode.value} for /analytics/risk/drawdown")
+    raise ValueError(
+        f"Unsupported input_mode={request_payload.input_mode.value} for /analytics/risk/drawdown"
+    )
 
 
 @app.post(

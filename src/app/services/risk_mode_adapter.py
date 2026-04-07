@@ -82,4 +82,3 @@ async def calculate_risk_stateful(
         benchmark_returns=benchmark_points,
     )
     return calculate_risk(stateless_request)
-

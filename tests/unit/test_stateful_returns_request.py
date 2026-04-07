@@ -47,7 +47,9 @@ def test_build_stateful_returns_series_request_shapes_common_contract() -> None:
     }
 
 
-def test_build_stateful_returns_series_request_preserves_null_reporting_currency_and_fail_fast_policy() -> None:
+def test_build_stateful_returns_series_request_preserves_null_reporting_currency_and_fail_fast_policy() -> (
+    None
+):
     periods = [RiskRequestPeriod.model_validate({"type": "YTD", "name": "YTD"})]
 
     payload = build_stateful_returns_series_request(
@@ -94,7 +96,9 @@ def test_build_stateful_returns_series_request_uses_since_inception_window_when_
     assert payload["window"] == {"mode": "RELATIVE", "period": "SI"}
 
 
-def test_build_stateful_returns_series_request_uses_longest_explicit_window_across_periods() -> None:
+def test_build_stateful_returns_series_request_uses_longest_explicit_window_across_periods() -> (
+    None
+):
     periods = [
         RiskRequestPeriod.model_validate(
             {

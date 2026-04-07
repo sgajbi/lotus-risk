@@ -145,7 +145,10 @@ async def test_client_supports_add_changes_and_snapshot_routes(
     assert index_catalog_response == {"ok": True}
     assert risk_free_response == {"ok": True}
     assert _FakeAsyncClient.last_request is not None
-    assert _FakeAsyncClient.last_request["url"] == "http://core.local/integration/reference/risk-free-series"
+    assert (
+        _FakeAsyncClient.last_request["url"]
+        == "http://core.local/integration/reference/risk-free-series"
+    )
 
 
 @pytest.mark.asyncio
