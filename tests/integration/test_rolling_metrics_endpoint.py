@@ -1,8 +1,7 @@
-from typing import Any, cast
-
 from fastapi.testclient import TestClient
 
 from app.main import app
+from tests.support.app_runtime import override_app_runtime
 from tests.support.returns_series_payloads import (
     JAN_2026_PORTFOLIO_RETURNS,
     JAN_2026_RISK_FREE_RETURNS,
@@ -136,29 +135,31 @@ def test_rolling_metrics_endpoint_stateless_contract() -> None:
 
 def test_rolling_metrics_endpoint_stateful_uses_lotus_performance() -> None:
     recorder = _RecordingLotusPerformanceClient()
-    app.state.lotus_performance_client = recorder
-    app.state.lotus_core_client = _AutoWiredLotusCoreClient()
-    client = TestClient(app)
-    response = client.post(
-        "/analytics/risk/rolling-metrics",
-        headers={"X-Correlation-Id": "corr-rolling-stateful"},
-        json={
-            "input_mode": "stateful",
-            "stateful_input": {
-                "portfolio_id": "DEMO_DPM_EUR_001",
-                "as_of_date": "2026-01-04",
-                "periods": [{"type": "YTD", "name": "YTD"}],
-                "rolling_options": {
-                    "window_lengths": [2],
-                    "metrics": [
-                        "ROLLING_VOLATILITY",
-                        "ROLLING_SHARPE",
-                        "ROLLING_BETA",
-                    ],
+    with override_app_runtime(
+        lotus_performance_client=recorder,
+        lotus_core_client=_AutoWiredLotusCoreClient(),
+    ):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/rolling-metrics",
+            headers={"X-Correlation-Id": "corr-rolling-stateful"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-04",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "rolling_options": {
+                        "window_lengths": [2],
+                        "metrics": [
+                            "ROLLING_VOLATILITY",
+                            "ROLLING_SHARPE",
+                            "ROLLING_BETA",
+                        ],
+                    },
                 },
             },
-        },
-    )
+        )
     assert response.status_code == 200
     assert len(recorder.calls) == 1
     assert recorder.calls[0]["correlation_id"] == "corr-rolling-stateful"
@@ -173,16 +174,12 @@ def test_rolling_metrics_endpoint_stateful_uses_lotus_performance() -> None:
 
 
 def test_rolling_metrics_endpoint_stateful_autowires_performance_client() -> None:
-    import app.main as main_module
-
-    main_module_any = cast(Any, main_module)
-    original = main_module_any.LotusPerformanceClient
-    original_core = main_module_any.LotusCoreClient
-    try:
-        main_module_any.LotusPerformanceClient = _AutoWiredLotusPerformanceClient
-        main_module_any.LotusCoreClient = _AutoWiredLotusCoreClient
-        app.state.lotus_performance_client = None
-        app.state.lotus_core_client = None
+    with override_app_runtime(
+        lotus_performance_client=None,
+        lotus_core_client=None,
+        lotus_performance_class=_AutoWiredLotusPerformanceClient,
+        lotus_core_class=_AutoWiredLotusCoreClient,
+    ):
         _AutoWiredLotusPerformanceClient.calls = []
         _AutoWiredLotusCoreClient.calls = []
         client = TestClient(app)
@@ -204,9 +201,6 @@ def test_rolling_metrics_endpoint_stateful_autowires_performance_client() -> Non
         )
         assert response.status_code == 200
         assert _AutoWiredLotusPerformanceClient.calls[0]["correlation_id"] == "corr-rolling-auto"
-    finally:
-        main_module_any.LotusPerformanceClient = original
-        main_module_any.LotusCoreClient = original_core
 
 
 def test_rolling_metrics_endpoint_rejects_simulation_mode_for_now() -> None:

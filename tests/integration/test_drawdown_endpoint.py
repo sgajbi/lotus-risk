@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
-from typing import Any, cast
 
 from app.main import app
+from tests.support.app_runtime import override_app_runtime
 from tests.support.returns_series_payloads import (
     JAN_2026_DRAWDOWN_BENCHMARK_RETURNS,
     JAN_2026_PORTFOLIO_RETURNS,
@@ -81,25 +81,25 @@ def test_drawdown_endpoint_stateless_contract() -> None:
 
 def test_drawdown_endpoint_stateful_uses_lotus_performance() -> None:
     recorder = _RecordingLotusPerformanceClient()
-    app.state.lotus_performance_client = recorder
-    client = TestClient(app)
-    response = client.post(
-        "/analytics/risk/drawdown",
-        headers={"X-Correlation-Id": "corr-dd-stateful"},
-        json={
-            "input_mode": "stateful",
-            "stateful_input": {
-                "portfolio_id": "DEMO_DPM_EUR_001",
-                "as_of_date": "2026-01-04",
-                "periods": [{"type": "YTD", "name": "YTD"}],
-                "benchmark_policy": {
-                    "include_benchmark": True,
-                    "missing_benchmark_policy": "REQUIRE",
+    with override_app_runtime(lotus_performance_client=recorder):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/drawdown",
+            headers={"X-Correlation-Id": "corr-dd-stateful"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-04",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "benchmark_policy": {
+                        "include_benchmark": True,
+                        "missing_benchmark_policy": "REQUIRE",
+                    },
                 },
+                "analysis_options": {"top_n_episodes": 3},
             },
-            "analysis_options": {"top_n_episodes": 3},
-        },
-    )
+        )
     assert response.status_code == 200
     assert len(recorder.calls) == 1
     assert recorder.calls[0]["correlation_id"] == "corr-dd-stateful"
@@ -129,13 +129,10 @@ def test_drawdown_endpoint_rejects_simulation_mode_for_now() -> None:
 
 
 def test_drawdown_endpoint_stateful_autowires_performance_client() -> None:
-    import app.main as main_module
-
-    main_module_any = cast(Any, main_module)
-    original = main_module_any.LotusPerformanceClient
-    try:
-        main_module_any.LotusPerformanceClient = _AutoWiredLotusPerformanceClient
-        app.state.lotus_performance_client = None
+    with override_app_runtime(
+        lotus_performance_client=None,
+        lotus_performance_class=_AutoWiredLotusPerformanceClient,
+    ):
         _AutoWiredLotusPerformanceClient.calls = []
         client = TestClient(app)
         response = client.post(
@@ -152,6 +149,4 @@ def test_drawdown_endpoint_stateful_autowires_performance_client() -> None:
         )
         assert response.status_code == 200
         assert _AutoWiredLotusPerformanceClient.calls[0]["correlation_id"] == "corr-dd-auto"
-    finally:
-        main_module_any.LotusPerformanceClient = original
 

@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
-from typing import Any, cast
 
 from app.main import app
+from tests.support.app_runtime import override_app_runtime
 from tests.support.returns_series_payloads import (
     RISK_STATEFUL_BENCHMARK_RETURNS,
     RISK_STATEFUL_RETURNS,
@@ -133,22 +133,22 @@ def test_risk_calculate_benchmark_requirement_behavior() -> None:
 
 def test_risk_calculate_stateful_mode_uses_lotus_performance_returns_series() -> None:
     performance_client = _RecordingLotusPerformanceClient()
-    app.state.lotus_performance_client = performance_client
-    client = TestClient(app)
-    response = client.post(
-        "/analytics/risk/calculate",
-        headers={"X-Correlation-Id": "corr-risk-stateful"},
-        json={
-            "input_mode": "stateful",
-            "stateful_input": {
-                "portfolio_id": "DEMO_DPM_EUR_001",
-                "as_of_date": "2025-01-07",
-                "net_or_gross": "NET",
-                "periods": [{"type": "YTD", "name": "YTD"}],
-                "metrics": ["VOLATILITY", "BETA"],
+    with override_app_runtime(lotus_performance_client=performance_client):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/calculate",
+            headers={"X-Correlation-Id": "corr-risk-stateful"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2025-01-07",
+                    "net_or_gross": "NET",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "metrics": ["VOLATILITY", "BETA"],
+                },
             },
-        },
-    )
+        )
     assert response.status_code == 200
     payload = performance_client.calls[0]["request_payload"]
     assert isinstance(payload, dict)
@@ -172,13 +172,10 @@ def test_risk_calculate_stateful_mode_uses_lotus_performance_returns_series() ->
 
 
 def test_risk_calculate_stateful_mode_autowires_lotus_performance_client() -> None:
-    import app.main as main_module
-
-    main_module_any = cast(Any, main_module)
-    original_client = main_module_any.LotusPerformanceClient
-    try:
-        main_module_any.LotusPerformanceClient = _AutoWiredLotusPerformanceClient
-        app.state.lotus_performance_client = None
+    with override_app_runtime(
+        lotus_performance_client=None,
+        lotus_performance_class=_AutoWiredLotusPerformanceClient,
+    ):
         _AutoWiredLotusPerformanceClient.calls = []
         client = TestClient(app)
         response = client.post(
@@ -196,8 +193,6 @@ def test_risk_calculate_stateful_mode_autowires_lotus_performance_client() -> No
         )
         assert response.status_code == 200
         assert _AutoWiredLotusPerformanceClient.calls[0]["correlation_id"] == "corr-autowire"
-    finally:
-        main_module_any.LotusPerformanceClient = original_client
 
 
 def test_risk_calculate_simulation_mode_returns_not_implemented_error() -> None:
