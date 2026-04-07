@@ -155,6 +155,7 @@ class RecordingLotusCoreReferenceClient:
         *,
         snapshot_response: dict[str, object] | None = None,
         risk_free_response: dict[str, object] | None = None,
+        risk_free_coverage_response: dict[str, object] | None = None,
     ) -> None:
         self.snapshot_response = snapshot_response or {
             "valuation_context": {
@@ -163,8 +164,25 @@ class RecordingLotusCoreReferenceClient:
             }
         }
         self.risk_free_response = risk_free_response or {"points": []}
+        self.risk_free_coverage_response = risk_free_coverage_response or {
+            "request_fingerprint": "risk-free-coverage-fp",
+            "observed_start_date": None,
+            "observed_end_date": None,
+            "expected_start_date": "2026-01-01",
+            "expected_end_date": "2026-01-04",
+            "total_points": 0,
+            "missing_dates_count": 4,
+            "missing_dates_sample": [
+                "2026-01-01",
+                "2026-01-02",
+                "2026-01-03",
+                "2026-01-04",
+            ],
+            "quality_status_distribution": {},
+        }
         self.snapshot_calls: list[dict[str, object]] = []
         self.risk_free_calls: list[dict[str, object]] = []
+        self.risk_free_coverage_calls: list[dict[str, object]] = []
 
     async def get_core_snapshot(
         self,
@@ -195,3 +213,19 @@ class RecordingLotusCoreReferenceClient:
             }
         )
         return self.risk_free_response
+
+    async def get_risk_free_coverage(
+        self,
+        *,
+        currency: str,
+        request_payload: dict[str, object],
+        correlation_id: str | None,
+    ) -> dict[str, object]:
+        self.risk_free_coverage_calls.append(
+            {
+                "currency": currency,
+                "request_payload": request_payload,
+                "correlation_id": correlation_id,
+            }
+        )
+        return self.risk_free_coverage_response

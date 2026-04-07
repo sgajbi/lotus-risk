@@ -183,6 +183,9 @@ def test_rolling_metrics_endpoint_stateful_surfaces_missing_risk_free_after_curr
     assert "no usable risk-free returns" in body["message"]
     assert body["correlation_id"] == "corr-rolling-missing-rf"
     assert body["details"]["service"] == "lotus-core"
+    assert body["details"]["risk_free_currency"] == "USD"
+    assert body["details"]["risk_free_total_points"] == 0
+    assert body["details"]["risk_free_missing_dates_count"] == 4
     assert len(recorder.calls) == 1
     payload = recorder.calls[0]["request_payload"]
     assert isinstance(payload, dict)
@@ -193,6 +196,7 @@ def test_rolling_metrics_endpoint_stateful_surfaces_missing_risk_free_after_curr
         "include_risk_free": False,
     }
     assert core_client.risk_free_calls
+    assert core_client.risk_free_coverage_calls
 
 
 def test_rolling_metrics_endpoint_stateful_uses_explicit_reporting_currency_for_risk_free() -> None:

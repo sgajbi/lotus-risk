@@ -122,16 +122,24 @@ async def test_client_supports_add_changes_and_snapshot_routes(
         },
         correlation_id=None,
     )
+    risk_free_coverage_response = await client.get_risk_free_coverage(
+        currency="USD",
+        request_payload={
+            "window": {"start_date": "2026-01-01", "end_date": "2026-01-04"},
+        },
+        correlation_id=None,
+    )
 
     assert add_response == {"ok": True}
     assert snapshot_response == {"ok": True}
     assert enrichment_response == {"ok": True}
     assert position_timeseries_response == {"ok": True}
     assert risk_free_response == {"ok": True}
+    assert risk_free_coverage_response == {"ok": True}
     assert _FakeAsyncClient.last_request is not None
     assert (
         _FakeAsyncClient.last_request["url"]
-        == "http://core.local/integration/reference/risk-free-series"
+        == "http://core.local/integration/reference/risk-free-series/coverage?currency=USD"
     )
 
 

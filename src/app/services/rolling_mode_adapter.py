@@ -22,7 +22,7 @@ from app.services.stateful_returns_series_parser import (
     extract_required_portfolio_returns,
     to_return_points,
 )
-from app.upstream_errors import missing_upstream_data
+from app.upstream_errors import UpstreamServiceError, missing_upstream_data
 
 
 class LotusPerformanceClientProtocol(Protocol):
@@ -49,6 +49,59 @@ class LotusCoreClientProtocol(Protocol):
         request_payload: dict[str, Any],
         correlation_id: str | None,
     ) -> dict[str, Any]: ...
+
+    async def get_risk_free_coverage(
+        self,
+        *,
+        currency: str,
+        request_payload: dict[str, Any],
+        correlation_id: str | None,
+    ) -> dict[str, Any]: ...
+
+
+async def _get_risk_free_coverage_details(
+    *,
+    core_client: LotusCoreClientProtocol,
+    currency: str,
+    start_date: date,
+    end_date: date,
+    correlation_id: str | None,
+) -> dict[str, Any]:
+    details: dict[str, Any] = {"risk_free_currency": currency}
+    try:
+        coverage = await core_client.get_risk_free_coverage(
+            currency=currency,
+            request_payload={
+                "window": {
+                    "start_date": start_date.isoformat(),
+                    "end_date": end_date.isoformat(),
+                }
+            },
+            correlation_id=correlation_id,
+        )
+    except UpstreamServiceError:
+        return details
+    if not isinstance(coverage, dict):
+        return details
+    total_points = coverage.get("total_points")
+    if isinstance(total_points, int):
+        details["risk_free_total_points"] = total_points
+    missing_dates_count = coverage.get("missing_dates_count")
+    if isinstance(missing_dates_count, int):
+        details["risk_free_missing_dates_count"] = missing_dates_count
+    observed_start = coverage.get("observed_start_date")
+    if isinstance(observed_start, str) and observed_start:
+        details["risk_free_observed_start_date"] = observed_start
+    observed_end = coverage.get("observed_end_date")
+    if isinstance(observed_end, str) and observed_end:
+        details["risk_free_observed_end_date"] = observed_end
+    request_fingerprint = coverage.get("request_fingerprint")
+    if isinstance(request_fingerprint, str) and request_fingerprint:
+        details["risk_free_coverage_request_fingerprint"] = request_fingerprint
+    sample = coverage.get("missing_dates_sample")
+    if isinstance(sample, list) and sample:
+        details["risk_free_missing_dates_sample"] = [value for value in sample if isinstance(value, str)]
+    return details
 
 
 def _build_stateful_source_request(stateful: RollingStatefulInput) -> dict[str, Any]:
@@ -211,6 +264,15 @@ async def calculate_rolling_metrics_stateful(
         else []
     )
     if include_risk_free and not risk_free_points:
+        assert core_client is not None
+        assert resolved_reporting_currency is not None
+        coverage_details = await _get_risk_free_coverage_details(
+            core_client=core_client,
+            currency=resolved_reporting_currency,
+            start_date=min(point.date for point in portfolio_points),
+            end_date=max(point.date for point in portfolio_points),
+            correlation_id=correlation_id,
+        )
         raise missing_upstream_data(
             service="lotus-core",
             operation="/integration/reference/risk-free-series",
@@ -218,6 +280,7 @@ async def calculate_rolling_metrics_stateful(
                 "lotus-core risk-free-series returned no usable risk-free returns for "
                 "requested rolling Sharpe"
             ),
+            details=coverage_details,
         )
 
     stateless = RollingStatelessInput(

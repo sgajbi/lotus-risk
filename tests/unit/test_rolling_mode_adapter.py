@@ -8,6 +8,7 @@ from app.services.rolling_mode_adapter import (
     _build_stateful_source_request,
     calculate_rolling_metrics_stateful,
 )
+from app.upstream_errors import UpstreamServiceError
 from tests.support.lotus_core_fakes import RecordingLotusCoreReferenceClient
 from tests.support.lotus_performance_fakes import RecordingLotusPerformanceClient
 from tests.support.risk_free_series_payloads import build_risk_free_series_response
@@ -162,7 +163,7 @@ def test_stateful_adapter_requires_benchmark_when_metric_requested() -> None:
 
 def test_stateful_adapter_requires_risk_free_for_sharpe() -> None:
     client = RecordingLotusPerformanceClient(response_payload=_portfolio_only_payload())
-    with pytest.raises(ValueError, match="no usable risk-free returns"):
+    with pytest.raises(UpstreamServiceError, match="no usable risk-free returns") as exc_info:
         asyncio.run(
             calculate_rolling_metrics_stateful(
                 _stateful_input(["ROLLING_SHARPE"]),
@@ -171,6 +172,43 @@ def test_stateful_adapter_requires_risk_free_for_sharpe() -> None:
                 correlation_id=None,
             )
         )
+    assert exc_info.value.details["risk_free_currency"] == "USD"
+    assert exc_info.value.details["risk_free_total_points"] == 0
+    assert exc_info.value.details["risk_free_missing_dates_count"] == 4
+
+
+def test_stateful_adapter_ignores_coverage_probe_failures_for_missing_risk_free() -> None:
+    class _CoverageUnavailableCoreClient(RecordingLotusCoreReferenceClient):
+        async def get_risk_free_coverage(
+            self,
+            *,
+            currency: str,
+            request_payload: dict[str, object],
+            correlation_id: str | None,
+        ) -> dict[str, object]:
+            raise UpstreamServiceError(
+                service="lotus-core",
+                operation="/integration/reference/risk-free-series/coverage",
+                status_code=503,
+                code="UPSTREAM_UNAVAILABLE",
+                message="lotus-core /integration/reference/risk-free-series/coverage unavailable: down",
+                details={"service": "lotus-core"},
+                retryable=True,
+            )
+
+    client = RecordingLotusPerformanceClient(response_payload=_portfolio_only_payload())
+    with pytest.raises(UpstreamServiceError, match="no usable risk-free returns") as exc_info:
+        asyncio.run(
+            calculate_rolling_metrics_stateful(
+                _stateful_input(["ROLLING_SHARPE"]),
+                performance_client=client,
+                core_client=_CoverageUnavailableCoreClient(),
+                correlation_id=None,
+            )
+        )
+
+    assert exc_info.value.details["risk_free_currency"] == "USD"
+    assert "risk_free_total_points" not in exc_info.value.details
 
 
 def test_stateful_adapter_rejects_invalid_return_value() -> None:
