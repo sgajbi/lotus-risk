@@ -177,11 +177,12 @@ def test_rolling_metrics_endpoint_stateful_surfaces_missing_risk_free_after_curr
             },
         )
 
-    assert response.status_code == 400
+    assert response.status_code == 424
     body = response.json()["error"]
-    assert body["code"] == "INVALID_INPUT"
+    assert body["code"] == "FAILED_DEPENDENCY"
     assert "no usable risk-free returns" in body["message"]
     assert body["correlation_id"] == "corr-rolling-missing-rf"
+    assert body["details"]["service"] == "lotus-core"
     assert len(recorder.calls) == 1
     payload = recorder.calls[0]["request_payload"]
     assert isinstance(payload, dict)
@@ -283,10 +284,12 @@ def test_rolling_metrics_endpoint_stateful_rejects_missing_benchmark_returns_for
             },
         )
 
-    assert response.status_code == 400
+    assert response.status_code == 424
     body = response.json()["error"]
+    assert body["code"] == "FAILED_DEPENDENCY"
     assert "no benchmark returns" in body["message"]
     assert body["correlation_id"] == "corr-rolling-missing-bmk"
+    assert body["details"]["service"] == "lotus-performance"
     request_payload = cast(dict[str, Any], recorder.calls[0]["request_payload"])
     assert request_payload["series_selection"]["include_benchmark"] is True
 

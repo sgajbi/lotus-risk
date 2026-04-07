@@ -22,6 +22,7 @@ from app.services.stateful_returns_series_parser import (
     extract_required_portfolio_returns,
     to_return_points,
 )
+from app.upstream_errors import missing_upstream_data
 
 
 class LotusPerformanceClientProtocol(Protocol):
@@ -178,8 +179,13 @@ async def calculate_rolling_metrics_stateful(
     )
     benchmark_points = to_return_points(series.get("benchmark_returns"))
     if include_benchmark and not benchmark_points:
-        raise ValueError(
-            "lotus-performance returns-series returned no benchmark returns for requested rolling benchmark metrics"
+        raise missing_upstream_data(
+            service="lotus-performance",
+            operation="/integration/returns/series",
+            message=(
+                "lotus-performance returns-series returned no benchmark returns for "
+                "requested rolling benchmark metrics"
+            ),
         )
 
     if include_risk_free and risk_free_response is None:
@@ -205,8 +211,13 @@ async def calculate_rolling_metrics_stateful(
         else []
     )
     if include_risk_free and not risk_free_points:
-        raise ValueError(
-            "lotus-core risk-free-series returned no usable risk-free returns for requested rolling Sharpe"
+        raise missing_upstream_data(
+            service="lotus-core",
+            operation="/integration/reference/risk-free-series",
+            message=(
+                "lotus-core risk-free-series returned no usable risk-free returns for "
+                "requested rolling Sharpe"
+            ),
         )
 
     stateless = RollingStatelessInput(

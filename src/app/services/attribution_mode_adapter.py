@@ -20,6 +20,7 @@ from app.services.stateful_returns_series_parser import (
     extract_required_portfolio_returns,
     to_return_points,
 )
+from app.upstream_errors import invalid_upstream_payload, missing_upstream_data
 
 
 class LotusPerformanceClientProtocol(Protocol):
@@ -70,9 +71,13 @@ def _validate_benchmark_exposure_alignment(
     missing_dates = sorted(return_dates - exposure_dates)
     if missing_dates:
         sample = ", ".join(date_value.isoformat() for date_value in missing_dates[:5])
-        raise ValueError(
-            "lotus-performance benchmark exposure context missing rows for benchmark return dates: "
-            f"{sample}"
+        raise missing_upstream_data(
+            service="lotus-performance",
+            operation="/integration/benchmarks/exposure-context",
+            message=(
+                "lotus-performance benchmark exposure context missing rows for benchmark "
+                f"return dates: {sample}"
+            ),
         )
 
 
@@ -216,7 +221,11 @@ async def _fetch_position_timeseries_rows(
         )
         batch = response.get("rows")
         if not isinstance(batch, list):
-            raise ValueError("lotus-core position-timeseries payload missing 'rows' list")
+            raise invalid_upstream_payload(
+                service="lotus-core",
+                operation=f"/integration/portfolios/{portfolio_id}/analytics/position-timeseries",
+                message="lotus-core position-timeseries payload missing 'rows' list",
+            )
         for row in batch:
             if isinstance(row, dict):
                 rows.append(row)
@@ -250,7 +259,11 @@ async def _build_issuer_map(
     )
     records = response.get("records")
     if not isinstance(records, list):
-        raise ValueError("lotus-core enrichment payload missing 'records' list")
+        raise invalid_upstream_payload(
+            service="lotus-core",
+            operation="/integration/instruments/enrichment-bulk",
+            message="lotus-core enrichment payload missing 'records' list",
+        )
     issuer_map: dict[str, tuple[str, str | None]] = {}
     for record in records:
         if not isinstance(record, dict):
@@ -290,8 +303,13 @@ async def calculate_historical_attribution_stateful(
     series, portfolio_returns = extract_required_portfolio_returns(returns_response)
     benchmark_returns = to_return_points(series.get("benchmark_returns"))
     if requires_active and not benchmark_returns:
-        raise ValueError(
-            "lotus-performance returns-series returned no benchmark returns for requested stateful active-risk attribution"
+        raise missing_upstream_data(
+            service="lotus-performance",
+            operation="/integration/returns/series",
+            message=(
+                "lotus-performance returns-series returned no benchmark returns for "
+                "requested stateful active-risk attribution"
+            ),
         )
     start_date = min(point.date for point in portfolio_returns)
 
@@ -305,7 +323,11 @@ async def calculate_historical_attribution_stateful(
         correlation_id=correlation_id,
     )
     if not rows:
-        raise ValueError("lotus-core position-timeseries returned no rows")
+        raise missing_upstream_data(
+            service="lotus-core",
+            operation=f"/integration/portfolios/{stateful.portfolio_id}/analytics/position-timeseries",
+            message="lotus-core position-timeseries returned no rows",
+        )
 
     issuer_map = (
         await _build_issuer_map(
@@ -322,7 +344,11 @@ async def calculate_historical_attribution_stateful(
         issuer_map=issuer_map,
     )
     if not exposure_history:
-        raise ValueError("unable to build exposure history from lotus-core position-timeseries")
+        raise missing_upstream_data(
+            service="lotus-core",
+            operation=f"/integration/portfolios/{stateful.portfolio_id}/analytics/position-timeseries",
+            message="unable to build exposure history from lotus-core position-timeseries",
+        )
 
     benchmark_exposure_history = (
         await fetch_benchmark_exposure_history(

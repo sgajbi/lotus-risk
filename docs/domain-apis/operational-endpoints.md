@@ -42,10 +42,11 @@
 - Availability status:
   - implemented.
 - Output:
-  - normal: `status: "ready"`
-  - draining: HTTP `503`, `status: "draining"`
+  - normal: HTTP `200`, `status: "ready"`, plus dependency runtime states
+  - degraded dependency: HTTP `200`, `status: "degraded"`
+  - draining or unavailable dependency: HTTP `503`, `status: "draining"` or `status: "dependency_unavailable"`
 - Alignment:
-  - aligned with platform readiness requirement.
+  - aligned with platform readiness requirement and now surfaces dependency-aware readiness semantics.
 
 ## Endpoint: `GET /metadata`
 
@@ -97,7 +98,18 @@
   - `checks.ready`
   - `checks.draining`
   - `inputModes`
+  - `dependencies[]` with `service`, canonical `baseUrl`, runtime `status`, and optional operator `detail`
+
+## Error Semantics
+
+- Domain endpoints now distinguish:
+  - caller validation errors: `422 INVALID_REQUEST`
+  - business-rule invalidity: `400 INVALID_INPUT`
+  - upstream rejected or missing dependency data: `424 FAILED_DEPENDENCY`
+  - upstream malformed or failing responses: `502 UPSTREAM_FAILURE` or `502 UPSTREAM_INVALID_RESPONSE`
+  - upstream unavailability: `503 UPSTREAM_UNAVAILABLE`
+  - upstream timeout: `504 UPSTREAM_TIMEOUT`
 
 ## Operational Alignment Verdict
 
-- Current state: compliant on health/metadata/metrics/ops.
+- Current state: compliant on health/metadata/metrics/ops with dependency-aware readiness and diagnostics.

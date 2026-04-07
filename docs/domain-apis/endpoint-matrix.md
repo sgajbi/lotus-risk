@@ -4,10 +4,10 @@
 |---|---|---|---|---|---|---|---|
 | `GET /health` | Operational | compatibility health | operational | operational | none | platform stack probes, ops tooling | exists |
 | `GET /health/live` | Operational | liveness | operational | operational | none | orchestrator/container probes | exists |
-| `GET /health/ready` | Operational | readiness | operational | operational | internal runtime state | orchestrator/container probes | exists |
+| `GET /health/ready` | Operational | readiness | operational | operational | internal runtime state + dependency runtime view for lotus-core and lotus-performance | orchestrator/container probes | exists |
 | `GET /metadata` | Operational | service/version/rounding metadata | operational | operational | internal constants | tooling/ops/clients | exists |
 | `GET /metrics` | Operational | Prometheus metrics | operational | operational | internal metrics registry | observability stack | exists |
-| `GET /ops` | Operational | consolidated operational diagnostics | operational | operational | runtime readiness + config internals | ops/platform automation | exists |
+| `GET /ops` | Operational | consolidated operational diagnostics | operational | operational | runtime readiness + canonical dependency configuration/runtime status for lotus-core and lotus-performance | ops/platform automation | exists |
 | `GET /integration/capabilities` | Integration | capability/workflow publication | integration metadata | integration metadata | internal typed constants | lotus-gateway capability aggregator | exists (context-aware query shaping needs enhancement) |
 | `POST /analytics/risk/calculate` | Domain analytics | portfolio risk metrics | stateless + stateful | stateless + stateful | stateful return sourcing via lotus-performance (`/integration/returns/series` with `input_mode=stateful`, `stateful_input is an empty envelope; consumer identity is stamped by lotus-performance server-side`) | lotus-report, external/advanced integrations, future gateway flows | exists (simulation intentionally unsupported) |
 | `POST /analytics/risk/drawdown` | Domain analytics | realized drawdown analytics | stateless + stateful | stateless + stateful | stateful return sourcing via lotus-performance (`/integration/returns/series` with `input_mode=stateful`, `stateful_input is an empty envelope; consumer identity is stamped by lotus-performance server-side`) | lotus-report, lotus-gateway, PB/WM advisory channels | exists (simulation intentionally unsupported) |

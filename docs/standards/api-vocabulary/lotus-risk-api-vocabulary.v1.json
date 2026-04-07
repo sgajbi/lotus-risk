@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-04-07T08:21:36.206076+00:00",
+  "generatedAt": "2026-04-07T10:04:46.975591+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.alignment_policy",
@@ -60,6 +60,20 @@
       "preferredName": "as_of_date",
       "description": "As-of date used for risk metric evaluation.",
       "example": "2025-03-31",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.base_url",
+      "canonicalTerm": "base_url",
+      "preferredName": "base_url",
+      "description": "Canonical base URL configured for the dependency.",
+      "example": "http://core-query.dev.lotus",
       "type": "string",
       "locations": [
         "body"
@@ -166,6 +180,41 @@
       ],
       "observedTypes": [
         "integer"
+      ]
+    },
+    {
+      "semanticId": "lotus.dependencies",
+      "canonicalTerm": "dependencies",
+      "preferredName": "dependencies",
+      "description": "Dependency runtime states used to determine readiness.",
+      "example": [
+        {
+          "base_url": "http://performance.dev.lotus",
+          "detail": "configured",
+          "service": "lotus-performance",
+          "status": "ok"
+        }
+      ],
+      "type": "array",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "array"
+      ]
+    },
+    {
+      "semanticId": "lotus.detail",
+      "canonicalTerm": "detail",
+      "preferredName": "detail",
+      "description": "Additional runtime detail for operators.",
+      "example": "configured",
+      "type": "object",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "object"
       ]
     },
     {
@@ -1075,6 +1124,46 @@
             "type": "string",
             "semanticId": "lotus.status",
             "attributeRef": "#/attributeCatalog/lotus.status"
+          },
+          {
+            "name": "dependencies",
+            "location": "body",
+            "required": true,
+            "type": "array",
+            "semanticId": "lotus.dependencies",
+            "attributeRef": "#/attributeCatalog/lotus.dependencies"
+          },
+          {
+            "name": "dependencies[].service",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.service",
+            "attributeRef": "#/attributeCatalog/lotus.service"
+          },
+          {
+            "name": "dependencies[].base_url",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.base_url",
+            "attributeRef": "#/attributeCatalog/lotus.base_url"
+          },
+          {
+            "name": "dependencies[].status",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.status",
+            "attributeRef": "#/attributeCatalog/lotus.status"
+          },
+          {
+            "name": "dependencies[].detail",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.detail",
+            "attributeRef": "#/attributeCatalog/lotus.detail"
           }
         ]
       }
@@ -1191,6 +1280,46 @@
             "type": "array",
             "semanticId": "lotus.input_modes",
             "attributeRef": "#/attributeCatalog/lotus.input_modes"
+          },
+          {
+            "name": "dependencies",
+            "location": "body",
+            "required": true,
+            "type": "array",
+            "semanticId": "lotus.dependencies",
+            "attributeRef": "#/attributeCatalog/lotus.dependencies"
+          },
+          {
+            "name": "dependencies[].service",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.service",
+            "attributeRef": "#/attributeCatalog/lotus.service"
+          },
+          {
+            "name": "dependencies[].base_url",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.base_url",
+            "attributeRef": "#/attributeCatalog/lotus.base_url"
+          },
+          {
+            "name": "dependencies[].status",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.status",
+            "attributeRef": "#/attributeCatalog/lotus.status"
+          },
+          {
+            "name": "dependencies[].detail",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.detail",
+            "attributeRef": "#/attributeCatalog/lotus.detail"
           }
         ]
       }

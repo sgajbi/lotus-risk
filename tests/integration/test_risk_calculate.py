@@ -6,6 +6,7 @@ from tests.support.lotus_performance_fakes import (
     RecordingLotusPerformanceClient,
     build_autowired_lotus_performance_client_class,
 )
+from app.upstream_errors import UpstreamServiceError
 from tests.support.returns_series_payloads import (
     RISK_STATEFUL_BENCHMARK_RETURNS,
     RISK_STATEFUL_RETURNS,
@@ -198,6 +199,51 @@ def test_risk_calculate_stateful_mode_autowires_lotus_performance_client() -> No
         )
         assert response.status_code == 200
         assert _AutoWiredLotusPerformanceClient.calls[0]["correlation_id"] == "corr-autowire"
+
+
+def test_risk_calculate_stateful_surfaces_upstream_unavailable_with_dependency_error() -> None:
+    class _UnavailablePerformanceClient:
+        async def get_returns_series(
+            self,
+            *,
+            request_payload: dict[str, object],
+            correlation_id: str | None,
+        ) -> dict[str, object]:
+            raise UpstreamServiceError(
+                service="lotus-performance",
+                operation="/integration/returns/series",
+                status_code=503,
+                code="UPSTREAM_UNAVAILABLE",
+                message="lotus-performance /integration/returns/series unavailable: network down",
+                details={
+                    "service": "lotus-performance",
+                    "operation": "/integration/returns/series",
+                },
+                retryable=True,
+            )
+
+    with override_app_runtime(lotus_performance_client=_UnavailablePerformanceClient()):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/calculate",
+            headers={"X-Correlation-Id": "corr-risk-upstream-down"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2025-01-07",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "metrics": ["VOLATILITY"],
+                },
+            },
+        )
+
+    assert response.status_code == 503
+    body = response.json()["error"]
+    assert body["code"] == "UPSTREAM_UNAVAILABLE"
+    assert body["correlation_id"] == "corr-risk-upstream-down"
+    assert body["details"]["service"] == "lotus-performance"
+    assert body["details"]["retryable"] is True
 
 
 def test_risk_calculate_simulation_mode_is_rejected_by_contract() -> None:

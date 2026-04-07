@@ -5,6 +5,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Any, Protocol
 
 from app.contracts.attribution import ExposurePoint, GroupingDimension
+from app.upstream_errors import invalid_upstream_payload, missing_upstream_data
 
 
 class BenchmarkExposurePerformanceClientProtocol(Protocol):
@@ -20,29 +21,51 @@ def _as_decimal(value: Any) -> Decimal:
     try:
         return Decimal(str(value))
     except (InvalidOperation, ValueError) as exc:
-        raise ValueError(
-            f"Invalid benchmark exposure weight from lotus-performance: {value}"
+        raise invalid_upstream_payload(
+            service="lotus-performance",
+            operation="/integration/benchmarks/exposure-context",
+            message=f"Invalid benchmark exposure weight from lotus-performance: {value}",
         ) from exc
 
 
 def _validate_lineage(response: dict[str, Any]) -> None:
     if response.get("source_service") != "lotus-performance":
-        raise ValueError(
-            "lotus-performance benchmark exposure context missing source_service=lotus-performance"
+        raise invalid_upstream_payload(
+            service="lotus-performance",
+            operation="/integration/benchmarks/exposure-context",
+            message=(
+                "lotus-performance benchmark exposure context missing "
+                "source_service=lotus-performance"
+            ),
         )
     if response.get("contract_version") != "v1":
-        raise ValueError("lotus-performance benchmark exposure context missing contract_version=v1")
+        raise invalid_upstream_payload(
+            service="lotus-performance",
+            operation="/integration/benchmarks/exposure-context",
+            message="lotus-performance benchmark exposure context missing contract_version=v1",
+        )
 
     metadata = response.get("metadata")
     if not isinstance(metadata, dict):
-        raise ValueError(
-            "lotus-performance benchmark exposure context payload missing metadata object"
+        raise invalid_upstream_payload(
+            service="lotus-performance",
+            operation="/integration/benchmarks/exposure-context",
+            message="lotus-performance benchmark exposure context payload missing metadata object",
         )
     if metadata.get("source_system") != "lotus-core":
-        raise ValueError("lotus-performance benchmark exposure context missing lotus-core lineage")
+        raise invalid_upstream_payload(
+            service="lotus-performance",
+            operation="/integration/benchmarks/exposure-context",
+            message="lotus-performance benchmark exposure context missing lotus-core lineage",
+        )
     if metadata.get("served_by") != "lotus-performance":
-        raise ValueError(
-            "lotus-performance benchmark exposure context missing served_by=lotus-performance"
+        raise invalid_upstream_payload(
+            service="lotus-performance",
+            operation="/integration/benchmarks/exposure-context",
+            message=(
+                "lotus-performance benchmark exposure context missing "
+                "served_by=lotus-performance"
+            ),
         )
 
 
@@ -139,8 +162,10 @@ async def fetch_benchmark_exposure_history(
 
         rows = response.get("rows")
         if not isinstance(rows, list):
-            raise ValueError(
-                "lotus-performance benchmark exposure context payload missing 'rows' list"
+            raise invalid_upstream_payload(
+                service="lotus-performance",
+                operation="/integration/benchmarks/exposure-context",
+                message="lotus-performance benchmark exposure context payload missing 'rows' list",
             )
         benchmark_exposures.extend(_rows_to_exposure_points(rows))
 
@@ -151,7 +176,12 @@ async def fetch_benchmark_exposure_history(
         page_token = next_page_token
 
     if not benchmark_exposures:
-        raise ValueError(
-            "unable to build benchmark exposure history from lotus-performance benchmark exposure context"
+        raise missing_upstream_data(
+            service="lotus-performance",
+            operation="/integration/benchmarks/exposure-context",
+            message=(
+                "unable to build benchmark exposure history from lotus-performance "
+                "benchmark exposure context"
+            ),
         )
     return benchmark_exposures

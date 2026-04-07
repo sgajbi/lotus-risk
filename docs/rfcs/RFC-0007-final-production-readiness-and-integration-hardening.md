@@ -2,14 +2,14 @@
 
 | Field | Value |
 | --- | --- |
-| Status | Draft, approved direction; Slice 1, Slice 2, and benchmark exposure migration in progress on feature branch |
+| Status | Draft, approved direction; Slice 1, Slice 2, benchmark exposure migration, and dependency error hardening in progress on feature branch |
 | Created | 2026-04-07 |
 | Last Updated | 2026-04-07 |
 | Owners | lotus-risk |
 | Depends On | lotus-core, lotus-performance |
 | Related Standards | lotus-platform RFC-0067, RFC-0003, RFC-0005, RFC-0006 |
 | Scope | Cross-repo |
-| Implementation Classification | Feature-branch implementation complete for Slice 1, Slice 2, and P0 benchmark exposure migration; final readiness validation remains |
+| Implementation Classification | Feature-branch implementation complete for Slice 1, Slice 2, P0 benchmark exposure migration, and dependency error hardening; final readiness validation remains |
 
 ## Executive Summary
 
@@ -73,7 +73,8 @@ The user further clarified that benchmark exposure can reasonably be exposed by 
 3. Stateful integration is materially improved:
    - canonical stateful returns-series request construction
    - explicit longest-window sourcing for required periods
-   - stronger upstream error surfacing
+   - typed upstream failure classification with deterministic Lotus error codes and retryability metadata
+   - dependency-aware `/health/ready` and `/ops` reporting
    - improved Docker/runtime URL handling
    - better characterization, contract, integration, and smoke coverage
 4. Simulation is correctly implemented only where it is naturally valid today:

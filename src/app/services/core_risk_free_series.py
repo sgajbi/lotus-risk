@@ -5,6 +5,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from app.contracts.risk import ReturnPoint
+from app.upstream_errors import invalid_upstream_payload
 
 
 _PERIODIC_VALUE_CONVENTIONS = {
@@ -47,7 +48,11 @@ def _to_decimal(value: Any) -> Decimal:
     try:
         return Decimal(str(value))
     except (InvalidOperation, ValueError) as exc:
-        raise ValueError(f"Invalid risk-free value from lotus-core: {value}") from exc
+        raise invalid_upstream_payload(
+            service="lotus-core",
+            operation="/integration/reference/risk-free-series",
+            message=f"Invalid risk-free value from lotus-core: {value}",
+        ) from exc
 
 
 def _parse_periodic_return(row: dict[str, Any], *, annualization_basis: int) -> float:
@@ -59,8 +64,13 @@ def _parse_periodic_return(row: dict[str, Any], *, annualization_basis: int) -> 
     elif value_convention in _ANNUALIZED_VALUE_CONVENTIONS:
         periodic_decimal = _annual_to_periodic(raw_value, annualization_basis)
     else:
-        raise ValueError(
-            f"Unsupported risk-free value_convention from lotus-core: {row.get('value_convention')}"
+        raise invalid_upstream_payload(
+            service="lotus-core",
+            operation="/integration/reference/risk-free-series",
+            message=(
+                "Unsupported risk-free value_convention from lotus-core: "
+                f"{row.get('value_convention')}"
+            ),
         )
 
     return float(periodic_decimal * Decimal("100"))
@@ -73,7 +83,11 @@ def to_risk_free_return_points(
 ) -> list[ReturnPoint]:
     points = payload.get("points")
     if not isinstance(points, list):
-        raise ValueError("lotus-core risk-free-series payload missing 'points' list")
+        raise invalid_upstream_payload(
+            service="lotus-core",
+            operation="/integration/reference/risk-free-series",
+            message="lotus-core risk-free-series payload missing 'points' list",
+        )
 
     result: list[ReturnPoint] = []
     for row in points:

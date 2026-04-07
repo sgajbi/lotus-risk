@@ -76,7 +76,7 @@
 ## Rolling Metrics Endpoint
 - `POST /analytics/risk/rolling-metrics` supports:
   - `stateless`: caller supplies return/reference series and rolling options
-  - `stateful`: caller supplies identifiers and options; lotus-risk sources canonical portfolio/benchmark/risk-free series from lotus-performance as required by requested metrics
+  - `stateful`: caller supplies identifiers and options; lotus-risk sources portfolio and benchmark returns from lotus-performance and risk-free series from lotus-core as required by requested metrics
   - `simulation`: reserved/not yet implemented
 - Output includes:
   - per-window summaries for rolling volatility, Sharpe, beta, tracking error, information ratio, and rolling max drawdown
@@ -86,7 +86,7 @@
 ## Historical Attribution Endpoint
 - `POST /analytics/risk/historical-attribution` supports:
   - `stateless`: caller supplies portfolio/benchmark return series plus exposure history by grouping dimension
-  - `stateful`: reserved/not yet implemented in Slice A
+  - `stateful`: implemented for total risk and active risk with supported grouping dimensions; portfolio/benchmark returns and benchmark exposure context come from lotus-performance, portfolio exposure history and enrichment come from lotus-core
   - `simulation`: reserved/not yet implemented
 - Output includes:
   - period-level attribution decomposition sets for total risk and active risk
@@ -106,9 +106,13 @@
 ## Error Semantics
 - All documented risk endpoints expose standard OpenAPI error contracts for:
   - `400`
+  - `424`
   - `403`
   - `404`
   - `422`
+  - `502`
+  - `503`
+  - `504`
 - Error envelope:
   - `error.code`
   - `error.message`
@@ -116,4 +120,8 @@
   - optional `error.details`
 - Period/model validation errors return `422` with `error.code=INVALID_REQUEST`.
 - Calculation-level invalid period or method errors return `400` with `error.code=INVALID_INPUT`.
+- Dependency rejection or missing upstream-required data returns `424` with `error.code=FAILED_DEPENDENCY`.
+- Dependency malformed payloads and upstream server failures return `502` with `error.code=UPSTREAM_INVALID_RESPONSE` or `UPSTREAM_FAILURE`.
+- Dependency transport unavailability returns `503` with `error.code=UPSTREAM_UNAVAILABLE`.
+- Dependency timeout returns `504` with `error.code=UPSTREAM_TIMEOUT`.
 

@@ -8,7 +8,7 @@ from fastapi import status
 
 
 @dataclass(slots=True)
-class UpstreamServiceError(Exception):
+class UpstreamServiceError(ValueError):
     service: str
     operation: str
     status_code: int
