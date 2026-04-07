@@ -53,6 +53,60 @@ class _StubLotusCoreClient:
         }
 
 
+class _StubLotusCoreClientPortfolioCurrencyOnly(_StubLotusCoreClient):
+    async def get_core_snapshot(
+        self,
+        *,
+        portfolio_id: str,
+        request_payload: dict[str, object],
+        correlation_id: str | None,
+    ) -> dict[str, object]:
+        self.calls.append(
+            {
+                "portfolio_id": portfolio_id,
+                "request_payload": request_payload,
+                "correlation_id": correlation_id,
+            }
+        )
+        return {"valuation_context": {"portfolio_currency": self.reporting_currency}}
+
+
+class _StubLotusCoreClientMissingValuationContext(_StubLotusCoreClient):
+    async def get_core_snapshot(
+        self,
+        *,
+        portfolio_id: str,
+        request_payload: dict[str, object],
+        correlation_id: str | None,
+    ) -> dict[str, object]:
+        self.calls.append(
+            {
+                "portfolio_id": portfolio_id,
+                "request_payload": request_payload,
+                "correlation_id": correlation_id,
+            }
+        )
+        return {"not_valuation_context": {}}
+
+
+class _StubLotusCoreClientMissingCurrencies(_StubLotusCoreClient):
+    async def get_core_snapshot(
+        self,
+        *,
+        portfolio_id: str,
+        request_payload: dict[str, object],
+        correlation_id: str | None,
+    ) -> dict[str, object]:
+        self.calls.append(
+            {
+                "portfolio_id": portfolio_id,
+                "request_payload": request_payload,
+                "correlation_id": correlation_id,
+            }
+        )
+        return {"valuation_context": {"portfolio_currency": "", "reporting_currency": ""}}
+
+
 def _stateful_input(metrics: list[str]) -> RollingStatefulInput:
     return RollingStatefulInput.model_validate(
         {
@@ -80,6 +134,21 @@ def test_build_stateful_source_request_selection_flags() -> None:
     assert selection["include_portfolio"] is True
     assert selection["include_benchmark"] is True
     assert selection["include_risk_free"] is True
+
+
+def _portfolio_and_risk_free_only_payload() -> dict[str, object]:
+    return {
+        "series": {
+            "portfolio_returns": [
+                {"date": "2026-01-02", "return_value": "0.0100"},
+                {"date": "2026-01-03", "return_value": "-0.0200"},
+            ],
+            "risk_free_returns": [
+                {"date": "2026-01-02", "return_value": "0.0001"},
+                {"date": "2026-01-03", "return_value": "0.0001"},
+            ],
+        }
+    }
 
 
 def test_stateful_adapter_happy_path() -> None:
@@ -204,26 +273,73 @@ def test_stateful_adapter_rejects_invalid_return_value() -> None:
 
 
 def test_stateful_adapter_requires_core_snapshot_when_sharpe_needs_reporting_currency() -> None:
-    client = _RecordingLotusPerformanceClient(
-        {
-            "series": {
-                "portfolio_returns": [
-                    {"date": "2026-01-02", "return_value": "0.0100"},
-                    {"date": "2026-01-03", "return_value": "-0.0200"},
-                ],
-                "risk_free_returns": [
-                    {"date": "2026-01-02", "return_value": "0.0001"},
-                    {"date": "2026-01-03", "return_value": "0.0001"},
-                ],
-            }
-        }
-    )
+    client = _RecordingLotusPerformanceClient(_portfolio_and_risk_free_only_payload())
     with pytest.raises(ValueError, match="reporting_currency is required for rolling Sharpe"):
         asyncio.run(
             calculate_rolling_metrics_stateful(
                 _stateful_input(["ROLLING_SHARPE"]),
                 performance_client=client,
                 core_client=None,
+                correlation_id=None,
+            )
+        )
+
+
+def test_stateful_adapter_skips_core_snapshot_when_reporting_currency_is_explicit() -> None:
+    client = _RecordingLotusPerformanceClient(_portfolio_and_risk_free_only_payload())
+    request = _stateful_input(["ROLLING_SHARPE"]).model_copy(
+        update={"reporting_currency": "CHF"}
+    )
+    response = asyncio.run(
+        calculate_rolling_metrics_stateful(
+            request,
+            performance_client=client,
+            core_client=None,
+            correlation_id="corr-explicit-ccy",
+        )
+    )
+    assert client.request_payload is not None
+    assert client.request_payload["reporting_currency"] == "CHF"
+    assert response.scope.reporting_currency == "CHF"
+
+
+def test_stateful_adapter_uses_portfolio_currency_when_reporting_currency_missing() -> None:
+    client = _RecordingLotusPerformanceClient(_portfolio_and_risk_free_only_payload())
+    core_client = _StubLotusCoreClientPortfolioCurrencyOnly(reporting_currency="EUR")
+    response = asyncio.run(
+        calculate_rolling_metrics_stateful(
+            _stateful_input(["ROLLING_SHARPE"]),
+            performance_client=client,
+            core_client=core_client,
+            correlation_id="corr-portfolio-ccy",
+        )
+    )
+    assert client.request_payload is not None
+    assert client.request_payload["reporting_currency"] == "EUR"
+    assert response.scope.reporting_currency == "EUR"
+
+
+def test_stateful_adapter_rejects_missing_valuation_context() -> None:
+    client = _RecordingLotusPerformanceClient(_portfolio_and_risk_free_only_payload())
+    with pytest.raises(ValueError, match="missing valuation_context"):
+        asyncio.run(
+            calculate_rolling_metrics_stateful(
+                _stateful_input(["ROLLING_SHARPE"]),
+                performance_client=client,
+                core_client=_StubLotusCoreClientMissingValuationContext(),
+                correlation_id=None,
+            )
+        )
+
+
+def test_stateful_adapter_rejects_missing_portfolio_and_reporting_currency() -> None:
+    client = _RecordingLotusPerformanceClient(_portfolio_and_risk_free_only_payload())
+    with pytest.raises(ValueError, match="missing portfolio/reporting currency"):
+        asyncio.run(
+            calculate_rolling_metrics_stateful(
+                _stateful_input(["ROLLING_SHARPE"]),
+                performance_client=client,
+                core_client=_StubLotusCoreClientMissingCurrencies(),
                 correlation_id=None,
             )
         )
