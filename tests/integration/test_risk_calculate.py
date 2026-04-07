@@ -144,6 +144,38 @@ def test_risk_calculate_stateful_mode_uses_lotus_performance_returns_series() ->
     assert metrics["BETA"]["value"] is not None
 
 
+def test_risk_calculate_stateful_mode_preserves_gross_metric_basis_and_currency() -> None:
+    performance_client = RecordingLotusPerformanceClient(
+        response_payload=build_returns_series_response(
+            portfolio_returns=RISK_STATEFUL_RETURNS,
+        )
+    )
+    with override_app_runtime(lotus_performance_client=performance_client):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/calculate",
+            headers={"X-Correlation-Id": "corr-risk-stateful-gross"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2025-01-07",
+                    "reporting_currency": "CHF",
+                    "net_or_gross": "GROSS",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "metrics": ["VOLATILITY"],
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    payload = performance_client.calls[0]["request_payload"]
+    assert isinstance(payload, dict)
+    assert payload["metric_basis"] == "GROSS"
+    assert payload["reporting_currency"] == "CHF"
+    assert payload["series_selection"]["include_benchmark"] is False
+
+
 def test_risk_calculate_stateful_mode_autowires_lotus_performance_client() -> None:
     with override_app_runtime(
         lotus_performance_client=None,

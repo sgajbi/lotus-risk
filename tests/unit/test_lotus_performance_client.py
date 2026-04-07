@@ -243,6 +243,85 @@ async def test_client_surfaces_async_execution_failure(
 
 
 @pytest.mark.asyncio
+async def test_client_surfaces_async_execution_failure_without_message(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(httpx, "AsyncClient", _FakeAsyncClient)
+    _FakeAsyncClient.requests = []
+
+    responses = iter(
+        [
+            _ok_response(
+                {
+                    "poll_path": "/performance/executions/calc-1",
+                    "result_path": "/integration/returns/series/results/calc-1",
+                },
+                status_code=202,
+            ),
+            _ok_response({"status": "failed"}),
+        ]
+    )
+    _FakeAsyncClient.response_factory = lambda **_: next(responses)
+
+    client = LotusPerformanceClient(base_url="http://performance.local")
+    with pytest.raises(ValueError, match="async returns-series failed$"):
+        await client.get_returns_series(
+            request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
+            correlation_id="corr-async-fail",
+        )
+
+
+@pytest.mark.asyncio
+async def test_client_rejects_invalid_async_accepted_payloads(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(httpx, "AsyncClient", _FakeAsyncClient)
+    _FakeAsyncClient.requests = []
+
+    for payload, expected in [
+        ({"result_path": "relative"}, "missing result_path"),
+        ({"result_path": "/result", "poll_path": "relative"}, "invalid poll_path"),
+    ]:
+
+        def _response_factory(**_: Any) -> httpx.Response:
+            return _ok_response(payload, status_code=202)
+
+        _FakeAsyncClient.response_factory = _response_factory
+        client = LotusPerformanceClient(base_url="http://performance.local")
+        with pytest.raises(ValueError, match=expected):
+            await client.get_returns_series(
+                request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
+                correlation_id=None,
+            )
+
+
+@pytest.mark.asyncio
+async def test_client_raises_for_unexpected_async_result_status(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(httpx, "AsyncClient", _FakeAsyncClient)
+    _FakeAsyncClient.requests = []
+
+    responses = iter(
+        [
+            _ok_response(
+                {"result_path": "/integration/returns/series/results/calc-1"},
+                status_code=202,
+            ),
+            _ok_response({"detail": "not ready"}, status_code=500),
+        ]
+    )
+    _FakeAsyncClient.response_factory = lambda **_: next(responses)
+
+    client = LotusPerformanceClient(base_url="http://performance.local")
+    with pytest.raises(ValueError, match="failed \\(500\\): not ready"):
+        await client.get_returns_series(
+            request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
+            correlation_id=None,
+        )
+
+
+@pytest.mark.asyncio
 async def test_client_times_out_async_returns_series_when_result_never_completes(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -309,6 +388,11 @@ def test_client_extract_error_detail_variants() -> None:
 
     response_error_obj = _ok_response({"error": {"message": "error message"}})
     assert LotusPerformanceClient._extract_error_detail(response_error_obj) == "error message"
+
+    response_fallback_obj = _ok_response({"unexpected": "payload"})
+    assert LotusPerformanceClient._extract_error_detail(response_fallback_obj) == str(
+        {"unexpected": "payload"}
+    )
 
 
 def test_client_defaults_base_url_when_env_missing(monkeypatch: pytest.MonkeyPatch) -> None:

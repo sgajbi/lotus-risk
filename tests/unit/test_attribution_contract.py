@@ -92,3 +92,30 @@ def test_attribution_contract_requires_benchmark_exposures_for_active_risk() -> 
     stateless_input["benchmark_exposure_history"] = []
     with pytest.raises(ValueError, match="benchmark_exposure_history are required"):
         HistoricalAttributionRequest.model_validate(payload)
+
+
+def test_attribution_options_reject_empty_lists() -> None:
+    for field_name, expected_message in [
+        ("attribution_types", "attribution_types must include at least one value"),
+        ("metrics", "metrics must include at least one value"),
+        ("grouping_dimensions", "grouping_dimensions must include at least one value"),
+    ]:
+        payload = deepcopy(BASE_STATELESS_PAYLOAD)
+        stateless_input = cast(dict[str, Any], payload["stateless_input"])
+        options = cast(dict[str, Any], stateless_input["attribution_options"])
+        options[field_name] = []
+
+        with pytest.raises(ValueError, match=expected_message):
+            HistoricalAttributionRequest.model_validate(payload)
+
+
+def test_attribution_contract_rejects_duplicate_period_names() -> None:
+    payload = deepcopy(BASE_STATELESS_PAYLOAD)
+    stateless_input = cast(dict[str, Any], payload["stateless_input"])
+    stateless_input["periods"] = [
+        {"type": "YTD", "name": "P1"},
+        {"type": "MTD", "name": "P1"},
+    ]
+
+    with pytest.raises(ValueError, match="Duplicate period names"):
+        HistoricalAttributionRequest.model_validate(payload)

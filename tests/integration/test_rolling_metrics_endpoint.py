@@ -1,3 +1,5 @@
+from typing import Any, cast
+
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -190,6 +192,103 @@ def test_rolling_metrics_endpoint_stateful_surfaces_missing_risk_free_after_curr
         "include_risk_free": False,
     }
     assert core_client.risk_free_calls
+
+
+def test_rolling_metrics_endpoint_stateful_uses_explicit_reporting_currency_for_risk_free() -> None:
+    recorder = RecordingLotusPerformanceClient(
+        response_payload=build_returns_series_response(
+            portfolio_returns=JAN_2026_PORTFOLIO_RETURNS,
+        )
+    )
+    core_client = RecordingLotusCoreReferenceClient(
+        risk_free_response=build_risk_free_series_response(
+            points=[
+                {
+                    "series_date": "2026-01-02",
+                    "value": "0.0252",
+                    "value_convention": "annualized_rate",
+                },
+                {
+                    "series_date": "2026-01-03",
+                    "value": "0.0252",
+                    "value_convention": "annualized_rate",
+                },
+                {
+                    "series_date": "2026-01-04",
+                    "value": "0.0252",
+                    "value_convention": "annualized_rate",
+                },
+            ]
+        )
+    )
+
+    with override_app_runtime(
+        lotus_performance_client=recorder,
+        lotus_core_client=core_client,
+    ):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/rolling-metrics",
+            headers={"X-Correlation-Id": "corr-rolling-explicit-rf"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-04",
+                    "reporting_currency": "CHF",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "rolling_options": {
+                        "window_lengths": [2],
+                        "metrics": ["ROLLING_SHARPE"],
+                    },
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    assert core_client.snapshot_calls == []
+    risk_free_payload = cast(dict[str, Any], core_client.risk_free_calls[0]["request_payload"])
+    assert risk_free_payload["currency"] == "CHF"
+    assert risk_free_payload["window"] == {
+        "start_date": "2026-01-01",
+        "end_date": "2026-01-04",
+    }
+    performance_payload = cast(dict[str, Any], recorder.calls[0]["request_payload"])
+    assert performance_payload["reporting_currency"] == "CHF"
+    assert performance_payload["series_selection"]["include_risk_free"] is False
+
+
+def test_rolling_metrics_endpoint_stateful_rejects_missing_benchmark_returns_for_beta() -> None:
+    recorder = RecordingLotusPerformanceClient(
+        response_payload=build_returns_series_response(
+            portfolio_returns=JAN_2026_PORTFOLIO_RETURNS,
+        )
+    )
+    with override_app_runtime(lotus_performance_client=recorder):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/rolling-metrics",
+            headers={"X-Correlation-Id": "corr-rolling-missing-bmk"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-04",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "rolling_options": {
+                        "window_lengths": [2],
+                        "metrics": ["ROLLING_BETA"],
+                    },
+                },
+            },
+        )
+
+    assert response.status_code == 400
+    body = response.json()["error"]
+    assert "no benchmark returns" in body["message"]
+    assert body["correlation_id"] == "corr-rolling-missing-bmk"
+    request_payload = cast(dict[str, Any], recorder.calls[0]["request_payload"])
+    assert request_payload["series_selection"]["include_benchmark"] is True
 
 
 def test_rolling_metrics_endpoint_stateful_autowires_performance_client() -> None:

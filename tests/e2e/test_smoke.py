@@ -1,9 +1,14 @@
 from fastapi.testclient import TestClient
 from app.main import app
 from tests.support.app_runtime import override_app_runtime
+from tests.support.historical_attribution_fakes import (
+    RecordingHistoricalAttributionCoreClient,
+    build_stateful_attribution_returns_client,
+)
 from tests.support.lotus_core_fakes import SimulationLotusCoreClient
 from tests.support.lotus_performance_fakes import RecordingLotusPerformanceClient
 from tests.support.returns_series_payloads import (
+    JAN_2026_DRAWDOWN_BENCHMARK_RETURNS,
     JAN_2026_PORTFOLIO_RETURNS,
     JAN_2026_RISK_FREE_RETURNS,
     JAN_2026_ROLLING_BENCHMARK_RETURNS,
@@ -183,6 +188,33 @@ def test_e2e_risk_calculate_happy_path() -> None:
     assert metrics["VAR"]["value"] is not None
 
 
+def test_e2e_risk_calculate_stateful_mode() -> None:
+    performance_client = RecordingLotusPerformanceClient(
+        response_payload=build_returns_series_response(
+            portfolio_returns=JAN_2026_PORTFOLIO_RETURNS,
+        )
+    )
+    with override_app_runtime(lotus_performance_client=performance_client):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/calculate",
+            headers={"X-Correlation-Id": "corr-e2e-risk-stateful"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-04",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "metrics": ["VOLATILITY"],
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()["results"]["YTD"]["metrics"]["VOLATILITY"]["value"] is not None
+    assert performance_client.calls[0]["correlation_id"] == "corr-e2e-risk-stateful"
+
+
 def test_e2e_risk_calculate_invalid_period_contract() -> None:
     client = TestClient(app)
     payload = _risk_payload()
@@ -344,3 +376,74 @@ def test_e2e_rolling_metrics_stateful_mode() -> None:
     body = response.json()
     assert body["input_mode"] == "stateful"
     assert "YTD" in body["results"]
+
+
+def test_e2e_drawdown_stateful_mode_with_benchmark() -> None:
+    performance_client = RecordingLotusPerformanceClient(
+        response_payload=build_returns_series_response(
+            portfolio_returns=JAN_2026_PORTFOLIO_RETURNS,
+            benchmark_returns=JAN_2026_DRAWDOWN_BENCHMARK_RETURNS,
+        )
+    )
+    with override_app_runtime(lotus_performance_client=performance_client):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/drawdown",
+            headers={"X-Correlation-Id": "corr-e2e-dd-stateful"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-04",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "benchmark_policy": {
+                        "include_benchmark": True,
+                        "missing_benchmark_policy": "REQUIRE",
+                    },
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()["input_mode"] == "stateful"
+    assert performance_client.calls[0]["request_payload"]["series_selection"] == {
+        "include_portfolio": True,
+        "include_benchmark": True,
+        "include_risk_free": False,
+    }
+
+
+def test_e2e_historical_attribution_stateful_active_risk_mode() -> None:
+    performance_client = build_stateful_attribution_returns_client()
+    core_client = RecordingHistoricalAttributionCoreClient()
+
+    with override_app_runtime(
+        lotus_performance_client=performance_client,
+        lotus_core_client=core_client,
+    ):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/historical-attribution",
+            headers={"X-Correlation-Id": "corr-e2e-attr-active"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-04",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "attribution_options": {
+                        "attribution_types": ["ACTIVE_RISK"],
+                        "metrics": ["TRACKING_ERROR"],
+                        "grouping_dimensions": ["SECTOR"],
+                    },
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["input_mode"] == "stateful"
+    attribution_set = body["results"]["YTD"]["attribution_sets"][0]
+    assert attribution_set["attribution_type"] == "ACTIVE_RISK"
+    assert attribution_set["contributors"]
+    assert core_client.assignment_calls

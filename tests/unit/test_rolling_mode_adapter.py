@@ -1,4 +1,5 @@
 import asyncio
+from typing import Any, cast
 
 import pytest
 
@@ -305,3 +306,48 @@ def test_stateful_adapter_rejects_unknown_risk_free_value_convention() -> None:
                 correlation_id=None,
             )
         )
+
+
+def test_stateful_adapter_sources_risk_free_after_returns_for_si_window() -> None:
+    client = RecordingLotusPerformanceClient(
+        response_payload={
+            "series": {
+                "portfolio_returns": [
+                    {"date": "2026-01-02", "return_value": "0.0100"},
+                    {"date": "2026-01-03", "return_value": "-0.0200"},
+                    {"date": "2026-01-04", "return_value": "0.0050"},
+                ],
+            }
+        }
+    )
+    core_client = RecordingLotusCoreReferenceClient(risk_free_response=_risk_free_payload())
+    request = RollingStatefulInput.model_validate(
+        {
+            "portfolio_id": "DEMO_DPM_EUR_001",
+            "as_of_date": "2026-01-04",
+            "reporting_currency": "USD",
+            "periods": [{"type": "SI", "name": "SI"}],
+            "rolling_options": {
+                "window_lengths": [2],
+                "metrics": ["ROLLING_SHARPE"],
+            },
+        }
+    )
+
+    response = asyncio.run(
+        calculate_rolling_metrics_stateful(
+            request,
+            performance_client=client,
+            core_client=core_client,
+            correlation_id="corr-si-risk-free",
+        )
+    )
+
+    assert client.request_payload is not None
+    assert client.request_payload["window"] == {"mode": "RELATIVE", "period": "SI"}
+    risk_free_payload = cast(dict[str, Any], core_client.risk_free_calls[0]["request_payload"])
+    assert risk_free_payload["window"] == {
+        "start_date": "2026-01-02",
+        "end_date": "2026-01-04",
+    }
+    assert response.results["SI"].error is None

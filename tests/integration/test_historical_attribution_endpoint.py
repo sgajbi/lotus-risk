@@ -317,3 +317,156 @@ def test_historical_attribution_stateful_active_risk_uses_benchmark_contract_fam
         "component_weight"
     ]
     assert core_client.index_catalog_calls[0]["request_payload"] == {"as_of_date": "2026-01-04"}
+
+
+def test_historical_attribution_stateful_active_risk_asset_class_contract() -> None:
+    performance_client = build_stateful_attribution_returns_client()
+    core_client = RecordingHistoricalAttributionCoreClient()
+
+    with override_app_runtime(
+        lotus_performance_client=performance_client,
+        lotus_core_client=core_client,
+    ):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/historical-attribution",
+            headers={"X-Correlation-Id": "corr-attr-active-asset-class"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-04",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "attribution_options": {
+                        "attribution_types": ["ACTIVE_RISK"],
+                        "metrics": ["TRACKING_ERROR"],
+                        "grouping_dimensions": ["ASSET_CLASS"],
+                    },
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    attribution_set = response.json()["results"]["YTD"]["attribution_sets"][0]
+    assert attribution_set["attribution_type"] == "ACTIVE_RISK"
+    assert attribution_set["contributors"]
+    assert core_client.position_calls[0]["request_payload"]["dimensions"] == ["asset_class"]
+    assert core_client.market_series_calls[0]["request_payload"]["series_fields"] == [
+        "component_weight"
+    ]
+
+
+def test_historical_attribution_stateful_active_risk_issuer_is_explicitly_gated() -> None:
+    performance_client = build_stateful_attribution_returns_client()
+    core_client = RecordingHistoricalAttributionCoreClient()
+
+    with override_app_runtime(
+        lotus_performance_client=performance_client,
+        lotus_core_client=core_client,
+    ):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/historical-attribution",
+            headers={"X-Correlation-Id": "corr-attr-active-issuer"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-04",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "attribution_options": {
+                        "attribution_types": ["ACTIVE_RISK"],
+                        "metrics": ["TRACKING_ERROR"],
+                        "grouping_dimensions": ["ISSUER"],
+                    },
+                },
+            },
+        )
+
+    assert response.status_code == 400
+    body = response.json()["error"]
+    assert body["code"] == "INVALID_INPUT"
+    assert "cannot source benchmark exposure history" in body["message"]
+    assert "grouping_dimensions=ISSUER" in body["message"]
+    assert body["correlation_id"] == "corr-attr-active-issuer"
+
+
+def test_historical_attribution_stateful_active_risk_rejects_missing_benchmark_returns() -> None:
+    performance_client = build_stateful_attribution_returns_client()
+    performance_client.response_payload = {
+        "series": {
+            "portfolio_returns": [
+                {"date": "2026-01-02", "return_value": "0.0100"},
+                {"date": "2026-01-03", "return_value": "-0.0050"},
+            ]
+        }
+    }
+    core_client = RecordingHistoricalAttributionCoreClient()
+
+    with override_app_runtime(
+        lotus_performance_client=performance_client,
+        lotus_core_client=core_client,
+    ):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/historical-attribution",
+            headers={"X-Correlation-Id": "corr-attr-missing-bmk-return"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-04",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "attribution_options": {
+                        "attribution_types": ["ACTIVE_RISK"],
+                        "metrics": ["TRACKING_ERROR"],
+                        "grouping_dimensions": ["SECTOR"],
+                    },
+                },
+            },
+        )
+
+    assert response.status_code == 400
+    body = response.json()["error"]
+    assert "no benchmark returns" in body["message"]
+    assert body["correlation_id"] == "corr-attr-missing-bmk-return"
+
+
+def test_historical_attribution_stateful_active_risk_rejects_bad_benchmark_series_shape() -> None:
+    class _BadBenchmarkSeriesCoreClient(RecordingHistoricalAttributionCoreClient):
+        async def get_benchmark_market_series(
+            self,
+            *,
+            benchmark_id: str,
+            request_payload: dict[str, object],
+            correlation_id: str | None,
+        ) -> dict[str, object]:
+            return {"component_series": "bad"}
+
+    with override_app_runtime(
+        lotus_performance_client=build_stateful_attribution_returns_client(),
+        lotus_core_client=_BadBenchmarkSeriesCoreClient(),
+    ):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/historical-attribution",
+            headers={"X-Correlation-Id": "corr-attr-bad-bmk-series"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-04",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "attribution_options": {
+                        "attribution_types": ["ACTIVE_RISK"],
+                        "metrics": ["TRACKING_ERROR"],
+                        "grouping_dimensions": ["SECTOR"],
+                    },
+                },
+            },
+        )
+
+    assert response.status_code == 400
+    body = response.json()["error"]
+    assert "benchmark market-series payload missing" in body["message"]
+    assert body["correlation_id"] == "corr-attr-bad-bmk-series"
