@@ -199,7 +199,7 @@ def _default_error_code(status_code: int) -> str:
         return "AUTHORIZATION_DENIED"
     if status_code == status.HTTP_413_REQUEST_ENTITY_TOO_LARGE:
         return "PAYLOAD_TOO_LARGE"
-    if status_code == status.HTTP_422_UNPROCESSABLE_ENTITY:
+    if status_code == status.HTTP_422_UNPROCESSABLE_CONTENT:
         return "INVALID_REQUEST"
     if status_code == status.HTTP_400_BAD_REQUEST:
         return "INVALID_INPUT"
@@ -210,7 +210,7 @@ def _default_error_code(status_code: int) -> str:
 async def handle_validation_error(request: Request, exc: RequestValidationError) -> Response:
     return error_response(
         request,
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         code="INVALID_REQUEST",
         message="Request validation failed",
         details=exc.errors(),
