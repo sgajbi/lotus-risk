@@ -89,6 +89,8 @@ def test_drawdown_endpoint_stateful_uses_lotus_performance() -> None:
     assert body["metadata"]["include_benchmark"] is True
     assert body["metadata"]["missing_benchmark_policy"] == "REQUIRE"
     assert body["metadata"]["top_n_episodes"] == 3
+    assert body["results"]["YTD"]["relative_to_benchmark_context"]["requested"] is True
+    assert body["results"]["YTD"]["relative_to_benchmark_context"]["applied"] is True
     assert body["results"]["YTD"]["relative_to_benchmark"]["time_under_water_days"] >= 0
 
 

@@ -126,5 +126,10 @@ def test_live_stateful_drawdown_reconciles_with_upstream_returns() -> None:
     assert summary["time_under_water_days"] == _time_under_water(portfolio_drawdowns)
     assert relative["max_drawdown"] == pytest.approx(_max_drawdown(active_drawdowns), abs=1e-12)
     assert relative["time_under_water_days"] == _time_under_water(active_drawdowns)
+    assert period["relative_to_benchmark_context"]["requested"] is True
+    assert period["relative_to_benchmark_context"]["applied"] is True
+    assert period["relative_to_benchmark_context"]["aligned_observation_count"] == len(
+        active_returns
+    )
     assert drawdown_body["metadata"]["include_benchmark"] is True
     assert drawdown_body["metadata"]["include_underwater_series"] is True

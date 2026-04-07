@@ -61,6 +61,9 @@ def test_drawdown_engine_returns_period_summary_episode_and_underwater() -> None
     assert period.underwater_series is not None
     assert len(period.underwater_series) > 0
     assert period.relative_to_benchmark is not None
+    assert period.relative_to_benchmark_context.requested is False
+    assert period.relative_to_benchmark_context.applied is True
+    assert period.relative_to_benchmark_context.aligned_observation_count == 7
     assert period.relative_to_benchmark.max_drawdown is not None
     assert period.relative_to_benchmark.days_to_trough is not None
     assert period.relative_to_benchmark.time_under_water_days >= 0
@@ -157,8 +160,36 @@ def test_drawdown_engine_sets_period_error_when_window_has_no_observations() -> 
         request,
         input_mode=DrawdownInputMode.STATELESS,
         analysis_options=DrawdownAnalysisOptions.model_validate({}),
+        include_benchmark=True,
     )
     assert response.results["empty"].error == "Insufficient data"
+    assert response.results["empty"].relative_to_benchmark_context.requested is True
+    assert response.results["empty"].relative_to_benchmark_context.applied is False
+
+
+def test_drawdown_engine_reports_unapplied_relative_context_when_benchmark_missing() -> None:
+    request = DrawdownStatelessInput.model_validate(
+        {
+            "scope": {"as_of_date": "2026-01-08", "net_or_gross": "NET"},
+            "periods": [{"type": "YTD", "name": "YTD"}],
+            "returns": [
+                {"date": "2026-01-02", "value": 1.0},
+                {"date": "2026-01-03", "value": -3.0},
+            ],
+            "benchmark_returns": [],
+        }
+    )
+    response = calculate_drawdown(
+        request,
+        input_mode=DrawdownInputMode.STATELESS,
+        analysis_options=DrawdownAnalysisOptions.model_validate({}),
+        include_benchmark=True,
+    )
+    period = response.results["YTD"]
+    assert period.relative_to_benchmark is None
+    assert period.relative_to_benchmark_context.requested is True
+    assert period.relative_to_benchmark_context.applied is False
+    assert period.relative_to_benchmark_context.aligned_observation_count == 0
 
 
 def test_drawdown_engine_empty_summary_and_duration_guard_branches() -> None:

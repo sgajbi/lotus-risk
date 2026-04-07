@@ -436,6 +436,24 @@ class RelativeDrawdownSummary(BaseModel):
     )
 
 
+class RelativeDrawdownContext(BaseModel):
+    requested: bool = Field(
+        default=False,
+        description="Whether benchmark-relative drawdown was requested for this period.",
+        json_schema_extra={"example": True},
+    )
+    applied: bool = Field(
+        default=False,
+        description="Whether benchmark-relative drawdown was actually computed for this period.",
+        json_schema_extra={"example": True},
+    )
+    aligned_observation_count: int = Field(
+        default=0,
+        description="Number of aligned portfolio and benchmark observations used for relative drawdown.",
+        json_schema_extra={"example": 64},
+    )
+
+
 class DrawdownPeriodResult(BaseModel):
     start_date: dt.date = Field(
         description="Resolved period start date.",
@@ -482,6 +500,20 @@ class DrawdownPeriodResult(BaseModel):
                 "days_to_trough": 15,
                 "days_to_recovery": 9,
                 "time_under_water_days": 21,
+            }
+        },
+    )
+    relative_to_benchmark_context: RelativeDrawdownContext = Field(
+        default_factory=RelativeDrawdownContext,
+        description=(
+            "Execution context for benchmark-relative drawdown, including whether it was "
+            "requested and whether aligned benchmark observations were available."
+        ),
+        json_schema_extra={
+            "example": {
+                "requested": True,
+                "applied": True,
+                "aligned_observation_count": 64,
             }
         },
     )
@@ -677,6 +709,11 @@ class DrawdownResponse(BaseModel):
                                 "days_to_trough": 30,
                                 "days_to_recovery": 10,
                                 "time_under_water_days": 74,
+                            },
+                            "relative_to_benchmark_context": {
+                                "requested": True,
+                                "applied": True,
+                                "aligned_observation_count": 64,
                             },
                             "underwater_series": [
                                 {"date": "2026-01-01", "drawdown": 0.0},

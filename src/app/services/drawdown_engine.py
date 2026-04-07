@@ -15,6 +15,7 @@ from app.contracts.drawdown import (
     DrawdownInputMode,
     DrawdownMetadata,
     DrawdownPeriodResult,
+    RelativeDrawdownContext,
     DrawdownResponse,
     DrawdownStatelessInput,
     DrawdownSummary,
@@ -249,6 +250,11 @@ def calculate_drawdown(
                 summary=None,
                 episodes=[],
                 relative_to_benchmark=None,
+                relative_to_benchmark_context=RelativeDrawdownContext(
+                    requested=include_benchmark is True,
+                    applied=False,
+                    aligned_observation_count=0,
+                ),
                 underwater_series=None,
                 error="Insufficient data",
             )
@@ -288,6 +294,11 @@ def calculate_drawdown(
         )
 
         relative_summary: RelativeDrawdownSummary | None = None
+        relative_context = RelativeDrawdownContext(
+            requested=include_benchmark is True,
+            applied=False,
+            aligned_observation_count=0,
+        )
         if not benchmark_df.empty:
             benchmark_series = _filter_period(benchmark_df, start=start, end=end)
             aligned = pd.merge(
@@ -296,6 +307,11 @@ def calculate_drawdown(
                 left_index=True,
                 right_index=True,
                 how="inner",
+            )
+            relative_context = RelativeDrawdownContext(
+                requested=include_benchmark is True,
+                applied=not aligned.empty,
+                aligned_observation_count=len(aligned),
             )
             if not aligned.empty:
                 active_returns = aligned["portfolio"] - aligned["benchmark"]
@@ -324,6 +340,7 @@ def calculate_drawdown(
             summary=summary,
             episodes=episode_models,
             relative_to_benchmark=relative_summary,
+            relative_to_benchmark_context=relative_context,
             underwater_series=(
                 _to_underwater_series(drawdown)
                 if analysis_options.include_underwater_series
