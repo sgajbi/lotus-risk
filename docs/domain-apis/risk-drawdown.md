@@ -60,7 +60,7 @@
   - `summary` (max drawdown, timing, TUW, ulcer, DaR/CDaR)
   - `episodes[]` (top-N worst by depth)
   - `relative_to_benchmark` (optional; active drawdown depth plus timing/recovery fields)
-  - `relative_to_benchmark_context` (requested/applied/aligned-observation status)
+- `relative_to_benchmark_context` (requested/applied/aligned-observation status)
   - `underwater_series` (optional)
   - `error` (period-level deterministic error when data is insufficient)
 - `metadata`
@@ -103,6 +103,11 @@ The response metadata now echoes the applied drawdown configuration so consumers
 - `max_drawdown = 0.0` means the realized wealth path never fell below its in-period running peak. This is a valid outcome, not missing data.
 - `relative_to_benchmark` is computed on the active return path `(portfolio - benchmark)`, not on the benchmark standalone wealth path.
 - `relative_to_benchmark_context.applied = false` means the caller asked for benchmark-relative drawdown but lotus-risk did not have aligned benchmark observations for that period.
+- `relative_to_benchmark_context.reason` explains why relative drawdown was or was not computed:
+  - `NOT_REQUESTED`
+  - `BENCHMARK_UNAVAILABLE`
+  - `NO_ALIGNED_OBSERVATIONS`
+  - `APPLIED`
 - `time_under_water_days` counts observations below the running peak. It is a persistence signal, not simply the gap between peak and trough dates.
 - `is_recovered = false` means the path had not returned to its prior peak by period end. In that case `max_drawdown_recovery_date` and `days_to_recovery` remain `null`.
 - `episodes[]` is filtered by `minimum_episode_depth_bps` and truncated by `top_n_episodes`, so it is a ranked decision support view rather than a full event ledger unless the caller requests it that way.

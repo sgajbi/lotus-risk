@@ -253,6 +253,11 @@ def calculate_drawdown(
                 relative_to_benchmark_context=RelativeDrawdownContext(
                     requested=include_benchmark is True,
                     applied=False,
+                    reason=(
+                        "BENCHMARK_UNAVAILABLE"
+                        if include_benchmark is True
+                        else "NOT_REQUESTED"
+                    ),
                     aligned_observation_count=0,
                 ),
                 underwater_series=None,
@@ -297,6 +302,7 @@ def calculate_drawdown(
         relative_context = RelativeDrawdownContext(
             requested=include_benchmark is True,
             applied=False,
+            reason="NOT_REQUESTED" if include_benchmark is not True else "BENCHMARK_UNAVAILABLE",
             aligned_observation_count=0,
         )
         if not benchmark_df.empty:
@@ -311,6 +317,7 @@ def calculate_drawdown(
             relative_context = RelativeDrawdownContext(
                 requested=include_benchmark is True,
                 applied=not aligned.empty,
+                reason="APPLIED" if not aligned.empty else "NO_ALIGNED_OBSERVATIONS",
                 aligned_observation_count=len(aligned),
             )
             if not aligned.empty:

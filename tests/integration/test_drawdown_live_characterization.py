@@ -128,6 +128,7 @@ def test_live_stateful_drawdown_reconciles_with_upstream_returns() -> None:
     assert relative["time_under_water_days"] == _time_under_water(active_drawdowns)
     assert period["relative_to_benchmark_context"]["requested"] is True
     assert period["relative_to_benchmark_context"]["applied"] is True
+    assert period["relative_to_benchmark_context"]["reason"] == "APPLIED"
     assert period["relative_to_benchmark_context"]["aligned_observation_count"] == len(
         active_returns
     )

@@ -447,6 +447,16 @@ class RelativeDrawdownContext(BaseModel):
         description="Whether benchmark-relative drawdown was actually computed for this period.",
         json_schema_extra={"example": True},
     )
+    reason: Literal[
+        "NOT_REQUESTED",
+        "BENCHMARK_UNAVAILABLE",
+        "NO_ALIGNED_OBSERVATIONS",
+        "APPLIED",
+    ] = Field(
+        default="NOT_REQUESTED",
+        description="Deterministic reason explaining whether benchmark-relative drawdown was applied.",
+        json_schema_extra={"example": "APPLIED"},
+    )
     aligned_observation_count: int = Field(
         default=0,
         description="Number of aligned portfolio and benchmark observations used for relative drawdown.",
@@ -513,6 +523,7 @@ class DrawdownPeriodResult(BaseModel):
             "example": {
                 "requested": True,
                 "applied": True,
+                "reason": "APPLIED",
                 "aligned_observation_count": 64,
             }
         },
@@ -713,6 +724,7 @@ class DrawdownResponse(BaseModel):
                             "relative_to_benchmark_context": {
                                 "requested": True,
                                 "applied": True,
+                                "reason": "APPLIED",
                                 "aligned_observation_count": 64,
                             },
                             "underwater_series": [
