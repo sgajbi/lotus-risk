@@ -2,13 +2,14 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from tests.support.app_runtime import override_app_runtime
+from tests.support.lotus_core_fakes import RecordingLotusCoreReferenceClient
 from tests.support.lotus_performance_fakes import (
     RecordingLotusPerformanceClient,
     build_autowired_lotus_performance_client_class,
 )
+from tests.support.risk_free_series_payloads import build_risk_free_series_response
 from tests.support.returns_series_payloads import (
     JAN_2026_PORTFOLIO_RETURNS,
-    JAN_2026_RISK_FREE_RETURNS,
     JAN_2026_ROLLING_BENCHMARK_RETURNS,
     build_returns_series_response,
 )
@@ -19,33 +20,6 @@ _AutoWiredLotusPerformanceClient = build_autowired_lotus_performance_client_clas
         benchmark_returns=JAN_2026_ROLLING_BENCHMARK_RETURNS,
     )
 )
-
-
-class _AutoWiredLotusCoreClient:
-    calls: list[dict[str, object]] = []
-
-    async def get_core_snapshot(
-        self,
-        *,
-        portfolio_id: str,
-        request_payload: dict[str, object],
-        correlation_id: str | None,
-    ) -> dict[str, object]:
-        _AutoWiredLotusCoreClient.calls.append(
-            {
-                "portfolio_id": portfolio_id,
-                "request_payload": request_payload,
-                "correlation_id": correlation_id,
-            }
-        )
-        return {
-            "valuation_context": {
-                "portfolio_currency": "USD",
-                "reporting_currency": "USD",
-            }
-        }
-
-
 def _stateless_payload() -> dict[str, object]:
     return {
         "input_mode": "stateless",
@@ -105,12 +79,32 @@ def test_rolling_metrics_endpoint_stateful_uses_lotus_performance() -> None:
         response_payload=build_returns_series_response(
             portfolio_returns=JAN_2026_PORTFOLIO_RETURNS,
             benchmark_returns=JAN_2026_ROLLING_BENCHMARK_RETURNS,
-            risk_free_returns=JAN_2026_RISK_FREE_RETURNS,
+        )
+    )
+    core_client = RecordingLotusCoreReferenceClient(
+        risk_free_response=build_risk_free_series_response(
+            points=[
+                {
+                    "series_date": "2026-01-02",
+                    "value": "0.0365",
+                    "value_convention": "annualized_rate",
+                },
+                {
+                    "series_date": "2026-01-03",
+                    "value": "0.0365",
+                    "value_convention": "annualized_rate",
+                },
+                {
+                    "series_date": "2026-01-04",
+                    "value": "0.0365",
+                    "value_convention": "annualized_rate",
+                },
+            ]
         )
     )
     with override_app_runtime(
         lotus_performance_client=recorder,
-        lotus_core_client=_AutoWiredLotusCoreClient(),
+        lotus_core_client=core_client,
     ):
         client = TestClient(app)
         response = client.post(
@@ -142,7 +136,8 @@ def test_rolling_metrics_endpoint_stateful_uses_lotus_performance() -> None:
     assert payload["stateful_input"] == {}
     assert payload["reporting_currency"] == "USD"
     assert payload["series_selection"]["include_benchmark"] is True
-    assert payload["series_selection"]["include_risk_free"] is True
+    assert payload["series_selection"]["include_risk_free"] is False
+    assert core_client.risk_free_calls
     assert response.json()["input_mode"] == "stateful"
 
 
@@ -153,9 +148,10 @@ def test_rolling_metrics_endpoint_stateful_surfaces_missing_risk_free_after_curr
             benchmark_returns=JAN_2026_ROLLING_BENCHMARK_RETURNS,
         )
     )
+    core_client = RecordingLotusCoreReferenceClient()
     with override_app_runtime(
         lotus_performance_client=recorder,
-        lotus_core_client=_AutoWiredLotusCoreClient(),
+        lotus_core_client=core_client,
     ):
         client = TestClient(app)
         response = client.post(
@@ -178,7 +174,7 @@ def test_rolling_metrics_endpoint_stateful_surfaces_missing_risk_free_after_curr
     assert response.status_code == 400
     body = response.json()["error"]
     assert body["code"] == "INVALID_INPUT"
-    assert "no risk-free returns" in body["message"]
+    assert "no usable risk-free returns" in body["message"]
     assert body["correlation_id"] == "corr-rolling-missing-rf"
     assert len(recorder.calls) == 1
     payload = recorder.calls[0]["request_payload"]
@@ -187,8 +183,9 @@ def test_rolling_metrics_endpoint_stateful_surfaces_missing_risk_free_after_curr
     assert payload["series_selection"] == {
         "include_portfolio": True,
         "include_benchmark": False,
-        "include_risk_free": True,
+        "include_risk_free": False,
     }
+    assert core_client.risk_free_calls
 
 
 def test_rolling_metrics_endpoint_stateful_autowires_performance_client() -> None:
@@ -196,10 +193,24 @@ def test_rolling_metrics_endpoint_stateful_autowires_performance_client() -> Non
         lotus_performance_client=None,
         lotus_core_client=None,
         lotus_performance_class=_AutoWiredLotusPerformanceClient,
-        lotus_core_class=_AutoWiredLotusCoreClient,
+        lotus_core_class=lambda: RecordingLotusCoreReferenceClient(
+            risk_free_response=build_risk_free_series_response(
+                points=[
+                    {
+                        "series_date": "2026-01-02",
+                        "value": "0.0365",
+                        "value_convention": "annualized_rate",
+                    },
+                    {
+                        "series_date": "2026-01-03",
+                        "value": "0.0365",
+                        "value_convention": "annualized_rate",
+                    },
+                ]
+            )
+        ),
     ):
         _AutoWiredLotusPerformanceClient.calls = []
-        _AutoWiredLotusCoreClient.calls = []
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/rolling-metrics",

@@ -17,13 +17,17 @@ Provide decomposition of historical realized risk and active risk into transpare
 
 ### Stateful (Slice B)
 
-- Status: planned (not implemented)
-- Caller provides identifiers and options; lotus-risk sources canonical inputs via lotus-performance.
+- Status: partially implemented
+- Current behavior:
+  - `TOTAL_RISK` stateful path is implemented
+  - `ACTIVE_RISK` stateful path remains gated until benchmark exposure history is available in the exact required upstream shape
 
 ### Simulation
 
-- Status: deferred (not implemented)
-- Explicitly rejected in v1 until simulation-history contracts are finalized.
+- Status: intentionally unsupported in the current production contract
+- Reason:
+  - historical attribution depends on realized return and exposure history
+  - projected holdings snapshots do not by themselves create a valid historical attribution series
 
 ## Required Inputs
 

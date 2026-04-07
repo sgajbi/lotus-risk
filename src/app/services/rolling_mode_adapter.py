@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+from datetime import date
 from typing import Any, Protocol
 
 from app.contracts.risk import RiskRequestScope
@@ -9,6 +11,10 @@ from app.contracts.rolling import (
     RollingResponse,
     RollingStatefulInput,
     RollingStatelessInput,
+)
+from app.services.core_risk_free_series import (
+    build_risk_free_series_request,
+    to_risk_free_return_points,
 )
 from app.services.rolling_engine import ROLLING_SHARPE_METRIC, calculate_rolling_metrics
 from app.services.stateful_returns_request import build_stateful_returns_series_request
@@ -36,12 +42,18 @@ class LotusCoreClientProtocol(Protocol):
         correlation_id: str | None,
     ) -> dict[str, Any]: ...
 
+    async def get_risk_free_series(
+        self,
+        *,
+        request_payload: dict[str, Any],
+        correlation_id: str | None,
+    ) -> dict[str, Any]: ...
+
 
 def _build_stateful_source_request(stateful: RollingStatefulInput) -> dict[str, Any]:
     include_benchmark = any(
         metric in ROLLING_BENCHMARK_METRICS for metric in stateful.rolling_options.metrics
     )
-    include_risk_free = ROLLING_SHARPE_METRIC in stateful.rolling_options.metrics
     return build_stateful_returns_series_request(
         portfolio_id=stateful.portfolio_id,
         as_of_date=stateful.as_of_date,
@@ -50,9 +62,23 @@ def _build_stateful_source_request(stateful: RollingStatefulInput) -> dict[str, 
         metric_basis=stateful.net_or_gross,
         reporting_currency=stateful.reporting_currency,
         include_benchmark=include_benchmark,
-        include_risk_free=include_risk_free,
+        include_risk_free=False,
         missing_data_policy="ALLOW_PARTIAL",
     )
+
+
+def _explicit_window_bounds(source_payload: dict[str, Any]) -> tuple[date, date] | None:
+    window = source_payload.get("window")
+    if not isinstance(window, dict):
+        return None
+    if window.get("mode") != "EXPLICIT":
+        return None
+
+    raw_start = window.get("from_date")
+    raw_end = window.get("to_date")
+    if not isinstance(raw_start, str) or not isinstance(raw_end, str):
+        return None
+    return date.fromisoformat(raw_start), date.fromisoformat(raw_end)
 
 
 async def _resolve_reporting_currency(
@@ -111,10 +137,36 @@ async def calculate_rolling_metrics_stateful(
         stateful = stateful.model_copy(update={"reporting_currency": resolved_reporting_currency})
 
     source_payload = _build_stateful_source_request(stateful)
-    source_response = await performance_client.get_returns_series(
-        request_payload=source_payload,
-        correlation_id=correlation_id,
-    )
+    explicit_window = _explicit_window_bounds(source_payload)
+    risk_free_response: dict[str, Any] | None = None
+
+    if include_risk_free and core_client is None:
+        raise ValueError("lotus-core client is required for rolling Sharpe stateful risk-free sourcing")
+
+    if include_risk_free and explicit_window is not None:
+        assert resolved_reporting_currency is not None
+        risk_free_request = build_risk_free_series_request(
+            currency=resolved_reporting_currency,
+            as_of_date=stateful.as_of_date,
+            start_date=explicit_window[0],
+            end_date=explicit_window[1],
+        )
+        source_response, risk_free_response = await asyncio.gather(
+            performance_client.get_returns_series(
+                request_payload=source_payload,
+                correlation_id=correlation_id,
+            ),
+            core_client.get_risk_free_series(
+                request_payload=risk_free_request,
+                correlation_id=correlation_id,
+            ),
+        )
+    else:
+        source_response = await performance_client.get_returns_series(
+            request_payload=source_payload,
+            correlation_id=correlation_id,
+        )
+
     series, portfolio_points = extract_required_portfolio_returns(source_response)
 
     include_benchmark = any(
@@ -126,10 +178,31 @@ async def calculate_rolling_metrics_stateful(
             "lotus-performance returns-series returned no benchmark returns for requested rolling benchmark metrics"
         )
 
-    risk_free_points = to_return_points(series.get("risk_free_returns"))
+    if include_risk_free and risk_free_response is None:
+        assert core_client is not None
+        assert resolved_reporting_currency is not None
+        risk_free_request = build_risk_free_series_request(
+            currency=resolved_reporting_currency,
+            as_of_date=stateful.as_of_date,
+            start_date=min(point.date for point in portfolio_points),
+            end_date=max(point.date for point in portfolio_points),
+        )
+        risk_free_response = await core_client.get_risk_free_series(
+            request_payload=risk_free_request,
+            correlation_id=correlation_id,
+        )
+
+    risk_free_points = (
+        to_risk_free_return_points(
+            risk_free_response,
+            annualization_basis=stateful.rolling_options.annualization_basis,
+        )
+        if include_risk_free and risk_free_response is not None
+        else []
+    )
     if include_risk_free and not risk_free_points:
         raise ValueError(
-            "lotus-performance returns-series returned no risk-free returns for requested rolling Sharpe"
+            "lotus-core risk-free-series returned no usable risk-free returns for requested rolling Sharpe"
         )
 
     stateless = RollingStatelessInput(

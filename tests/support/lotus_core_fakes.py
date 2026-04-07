@@ -112,3 +112,86 @@ class SimulationLotusCoreClient:
                 record["ultimate_parent_issuer_id"] = f"UPI_{security_id}"
             records.append(record)
         return {"records": records}
+
+    async def get_risk_free_series(
+        self,
+        *,
+        request_payload: dict[str, object],
+        correlation_id: str | None,
+    ) -> dict[str, object]:
+        return {
+            "currency": request_payload.get("currency", "USD"),
+            "as_of_date": request_payload.get("as_of_date", "2026-01-04"),
+            "series_mode": request_payload.get("series_mode", "annualized_rate_series"),
+            "resolved_window": request_payload.get(
+                "window",
+                {"start_date": "2026-01-01", "end_date": "2026-01-04"},
+            ),
+            "frequency": request_payload.get("frequency", "daily"),
+            "request_fingerprint": "sim-core-risk-free",
+            "points": [
+                {
+                    "series_date": "2026-01-02",
+                    "value": "0.0365",
+                    "value_convention": "annualized_rate",
+                },
+                {
+                    "series_date": "2026-01-03",
+                    "value": "0.0365",
+                    "value_convention": "annualized_rate",
+                },
+                {
+                    "series_date": "2026-01-04",
+                    "value": "0.0365",
+                    "value_convention": "annualized_rate",
+                },
+            ],
+        }
+
+
+class RecordingLotusCoreReferenceClient:
+    def __init__(
+        self,
+        *,
+        snapshot_response: dict[str, object] | None = None,
+        risk_free_response: dict[str, object] | None = None,
+    ) -> None:
+        self.snapshot_response = snapshot_response or {
+            "valuation_context": {
+                "portfolio_currency": "USD",
+                "reporting_currency": "USD",
+            }
+        }
+        self.risk_free_response = risk_free_response or {"points": []}
+        self.snapshot_calls: list[dict[str, object]] = []
+        self.risk_free_calls: list[dict[str, object]] = []
+
+    async def get_core_snapshot(
+        self,
+        *,
+        portfolio_id: str,
+        request_payload: dict[str, object],
+        correlation_id: str | None,
+    ) -> dict[str, object]:
+        self.snapshot_calls.append(
+            {
+                "portfolio_id": portfolio_id,
+                "request_payload": request_payload,
+                "correlation_id": correlation_id,
+            }
+        )
+        return self.snapshot_response
+
+    async def get_risk_free_series(
+        self,
+        *,
+        request_payload: dict[str, object],
+        correlation_id: str | None,
+    ) -> dict[str, object]:
+        self.risk_free_calls.append(
+            {
+                "request_payload": request_payload,
+                "correlation_id": correlation_id,
+            }
+        )
+        return self.risk_free_response

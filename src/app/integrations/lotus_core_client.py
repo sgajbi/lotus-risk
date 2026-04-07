@@ -101,6 +101,19 @@ class LotusCoreClient:
             correlation_id=correlation_id,
         )
 
+    async def get_risk_free_series(
+        self,
+        *,
+        request_payload: dict[str, Any],
+        correlation_id: str | None,
+    ) -> dict[str, Any]:
+        return await self._request_json(
+            "POST",
+            "/integration/reference/risk-free-series",
+            json_payload=request_payload,
+            correlation_id=correlation_id,
+        )
+
     async def _request_json(
         self,
         method: str,

@@ -111,16 +111,24 @@ async def test_client_supports_add_changes_and_snapshot_routes(
         request_payload={"as_of_date": "2026-02-28"},
         correlation_id=None,
     )
+    risk_free_response = await client.get_risk_free_series(
+        request_payload={
+            "currency": "USD",
+            "as_of_date": "2026-01-04",
+            "series_mode": "annualized_rate_series",
+            "window": {"start_date": "2026-01-01", "end_date": "2026-01-04"},
+            "frequency": "daily",
+        },
+        correlation_id=None,
+    )
 
     assert add_response == {"ok": True}
     assert snapshot_response == {"ok": True}
     assert enrichment_response == {"ok": True}
     assert position_timeseries_response == {"ok": True}
+    assert risk_free_response == {"ok": True}
     assert _FakeAsyncClient.last_request is not None
-    assert (
-        _FakeAsyncClient.last_request["url"]
-        == "http://core.local/integration/portfolios/DEMO_DPM_EUR_001/analytics/position-timeseries"
-    )
+    assert _FakeAsyncClient.last_request["url"] == "http://core.local/integration/reference/risk-free-series"
 
 
 @pytest.mark.asyncio
