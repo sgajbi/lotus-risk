@@ -401,8 +401,7 @@ async def analytics_risk_historical_attribution(
         )
 
     raise ValueError(
-        f"input_mode={request_payload.input_mode.value} is not implemented for /analytics/risk/historical-attribution yet. "
-        "Use input_mode=stateless or input_mode=stateful in this slice."
+        f"Unsupported input_mode={request_payload.input_mode.value} for /analytics/risk/historical-attribution"
     )
 
 
@@ -469,10 +468,7 @@ async def analytics_risk_drawdown(
             correlation_id=request.headers.get("X-Correlation-Id"),
         )
 
-    raise ValueError(
-        f"input_mode={request_payload.input_mode.value} is not implemented for /analytics/risk/drawdown yet. "
-        "Use input_mode=stateless or input_mode=stateful in this slice."
-    )
+    raise ValueError(f"Unsupported input_mode={request_payload.input_mode.value} for /analytics/risk/drawdown")
 
 
 @app.post(
@@ -515,8 +511,7 @@ async def analytics_risk_rolling_metrics(
         )
 
     raise ValueError(
-        f"input_mode={request_payload.input_mode.value} is not implemented for /analytics/risk/rolling-metrics yet. "
-        "Use input_mode=stateless or input_mode=stateful in this slice."
+        f"Unsupported input_mode={request_payload.input_mode.value} for /analytics/risk/rolling-metrics"
     )
 
 
@@ -551,12 +546,6 @@ async def analytics_risk_calculate(
             stateful_input,
             performance_client=performance_client,
             correlation_id=request.headers.get("X-Correlation-Id"),
-        )
-
-    if request_payload.input_mode == RiskInputMode.SIMULATION:
-        raise ValueError(
-            f"input_mode={request_payload.input_mode.value} is not implemented for /analytics/risk/calculate yet. "
-            "Use input_mode=stateless or input_mode=stateful in this slice."
         )
 
     raise ValueError(

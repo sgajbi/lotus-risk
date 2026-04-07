@@ -1,4 +1,5 @@
 import pytest
+from pydantic import ValidationError
 
 from app.contracts.drawdown import DrawdownAnalyticsRequest, DrawdownInputMode
 
@@ -27,21 +28,8 @@ def test_drawdown_contract_requires_stateful_input() -> None:
         DrawdownAnalyticsRequest.model_validate({"input_mode": "stateful"})
 
 
-def test_drawdown_contract_rejects_simulation_mode_in_rfc_slice() -> None:
-    payload = {
-        "input_mode": "simulation",
-        "simulation_input": {
-            "portfolio_id": "DEMO_DPM_EUR_001",
-            "as_of_date": "2026-02-28",
-            "periods": [{"type": "YTD"}],
-        },
-    }
-    request = DrawdownAnalyticsRequest.model_validate(payload)
-    assert request.input_mode == DrawdownInputMode.SIMULATION
-
-
-def test_drawdown_contract_requires_simulation_input() -> None:
-    with pytest.raises(ValueError, match="simulation_input is required"):
+def test_drawdown_contract_rejects_simulation_mode_from_public_contract() -> None:
+    with pytest.raises(ValidationError):
         DrawdownAnalyticsRequest.model_validate({"input_mode": "simulation"})
 
 

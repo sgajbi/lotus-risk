@@ -2,6 +2,7 @@ from copy import deepcopy
 from typing import Any, cast
 
 import pytest
+from pydantic import ValidationError
 
 from app.contracts.attribution import AttributionInputMode, HistoricalAttributionRequest
 
@@ -72,8 +73,8 @@ def test_attribution_contract_requires_stateful_input() -> None:
         HistoricalAttributionRequest.model_validate({"input_mode": "stateful"})
 
 
-def test_attribution_contract_requires_simulation_input() -> None:
-    with pytest.raises(ValueError, match="simulation_input is required"):
+def test_attribution_contract_rejects_simulation_mode_from_public_contract() -> None:
+    with pytest.raises(ValidationError):
         HistoricalAttributionRequest.model_validate({"input_mode": "simulation"})
 
 

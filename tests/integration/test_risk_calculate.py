@@ -168,7 +168,7 @@ def test_risk_calculate_stateful_mode_autowires_lotus_performance_client() -> No
         assert _AutoWiredLotusPerformanceClient.calls[0]["correlation_id"] == "corr-autowire"
 
 
-def test_risk_calculate_simulation_mode_returns_not_implemented_error() -> None:
+def test_risk_calculate_simulation_mode_is_rejected_by_contract() -> None:
     client = TestClient(app)
     response = client.post(
         "/analytics/risk/calculate",
@@ -182,8 +182,8 @@ def test_risk_calculate_simulation_mode_returns_not_implemented_error() -> None:
             },
         },
     )
-    assert response.status_code == 400
-    assert "not implemented" in response.json()["error"]["message"]
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "INVALID_REQUEST"
 
 
 def test_metrics_endpoint_exposes_risk_metric_observability() -> None:

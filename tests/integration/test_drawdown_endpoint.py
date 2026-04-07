@@ -84,7 +84,7 @@ def test_drawdown_endpoint_stateful_uses_lotus_performance() -> None:
     assert response.json()["input_mode"] == "stateful"
 
 
-def test_drawdown_endpoint_rejects_simulation_mode_for_now() -> None:
+def test_drawdown_endpoint_rejects_simulation_mode_at_contract_boundary() -> None:
     client = TestClient(app)
     response = client.post(
         "/analytics/risk/drawdown",
@@ -97,8 +97,8 @@ def test_drawdown_endpoint_rejects_simulation_mode_for_now() -> None:
             },
         },
     )
-    assert response.status_code == 400
-    assert "not implemented" in response.json()["error"]["message"]
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "INVALID_REQUEST"
 
 
 def test_drawdown_endpoint_stateful_autowires_performance_client() -> None:

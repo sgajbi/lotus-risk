@@ -1,6 +1,7 @@
 import copy
 
 import pytest
+from pydantic import ValidationError
 from typing import Any, cast
 
 from app.contracts.rolling import RollingAnalyticsRequest, RollingInputMode
@@ -58,8 +59,8 @@ def test_rolling_contract_requires_stateful_input() -> None:
         RollingAnalyticsRequest.model_validate({"input_mode": "stateful"})
 
 
-def test_rolling_contract_requires_simulation_input() -> None:
-    with pytest.raises(ValueError, match="simulation_input is required"):
+def test_rolling_contract_rejects_simulation_mode_from_public_contract() -> None:
+    with pytest.raises(ValidationError):
         RollingAnalyticsRequest.model_validate({"input_mode": "simulation"})
 
 

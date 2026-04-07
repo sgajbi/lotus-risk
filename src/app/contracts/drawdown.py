@@ -12,7 +12,6 @@ from app.contracts.risk import ReturnPoint, RiskRequestPeriod, RiskRequestScope
 class DrawdownInputMode(str, Enum):
     STATELESS = "stateless"
     STATEFUL = "stateful"
-    SIMULATION = "simulation"
 
 
 class BenchmarkDrawdownPolicy(BaseModel):
@@ -185,17 +184,6 @@ class DrawdownAnalyticsRequest(BaseModel):
             }
         },
     )
-    simulation_input: DrawdownStatefulInput | None = Field(
-        default=None,
-        description="Simulation drawdown payload. Reserved for a future slice.",
-        json_schema_extra={
-            "example": {
-                "portfolio_id": "DEMO_DPM_EUR_001",
-                "as_of_date": "2026-02-28",
-                "periods": [{"type": "YTD", "name": "YTD"}],
-            }
-        },
-    )
     analysis_options: DrawdownAnalysisOptions = Field(
         default_factory=DrawdownAnalysisOptions,
         description="Drawdown analytics option flags and thresholds.",
@@ -219,9 +207,6 @@ class DrawdownAnalyticsRequest(BaseModel):
             raise ValueError("stateless_input is required when input_mode=stateless")
         if self.input_mode == DrawdownInputMode.STATEFUL and self.stateful_input is None:
             raise ValueError("stateful_input is required when input_mode=stateful")
-        if self.input_mode == DrawdownInputMode.SIMULATION:
-            if self.simulation_input is None:
-                raise ValueError("simulation_input is required when input_mode=simulation")
         return self
 
 
