@@ -7,23 +7,7 @@ from app.services.rolling_mode_adapter import (
     _build_stateful_source_request,
     calculate_rolling_metrics_stateful,
 )
-
-
-class _RecordingLotusPerformanceClient:
-    def __init__(self, payload: dict[str, object]) -> None:
-        self.payload = payload
-        self.request_payload: dict[str, object] | None = None
-        self.correlation_id: str | None = None
-
-    async def get_returns_series(
-        self,
-        *,
-        request_payload: dict[str, object],
-        correlation_id: str | None,
-    ) -> dict[str, object]:
-        self.request_payload = request_payload
-        self.correlation_id = correlation_id
-        return self.payload
+from tests.support.lotus_performance_fakes import RecordingLotusPerformanceClient
 
 
 class _StubLotusCoreClient:
@@ -152,8 +136,8 @@ def _portfolio_and_risk_free_only_payload() -> dict[str, object]:
 
 
 def test_stateful_adapter_happy_path() -> None:
-    client = _RecordingLotusPerformanceClient(
-        {
+    client = RecordingLotusPerformanceClient(
+        response_payload={
             "series": {
                 "portfolio_returns": [
                     {"date": "2026-01-02", "return_value": "0.0100"},
@@ -195,7 +179,7 @@ def test_stateful_adapter_happy_path() -> None:
 
 
 def test_stateful_adapter_requires_series_object() -> None:
-    client = _RecordingLotusPerformanceClient({"not_series": {}})
+    client = RecordingLotusPerformanceClient(response_payload={"not_series": {}})
     with pytest.raises(ValueError, match="missing 'series' object"):
         asyncio.run(
             calculate_rolling_metrics_stateful(
@@ -207,8 +191,8 @@ def test_stateful_adapter_requires_series_object() -> None:
 
 
 def test_stateful_adapter_requires_benchmark_when_metric_requested() -> None:
-    client = _RecordingLotusPerformanceClient(
-        {
+    client = RecordingLotusPerformanceClient(
+        response_payload={
             "series": {
                 "portfolio_returns": [
                     {"date": "2026-01-02", "return_value": "0.0100"},
@@ -229,8 +213,8 @@ def test_stateful_adapter_requires_benchmark_when_metric_requested() -> None:
 
 
 def test_stateful_adapter_requires_risk_free_for_sharpe() -> None:
-    client = _RecordingLotusPerformanceClient(
-        {
+    client = RecordingLotusPerformanceClient(
+        response_payload={
             "series": {
                 "portfolio_returns": [
                     {"date": "2026-01-02", "return_value": "0.0100"},
@@ -251,8 +235,8 @@ def test_stateful_adapter_requires_risk_free_for_sharpe() -> None:
 
 
 def test_stateful_adapter_rejects_invalid_return_value() -> None:
-    client = _RecordingLotusPerformanceClient(
-        {
+    client = RecordingLotusPerformanceClient(
+        response_payload={
             "series": {
                 "portfolio_returns": [
                     {"date": "2026-01-02", "return_value": "not-a-number"},
@@ -273,7 +257,7 @@ def test_stateful_adapter_rejects_invalid_return_value() -> None:
 
 
 def test_stateful_adapter_requires_core_snapshot_when_sharpe_needs_reporting_currency() -> None:
-    client = _RecordingLotusPerformanceClient(_portfolio_and_risk_free_only_payload())
+    client = RecordingLotusPerformanceClient(response_payload=_portfolio_and_risk_free_only_payload())
     with pytest.raises(ValueError, match="reporting_currency is required for rolling Sharpe"):
         asyncio.run(
             calculate_rolling_metrics_stateful(
@@ -286,7 +270,7 @@ def test_stateful_adapter_requires_core_snapshot_when_sharpe_needs_reporting_cur
 
 
 def test_stateful_adapter_skips_core_snapshot_when_reporting_currency_is_explicit() -> None:
-    client = _RecordingLotusPerformanceClient(_portfolio_and_risk_free_only_payload())
+    client = RecordingLotusPerformanceClient(response_payload=_portfolio_and_risk_free_only_payload())
     request = _stateful_input(["ROLLING_SHARPE"]).model_copy(
         update={"reporting_currency": "CHF"}
     )
@@ -304,7 +288,7 @@ def test_stateful_adapter_skips_core_snapshot_when_reporting_currency_is_explici
 
 
 def test_stateful_adapter_uses_portfolio_currency_when_reporting_currency_missing() -> None:
-    client = _RecordingLotusPerformanceClient(_portfolio_and_risk_free_only_payload())
+    client = RecordingLotusPerformanceClient(response_payload=_portfolio_and_risk_free_only_payload())
     core_client = _StubLotusCoreClientPortfolioCurrencyOnly(reporting_currency="EUR")
     response = asyncio.run(
         calculate_rolling_metrics_stateful(
@@ -320,7 +304,7 @@ def test_stateful_adapter_uses_portfolio_currency_when_reporting_currency_missin
 
 
 def test_stateful_adapter_rejects_missing_valuation_context() -> None:
-    client = _RecordingLotusPerformanceClient(_portfolio_and_risk_free_only_payload())
+    client = RecordingLotusPerformanceClient(response_payload=_portfolio_and_risk_free_only_payload())
     with pytest.raises(ValueError, match="missing valuation_context"):
         asyncio.run(
             calculate_rolling_metrics_stateful(
@@ -333,7 +317,7 @@ def test_stateful_adapter_rejects_missing_valuation_context() -> None:
 
 
 def test_stateful_adapter_rejects_missing_portfolio_and_reporting_currency() -> None:
-    client = _RecordingLotusPerformanceClient(_portfolio_and_risk_free_only_payload())
+    client = RecordingLotusPerformanceClient(response_payload=_portfolio_and_risk_free_only_payload())
     with pytest.raises(ValueError, match="missing portfolio/reporting currency"):
         asyncio.run(
             calculate_rolling_metrics_stateful(
