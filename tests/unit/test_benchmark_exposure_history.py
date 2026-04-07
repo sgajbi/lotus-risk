@@ -66,7 +66,7 @@ def test_fetch_benchmark_exposure_history_uses_decomposed_core_contracts() -> No
         "window": {"start_date": "2026-01-02", "end_date": "2026-01-04"},
         "frequency": "daily",
         "series_fields": ["component_weight"],
-        "page": {"page_size": 5000, "page_token": None},
+        "page": {"page_size": 1000, "page_token": None},
         "target_currency": "USD",
     }
 

@@ -205,7 +205,7 @@ async def fetch_benchmark_exposure_history(
             },
             "frequency": "daily",
             "series_fields": ["component_weight"],
-            "page": {"page_size": 5000, "page_token": page_token},
+            "page": {"page_size": 1000, "page_token": page_token},
         }
         if reporting_currency:
             payload["target_currency"] = reporting_currency
