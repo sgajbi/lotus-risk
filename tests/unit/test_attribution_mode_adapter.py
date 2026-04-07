@@ -10,10 +10,15 @@ from app.services.stateful_returns_series_parser import (
     decimal_return_to_percentage_points,
     to_return_points,
 )
+from tests.support.historical_attribution_fakes import (
+    RecordingHistoricalAttributionCoreClient,
+    build_stateful_attribution_returns_client,
+)
 
 
 class _StubPerformanceClient:
     def __init__(self) -> None:
+        self._client = build_stateful_attribution_returns_client()
         self.payload: dict[str, object] | None = None
 
     async def get_returns_series(
@@ -23,61 +28,17 @@ class _StubPerformanceClient:
         correlation_id: str | None,
     ) -> dict[str, object]:
         self.payload = request_payload
-        return {
-            "series": {
-                "portfolio_returns": [
-                    {"date": "2026-01-02", "return_value": "0.0100"},
-                    {"date": "2026-01-03", "return_value": "-0.0050"},
-                    {"date": "2026-01-04", "return_value": "0.0040"},
-                ]
-            }
-        }
+        return await self._client.get_returns_series(
+            request_payload=request_payload,
+            correlation_id=correlation_id,
+        )
 
 
-class _StubCoreClient:
+class _StubCoreClient(RecordingHistoricalAttributionCoreClient):
     def __init__(self) -> None:
-        self.position_payloads: list[dict[str, object]] = []
+        super().__init__()
+        self.position_payloads = self.position_calls
         self.enrichment_calls: list[list[str]] = []
-
-    async def get_position_analytics_timeseries(
-        self,
-        *,
-        portfolio_id: str,
-        request_payload: dict[str, object],
-        correlation_id: str | None,
-    ) -> dict[str, object]:
-        self.position_payloads.append(request_payload)
-        page = request_payload.get("page")
-        page_token = page.get("page_token") if isinstance(page, dict) else None
-        if page_token:
-            return {
-                "rows": [
-                    {
-                        "security_id": "SEC_B",
-                        "valuation_date": "2026-01-03",
-                        "dimensions": {"sector": "HEALTH", "asset_class": "EQUITY"},
-                        "ending_market_value_portfolio_currency": "40",
-                    }
-                ],
-                "page": {"next_page_token": None},
-            }
-        return {
-            "rows": [
-                {
-                    "security_id": "SEC_A",
-                    "valuation_date": "2026-01-02",
-                    "dimensions": {"sector": "TECH", "asset_class": "EQUITY"},
-                    "ending_market_value_portfolio_currency": "60",
-                },
-                {
-                    "security_id": "SEC_B",
-                    "valuation_date": "2026-01-02",
-                    "dimensions": {"sector": "HEALTH", "asset_class": "EQUITY"},
-                    "ending_market_value_portfolio_currency": "40",
-                },
-            ],
-            "page": {"next_page_token": "NEXT_1"},
-        }
 
     async def get_instrument_enrichment(
         self,
@@ -203,8 +164,8 @@ def test_stateful_attribution_total_risk_happy_path() -> None:
         "from_date": "2026-01-01",
         "to_date": "2026-01-04",
     }
-    assert len(core.position_payloads) == 2
-    first_payload = core.position_payloads[0]
+    assert len(core.position_payloads) == 1
+    first_payload = core.position_payloads[0]["request_payload"]
     assert first_payload["dimensions"] == ["sector"]
     assert response.input_mode.value == "stateful"
     assert response.results["YTD"].error is None
@@ -224,8 +185,9 @@ def test_stateful_attribution_asset_class_and_reporting_currency() -> None:
         )
     )
     assert response.results["YTD"].error is None
-    assert core.position_payloads[0]["dimensions"] == ["asset_class"]
-    assert core.position_payloads[0]["reporting_currency"] == "USD"
+    first_payload = core.position_payloads[0]["request_payload"]
+    assert first_payload["dimensions"] == ["asset_class"]
+    assert first_payload["reporting_currency"] == "USD"
 
 
 def test_stateful_attribution_issuer_grouping_uses_enrichment() -> None:
