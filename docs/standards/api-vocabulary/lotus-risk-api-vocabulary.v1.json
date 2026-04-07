@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-04-07T23:51:39.734912+00:00",
+  "generatedAt": "2026-04-07T23:58:02.791494+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.alignment_policy",
@@ -45,6 +45,20 @@
       "canonicalTerm": "annualization_basis",
       "preferredName": "annualization_basis",
       "description": "Annualization basis used for annualized metrics.",
+      "example": 252,
+      "type": "integer",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "integer"
+      ]
+    },
+    {
+      "semanticId": "lotus.annualization_factor",
+      "canonicalTerm": "annualization_factor",
+      "preferredName": "annualization_factor",
+      "description": "Applied annualization factor after defaults or overrides.",
       "example": 252,
       "type": "integer",
       "locations": [
@@ -335,6 +349,20 @@
       ]
     },
     {
+      "semanticId": "lotus.frequency",
+      "canonicalTerm": "frequency",
+      "preferredName": "frequency",
+      "description": "Applied return sampling frequency.",
+      "example": "DAILY",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
       "semanticId": "lotus.hhi_current",
       "canonicalTerm": "hhi_current",
       "preferredName": "hhi_current",
@@ -555,6 +583,20 @@
       ]
     },
     {
+      "semanticId": "lotus.mar_annual_rate",
+      "canonicalTerm": "mar_annual_rate",
+      "preferredName": "mar_annual_rate",
+      "description": "Applied annual minimum acceptable return for Sortino calculations.",
+      "example": 0.0,
+      "type": "number",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "number"
+      ]
+    },
+    {
       "semanticId": "lotus.metadata",
       "canonicalTerm": "metadata",
       "preferredName": "metadata",
@@ -570,7 +612,8 @@
         "HistoricalAttributionMetadata",
         "object",
         "DrawdownMetadata",
-        "RollingMetadata"
+        "RollingMetadata",
+        "RiskResponseMetadata"
       ]
     },
     {
@@ -703,6 +746,34 @@
       ],
       "observedTypes": [
         "object"
+      ]
+    },
+    {
+      "semanticId": "lotus.risk_free_annual_rate",
+      "canonicalTerm": "risk_free_annual_rate",
+      "preferredName": "risk_free_annual_rate",
+      "description": "Applied annual risk-free rate when risk_free_mode=ANNUAL_RATE.",
+      "example": 0.01,
+      "type": "object",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "object"
+      ]
+    },
+    {
+      "semanticId": "lotus.risk_free_mode",
+      "canonicalTerm": "risk_free_mode",
+      "preferredName": "risk_free_mode",
+      "description": "Applied risk-free mode for Sharpe calculations.",
+      "example": "ZERO",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
       ]
     },
     {
@@ -1218,6 +1289,20 @@
       ]
     },
     {
+      "semanticId": "lotus.use_log_returns",
+      "canonicalTerm": "use_log_returns",
+      "preferredName": "use_log_returns",
+      "description": "Whether returns were transformed to log returns before metric evaluation.",
+      "example": false,
+      "type": "boolean",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "boolean"
+      ]
+    },
+    {
       "semanticId": "lotus.valuation_context",
       "canonicalTerm": "valuation_context",
       "preferredName": "valuation_context",
@@ -1234,6 +1319,48 @@
       ],
       "observedTypes": [
         "object"
+      ]
+    },
+    {
+      "semanticId": "lotus.var_confidence",
+      "canonicalTerm": "var_confidence",
+      "preferredName": "var_confidence",
+      "description": "Applied Value-at-Risk confidence level.",
+      "example": 0.95,
+      "type": "number",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "number"
+      ]
+    },
+    {
+      "semanticId": "lotus.var_horizon_days",
+      "canonicalTerm": "var_horizon_days",
+      "preferredName": "var_horizon_days",
+      "description": "Applied Value-at-Risk horizon in business days.",
+      "example": 1,
+      "type": "integer",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "integer"
+      ]
+    },
+    {
+      "semanticId": "lotus.var_method",
+      "canonicalTerm": "var_method",
+      "preferredName": "var_method",
+      "description": "Applied Value-at-Risk method.",
+      "example": "HISTORICAL",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
       ]
     },
     {
@@ -2740,6 +2867,102 @@
             "type": "object",
             "semanticId": "lotus.results",
             "attributeRef": "#/attributeCatalog/lotus.results"
+          },
+          {
+            "name": "metadata",
+            "location": "body",
+            "required": false,
+            "type": "RiskResponseMetadata",
+            "semanticId": "lotus.metadata",
+            "attributeRef": "#/attributeCatalog/lotus.metadata"
+          },
+          {
+            "name": "metadata.contract_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.contract_version",
+            "attributeRef": "#/attributeCatalog/lotus.contract_version"
+          },
+          {
+            "name": "metadata.methodology_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.methodology_version",
+            "attributeRef": "#/attributeCatalog/lotus.methodology_version"
+          },
+          {
+            "name": "metadata.frequency",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.frequency",
+            "attributeRef": "#/attributeCatalog/lotus.frequency"
+          },
+          {
+            "name": "metadata.annualization_factor",
+            "location": "body",
+            "required": false,
+            "type": "integer",
+            "semanticId": "lotus.annualization_factor",
+            "attributeRef": "#/attributeCatalog/lotus.annualization_factor"
+          },
+          {
+            "name": "metadata.use_log_returns",
+            "location": "body",
+            "required": false,
+            "type": "boolean",
+            "semanticId": "lotus.use_log_returns",
+            "attributeRef": "#/attributeCatalog/lotus.use_log_returns"
+          },
+          {
+            "name": "metadata.risk_free_mode",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.risk_free_mode",
+            "attributeRef": "#/attributeCatalog/lotus.risk_free_mode"
+          },
+          {
+            "name": "metadata.risk_free_annual_rate",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.risk_free_annual_rate",
+            "attributeRef": "#/attributeCatalog/lotus.risk_free_annual_rate"
+          },
+          {
+            "name": "metadata.mar_annual_rate",
+            "location": "body",
+            "required": false,
+            "type": "number",
+            "semanticId": "lotus.mar_annual_rate",
+            "attributeRef": "#/attributeCatalog/lotus.mar_annual_rate"
+          },
+          {
+            "name": "metadata.var_method",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.var_method",
+            "attributeRef": "#/attributeCatalog/lotus.var_method"
+          },
+          {
+            "name": "metadata.var_confidence",
+            "location": "body",
+            "required": false,
+            "type": "number",
+            "semanticId": "lotus.var_confidence",
+            "attributeRef": "#/attributeCatalog/lotus.var_confidence"
+          },
+          {
+            "name": "metadata.var_horizon_days",
+            "location": "body",
+            "required": false,
+            "type": "integer",
+            "semanticId": "lotus.var_horizon_days",
+            "attributeRef": "#/attributeCatalog/lotus.var_horizon_days"
           }
         ]
       }

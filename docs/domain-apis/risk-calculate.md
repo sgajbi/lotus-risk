@@ -63,9 +63,16 @@
 ## Expected Output Structure
 
 - `scope` (echoed normalized request scope)
+- `metadata`
+  - `contract_version`
+  - `methodology_version`
+  - applied frequency / annualization / log-return / risk-free / VaR settings
 - `results` map keyed by period name/type:
-  - `startDate`
-  - `endDate`
+  - `start_date`
+  - `end_date`
+  - `portfolio_observation_count`
+  - `benchmark_observation_count`
+  - `aligned_benchmark_observation_count`
   - `metrics` map:
     - each metric:
       - `value: float | null`

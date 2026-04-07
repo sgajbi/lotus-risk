@@ -11,6 +11,7 @@ from prometheus_client import Counter, Histogram
 
 from app.contracts.risk import (
     RiskPeriodResult,
+    RiskResponseMetadata,
     RiskResponse,
     RiskStatelessCalculationInput,
     RiskValue,
@@ -203,12 +204,43 @@ def _record_metric_request(metrics: Sequence[str]) -> None:
         RISK_METRIC_REQUESTED_TOTAL.labels(metric_name=metric).inc()
 
 
+def _build_metadata(
+    request: RiskStatelessCalculationInput,
+    *,
+    annual_factor: int,
+) -> RiskResponseMetadata:
+    return RiskResponseMetadata(
+        frequency=request.options.frequency,
+        annualization_factor=annual_factor,
+        use_log_returns=request.options.use_log_returns,
+        risk_free_mode=request.options.risk_free_mode,
+        risk_free_annual_rate=request.options.risk_free_annual_rate,
+        mar_annual_rate=request.options.mar_annual_rate,
+        var_method=request.options.var.method,
+        var_confidence=request.options.var.confidence,
+        var_horizon_days=request.options.var.horizon_days,
+    )
+
+
 def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
     _record_metric_request(request.metrics)
 
+    annual_factor = (
+        request.options.annualization_factor
+        or {
+            "DAILY": 252,
+            "WEEKLY": 52,
+            "MONTHLY": 12,
+        }[request.options.frequency]
+    )
+
     returns_df = pd.DataFrame([{"date": p.date, "value": p.value} for p in request.returns])
     if returns_df.empty:
-        return RiskResponse(scope=request.scope, results={})
+        return RiskResponse(
+            scope=request.scope,
+            results={},
+            metadata=_build_metadata(request, annual_factor=annual_factor),
+        )
 
     returns_df["date"] = pd.to_datetime(returns_df["date"])
     returns_df = returns_df.sort_values("date").set_index("date")
@@ -219,15 +251,6 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
     if not benchmark_df.empty:
         benchmark_df["date"] = pd.to_datetime(benchmark_df["date"])
         benchmark_df = benchmark_df.sort_values("date").set_index("date")
-
-    annual_factor = (
-        request.options.annualization_factor
-        or {
-            "DAILY": 252,
-            "WEEKLY": 52,
-            "MONTHLY": 12,
-        }[request.options.frequency]
-    )
 
     periodic_rf = 0.0
     if (
@@ -319,6 +342,8 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
                     metric_map["SORTINO"] = _metric_error(str(exc))
 
         benchmark_metrics = [m for m in request.metrics if m in BENCHMARK_METRICS]
+        benchmark_period = pd.Series(dtype=float)
+        aligned = pd.DataFrame(columns=["portfolio", "benchmark"])
         if benchmark_metrics:
             if benchmark_df.empty:
                 for metric_name in benchmark_metrics:
@@ -375,6 +400,17 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
                 except ValueError as exc:
                     metric_map["VAR"] = _metric_error(str(exc))
 
-        results[period_name] = RiskPeriodResult(start_date=start, end_date=end, metrics=metric_map)
+        results[period_name] = RiskPeriodResult(
+            start_date=start,
+            end_date=end,
+            portfolio_observation_count=len(period_returns),
+            benchmark_observation_count=(len(benchmark_period) if benchmark_metrics else 0),
+            aligned_benchmark_observation_count=(len(aligned) if benchmark_metrics else 0),
+            metrics=metric_map,
+        )
 
-    return RiskResponse(scope=request.scope, results=results)
+    return RiskResponse(
+        scope=request.scope,
+        results=results,
+        metadata=_build_metadata(request, annual_factor=annual_factor),
+    )
