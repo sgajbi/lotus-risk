@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-03-01T13:30:16.567479+00:00",
+  "generatedAt": "2026-04-07T08:21:36.206076+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.alignment_policy",
@@ -608,16 +608,19 @@
       "semanticId": "lotus.simulation_input",
       "canonicalTerm": "simulation_input",
       "preferredName": "simulation_input",
-      "description": "Simulation payload. Reserved for a future slice.",
+      "description": "Simulation execution payload orchestrated through lotus-core simulation session APIs.",
       "example": {
-        "as_of_date": "2026-02-28",
-        "periods": [
+        "as_of_date": "2026-02-27",
+        "expected_version": 3,
+        "portfolio_id": "DEMO_DPM_EUR_001",
+        "session_id": "SIM_0001",
+        "simulation_changes": [
           {
-            "name": "YTD",
-            "type": "YTD"
+            "security_id": "SEC_AAPL_US",
+            "transaction_type": "BUY"
           }
         ],
-        "portfolio_id": "DEMO_DPM_EUR_001"
+        "top_n": 10
       },
       "type": "object",
       "locations": [
@@ -1322,14 +1325,6 @@
             "type": "object",
             "semanticId": "lotus.stateful_input",
             "attributeRef": "#/attributeCatalog/lotus.stateful_input"
-          },
-          {
-            "name": "simulation_input",
-            "location": "body",
-            "required": false,
-            "type": "object",
-            "semanticId": "lotus.simulation_input",
-            "attributeRef": "#/attributeCatalog/lotus.simulation_input"
           }
         ]
       },
@@ -1762,14 +1757,6 @@
             "attributeRef": "#/attributeCatalog/lotus.stateful_input"
           },
           {
-            "name": "simulation_input",
-            "location": "body",
-            "required": false,
-            "type": "object",
-            "semanticId": "lotus.simulation_input",
-            "attributeRef": "#/attributeCatalog/lotus.simulation_input"
-          },
-          {
             "name": "analysis_options",
             "location": "body",
             "required": false,
@@ -1943,14 +1930,6 @@
             "type": "object",
             "semanticId": "lotus.stateful_input",
             "attributeRef": "#/attributeCatalog/lotus.stateful_input"
-          },
-          {
-            "name": "simulation_input",
-            "location": "body",
-            "required": false,
-            "type": "object",
-            "semanticId": "lotus.simulation_input",
-            "attributeRef": "#/attributeCatalog/lotus.simulation_input"
           }
         ]
       },
@@ -2086,14 +2065,6 @@
             "type": "object",
             "semanticId": "lotus.stateful_input",
             "attributeRef": "#/attributeCatalog/lotus.stateful_input"
-          },
-          {
-            "name": "simulation_input",
-            "location": "body",
-            "required": false,
-            "type": "object",
-            "semanticId": "lotus.simulation_input",
-            "attributeRef": "#/attributeCatalog/lotus.simulation_input"
           }
         ]
       },
