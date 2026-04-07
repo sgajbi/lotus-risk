@@ -2,18 +2,18 @@
 
 | Field | Value |
 | --- | --- |
-| Status | Draft, approved direction; Slice 1, Slice 2, benchmark exposure migration, and dependency error hardening in progress on feature branch |
+| Status | Implemented for lotus-risk scope; merged readiness program complete except external upstream data blocker in lotus-core issue #294 |
 | Created | 2026-04-07 |
 | Last Updated | 2026-04-07 |
 | Owners | lotus-risk |
 | Depends On | lotus-core, lotus-performance |
 | Related Standards | lotus-platform RFC-0067, RFC-0003, RFC-0005, RFC-0006 |
 | Scope | Cross-repo |
-| Implementation Classification | Feature-branch implementation complete for Slice 1, Slice 2, P0 benchmark exposure migration, and dependency error hardening; final readiness validation remains |
+| Implementation Classification | lotus-risk implementation complete for Slice 1, Slice 2, P0 benchmark exposure migration, dependency error hardening, ops/readiness hardening, and validation evidence; remaining live rolling Sharpe blocker is upstream lotus-core risk-free data readiness |
 
 ## Executive Summary
 
-`lotus-risk` is materially stronger than before: the implemented endpoint surface is credible, the stateful integrations are real, and the test stack is substantially improved. It is not yet correct to call the service fully gold-standard or production-ready.
+`lotus-risk` is materially stronger than before: the implemented endpoint surface is credible, the stateful integrations are real, and the test stack is substantially improved. The lotus-risk implementation work defined by this RFC is complete. The only remaining blocker is external upstream data readiness for lotus-core risk-free coverage, tracked separately in lotus-core issue `#294`.
 
 The remaining work is no longer about adding arbitrary features. It is about finishing the contract, removing ambiguity, aligning upstream ownership to bounded contexts, hardening integration behavior, and proving readiness with evidence.
 
@@ -102,7 +102,7 @@ The user further clarified that benchmark exposure can reasonably be exposed by 
 | Unsupported modes must be explicit and deterministic | Implemented on feature branch | unsupported simulation modes are removed from non-concentration request schemas and rejected at validation boundary | Keep and preserve |
 | Production hardening of upstream behavior | Improved, not complete | better runtime wiring and tests exist, but no final service-wide readiness sign-off | Open |
 | Full integrated validation against real upstreams | Partial | live Docker validation passes for operational endpoints, stateful risk, drawdown, rolling without Sharpe, historical-attribution total/active risk, concentration stateful, and concentration simulation; rolling Sharpe remains data-dependent on lotus-core risk-free points | Open until upstream risk-free data is populated |
-| Production-grade observability | Partial | correlation/error propagation improved, but final dependency/readiness instrumentation still needs confirmation | Open |
+| Production-grade observability | Implemented on feature branch | correlation/error propagation improved; dependency-aware `/health/ready` and `/ops` now expose structured issue metadata (`category`, `issue_code`) for degraded and unavailable dependencies | Keep and preserve |
 
 ## Design Reasoning and Trade-offs
 

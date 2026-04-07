@@ -242,7 +242,10 @@ class RollingAnalyticsRequest(BaseModel):
     )
     stateful_input: RollingStatefulInput | None = Field(
         default=None,
-        description="Stateful payload sourced through lotus-performance integrations (future slice).",
+        description=(
+            "Stateful payload sourced through lotus-performance for portfolio/benchmark returns "
+            "and lotus-core for risk-free reference series when rolling Sharpe is requested."
+        ),
         json_schema_extra={
             "example": {
                 "portfolio_id": "DEMO_DPM_EUR_001",
