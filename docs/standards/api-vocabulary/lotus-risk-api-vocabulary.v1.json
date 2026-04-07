@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-04-07T10:04:46.975591+00:00",
+  "generatedAt": "2026-04-07T10:34:07.323297+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.alignment_policy",
@@ -80,6 +80,20 @@
       ],
       "observedTypes": [
         "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.category",
+      "canonicalTerm": "category",
+      "preferredName": "category",
+      "description": "Optional structured dependency issue category such as transport, timeout, or data_gap.",
+      "example": "data_gap",
+      "type": "object",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "object"
       ]
     },
     {
@@ -396,6 +410,20 @@
       ],
       "observedTypes": [
         "array"
+      ]
+    },
+    {
+      "semanticId": "lotus.issue_code",
+      "canonicalTerm": "issue_code",
+      "preferredName": "issue_code",
+      "description": "Optional machine-readable issue code for degraded or unavailable dependency state.",
+      "example": "RISK_FREE_SERIES_EMPTY",
+      "type": "object",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "object"
       ]
     },
     {
@@ -1164,6 +1192,22 @@
             "type": "object",
             "semanticId": "lotus.detail",
             "attributeRef": "#/attributeCatalog/lotus.detail"
+          },
+          {
+            "name": "dependencies[].category",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.category",
+            "attributeRef": "#/attributeCatalog/lotus.category"
+          },
+          {
+            "name": "dependencies[].issue_code",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.issue_code",
+            "attributeRef": "#/attributeCatalog/lotus.issue_code"
           }
         ]
       }
@@ -1320,6 +1364,22 @@
             "type": "object",
             "semanticId": "lotus.detail",
             "attributeRef": "#/attributeCatalog/lotus.detail"
+          },
+          {
+            "name": "dependencies[].category",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.category",
+            "attributeRef": "#/attributeCatalog/lotus.category"
+          },
+          {
+            "name": "dependencies[].issue_code",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.issue_code",
+            "attributeRef": "#/attributeCatalog/lotus.issue_code"
           }
         ]
       }
