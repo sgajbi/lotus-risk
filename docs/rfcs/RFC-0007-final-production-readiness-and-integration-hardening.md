@@ -9,7 +9,7 @@
 | Depends On | lotus-core, lotus-performance |
 | Related Standards | lotus-platform RFC-0067, RFC-0003, RFC-0005, RFC-0006 |
 | Scope | Cross-repo |
-| Implementation Classification | Partially implemented (requires enhancement) |
+| Implementation Classification | Feature-branch implementation complete for Slice 1 and Slice 2; final readiness validation remains |
 
 ## Executive Summary
 
@@ -22,7 +22,7 @@ This RFC defines that final readiness program and requests approval on the archi
 1. Simulation exists only where it is methodologically valid.
 2. Benchmark return history is sourced from `lotus-performance`.
 3. Risk-free reference series is sourced from `lotus-core`.
-4. Benchmark exposure history for stateful active-risk attribution is sourced from `lotus-core`.
+4. Benchmark exposure history is authored by `lotus-core` but should be exposed to `lotus-risk` through a `lotus-performance` performance-aligned view when used together with benchmark returns.
 5. `lotus-risk` remains the analytics owner and orchestration layer; it does not become a portfolio-construction or market-data ownership service.
 
 ## Original Requested Requirements (Preserved)
@@ -39,15 +39,17 @@ The remaining readiness work discussed for `lotus-risk` was:
 
 The specific blockers identified were:
 
-1. unresolved upstream dependency for rolling Sharpe risk-free data
-2. final decision and documentation on unsupported modes
-3. full pre-merge gate and live integrated validation
-4. stateful active-risk attribution dependency on benchmark exposure history
+1. upstream risk-free reference data availability for stateful rolling Sharpe
+2. final pre-merge gate and live integrated validation evidence
+3. performance-aligned benchmark exposure view for stateful active-risk attribution
+4. final production observability and dependency-readiness sign-off
 
 The user also clarified two upstream ownership expectations that this RFC must honor:
 
 1. benchmark returns should come from `lotus-performance`
 2. risk-free series should come from `lotus-core`
+
+The user further clarified that benchmark exposure can reasonably be exposed by `lotus-performance` because `lotus-performance` already sources benchmark composition to calculate benchmark returns. This RFC accepts that refinement with one constraint: `lotus-core` remains the benchmark-composition system of record, while `lotus-performance` exposes only a lineage-backed, performance-aligned derived view.
 
 ## Current Implementation Reality
 
@@ -84,20 +86,21 @@ The user also clarified two upstream ownership expectations that this RFC must h
 3. `rolling-metrics` does not support simulation.
 4. `historical-attribution` does not support simulation.
 5. `historical-attribution` stateful `ACTIVE_RISK` now uses lotus-core decomposed benchmark contracts for `POSITION`, `SECTOR`, and `ASSET_CLASS`.
-6. `historical-attribution` stateful `ACTIVE_RISK` + `ISSUER` remains gated until benchmark issuer exposure semantics are explicitly available.
-7. Some docs still reflect an older assumption that stateful risk-free series comes from `lotus-performance`; this is not the target architecture.
+6. The target architecture is to move benchmark exposure sourcing behind a `lotus-performance` derived view so benchmark returns and benchmark exposures share the same effective date grid, benchmark version, and calculation lineage.
+7. `historical-attribution` stateful `ACTIVE_RISK` + `ISSUER` remains gated until benchmark issuer exposure semantics are explicitly available.
+8. Stateful rolling Sharpe now uses `lotus-core` for risk-free series; the remaining gap is upstream data population for tested currency/window combinations.
 
 ## Requirement-to-Implementation Traceability
 
 | Requirement | Current State | Evidence / Basis | Outcome |
 | --- | --- | --- | --- |
-| Support simulation only where methodologically valid | Achieved in principle, not yet fully codified in all contracts/docs | Concentration RFC and live implementation; no valid time-series simulation methodology approved for other endpoints | Keep and formalize |
+| Support simulation only where methodologically valid | Implemented on feature branch | Concentration supports simulation; risk/calculate, drawdown, rolling-metrics, and historical-attribution now expose stateless/stateful only | Keep and preserve |
 | Benchmark returns should come from `lotus-performance` | Achieved in current stateful rolling/risk design direction | lotus-performance returns-series contract and integration usage | Confirm and preserve |
-| Risk-free series should come from `lotus-core` | Implemented on feature branch for stateful rolling Sharpe | rolling adapter now sources risk-free reference series through lotus-core risk-free contract | Validate live |
-| Stateful active-risk attribution needs benchmark exposure history | Implemented on feature branch for POSITION, SECTOR, and ASSET_CLASS via decomposed contracts | lotus-core benchmark assignment, market-series, and index catalog contracts | Issuer active-risk remains open |
-| Unsupported modes must be explicit and deterministic | Partially true, not final everywhere in docs/contracts | simulation reserved/rejected in some RFCs but not yet finalized across all endpoint docs/OpenAPI | Open |
+| Risk-free series should come from `lotus-core` | Implemented on feature branch for stateful rolling Sharpe | rolling adapter now sources risk-free reference series through lotus-core risk-free contract; live contract call succeeds but current upstream data returned `points: []` for tested USD/SGD windows | Upstream data readiness remains |
+| Stateful active-risk attribution needs benchmark exposure history | Implemented on feature branch for POSITION, SECTOR, and ASSET_CLASS via direct lotus-core decomposed contracts | lotus-core benchmark assignment, market-series, and index catalog contracts | Replace direct sourcing with lotus-performance performance-aligned exposure view after upstream slice |
+| Unsupported modes must be explicit and deterministic | Implemented on feature branch | unsupported simulation modes are removed from non-concentration request schemas and rejected at validation boundary | Keep and preserve |
 | Production hardening of upstream behavior | Improved, not complete | better runtime wiring and tests exist, but no final service-wide readiness sign-off | Open |
-| Full integrated validation against real upstreams | Partial | targeted live validations performed, not yet final full-gate sign-off | Open |
+| Full integrated validation against real upstreams | Partial | live Docker validation passes for operational endpoints, stateful risk, drawdown, rolling without Sharpe, historical-attribution total/active risk, concentration stateful, and concentration simulation; rolling Sharpe remains data-dependent on lotus-core risk-free points | Open until upstream risk-free data is populated |
 | Production-grade observability | Partial | correlation/error propagation improved, but final dependency/readiness instrumentation still needs confirmation | Open |
 
 ## Design Reasoning and Trade-offs
@@ -122,19 +125,26 @@ Decision:
 
 Benchmark return history belongs with the service that computes and serves performance series: `lotus-performance`.
 
+Benchmark exposure history has two layers:
+
+1. the authoritative benchmark definition, composition, and classifications belong to `lotus-core`
+2. the benchmark exposure view used alongside benchmark returns belongs in `lotus-performance` as a derived, lineage-backed performance context
+
 Risk-free series is reference/market data and therefore belongs with `lotus-core`.
 
 Trade-off:
 
-1. `lotus-risk` may need to orchestrate more than one upstream for a single endpoint
-2. the resulting architecture is cleaner, more scalable, and less likely to create ownership drift later
+1. `lotus-performance` must expose lineage clearly so it does not appear to own benchmark composition
+2. `lotus-risk` gets a cleaner and lower-latency integration for active-risk attribution because benchmark returns and benchmark exposures come from one performance-aligned contract
+3. the resulting architecture is cleaner, more scalable, and less likely to create ownership drift later
 
 Decision:
 
 1. portfolio returns: `lotus-performance`
 2. benchmark returns: `lotus-performance`
 3. risk-free series: `lotus-core`
-4. benchmark exposure history for stateful active-risk attribution: `lotus-core`
+4. benchmark composition source of record: `lotus-core`
+5. benchmark exposure history consumed by `lotus-risk` for stateful active-risk attribution: `lotus-performance` derived view sourced from `lotus-core`
 
 ### 3. Production readiness must be evidence-based
 
@@ -159,14 +169,9 @@ Current reality is already clear enough to make the decision:
 3. `rolling-metrics`: `stateless + stateful` only
 4. `historical-attribution`: `stateless + stateful` only in current scope
 
-The gap is not design uncertainty. The gap is contract finalization.
+This has been implemented on the feature branch. The remaining action is to preserve this contract through final PR review and avoid reintroducing placeholder simulation language in OpenAPI or domain documentation.
 
-Required action:
-
-1. hard-reject unsupported modes
-2. update OpenAPI and domain docs to remove ambiguity
-
-### Gap B: Stateful rolling Sharpe still needs risk-free sourcing alignment
+### Gap B: Stateful rolling Sharpe still needs upstream risk-free data availability
 
 The current implementation already proves that `lotus-risk` can:
 
@@ -174,24 +179,27 @@ The current implementation already proves that `lotus-risk` can:
 2. resolve reporting currency when caller omitted it
 3. surface deterministic failure when required risk-free data is absent
 
-What remains is architectural alignment and live validation:
+Architectural alignment is now implemented on the feature branch:
 
 1. stateful risk-free series should come from `lotus-core`
-2. that path must be validated against real upstream data for supported currencies and periods
+2. lotus-risk calls the lotus-core risk-free series contract directly
+3. live validation confirms the contract returns successfully, but the tested windows returned no risk-free points
 
-This is not just a data-seeding issue. It is also a contract-ownership alignment issue.
+The remaining gap is upstream data readiness. `lotus-risk` should continue to fail deterministically when the contract returns no usable risk-free points; `lotus-core` must provide populated risk-free series for supported currencies/windows before stateful rolling Sharpe can be called production-ready for those scenarios.
 
 ### Gap C: Stateful active-risk attribution still needs issuer benchmark semantics
 
 The original blocker was benchmark exposure history. lotus-core confirms this is provided through a decomposed benchmark contract family rather than a monolithic benchmark exposure endpoint.
 
-For `POSITION`, `SECTOR`, and `ASSET_CLASS`, lotus-risk can derive benchmark exposure history from:
+For `POSITION`, `SECTOR`, and `ASSET_CLASS`, the current feature branch can derive benchmark exposure history from:
 
 1. benchmark assignment
 2. benchmark market-series component weights
 3. index catalog classification labels
 
-The remaining gap is issuer-level active attribution. `lotus-risk` still needs benchmark issuer exposure semantics before it can support `ACTIVE_RISK` + `ISSUER` statefully.
+This is a valid interim implementation, but the target production integration should move to `lotus-performance` once `lotus-performance` exposes the same exposure history as a performance-aligned derived view. That view should return benchmark exposure rows on the same date grid and benchmark version used to calculate benchmark returns.
+
+The remaining functional gap is issuer-level active attribution. `lotus-risk` still needs benchmark issuer exposure semantics before it can support `ACTIVE_RISK` + `ISSUER` statefully.
 
 For issuer support, `lotus-risk` does not merely need benchmark metadata or current benchmark composition. It needs benchmark issuer exposure history over time:
 
@@ -250,9 +258,39 @@ The recent branch work materially improved integration reliability, but the serv
 1. Portfolio returns: `lotus-performance`
 2. Benchmark returns: `lotus-performance`
 3. Risk-free series: `lotus-core`
-4. Benchmark exposure history: `lotus-core` via benchmark assignment, benchmark market-series, and index catalog classification labels
+4. Benchmark composition source of record: `lotus-core`
+5. Benchmark exposure history consumed by `lotus-risk`: `lotus-performance` performance-aligned derived view backed by `lotus-core` lineage
 
-### C. Complete integration hardening
+### C. Add upstream lotus-performance benchmark exposure slice
+
+`lotus-performance` should add a benchmark exposure context API that exposes the benchmark exposure history used for performance calculation. It must not become the system of record for benchmark composition.
+
+Minimum contract expectations:
+
+1. Accept portfolio/benchmark identifiers, date window, reporting currency, grouping dimensions, and pagination.
+2. Return benchmark exposure rows by valuation date and grouping dimension.
+3. Preserve the same effective benchmark date grid as benchmark return history.
+4. Include lineage fields:
+   - `benchmark_id`
+   - `benchmark_version`
+   - `source_system: lotus-core`
+   - `calculation_run_id` or equivalent performance context identifier
+   - `contract_version`
+5. Use canonical Lotus vocabulary and RFC-0067 OpenAPI documentation.
+6. Define deterministic empty, partial, and error behavior.
+
+### D. Add downstream lotus-risk integration slice
+
+After the `lotus-performance` benchmark exposure view exists, `lotus-risk` should:
+
+1. replace direct benchmark exposure sourcing from lotus-core in stateful active-risk attribution
+2. keep lotus-core direct calls only where lotus-risk needs authoritative reference data not exposed through performance context
+3. validate date-grid alignment between benchmark returns and benchmark exposure rows
+4. preserve deterministic failure if benchmark exposure lineage or required grouping data is missing
+5. keep issuer active-risk gated until issuer exposure semantics exist in the performance-aligned view
+6. add contract, characterization, and endpoint tests that lock the new `lotus-performance` request/response shape
+
+### E. Complete integration hardening
 
 1. tighten timeout budgets
 2. define retry policy by failure class
@@ -260,7 +298,7 @@ The recent branch work materially improved integration reliability, but the serv
 4. confirm canonical URL/config handling in all target environments
 5. strengthen readiness/degraded dependency reporting
 
-### D. Finalize docs and OpenAPI
+### F. Finalize docs and OpenAPI
 
 1. supported modes must be explicit
 2. unsupported modes must be explicit
@@ -268,7 +306,7 @@ The recent branch work materially improved integration reliability, but the serv
 4. upstream ownership by endpoint must be explicit
 5. examples must reflect actual current integrated behavior
 
-### E. Complete production-readiness validation
+### G. Complete production-readiness validation
 
 1. full branch-wide lint/unit/integration/e2e gate
 2. Docker build/runtime validation
@@ -281,15 +319,16 @@ This RFC should not be marked implemented based on intent alone. The required ev
 
 1. contract tests proving unsupported modes fail deterministically
 2. integration tests proving stateful upstream request shape and error mapping
-3. endpoint-level tests for risk-free-backed rolling Sharpe behavior after migration to `lotus-core`
-4. endpoint-level tests for stateful active-risk attribution through decomposed benchmark contracts
-5. full local gate results:
+3. endpoint-level tests for risk-free-backed rolling Sharpe behavior through `lotus-core`
+4. endpoint-level tests for stateful active-risk attribution through the interim decomposed lotus-core benchmark contracts
+5. contract tests for the target `lotus-performance` benchmark exposure view before lotus-risk switches to it
+6. full local gate results:
    - lint
    - unit
    - integration
    - e2e
    - Docker build/runtime
-6. live validation evidence for the implemented endpoint surface against real upstream services
+7. live validation evidence for the implemented endpoint surface against real upstream services
 
 ## Original Acceptance Criteria Alignment
 
@@ -297,7 +336,8 @@ This RFC should not be marked implemented based on intent alone. The required ev
 | --- | --- |
 | Close functional gaps | Final mode contract and upstream dependency closure |
 | Harden integrations | deterministic upstream behavior, timeout/retry policy, canonical URL handling |
-| Resolve rolling Sharpe dependency | migrate risk-free sourcing to `lotus-core` and validate live |
+| Resolve rolling Sharpe dependency | source risk-free series from `lotus-core`, validate deterministic empty-data behavior, and require populated upstream points for production success |
+| Align benchmark exposure ownership | add a lineage-backed `lotus-performance` benchmark exposure view, then move lotus-risk active-risk attribution to that view |
 | Broader end-to-end validation | full gate plus real upstream Docker/live validation |
 | Finalize docs and contracts | OpenAPI and domain docs match runtime truth |
 | Production-grade observability | latency, failure-class, execution-mode, degraded-state visibility |
@@ -313,33 +353,40 @@ This RFC should not be marked implemented based on intent alone. The required ev
 ## Open Questions
 
 1. What exact benchmark issuer exposure semantics should be used for stateful `ACTIVE_RISK` + `ISSUER` attribution?
-2. Which exact `lotus-core` risk-free contract should be the canonical integration point for rolling Sharpe and any future risk-free-backed stateful metrics?
+2. What endpoint name and response envelope should `lotus-performance` use for the benchmark exposure context API?
 3. Do we want unsupported-mode responses standardized on one specific Lotus error code across all analytics endpoints, or is the current per-endpoint validation mapping sufficient as long as it is deterministic and documented?
+4. Which currencies, tenors, and date ranges must lotus-core seed first so stateful rolling Sharpe has production-grade live coverage?
 
 ## Approval Decisions Requested
 
 1. Approve the final upstream ownership model:
    - benchmark returns from `lotus-performance`
    - risk-free series from `lotus-core`
-   - benchmark exposure history from `lotus-core`
+   - benchmark composition source of record from `lotus-core`
+   - benchmark exposure history consumed by `lotus-risk` from a lineage-backed `lotus-performance` derived view
 2. Approve the final mode policy:
    - simulation remains concentration-only in the current `lotus-risk` production surface
    - `risk/calculate`, `drawdown`, `rolling-metrics`, and `historical-attribution` do not expose simulation in the current contract
 3. Approve hard rejection of unsupported modes.
 4. Approve `historical-attribution` stateful `ACTIVE_RISK` support for `POSITION`, `SECTOR`, and `ASSET_CLASS`, with `ISSUER` remaining gated until benchmark issuer exposure semantics are available.
+5. Approve the two-step benchmark exposure migration:
+   - Slice P0-A: implement the `lotus-performance` benchmark exposure context API backed by lotus-core lineage.
+   - Slice P0-B: migrate `lotus-risk` active-risk attribution from direct lotus-core benchmark exposure sourcing to the `lotus-performance` derived view.
 
 ## Next Actions
 
 ### P0
 
-1. Verify the canonical `lotus-core` risk-free contract and migrate stateful rolling Sharpe to it.
-2. Verify benchmark issuer exposure semantics needed for stateful issuer active-risk attribution.
-3. Finalize endpoint contracts and OpenAPI so unsupported modes are explicit.
+1. Preserve the finalized endpoint mode contracts and OpenAPI in PR review.
+2. Define and implement the `lotus-performance` benchmark exposure context API.
+3. Migrate `lotus-risk` active-risk attribution to the `lotus-performance` benchmark exposure context API after upstream implementation is available.
+4. Verify benchmark issuer exposure semantics needed for stateful issuer active-risk attribution.
+5. Coordinate lotus-core risk-free data availability for the supported currencies/windows required by rolling Sharpe.
 
 ### P1
 
 1. Complete service-wide integration hardening for timeout, retry, and upstream failure mapping.
-2. Update domain docs, endpoint matrix, and capability docs to reflect the final upstream ownership split.
+2. Keep domain docs, endpoint matrix, and capability docs aligned with the final upstream ownership split.
 3. Strengthen observability for dependency readiness, latency, and degraded-state reporting.
 
 ### P2
@@ -354,13 +401,14 @@ This RFC should not be marked implemented based on intent alone. The required ev
 
 1. All supported endpoint modes are explicitly documented and enforced.
 2. Unsupported modes fail deterministically and are documented as unsupported.
-3. Stateful rolling Sharpe uses `lotus-core` risk-free sourcing and passes live validation for supported currencies and windows.
+3. Stateful rolling Sharpe uses `lotus-core` risk-free sourcing, fails deterministically when no usable points exist, and passes live validation once supported currencies/windows are populated upstream.
 4. Stateful `ACTIVE_RISK` attribution is either:
    - fully integrated and validated, or
    - explicitly unavailable for unsupported grouping dimensions with no ambiguity in the contract and a clearly documented upstream dependency gate
-5. Full lint/unit/integration/e2e/Docker gates pass on the final branch.
-6. Live endpoint-by-endpoint validation passes against current upstream services.
-7. OpenAPI and domain documentation reflect actual runtime behavior.
-8. Observability and correlation standards are verified.
-9. Canonical URLs and environment configuration are proven across expected runtime environments.
-10. Final PR and CI evidence are green before merge.
+5. Benchmark exposure used by stateful active-risk attribution is sourced from `lotus-performance` as a lineage-backed performance context, with lotus-core remaining the system of record.
+6. Full lint/unit/integration/e2e/Docker gates pass on the final branch.
+7. Live endpoint-by-endpoint validation passes against current upstream services.
+8. OpenAPI and domain documentation reflect actual runtime behavior.
+9. Observability and correlation standards are verified.
+10. Canonical URLs and environment configuration are proven across expected runtime environments.
+11. Final PR and CI evidence are green before merge.

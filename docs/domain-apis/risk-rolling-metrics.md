@@ -85,5 +85,4 @@ Provide windowed historical risk diagnostics for PB/WM portfolios with instituti
 
 1. Expand stateful lineage metadata in response contract (`source_window`, `data_quality`, `upstream_refs`).
 2. Evaluate whether annualization basis should support both 252 and 260 in v2.
-3. Confirm final benchmark/risk-free selector standardization in upstream contracts.
-4. rolling Sharpe remains data-dependent on lotus-core risk-free availability for the resolved currency/window.
+3. rolling Sharpe remains data-dependent on lotus-core risk-free availability for the resolved currency/window. Live validation confirmed the lotus-core contract is reachable but returned no risk-free points for tested USD/SGD windows.
