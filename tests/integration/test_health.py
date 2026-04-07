@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 
 from app.main import app
+from tests.support.app_runtime import override_app_runtime
 
 
 def test_health_endpoints() -> None:
@@ -291,15 +292,18 @@ class _FakeLotusCoreClient:
 
 
 def test_concentration_stateful_mode_uses_lotus_core_snapshot() -> None:
-    client = TestClient(app)
-    app.state.lotus_core_client = _FakeLotusCoreClient()
-    response = client.post(
-        "/analytics/risk/concentration",
-        json={
-            "input_mode": "stateful",
-            "stateful_input": {"portfolio_id": "DEMO_DPM_EUR_001", "as_of_date": "2026-02-27"},
-        },
-    )
+    with override_app_runtime(lotus_core_client=_FakeLotusCoreClient()):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/concentration",
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-02-27",
+                },
+            },
+        )
     assert response.status_code == 200
     body = response.json()
     assert body["input_mode"] == "stateful"
@@ -308,21 +312,21 @@ def test_concentration_stateful_mode_uses_lotus_core_snapshot() -> None:
 
 
 def test_concentration_simulation_mode_reuses_or_creates_session_and_returns_metadata() -> None:
-    client = TestClient(app)
-    app.state.lotus_core_client = _FakeLotusCoreClient()
-    response = client.post(
-        "/analytics/risk/concentration",
-        json={
-            "input_mode": "simulation",
-            "simulation_input": {
-                "portfolio_id": "DEMO_DPM_EUR_001",
-                "as_of_date": "2026-02-27",
-                "simulation_changes": [
-                    {"security_id": "SEC_A", "transaction_type": "BUY", "quantity": 10}
-                ],
+    with override_app_runtime(lotus_core_client=_FakeLotusCoreClient()):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/concentration",
+            json={
+                "input_mode": "simulation",
+                "simulation_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-02-27",
+                    "simulation_changes": [
+                        {"security_id": "SEC_A", "transaction_type": "BUY", "quantity": 10}
+                    ],
+                },
             },
-        },
-    )
+        )
     assert response.status_code == 200
     body = response.json()
     assert body["input_mode"] == "simulation"
