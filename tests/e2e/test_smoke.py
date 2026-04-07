@@ -446,4 +446,5 @@ def test_e2e_historical_attribution_stateful_active_risk_mode() -> None:
     attribution_set = body["results"]["YTD"]["attribution_sets"][0]
     assert attribution_set["attribution_type"] == "ACTIVE_RISK"
     assert attribution_set["contributors"]
-    assert core_client.assignment_calls
+    assert performance_client.benchmark_exposure_context_calls
+    assert not hasattr(core_client, "get_benchmark_market_series")

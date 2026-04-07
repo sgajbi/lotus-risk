@@ -30,6 +30,13 @@ class LotusPerformanceClientProtocol(Protocol):
         correlation_id: str | None,
     ) -> dict[str, Any]: ...
 
+    async def get_benchmark_exposure_context(
+        self,
+        *,
+        request_payload: dict[str, Any],
+        correlation_id: str | None,
+    ) -> dict[str, Any]: ...
+
 
 class LotusCoreClientProtocol(Protocol):
     async def get_position_analytics_timeseries(
@@ -44,29 +51,6 @@ class LotusCoreClientProtocol(Protocol):
         self,
         *,
         security_ids: list[str],
-        correlation_id: str | None,
-    ) -> dict[str, Any]: ...
-
-    async def resolve_benchmark_assignment(
-        self,
-        *,
-        portfolio_id: str,
-        request_payload: dict[str, Any],
-        correlation_id: str | None,
-    ) -> dict[str, Any]: ...
-
-    async def get_benchmark_market_series(
-        self,
-        *,
-        benchmark_id: str,
-        request_payload: dict[str, Any],
-        correlation_id: str | None,
-    ) -> dict[str, Any]: ...
-
-    async def list_index_catalog(
-        self,
-        *,
-        request_payload: dict[str, Any],
         correlation_id: str | None,
     ) -> dict[str, Any]: ...
 
@@ -326,7 +310,7 @@ async def calculate_historical_attribution_stateful(
 
     benchmark_exposure_history = (
         await fetch_benchmark_exposure_history(
-            core_client=core_client,
+            performance_client=performance_client,
             portfolio_id=stateful.portfolio_id,
             as_of_date=stateful.as_of_date,
             start_date=start_date,

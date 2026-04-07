@@ -97,7 +97,7 @@ Required behavior:
 
 Endpoint 2:
 
-- `POST /integration/benchmarks/exposure-context` (proposed; final route name to be confirmed by lotus-performance)
+- `POST /integration/benchmarks/exposure-context` (implemented in lotus-performance)
 
 Purpose:
 
@@ -275,8 +275,7 @@ Required behavior:
 2. `ACTIVE_RISK + TRACKING_ERROR` stateful:
 - needs `portfolio_returns` and `benchmark_returns` from lotus-performance
 - needs portfolio exposure timeseries from lotus-core
-- target: needs benchmark exposure context from lotus-performance as the performance-aligned derived view backed by lotus-core lineage
-- interim implementation: derives benchmark exposure from lotus-core benchmark assignment, benchmark market-series component weights, and index catalog classification labels
+- needs benchmark exposure context from lotus-performance as the performance-aligned derived view backed by lotus-core lineage
 - issuer active-risk remains gated until benchmark issuer exposure semantics are available
 
 3. `grouping_dimension=ISSUER`:
@@ -290,13 +289,10 @@ Required behavior:
 1. Benchmark issuer exposure semantics for active attribution in stateful mode:
 - required to fully support `ACTIVE_RISK` decomposition by issuer grouping.
 
-2. lotus-performance benchmark exposure context endpoint:
-- required to remove direct lotus-core benchmark-exposure orchestration from lotus-risk and align benchmark exposure with benchmark return calculation context.
-
-3. Explicit response metadata in both upstream services:
+2. Explicit response metadata in both upstream services:
 - lineage and contract version fields should be stable and documented.
 
-4. OpenAPI completeness:
+3. OpenAPI completeness:
 - all request/response attributes must include descriptions and realistic examples per RFC-0067.
 
 ## Non-Functional Requirements
@@ -306,7 +302,7 @@ Required behavior:
 
 2. Performance:
 - support at least 5,000 rows per page in `position-timeseries`.
-- benchmark market-series may enforce a smaller page-size cap; live validation confirmed lotus-risk uses `page_size=1000` for that contract.
+- benchmark exposure context uses `page_size=1000` for deterministic paging through lotus-performance.
 
 3. Resilience:
 - standard Lotus error envelope, clear message, correlation ID echo.
@@ -318,10 +314,8 @@ Required behavior:
 ## Acceptance Checklist
 
 1. Stateful `TOTAL_RISK` attribution succeeds end-to-end using upstream data only.
-2. Stateful `ACTIVE_RISK` attribution succeeds end-to-end for POSITION, SECTOR, and ASSET_CLASS using decomposed lotus-core benchmark contracts in the interim implementation.
-3. Stateful `ACTIVE_RISK` attribution migrates to the lotus-performance benchmark exposure context once that upstream endpoint is available.
-4. `ISSUER` grouping succeeds with enrichment-bulk.
-5. Contract tests validate required fields and type/shape guarantees.
-6. Characterization tests lock numerical behavior for stable fixtures.
-7. OpenAPI docs include full descriptions and realistic examples for all attributes.
-
+2. Stateful `ACTIVE_RISK` attribution succeeds end-to-end for POSITION, SECTOR, and ASSET_CLASS using the lotus-performance benchmark exposure context.
+3. `ISSUER` grouping succeeds for `TOTAL_RISK` with enrichment-bulk and remains gated for `ACTIVE_RISK` until benchmark issuer exposure semantics are available.
+4. Contract tests validate required fields and type/shape guarantees.
+5. Characterization tests lock numerical behavior for stable fixtures.
+6. OpenAPI docs include full descriptions and realistic examples for all attributes.

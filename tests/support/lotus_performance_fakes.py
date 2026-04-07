@@ -4,9 +4,16 @@ from typing import Any, Callable
 
 
 class RecordingLotusPerformanceClient:
-    def __init__(self, *, response_payload: dict[str, Any]) -> None:
+    def __init__(
+        self,
+        *,
+        response_payload: dict[str, Any],
+        benchmark_exposure_context_payload: dict[str, Any] | None = None,
+    ) -> None:
         self.response_payload = response_payload
+        self.benchmark_exposure_context_payload = benchmark_exposure_context_payload
         self.calls: list[dict[str, Any]] = []
+        self.benchmark_exposure_context_calls: list[dict[str, Any]] = []
 
     async def get_returns_series(
         self,
@@ -21,6 +28,22 @@ class RecordingLotusPerformanceClient:
             }
         )
         return self.response_payload
+
+    async def get_benchmark_exposure_context(
+        self,
+        *,
+        request_payload: dict[str, Any],
+        correlation_id: str | None,
+    ) -> dict[str, Any]:
+        self.benchmark_exposure_context_calls.append(
+            {
+                "request_payload": request_payload,
+                "correlation_id": correlation_id,
+            }
+        )
+        if self.benchmark_exposure_context_payload is None:
+            raise AssertionError("benchmark exposure context payload was not configured")
+        return self.benchmark_exposure_context_payload
 
     @property
     def request_payload(self) -> dict[str, Any] | None:
@@ -40,9 +63,11 @@ class RecordingLotusPerformanceClient:
 def build_autowired_lotus_performance_client_class(
     *,
     response_factory: Callable[[], dict[str, Any]],
+    benchmark_exposure_context_response_factory: Callable[[], dict[str, Any]] | None = None,
 ) -> type[Any]:
     class _AutoWiredLotusPerformanceClient:
         calls: list[dict[str, Any]] = []
+        benchmark_exposure_context_calls: list[dict[str, Any]] = []
 
         async def get_returns_series(
             self,
@@ -57,5 +82,23 @@ def build_autowired_lotus_performance_client_class(
                 }
             )
             return response_factory()
+
+        async def get_benchmark_exposure_context(
+            self,
+            *,
+            request_payload: dict[str, Any],
+            correlation_id: str | None,
+        ) -> dict[str, Any]:
+            _AutoWiredLotusPerformanceClient.benchmark_exposure_context_calls.append(
+                {
+                    "request_payload": request_payload,
+                    "correlation_id": correlation_id,
+                }
+            )
+            if benchmark_exposure_context_response_factory is None:
+                raise AssertionError(
+                    "benchmark exposure context response factory was not configured"
+                )
+            return benchmark_exposure_context_response_factory()
 
     return _AutoWiredLotusPerformanceClient

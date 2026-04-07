@@ -4,6 +4,7 @@ from app.main import app
 from tests.support.app_runtime import override_app_runtime
 from tests.support.historical_attribution_fakes import (
     RecordingHistoricalAttributionCoreClient,
+    build_benchmark_exposure_context_response,
     build_stateful_attribution_returns_client,
 )
 
@@ -275,7 +276,9 @@ def test_historical_attribution_stateful_total_risk_happy_path() -> None:
     ]
 
 
-def test_historical_attribution_stateful_active_risk_uses_benchmark_contract_family() -> None:
+def test_historical_attribution_stateful_active_risk_uses_performance_benchmark_exposure_context() -> (
+    None
+):
     performance_client = build_stateful_attribution_returns_client()
     core_client = RecordingHistoricalAttributionCoreClient()
     with override_app_runtime(
@@ -312,15 +315,27 @@ def test_historical_attribution_stateful_active_risk_uses_benchmark_contract_fam
         "include_benchmark": True,
         "include_risk_free": False,
     }
-    assert core_client.assignment_calls[0]["correlation_id"] == "corr-attr-active-stateful"
-    assert core_client.market_series_calls[0]["request_payload"]["series_fields"] == [
-        "component_weight"
+    assert performance_client.benchmark_exposure_context_calls == [
+        {
+            "request_payload": {
+                "portfolio_id": "DEMO_DPM_EUR_001",
+                "as_of_date": "2026-01-04",
+                "window": {"start_date": "2026-01-02", "end_date": "2026-01-04"},
+                "frequency": "DAILY",
+                "grouping_dimensions": ["SECTOR"],
+                "page": {"page_size": 1000, "page_token": None},
+            },
+            "correlation_id": "corr-attr-active-stateful",
+        }
     ]
-    assert core_client.index_catalog_calls[0]["request_payload"] == {"as_of_date": "2026-01-04"}
+    assert not hasattr(core_client, "get_benchmark_market_series")
 
 
 def test_historical_attribution_stateful_active_risk_asset_class_contract() -> None:
     performance_client = build_stateful_attribution_returns_client()
+    performance_client.benchmark_exposure_context_payload = (
+        build_benchmark_exposure_context_response(grouping_dimension="ASSET_CLASS")
+    )
     core_client = RecordingHistoricalAttributionCoreClient()
 
     with override_app_runtime(
@@ -351,9 +366,9 @@ def test_historical_attribution_stateful_active_risk_asset_class_contract() -> N
     assert attribution_set["attribution_type"] == "ACTIVE_RISK"
     assert attribution_set["contributors"]
     assert core_client.position_calls[0]["request_payload"]["dimensions"] == ["asset_class"]
-    assert core_client.market_series_calls[0]["request_payload"]["series_fields"] == [
-        "component_weight"
-    ]
+    exposure_payload = performance_client.benchmark_exposure_context_calls[0]["request_payload"]
+    assert exposure_payload["grouping_dimensions"] == ["ASSET_CLASS"]
+    assert not hasattr(core_client, "get_benchmark_market_series")
 
 
 def test_historical_attribution_stateful_active_risk_issuer_is_explicitly_gated() -> None:
@@ -432,25 +447,21 @@ def test_historical_attribution_stateful_active_risk_rejects_missing_benchmark_r
     assert body["correlation_id"] == "corr-attr-missing-bmk-return"
 
 
-def test_historical_attribution_stateful_active_risk_rejects_bad_benchmark_series_shape() -> None:
-    class _BadBenchmarkSeriesCoreClient(RecordingHistoricalAttributionCoreClient):
-        async def get_benchmark_market_series(
-            self,
-            *,
-            benchmark_id: str,
-            request_payload: dict[str, object],
-            correlation_id: str | None,
-        ) -> dict[str, object]:
-            return {"component_series": "bad"}
+def test_historical_attribution_stateful_active_risk_rejects_bad_benchmark_context_shape() -> None:
+    performance_client = build_stateful_attribution_returns_client()
+    performance_client.benchmark_exposure_context_payload = {
+        **build_benchmark_exposure_context_response(),
+        "rows": "bad",
+    }
 
     with override_app_runtime(
-        lotus_performance_client=build_stateful_attribution_returns_client(),
-        lotus_core_client=_BadBenchmarkSeriesCoreClient(),
+        lotus_performance_client=performance_client,
+        lotus_core_client=RecordingHistoricalAttributionCoreClient(),
     ):
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/historical-attribution",
-            headers={"X-Correlation-Id": "corr-attr-bad-bmk-series"},
+            headers={"X-Correlation-Id": "corr-attr-bad-bmk-context"},
             json={
                 "input_mode": "stateful",
                 "stateful_input": {
@@ -468,5 +479,5 @@ def test_historical_attribution_stateful_active_risk_rejects_bad_benchmark_serie
 
     assert response.status_code == 400
     body = response.json()["error"]
-    assert "benchmark market-series payload missing" in body["message"]
-    assert body["correlation_id"] == "corr-attr-bad-bmk-series"
+    assert "benchmark exposure context payload missing" in body["message"]
+    assert body["correlation_id"] == "corr-attr-bad-bmk-context"

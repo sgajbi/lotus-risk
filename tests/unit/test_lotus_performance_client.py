@@ -375,6 +375,58 @@ async def test_client_times_out_async_returns_series_when_result_never_completes
         )
 
 
+@pytest.mark.asyncio
+async def test_client_builds_headers_and_payload_for_benchmark_exposure_context(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(httpx, "AsyncClient", _FakeAsyncClient)
+    _FakeAsyncClient.requests = []
+    _FakeAsyncClient.response_factory = lambda **_: _ok_response(
+        {
+            "source_service": "lotus-performance",
+            "contract_version": "v1",
+            "rows": [],
+            "metadata": {"source_system": "lotus-core", "served_by": "lotus-performance"},
+        }
+    )
+
+    client = LotusPerformanceClient(base_url="http://performance.local", timeout_seconds=5)
+    response = await client.get_benchmark_exposure_context(
+        request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
+        correlation_id="corr-benchmark-context",
+    )
+
+    assert response["source_service"] == "lotus-performance"
+    assert _FakeAsyncClient.last_request is not None
+    assert (
+        _FakeAsyncClient.last_request["url"]
+        == "http://performance.local/integration/benchmarks/exposure-context"
+    )
+    assert _FakeAsyncClient.last_request["headers"]["X-Correlation-Id"] == "corr-benchmark-context"
+    assert _FakeAsyncClient.last_request["json"] == {"portfolio_id": "DEMO_DPM_EUR_001"}
+
+
+@pytest.mark.asyncio
+async def test_client_maps_benchmark_exposure_context_errors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(httpx, "AsyncClient", _FakeAsyncClient)
+    _FakeAsyncClient.requests = []
+    _FakeAsyncClient.response_factory = lambda **_: _ok_response(
+        {"detail": {"message": "benchmark context unavailable"}},
+        status_code=503,
+    )
+    client = LotusPerformanceClient(base_url="http://performance.local")
+
+    with pytest.raises(
+        ValueError, match="exposure-context failed \\(503\\): benchmark context unavailable"
+    ):
+        await client.get_benchmark_exposure_context(
+            request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
+            correlation_id=None,
+        )
+
+
 def test_client_extract_error_detail_variants() -> None:
     response_plain = httpx.Response(
         status_code=500,

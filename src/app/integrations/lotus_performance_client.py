@@ -66,6 +66,34 @@ class LotusPerformanceClient:
         except httpx.HTTPError as exc:
             raise ValueError(f"lotus-performance {path} unavailable: {exc}") from exc
 
+    async def get_benchmark_exposure_context(
+        self,
+        *,
+        request_payload: dict[str, Any],
+        correlation_id: str | None,
+    ) -> dict[str, Any]:
+        headers: dict[str, str] = {}
+        if correlation_id:
+            headers["X-Correlation-Id"] = correlation_id
+
+        path = "/integration/benchmarks/exposure-context"
+        url = f"{self._base_url}{path}"
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout) as client:
+                response = await client.post(url, json=request_payload, headers=headers)
+                response.raise_for_status()
+                return self._ensure_dict_payload(
+                    response,
+                    invalid_message="lotus-performance returned invalid benchmark exposure context payload",
+                )
+        except httpx.HTTPStatusError as exc:
+            detail = self._extract_error_detail(exc.response)
+            raise ValueError(
+                f"lotus-performance {path} failed ({exc.response.status_code}): {detail}"
+            ) from exc
+        except httpx.HTTPError as exc:
+            raise ValueError(f"lotus-performance {path} unavailable: {exc}") from exc
+
     async def _poll_returns_series_result(
         self,
         *,
