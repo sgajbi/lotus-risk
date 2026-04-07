@@ -293,6 +293,31 @@ def test_openapi_exposes_typed_capabilities_response_contract() -> None:
     assert schema_ref.endswith("/IntegrationCapabilitiesResponse")
 
 
+def test_drawdown_openapi_examples_are_present_and_canonical() -> None:
+    client = TestClient(app)
+    spec = client.get("/openapi.json").json()
+    drawdown_schema = spec["components"]["schemas"]["DrawdownAnalyticsRequest"]
+    response_schema = spec["components"]["schemas"]["DrawdownResponse"]
+
+    assert drawdown_schema["properties"]["input_mode"]["example"] == "stateful"
+    assert (
+        drawdown_schema["properties"]["stateful_input"]["example"]["benchmark_policy"][
+            "include_benchmark"
+        ]
+        is True
+    )
+    assert (
+        drawdown_schema["properties"]["analysis_options"]["example"]["top_n_episodes"] == 5
+    )
+    assert response_schema["properties"]["metadata"]["example"]["missing_benchmark_policy"] in {
+        "IGNORE",
+        "REQUIRE",
+    }
+    assert response_schema["properties"]["results"]["example"]["YTD"]["summary"][
+        "max_drawdown"
+    ] < 0
+
+
 def test_concentration_rejects_legacy_payload_shape() -> None:
     client = TestClient(app)
     response = client.post(

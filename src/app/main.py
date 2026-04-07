@@ -579,8 +579,10 @@ async def analytics_risk_concentration(
     summary="Calculate realized drawdown analytics",
     tags=["risk-analytics"],
     description=(
-        "Calculates historical drawdown analytics including max drawdown, episode diagnostics, "
-        "time-under-water, ulcer index, and conditional drawdown metrics."
+        "Calculates realized drawdown analytics for stateless or stateful return histories, including "
+        "max drawdown, episode diagnostics, time-under-water, ulcer index, drawdown-at-risk, and "
+        "benchmark-relative drawdown timing. The response echoes applied analysis and benchmark policy "
+        "settings so downstream consumers can interpret results without reconstructing the request."
     ),
 )
 async def analytics_risk_drawdown(

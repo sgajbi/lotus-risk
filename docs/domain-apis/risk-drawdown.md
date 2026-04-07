@@ -97,6 +97,23 @@ The response metadata now echoes the applied drawdown configuration so consumers
 - `include_benchmark`
 - `missing_benchmark_policy`
 
+## Business Interpretation Notes
+
+- `max_drawdown = 0.0` means the realized wealth path never fell below its in-period running peak. This is a valid outcome, not missing data.
+- `relative_to_benchmark` is computed on the active return path `(portfolio - benchmark)`, not on the benchmark standalone wealth path.
+- `time_under_water_days` counts observations below the running peak. It is a persistence signal, not simply the gap between peak and trough dates.
+- `is_recovered = false` means the path had not returned to its prior peak by period end. In that case `max_drawdown_recovery_date` and `days_to_recovery` remain `null`.
+- `episodes[]` is filtered by `minimum_episode_depth_bps` and truncated by `top_n_episodes`, so it is a ranked decision support view rather than a full event ledger unless the caller requests it that way.
+
+## Example Use
+
+- Private banker review:
+  - use `summary.max_drawdown`, `summary.time_under_water_days`, and `summary.is_recovered` to judge whether the client experienced a meaningful realized loss and whether it recovered quickly.
+- Benchmark-relative review:
+  - use `relative_to_benchmark.max_drawdown` and `relative_to_benchmark.time_under_water_days` to judge whether underperformance was both deep and persistent.
+- QA / operations:
+  - use `metadata` to confirm whether benchmark-relative drawdown, underwater series, and episode filters were actually applied.
+
 ## Remaining Gaps
 
 1. Relative drawdown expansion (full benchmark episode decomposition) can be enhanced in later slices.
