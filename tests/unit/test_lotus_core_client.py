@@ -168,7 +168,9 @@ async def test_client_maps_http_status_error_with_detail(monkeypatch: pytest.Mon
     )
     client = LotusCoreClient(base_url="http://core.local")
 
-    with pytest.raises(UpstreamServiceError, match="rejected request \\(400\\): bad request") as exc_info:
+    with pytest.raises(
+        UpstreamServiceError, match="rejected request \\(400\\): bad request"
+    ) as exc_info:
         await client.get_core_snapshot(
             portfolio_id="DEMO_DPM_EUR_001",
             request_payload={"snapshot_mode": "BASELINE"},

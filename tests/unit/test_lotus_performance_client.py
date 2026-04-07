@@ -377,7 +377,9 @@ async def test_client_times_out_async_returns_series_when_result_never_completes
 
     client = LotusPerformanceClient(base_url="http://performance.local")
     client._async_max_polls = 2
-    with pytest.raises(UpstreamServiceError, match="did not complete within polling budget") as exc_info:
+    with pytest.raises(
+        UpstreamServiceError, match="did not complete within polling budget"
+    ) as exc_info:
         await client.get_returns_series(
             request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
             correlation_id="corr-async-timeout",
@@ -429,7 +431,8 @@ async def test_client_maps_benchmark_exposure_context_errors(
     client = LotusPerformanceClient(base_url="http://performance.local")
 
     with pytest.raises(
-        UpstreamServiceError, match="exposure-context failed \\(503\\): benchmark context unavailable"
+        UpstreamServiceError,
+        match="exposure-context failed \\(503\\): benchmark context unavailable",
     ) as exc_info:
         await client.get_benchmark_exposure_context(
             request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},

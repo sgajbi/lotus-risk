@@ -347,9 +347,7 @@ async def handle_value_error(request: Request, exc: ValueError) -> Response:
 
 
 @app.exception_handler(UpstreamServiceError)
-async def handle_upstream_service_error(
-    request: Request, exc: UpstreamServiceError
-) -> Response:
+async def handle_upstream_service_error(request: Request, exc: UpstreamServiceError) -> Response:
     details = dict(exc.details)
     details["retryable"] = exc.retryable
     return error_response(

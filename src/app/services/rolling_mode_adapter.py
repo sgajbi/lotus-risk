@@ -100,7 +100,9 @@ async def _get_risk_free_coverage_details(
         details["risk_free_coverage_request_fingerprint"] = request_fingerprint
     sample = coverage.get("missing_dates_sample")
     if isinstance(sample, list) and sample:
-        details["risk_free_missing_dates_sample"] = [value for value in sample if isinstance(value, str)]
+        details["risk_free_missing_dates_sample"] = [
+            value for value in sample if isinstance(value, str)
+        ]
     return details
 
 

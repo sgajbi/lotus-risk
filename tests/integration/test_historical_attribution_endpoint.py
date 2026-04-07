@@ -487,7 +487,9 @@ def test_historical_attribution_stateful_active_risk_rejects_bad_benchmark_conte
     assert body["correlation_id"] == "corr-attr-bad-bmk-context"
 
 
-def test_historical_attribution_stateful_active_risk_maps_benchmark_context_500_to_upstream_failure() -> None:
+def test_historical_attribution_stateful_active_risk_maps_benchmark_context_500_to_upstream_failure() -> (
+    None
+):
     class _BenchmarkContextFailurePerformanceClient:
         def __init__(self) -> None:
             self.calls: list[dict[str, object]] = []
@@ -567,4 +569,7 @@ def test_historical_attribution_stateful_active_risk_maps_benchmark_context_500_
     assert body["details"]["service"] == "lotus-performance"
     assert body["details"]["operation"] == "/integration/benchmarks/exposure-context"
     assert body["details"]["upstream_status_code"] == 500
-    assert performance_client.benchmark_exposure_context_calls[0]["correlation_id"] == "corr-attr-bmk-context-500"
+    assert (
+        performance_client.benchmark_exposure_context_calls[0]["correlation_id"]
+        == "corr-attr-bmk-context-500"
+    )
