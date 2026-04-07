@@ -11,6 +11,7 @@ from app.integrations.lotus_performance_client import (
     DEFAULT_LOTUS_PERFORMANCE_BASE_URL,
     LotusPerformanceClient,
 )
+from app.upstream_errors import UpstreamServiceError
 
 
 class _FakeAsyncClient:
@@ -100,11 +101,12 @@ async def test_client_rejects_non_object_json_response(monkeypatch: pytest.Monke
     _FakeAsyncClient.response_factory = lambda **_: _ok_response(["invalid"])
     client = LotusPerformanceClient(base_url="http://performance.local")
 
-    with pytest.raises(ValueError, match="invalid JSON payload"):
+    with pytest.raises(UpstreamServiceError, match="invalid JSON payload") as exc_info:
         await client.get_returns_series(
             request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
             correlation_id=None,
         )
+    assert exc_info.value.code == "UPSTREAM_INVALID_RESPONSE"
 
 
 @pytest.mark.asyncio
@@ -117,11 +119,13 @@ async def test_client_maps_http_status_error_with_detail(monkeypatch: pytest.Mon
     )
     client = LotusPerformanceClient(base_url="http://performance.local")
 
-    with pytest.raises(ValueError, match="failed \\(503\\): upstream failed"):
+    with pytest.raises(UpstreamServiceError, match="failed \\(503\\): upstream failed") as exc_info:
         await client.get_returns_series(
             request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
             correlation_id=None,
         )
+    assert exc_info.value.code == "UPSTREAM_FAILURE"
+    assert exc_info.value.status_code == 502
 
 
 @pytest.mark.asyncio
@@ -135,11 +139,12 @@ async def test_client_maps_http_transport_error(monkeypatch: pytest.MonkeyPatch)
     monkeypatch.setattr(httpx, "AsyncClient", _BrokenAsyncClient)
     client = LotusPerformanceClient(base_url="http://performance.local")
 
-    with pytest.raises(ValueError, match="unavailable"):
+    with pytest.raises(UpstreamServiceError, match="unavailable") as exc_info:
         await client.get_returns_series(
             request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
             correlation_id=None,
         )
+    assert exc_info.value.code == "UPSTREAM_UNAVAILABLE"
 
 
 @pytest.mark.asyncio
@@ -233,13 +238,14 @@ async def test_client_surfaces_async_execution_failure(
 
     client = LotusPerformanceClient(base_url="http://performance.local")
     with pytest.raises(
-        ValueError,
+        UpstreamServiceError,
         match="async returns-series failed: No benchmark assignment found for portfolio.",
-    ):
+    ) as exc_info:
         await client.get_returns_series(
             request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
             correlation_id="corr-async-fail",
         )
+    assert exc_info.value.code == "FAILED_DEPENDENCY"
 
 
 @pytest.mark.asyncio
@@ -264,11 +270,12 @@ async def test_client_surfaces_async_execution_failure_without_message(
     _FakeAsyncClient.response_factory = lambda **_: next(responses)
 
     client = LotusPerformanceClient(base_url="http://performance.local")
-    with pytest.raises(ValueError, match="async returns-series failed$"):
+    with pytest.raises(UpstreamServiceError, match="async returns-series failed$") as exc_info:
         await client.get_returns_series(
             request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
             correlation_id="corr-async-fail",
         )
+    assert exc_info.value.code == "FAILED_DEPENDENCY"
 
 
 @pytest.mark.asyncio
@@ -288,11 +295,12 @@ async def test_client_rejects_invalid_async_accepted_payloads(
 
         _FakeAsyncClient.response_factory = _response_factory
         client = LotusPerformanceClient(base_url="http://performance.local")
-        with pytest.raises(ValueError, match=expected):
+        with pytest.raises(UpstreamServiceError, match=expected) as exc_info:
             await client.get_returns_series(
                 request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
                 correlation_id=None,
             )
+        assert exc_info.value.code == "UPSTREAM_INVALID_RESPONSE"
 
 
 @pytest.mark.asyncio
@@ -314,11 +322,12 @@ async def test_client_raises_for_unexpected_async_result_status(
     _FakeAsyncClient.response_factory = lambda **_: next(responses)
 
     client = LotusPerformanceClient(base_url="http://performance.local")
-    with pytest.raises(ValueError, match="failed \\(500\\): not ready"):
+    with pytest.raises(UpstreamServiceError, match="failed \\(500\\): not ready") as exc_info:
         await client.get_returns_series(
             request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
             correlation_id=None,
         )
+    assert exc_info.value.code == "UPSTREAM_FAILURE"
 
 
 @pytest.mark.asyncio
@@ -368,11 +377,12 @@ async def test_client_times_out_async_returns_series_when_result_never_completes
 
     client = LotusPerformanceClient(base_url="http://performance.local")
     client._async_max_polls = 2
-    with pytest.raises(ValueError, match="did not complete within polling budget"):
+    with pytest.raises(UpstreamServiceError, match="did not complete within polling budget") as exc_info:
         await client.get_returns_series(
             request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
             correlation_id="corr-async-timeout",
         )
+    assert exc_info.value.code == "FAILED_DEPENDENCY"
 
 
 @pytest.mark.asyncio
@@ -419,12 +429,13 @@ async def test_client_maps_benchmark_exposure_context_errors(
     client = LotusPerformanceClient(base_url="http://performance.local")
 
     with pytest.raises(
-        ValueError, match="exposure-context failed \\(503\\): benchmark context unavailable"
-    ):
+        UpstreamServiceError, match="exposure-context failed \\(503\\): benchmark context unavailable"
+    ) as exc_info:
         await client.get_benchmark_exposure_context(
             request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
             correlation_id=None,
         )
+    assert exc_info.value.code == "UPSTREAM_FAILURE"
 
 
 def test_client_extract_error_detail_variants() -> None:

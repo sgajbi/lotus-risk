@@ -3,6 +3,26 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 
+class DependencyStatus(BaseModel):
+    service: str = Field(
+        description="Dependency service identifier.",
+        json_schema_extra={"example": "lotus-core"},
+    )
+    base_url: str = Field(
+        description="Canonical base URL configured for the dependency.",
+        json_schema_extra={"example": "http://core-query.dev.lotus"},
+    )
+    status: str = Field(
+        description="Dependency runtime state.",
+        json_schema_extra={"example": "ok"},
+    )
+    detail: str | None = Field(
+        default=None,
+        description="Additional runtime detail for operators.",
+        json_schema_extra={"example": "configured"},
+    )
+
+
 class OpsChecks(BaseModel):
     live: bool = Field(
         description="Liveness check status.",
@@ -38,4 +58,17 @@ class OpsResponse(BaseModel):
     input_modes: list[str] = Field(
         description="Execution modes exposed by this service.",
         json_schema_extra={"example": ["stateless", "stateful", "simulation"]},
+    )
+    dependencies: list[DependencyStatus] = Field(
+        description="Runtime dependency diagnostics used for readiness and operations.",
+        json_schema_extra={
+            "example": [
+                {
+                    "service": "lotus-core",
+                    "base_url": "http://core-query.dev.lotus",
+                    "status": "ok",
+                    "detail": "configured",
+                }
+            ]
+        },
     )

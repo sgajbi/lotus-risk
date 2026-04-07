@@ -66,8 +66,14 @@ def _concentration_payload() -> dict[str, object]:
 
 
 def test_concentration_risk_endpoint() -> None:
-    client = TestClient(app)
-    response = client.post("/analytics/risk/concentration", json=_concentration_payload())
+    with override_app_runtime(
+        lotus_core_client=SimulationLotusCoreClient(
+            session_id="SIM_HEALTH_0001",
+            simulation_version=1,
+        )
+    ):
+        client = TestClient(app)
+        response = client.post("/analytics/risk/concentration", json=_concentration_payload())
     assert response.status_code == 200
     body = response.json()
     assert body["source_service"] == "lotus-risk"
@@ -135,6 +141,53 @@ def test_metadata_and_ops_contract_shape() -> None:
     assert ops_body["checks"]["ready"] is True
     assert ops_body["checks"]["draining"] is False
     assert ops_body["input_modes"] == ["stateless", "stateful", "simulation"]
+    assert [dependency["service"] for dependency in ops_body["dependencies"]] == [
+        "lotus-core",
+        "lotus-performance",
+    ]
+    assert all(dependency["status"] == "ok" for dependency in ops_body["dependencies"])
+
+
+def test_health_ready_and_ops_surface_dependency_degradation() -> None:
+    with override_app_runtime(
+        dependency_statuses={
+            "lotus-performance": {"status": "degraded", "detail": "high_latency"}
+        }
+    ):
+        client = TestClient(app)
+        readiness = client.get("/health/ready")
+        ops = client.get("/ops")
+
+    assert readiness.status_code == 200
+    assert readiness.json()["status"] == "degraded"
+    assert ops.status_code == 200
+    ops_body = ops.json()
+    assert ops_body["status"] == "degraded"
+    assert ops_body["checks"]["ready"] is True
+    performance_dependency = next(
+        dependency for dependency in ops_body["dependencies"] if dependency["service"] == "lotus-performance"
+    )
+    assert performance_dependency["detail"] == "high_latency"
+
+
+def test_health_ready_fails_when_dependency_is_unavailable() -> None:
+    with override_app_runtime(
+        dependency_statuses={
+            "lotus-core": {"status": "unavailable", "detail": "connection_refused"}
+        }
+    ):
+        client = TestClient(app)
+        readiness = client.get("/health/ready")
+        ops = client.get("/ops")
+
+    assert readiness.status_code == 503
+    readiness_body = readiness.json()
+    assert readiness_body["status"] == "dependency_unavailable"
+    assert any(
+        dependency["service"] == "lotus-core" and dependency["status"] == "unavailable"
+        for dependency in readiness_body["dependencies"]
+    )
+    assert ops.json()["checks"]["ready"] is False
 
 
 def test_openapi_declares_standard_error_models_for_risk_endpoints() -> None:
@@ -155,7 +208,7 @@ def test_openapi_declares_standard_error_models_for_risk_endpoints() -> None:
         drawdown_responses,
         rolling_responses,
     ):
-        for status_code in ("400", "403", "404", "422"):
+        for status_code in ("400", "403", "404", "422", "424", "502", "503", "504"):
             schema_ref = responses[status_code]["content"]["application/json"]["schema"]["$ref"]
             assert schema_ref.endswith("/ErrorResponse")
         assert responses["400"]["content"]["application/json"]["example"]["error"]["code"] == (
@@ -169,6 +222,18 @@ def test_openapi_declares_standard_error_models_for_risk_endpoints() -> None:
         )
         assert responses["422"]["content"]["application/json"]["example"]["error"]["code"] == (
             "INVALID_REQUEST"
+        )
+        assert responses["424"]["content"]["application/json"]["example"]["error"]["code"] == (
+            "FAILED_DEPENDENCY"
+        )
+        assert responses["502"]["content"]["application/json"]["example"]["error"]["code"] == (
+            "UPSTREAM_FAILURE"
+        )
+        assert responses["503"]["content"]["application/json"]["example"]["error"]["code"] == (
+            "UPSTREAM_UNAVAILABLE"
+        )
+        assert responses["504"]["content"]["application/json"]["example"]["error"]["code"] == (
+            "UPSTREAM_TIMEOUT"
         )
 
 

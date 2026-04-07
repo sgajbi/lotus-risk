@@ -7,7 +7,13 @@ from fastapi import HTTPException
 import pytest
 from starlette.requests import Request
 
-from app.main import _default_error_code, analytics_risk_calculate, handle_http_exception
+from app.main import (
+    _default_error_code,
+    analytics_risk_calculate,
+    handle_http_exception,
+    handle_upstream_service_error,
+)
+from app.upstream_errors import UpstreamServiceError
 
 
 def _request_with_correlation(correlation_id: str = "corr-123") -> Request:
@@ -34,6 +40,32 @@ def test_handle_http_exception_returns_platform_error_envelope() -> None:
     assert response.status_code == 400
     assert body["error"]["code"] == "INVALID_INPUT"
     assert body["error"]["message"] == "bad_input"
+    assert body["error"]["correlation_id"] == "corr-123"
+
+
+def test_handle_upstream_service_error_returns_dependency_envelope() -> None:
+    request = _request_with_correlation()
+    response = asyncio.run(
+        handle_upstream_service_error(
+            request,
+            UpstreamServiceError(
+                service="lotus-performance",
+                operation="/integration/returns/series",
+                status_code=503,
+                code="UPSTREAM_UNAVAILABLE",
+                message="lotus-performance /integration/returns/series unavailable: network down",
+                details={
+                    "service": "lotus-performance",
+                    "operation": "/integration/returns/series",
+                },
+                retryable=True,
+            ),
+        )
+    )
+    body = json.loads(bytes(response.body).decode("utf-8"))
+    assert response.status_code == 503
+    assert body["error"]["code"] == "UPSTREAM_UNAVAILABLE"
+    assert body["error"]["details"]["retryable"] is True
     assert body["error"]["correlation_id"] == "corr-123"
 
 

@@ -24,6 +24,7 @@ class _FakeCoreClass:
 def test_override_app_runtime_restores_clients_and_classes_after_exit() -> None:
     original_performance_client = getattr(app.state, "lotus_performance_client", None)
     original_core_client = getattr(app.state, "lotus_core_client", None)
+    original_dependency_statuses = getattr(app.state, "dependency_statuses", None)
     original_performance_class = getattr(main_module, "LotusPerformanceClient")
     original_core_class = getattr(main_module, "LotusCoreClient")
 
@@ -32,14 +33,17 @@ def test_override_app_runtime_restores_clients_and_classes_after_exit() -> None:
         lotus_core_client=_FakeCoreClient(),
         lotus_performance_class=_FakePerformanceClass,
         lotus_core_class=_FakeCoreClass,
+        dependency_statuses={"lotus-core": {"status": "degraded"}},
     ):
         assert isinstance(app.state.lotus_performance_client, _FakePerformanceClient)
         assert isinstance(app.state.lotus_core_client, _FakeCoreClient)
+        assert app.state.dependency_statuses == {"lotus-core": {"status": "degraded"}}
         assert getattr(main_module, "LotusPerformanceClient") is _FakePerformanceClass
         assert getattr(main_module, "LotusCoreClient") is _FakeCoreClass
 
     assert app.state.lotus_performance_client is original_performance_client
     assert app.state.lotus_core_client is original_core_client
+    assert app.state.dependency_statuses is original_dependency_statuses
     assert getattr(main_module, "LotusPerformanceClient") is original_performance_class
     assert getattr(main_module, "LotusCoreClient") is original_core_class
 

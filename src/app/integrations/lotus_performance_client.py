@@ -6,6 +6,13 @@ from typing import Any
 
 import httpx
 
+from app.upstream_errors import (
+    classify_upstream_http_error,
+    classify_upstream_transport_error,
+    invalid_upstream_payload,
+    missing_upstream_data,
+)
+
 DEFAULT_LOTUS_PERFORMANCE_BASE_URL = "http://performance.dev.lotus"
 
 
@@ -27,6 +34,10 @@ class LotusPerformanceClient:
             os.getenv("LOTUS_PERFORMANCE_ASYNC_POLL_INTERVAL_SECONDS", "1")
         )
         self._async_max_polls = int(os.getenv("LOTUS_PERFORMANCE_ASYNC_MAX_POLLS", "60"))
+
+    @property
+    def base_url(self) -> str:
+        return self._base_url
 
     async def get_returns_series(
         self,
@@ -60,11 +71,18 @@ class LotusPerformanceClient:
                 )
         except httpx.HTTPStatusError as exc:
             detail = self._extract_error_detail(exc.response)
-            raise ValueError(
-                f"lotus-performance {path} failed ({exc.response.status_code}): {detail}"
+            raise classify_upstream_http_error(
+                service="lotus-performance",
+                operation=path,
+                response=exc.response,
+                detail=detail,
             ) from exc
         except httpx.HTTPError as exc:
-            raise ValueError(f"lotus-performance {path} unavailable: {exc}") from exc
+            raise classify_upstream_transport_error(
+                service="lotus-performance",
+                operation=path,
+                exc=exc,
+            ) from exc
 
     async def get_benchmark_exposure_context(
         self,
@@ -88,11 +106,18 @@ class LotusPerformanceClient:
                 )
         except httpx.HTTPStatusError as exc:
             detail = self._extract_error_detail(exc.response)
-            raise ValueError(
-                f"lotus-performance {path} failed ({exc.response.status_code}): {detail}"
+            raise classify_upstream_http_error(
+                service="lotus-performance",
+                operation=path,
+                response=exc.response,
+                detail=detail,
             ) from exc
         except httpx.HTTPError as exc:
-            raise ValueError(f"lotus-performance {path} unavailable: {exc}") from exc
+            raise classify_upstream_transport_error(
+                service="lotus-performance",
+                operation=path,
+                exc=exc,
+            ) from exc
 
     async def _poll_returns_series_result(
         self,
@@ -103,13 +128,21 @@ class LotusPerformanceClient:
     ) -> dict[str, Any]:
         result_path = accepted_payload.get("result_path")
         if not isinstance(result_path, str) or not result_path.startswith("/"):
-            raise ValueError("lotus-performance async accepted payload missing result_path")
+            raise invalid_upstream_payload(
+                service="lotus-performance",
+                operation="/integration/returns/series",
+                message="lotus-performance async accepted payload missing result_path",
+            )
 
         poll_path = accepted_payload.get("poll_path")
         if poll_path is not None and (
             not isinstance(poll_path, str) or not poll_path.startswith("/")
         ):
-            raise ValueError("lotus-performance async accepted payload has invalid poll_path")
+            raise invalid_upstream_payload(
+                service="lotus-performance",
+                operation="/integration/returns/series",
+                message="lotus-performance async accepted payload has invalid poll_path",
+            )
 
         last_status = "pending"
         for _ in range(self._async_max_polls):
@@ -125,10 +158,16 @@ class LotusPerformanceClient:
                 if status == "failed":
                     error_message = execution_payload.get("error_message")
                     if isinstance(error_message, str) and error_message:
-                        raise ValueError(
-                            f"lotus-performance async returns-series failed: {error_message}"
+                        raise missing_upstream_data(
+                            service="lotus-performance",
+                            operation="/integration/returns/series",
+                            message=f"lotus-performance async returns-series failed: {error_message}",
                         )
-                    raise ValueError("lotus-performance async returns-series failed")
+                    raise missing_upstream_data(
+                        service="lotus-performance",
+                        operation="/integration/returns/series",
+                        message="lotus-performance async returns-series failed",
+                    )
 
             result_response = await client.get(f"{self._base_url}{result_path}", headers=headers)
             if result_response.status_code == 200:
@@ -140,9 +179,13 @@ class LotusPerformanceClient:
                 result_response.raise_for_status()
             await asyncio.sleep(self._async_poll_interval_seconds)
 
-        raise ValueError(
-            "lotus-performance async returns-series did not complete within polling budget "
-            f"(last_status={last_status})"
+        raise missing_upstream_data(
+            service="lotus-performance",
+            operation="/integration/returns/series",
+            message=(
+                "lotus-performance async returns-series did not complete within polling budget "
+                f"(last_status={last_status})"
+            ),
         )
 
     async def _get_dict(
@@ -167,7 +210,11 @@ class LotusPerformanceClient:
     ) -> dict[str, Any]:
         payload = response.json()
         if not isinstance(payload, dict):
-            raise ValueError(invalid_message)
+            raise invalid_upstream_payload(
+                service="lotus-performance",
+                operation=response.request.url.path,
+                message=invalid_message,
+            )
         return payload
 
     @staticmethod

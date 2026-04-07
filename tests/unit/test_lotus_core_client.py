@@ -11,6 +11,7 @@ from app.integrations.lotus_core_client import (
     DEFAULT_LOTUS_CORE_BASE_URL,
     LotusCoreClient,
 )
+from app.upstream_errors import UpstreamServiceError
 
 
 class _FakeAsyncClient:
@@ -140,12 +141,14 @@ async def test_client_rejects_non_object_json_response(monkeypatch: pytest.Monke
     _FakeAsyncClient.response_factory = lambda **_: _ok_response(["invalid"])
     client = LotusCoreClient(base_url="http://core.local")
 
-    with pytest.raises(ValueError, match="invalid JSON payload"):
+    with pytest.raises(UpstreamServiceError, match="invalid JSON payload") as exc_info:
         await client.get_core_snapshot(
             portfolio_id="DEMO_DPM_EUR_001",
             request_payload={"snapshot_mode": "BASELINE"},
             correlation_id=None,
         )
+    assert exc_info.value.code == "UPSTREAM_INVALID_RESPONSE"
+    assert exc_info.value.status_code == 502
 
 
 @pytest.mark.asyncio
@@ -157,12 +160,14 @@ async def test_client_maps_http_status_error_with_detail(monkeypatch: pytest.Mon
     )
     client = LotusCoreClient(base_url="http://core.local")
 
-    with pytest.raises(ValueError, match="failed \\(400\\): bad request"):
+    with pytest.raises(UpstreamServiceError, match="rejected request \\(400\\): bad request") as exc_info:
         await client.get_core_snapshot(
             portfolio_id="DEMO_DPM_EUR_001",
             request_payload={"snapshot_mode": "BASELINE"},
             correlation_id=None,
         )
+    assert exc_info.value.code == "FAILED_DEPENDENCY"
+    assert exc_info.value.status_code == 424
 
 
 @pytest.mark.asyncio
@@ -181,12 +186,14 @@ async def test_client_maps_http_transport_error(monkeypatch: pytest.MonkeyPatch)
     monkeypatch.setattr(httpx, "AsyncClient", _BrokenAsyncClient)
     client = LotusCoreClient(base_url="http://core.local")
 
-    with pytest.raises(ValueError, match="unavailable"):
+    with pytest.raises(UpstreamServiceError, match="unavailable") as exc_info:
         await client.get_core_snapshot(
             portfolio_id="DEMO_DPM_EUR_001",
             request_payload={"snapshot_mode": "BASELINE"},
             correlation_id=None,
         )
+    assert exc_info.value.code == "UPSTREAM_UNAVAILABLE"
+    assert exc_info.value.status_code == 503
 
 
 def test_extract_error_detail_variants() -> None:
