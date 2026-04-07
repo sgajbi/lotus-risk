@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-04-07T23:26:19.083497+00:00",
+  "generatedAt": "2026-04-07T23:31:43.491965+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.alignment_policy",
@@ -377,6 +377,20 @@
       ]
     },
     {
+      "semanticId": "lotus.include_benchmark",
+      "canonicalTerm": "include_benchmark",
+      "preferredName": "include_benchmark",
+      "description": "Whether benchmark-relative drawdown was requested.",
+      "example": true,
+      "type": "object",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "object"
+      ]
+    },
+    {
       "semanticId": "lotus.include_episode_list",
       "canonicalTerm": "include_episode_list",
       "preferredName": "include_episode_list",
@@ -585,6 +599,20 @@
       ],
       "observedTypes": [
         "number"
+      ]
+    },
+    {
+      "semanticId": "lotus.missing_benchmark_policy",
+      "canonicalTerm": "missing_benchmark_policy",
+      "preferredName": "missing_benchmark_policy",
+      "description": "Behavior requested when benchmark series is unavailable.",
+      "example": "IGNORE",
+      "type": "object",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "object"
       ]
     },
     {
@@ -2434,6 +2462,70 @@
             "type": "string",
             "semanticId": "lotus.methodology_version",
             "attributeRef": "#/attributeCatalog/lotus.methodology_version"
+          },
+          {
+            "name": "metadata.include_underwater_series",
+            "location": "body",
+            "required": false,
+            "type": "boolean",
+            "semanticId": "lotus.include_underwater_series",
+            "attributeRef": "#/attributeCatalog/lotus.include_underwater_series"
+          },
+          {
+            "name": "metadata.include_episode_list",
+            "location": "body",
+            "required": false,
+            "type": "boolean",
+            "semanticId": "lotus.include_episode_list",
+            "attributeRef": "#/attributeCatalog/lotus.include_episode_list"
+          },
+          {
+            "name": "metadata.top_n_episodes",
+            "location": "body",
+            "required": false,
+            "type": "integer",
+            "semanticId": "lotus.top_n_episodes",
+            "attributeRef": "#/attributeCatalog/lotus.top_n_episodes"
+          },
+          {
+            "name": "metadata.cdar_alpha",
+            "location": "body",
+            "required": false,
+            "type": "number",
+            "semanticId": "lotus.cdar_alpha",
+            "attributeRef": "#/attributeCatalog/lotus.cdar_alpha"
+          },
+          {
+            "name": "metadata.minimum_episode_depth_bps",
+            "location": "body",
+            "required": false,
+            "type": "number",
+            "semanticId": "lotus.minimum_episode_depth_bps",
+            "attributeRef": "#/attributeCatalog/lotus.minimum_episode_depth_bps"
+          },
+          {
+            "name": "metadata.duration_unit",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.duration_unit",
+            "attributeRef": "#/attributeCatalog/lotus.duration_unit"
+          },
+          {
+            "name": "metadata.include_benchmark",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.include_benchmark",
+            "attributeRef": "#/attributeCatalog/lotus.include_benchmark"
+          },
+          {
+            "name": "metadata.missing_benchmark_policy",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.missing_benchmark_policy",
+            "attributeRef": "#/attributeCatalog/lotus.missing_benchmark_policy"
           }
         ]
       }

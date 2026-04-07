@@ -13,6 +13,7 @@ from app.contracts.drawdown import (
     DrawdownAnalysisOptions,
     DrawdownEpisode,
     DrawdownInputMode,
+    DrawdownMetadata,
     DrawdownPeriodResult,
     DrawdownResponse,
     DrawdownStatelessInput,
@@ -189,16 +190,45 @@ def _period_name(period: RiskRequestPeriod) -> str:
     return period.name or period.type
 
 
+def _build_metadata(
+    *,
+    analysis_options: DrawdownAnalysisOptions,
+    include_benchmark: bool | None,
+    missing_benchmark_policy: str | None,
+) -> DrawdownMetadata:
+    return DrawdownMetadata(
+        include_underwater_series=analysis_options.include_underwater_series,
+        include_episode_list=analysis_options.include_episode_list,
+        top_n_episodes=analysis_options.top_n_episodes,
+        cdar_alpha=analysis_options.cdar_alpha,
+        minimum_episode_depth_bps=analysis_options.minimum_episode_depth_bps,
+        duration_unit=analysis_options.duration_unit,
+        include_benchmark=include_benchmark,
+        missing_benchmark_policy=missing_benchmark_policy,
+    )
+
+
 def calculate_drawdown(
     request: DrawdownStatelessInput,
     *,
     input_mode: DrawdownInputMode,
     analysis_options: DrawdownAnalysisOptions,
+    include_benchmark: bool | None = None,
+    missing_benchmark_policy: str | None = None,
 ) -> DrawdownResponse:
     returns_df = _build_returns_df(request.returns)
     benchmark_df = _build_returns_df(request.benchmark_returns)
     if returns_df.empty:
-        return DrawdownResponse(input_mode=input_mode, scope=request.scope, results={})
+        return DrawdownResponse(
+            input_mode=input_mode,
+            scope=request.scope,
+            results={},
+            metadata=_build_metadata(
+                analysis_options=analysis_options,
+                include_benchmark=include_benchmark,
+                missing_benchmark_policy=missing_benchmark_policy,
+            ),
+        )
 
     open_date = cast(pd.Timestamp, returns_df.index.min()).date()
     results: dict[str, DrawdownPeriodResult] = {}
@@ -301,4 +331,9 @@ def calculate_drawdown(
         input_mode=input_mode,
         scope=request.scope,
         results=results,
+        metadata=_build_metadata(
+            analysis_options=analysis_options,
+            include_benchmark=include_benchmark,
+            missing_benchmark_policy=missing_benchmark_policy,
+        ),
     )

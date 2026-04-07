@@ -61,6 +61,13 @@ def test_drawdown_engine_returns_period_summary_episode_and_underwater() -> None
     assert period.underwater_series is not None
     assert len(period.underwater_series) > 0
     assert period.relative_to_benchmark is not None
+    assert response.metadata.include_underwater_series is True
+    assert response.metadata.include_episode_list is True
+    assert response.metadata.top_n_episodes == 5
+    assert response.metadata.cdar_alpha == 0.95
+    assert response.metadata.duration_unit == "BUSINESS_DAYS"
+    assert response.metadata.include_benchmark is None
+    assert response.metadata.missing_benchmark_policy is None
 
 
 def test_drawdown_engine_handles_empty_returns() -> None:
@@ -77,6 +84,8 @@ def test_drawdown_engine_handles_empty_returns() -> None:
         analysis_options=DrawdownAnalysisOptions.model_validate({}),
     )
     assert response.results == {}
+    assert response.metadata.include_episode_list is True
+    assert response.metadata.include_benchmark is None
 
 
 def test_drawdown_engine_respects_episode_threshold_and_top_n() -> None:

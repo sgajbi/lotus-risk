@@ -65,6 +65,8 @@
 - `metadata`
   - `contract_version`
   - `methodology_version`
+  - applied analysis options
+  - applied benchmark policy
 
 ## Upstream / Downstream Contracts
 
@@ -81,6 +83,19 @@
 - Bounded context ownership: aligned (`lotus-risk` remains analytics owner).
 - Vocabulary and API governance: aligned with RFC-0067 (snake_case canonical names, no alias terms).
 - Mode envelope consistency: aligned with existing risk/concentration patterns.
+
+## Response Auditability
+
+The response metadata now echoes the applied drawdown configuration so consumers can interpret results without reconstructing the request:
+
+- `include_underwater_series`
+- `include_episode_list`
+- `top_n_episodes`
+- `cdar_alpha`
+- `minimum_episode_depth_bps`
+- `duration_unit`
+- `include_benchmark`
+- `missing_benchmark_policy`
 
 ## Remaining Gaps
 
