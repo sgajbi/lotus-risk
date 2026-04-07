@@ -6,30 +6,8 @@ import pytest
 
 from app.contracts.risk import StatefulRiskInput
 from app.services.risk_mode_adapter import _build_stateful_source_request, _portfolio_open_date, calculate_risk_stateful
-
-
-class _StubPerformanceClient:
-    def __init__(self) -> None:
-        self.payload: dict[str, object] | None = None
-        self.correlation_id: str | None = None
-
-    async def get_returns_series(
-        self,
-        *,
-        request_payload: dict[str, object],
-        correlation_id: str | None,
-    ) -> dict[str, object]:
-        self.payload = request_payload
-        self.correlation_id = correlation_id
-        return {
-            "series": {
-                "portfolio_returns": [
-                    {"date": "2025-01-02", "return_value": "0.0100"},
-                    {"date": "2025-01-03", "return_value": "-0.0050"},
-                    {"date": "2025-01-06", "return_value": "0.0030"},
-                ],
-            }
-        }
+from tests.support.lotus_performance_fakes import RecordingLotusPerformanceClient
+from tests.support.returns_series_payloads import build_returns_series_response
 
 
 def _stateful_input() -> StatefulRiskInput:
@@ -67,7 +45,15 @@ def test_stateful_source_payload_characterization() -> None:
 
 
 def test_calculate_risk_stateful_characterization() -> None:
-    performance_client = _StubPerformanceClient()
+    performance_client = RecordingLotusPerformanceClient(
+        response_payload=build_returns_series_response(
+            portfolio_returns=[
+                ("2025-01-02", "0.0100"),
+                ("2025-01-03", "-0.0050"),
+                ("2025-01-06", "0.0030"),
+            ]
+        )
+    )
     response = asyncio.run(
         calculate_risk_stateful(
             _stateful_input(),
@@ -76,7 +62,7 @@ def test_calculate_risk_stateful_characterization() -> None:
         )
     )
 
-    assert performance_client.payload is not None
+    assert performance_client.request_payload is not None
     assert performance_client.correlation_id == "corr-risk-stateful"
     metrics = response.results["YTD"].metrics
     assert metrics["VOLATILITY"].value is not None

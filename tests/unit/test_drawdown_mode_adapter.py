@@ -9,23 +9,7 @@ from app.contracts.drawdown import (
 from app.services.drawdown_mode_adapter import (
     calculate_drawdown_stateful,
 )
-
-
-class _StubPerformanceClient:
-    def __init__(self, response: dict[str, object]) -> None:
-        self.response = response
-        self.payload: dict[str, object] | None = None
-        self.correlation_id: str | None = None
-
-    async def get_returns_series(
-        self,
-        *,
-        request_payload: dict[str, object],
-        correlation_id: str | None,
-    ) -> dict[str, object]:
-        self.payload = request_payload
-        self.correlation_id = correlation_id
-        return self.response
+from tests.support.lotus_performance_fakes import RecordingLotusPerformanceClient
 
 
 def _stateful() -> DrawdownStatefulInput:
@@ -40,7 +24,8 @@ def _stateful() -> DrawdownStatefulInput:
 
 
 def test_drawdown_stateful_adapter_happy_path() -> None:
-    client = _StubPerformanceClient(
+    client = RecordingLotusPerformanceClient(
+        response_payload=
         {
             "series": {
                 "portfolio_returns": [
@@ -62,10 +47,10 @@ def test_drawdown_stateful_adapter_happy_path() -> None:
             correlation_id="corr-dd",
         )
     )
-    assert client.payload is not None
-    assert client.payload["input_mode"] == "stateful"
-    assert client.payload["stateful_input"] == {}
-    assert client.payload["window"] == {
+    assert client.request_payload is not None
+    assert client.request_payload["input_mode"] == "stateful"
+    assert client.request_payload["stateful_input"] == {}
+    assert client.request_payload["window"] == {
         "mode": "EXPLICIT",
         "from_date": "2026-01-01",
         "to_date": "2026-01-08",
@@ -75,7 +60,7 @@ def test_drawdown_stateful_adapter_happy_path() -> None:
 
 
 def test_drawdown_stateful_adapter_requires_series_payload() -> None:
-    client = _StubPerformanceClient({})
+    client = RecordingLotusPerformanceClient(response_payload={})
     with pytest.raises(ValueError, match="missing 'series' object"):
         asyncio.run(
             calculate_drawdown_stateful(
@@ -88,7 +73,7 @@ def test_drawdown_stateful_adapter_requires_series_payload() -> None:
 
 
 def test_drawdown_stateful_adapter_requires_portfolio_returns() -> None:
-    client = _StubPerformanceClient({"series": {"portfolio_returns": []}})
+    client = RecordingLotusPerformanceClient(response_payload={"series": {"portfolio_returns": []}})
     with pytest.raises(ValueError, match="no portfolio returns"):
         asyncio.run(
             calculate_drawdown_stateful(
@@ -101,7 +86,8 @@ def test_drawdown_stateful_adapter_requires_portfolio_returns() -> None:
 
 
 def test_drawdown_stateful_adapter_requires_benchmark_when_policy_requires() -> None:
-    client = _StubPerformanceClient(
+    client = RecordingLotusPerformanceClient(
+        response_payload=
         {
             "series": {
                 "portfolio_returns": [
@@ -124,7 +110,8 @@ def test_drawdown_stateful_adapter_requires_benchmark_when_policy_requires() -> 
 
 
 def test_drawdown_stateful_adapter_rejects_invalid_portfolio_return_value() -> None:
-    client = _StubPerformanceClient(
+    client = RecordingLotusPerformanceClient(
+        response_payload=
         {
             "series": {
                 "portfolio_returns": [
@@ -155,7 +142,8 @@ def test_drawdown_stateful_adapter_rejects_invalid_portfolio_return_value() -> N
 
 
 def test_drawdown_stateful_adapter_skips_malformed_rows_and_allows_optional_benchmark() -> None:
-    client = _StubPerformanceClient(
+    client = RecordingLotusPerformanceClient(
+        response_payload=
         {
             "series": {
                 "portfolio_returns": [
