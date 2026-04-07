@@ -2,6 +2,10 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from tests.support.app_runtime import override_app_runtime
+from tests.support.lotus_performance_fakes import (
+    RecordingLotusPerformanceClient,
+    build_autowired_lotus_performance_client_class,
+)
 from tests.support.returns_series_payloads import (
     JAN_2026_PORTFOLIO_RETURNS,
     JAN_2026_RISK_FREE_RETURNS,
@@ -9,49 +13,12 @@ from tests.support.returns_series_payloads import (
     build_returns_series_response,
 )
 
-
-class _RecordingLotusPerformanceClient:
-    def __init__(self) -> None:
-        self.calls: list[dict[str, object]] = []
-
-    async def get_returns_series(
-        self,
-        *,
-        request_payload: dict[str, object],
-        correlation_id: str | None,
-    ) -> dict[str, object]:
-        self.calls.append(
-            {
-                "request_payload": request_payload,
-                "correlation_id": correlation_id,
-            }
-        )
-        return build_returns_series_response(
-            portfolio_returns=JAN_2026_PORTFOLIO_RETURNS,
-            benchmark_returns=JAN_2026_ROLLING_BENCHMARK_RETURNS,
-            risk_free_returns=JAN_2026_RISK_FREE_RETURNS,
-        )
-
-
-class _AutoWiredLotusPerformanceClient:
-    calls: list[dict[str, object]] = []
-
-    async def get_returns_series(
-        self,
-        *,
-        request_payload: dict[str, object],
-        correlation_id: str | None,
-    ) -> dict[str, object]:
-        _AutoWiredLotusPerformanceClient.calls.append(
-            {
-                "request_payload": request_payload,
-                "correlation_id": correlation_id,
-            }
-        )
-        return build_returns_series_response(
-            portfolio_returns=JAN_2026_PORTFOLIO_RETURNS,
-            benchmark_returns=JAN_2026_ROLLING_BENCHMARK_RETURNS,
-        )
+_AutoWiredLotusPerformanceClient = build_autowired_lotus_performance_client_class(
+    response_factory=lambda: build_returns_series_response(
+        portfolio_returns=JAN_2026_PORTFOLIO_RETURNS,
+        benchmark_returns=JAN_2026_ROLLING_BENCHMARK_RETURNS,
+    )
+)
 
 
 class _AutoWiredLotusCoreClient:
@@ -134,7 +101,13 @@ def test_rolling_metrics_endpoint_stateless_contract() -> None:
 
 
 def test_rolling_metrics_endpoint_stateful_uses_lotus_performance() -> None:
-    recorder = _RecordingLotusPerformanceClient()
+    recorder = RecordingLotusPerformanceClient(
+        response_payload=build_returns_series_response(
+            portfolio_returns=JAN_2026_PORTFOLIO_RETURNS,
+            benchmark_returns=JAN_2026_ROLLING_BENCHMARK_RETURNS,
+            risk_free_returns=JAN_2026_RISK_FREE_RETURNS,
+        )
+    )
     with override_app_runtime(
         lotus_performance_client=recorder,
         lotus_core_client=_AutoWiredLotusCoreClient(),

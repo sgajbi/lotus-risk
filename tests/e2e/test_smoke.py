@@ -2,6 +2,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 from tests.support.app_runtime import override_app_runtime
 from tests.support.lotus_core_fakes import SimulationLotusCoreClient
+from tests.support.lotus_performance_fakes import RecordingLotusPerformanceClient
 from tests.support.returns_series_payloads import (
     JAN_2026_PORTFOLIO_RETURNS,
     JAN_2026_RISK_FREE_RETURNS,
@@ -249,22 +250,6 @@ def test_e2e_concentration_stateless_payload() -> None:
     assert body["risk_proxy"]["hhi_proposed"] == 6250.0
 
 
-class _FakeLotusPerformanceClient:
-    async def get_returns_series(
-        self,
-        *,
-        request_payload: dict[str, object],
-        correlation_id: str | None,
-    ) -> dict[str, object]:
-        assert request_payload["input_mode"] == "stateful"
-        assert request_payload["stateful_input"] == {}
-        return build_returns_series_response(
-            portfolio_returns=JAN_2026_PORTFOLIO_RETURNS,
-            benchmark_returns=JAN_2026_ROLLING_BENCHMARK_RETURNS,
-            risk_free_returns=JAN_2026_RISK_FREE_RETURNS,
-        )
-
-
 def test_e2e_concentration_stateful_mode() -> None:
     with override_app_runtime(
         lotus_core_client=SimulationLotusCoreClient(
@@ -322,7 +307,13 @@ def test_e2e_concentration_simulation_mode() -> None:
 
 def test_e2e_rolling_metrics_stateful_mode() -> None:
     with override_app_runtime(
-        lotus_performance_client=_FakeLotusPerformanceClient(),
+        lotus_performance_client=RecordingLotusPerformanceClient(
+            response_payload=build_returns_series_response(
+                portfolio_returns=JAN_2026_PORTFOLIO_RETURNS,
+                benchmark_returns=JAN_2026_ROLLING_BENCHMARK_RETURNS,
+                risk_free_returns=JAN_2026_RISK_FREE_RETURNS,
+            )
+        ),
         lotus_core_client=SimulationLotusCoreClient(
             session_id="SIM_E2E_0001",
             simulation_version=2,

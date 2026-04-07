@@ -2,53 +2,21 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from tests.support.app_runtime import override_app_runtime
+from tests.support.lotus_performance_fakes import (
+    RecordingLotusPerformanceClient,
+    build_autowired_lotus_performance_client_class,
+)
 from tests.support.returns_series_payloads import (
     RISK_STATEFUL_BENCHMARK_RETURNS,
     RISK_STATEFUL_RETURNS,
     build_returns_series_response,
 )
 
-
-class _RecordingLotusPerformanceClient:
-    def __init__(self) -> None:
-        self.calls: list[dict[str, object]] = []
-
-    async def get_returns_series(
-        self,
-        *,
-        request_payload: dict[str, object],
-        correlation_id: str | None,
-    ) -> dict[str, object]:
-        self.calls.append(
-            {
-                "request_payload": request_payload,
-                "correlation_id": correlation_id,
-            }
-        )
-        return build_returns_series_response(
-            portfolio_returns=RISK_STATEFUL_RETURNS,
-            benchmark_returns=RISK_STATEFUL_BENCHMARK_RETURNS,
-        )
-
-
-class _AutoWiredLotusPerformanceClient:
-    calls: list[dict[str, object]] = []
-
-    async def get_returns_series(
-        self,
-        *,
-        request_payload: dict[str, object],
-        correlation_id: str | None,
-    ) -> dict[str, object]:
-        _AutoWiredLotusPerformanceClient.calls.append(
-            {
-                "request_payload": request_payload,
-                "correlation_id": correlation_id,
-            }
-        )
-        return build_returns_series_response(
-            portfolio_returns=RISK_STATEFUL_RETURNS[:2],
-        )
+_AutoWiredLotusPerformanceClient = build_autowired_lotus_performance_client_class(
+    response_factory=lambda: build_returns_series_response(
+        portfolio_returns=RISK_STATEFUL_RETURNS[:2],
+    )
+)
 
 
 def _request_payload() -> dict[str, object]:
@@ -132,7 +100,12 @@ def test_risk_calculate_benchmark_requirement_behavior() -> None:
 
 
 def test_risk_calculate_stateful_mode_uses_lotus_performance_returns_series() -> None:
-    performance_client = _RecordingLotusPerformanceClient()
+    performance_client = RecordingLotusPerformanceClient(
+        response_payload=build_returns_series_response(
+            portfolio_returns=RISK_STATEFUL_RETURNS,
+            benchmark_returns=RISK_STATEFUL_BENCHMARK_RETURNS,
+        )
+    )
     with override_app_runtime(lotus_performance_client=performance_client):
         client = TestClient(app)
         response = client.post(
