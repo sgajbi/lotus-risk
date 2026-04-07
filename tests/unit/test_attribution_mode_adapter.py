@@ -129,7 +129,10 @@ class _StubPerformanceClientEmptyReturns(_StubPerformanceClient):
 
 
 def _stateful_input(
-    *, grouping_dimensions: list[str], attribution_types: list[str]
+    *,
+    grouping_dimensions: list[str],
+    attribution_types: list[str],
+    metrics: list[str] | None = None,
 ) -> HistoricalAttributionStatefulInput:
     return HistoricalAttributionStatefulInput.model_validate(
         {
@@ -138,7 +141,7 @@ def _stateful_input(
             "periods": [{"type": "YTD", "name": "YTD"}],
             "attribution_options": {
                 "attribution_types": attribution_types,
-                "metrics": ["VOLATILITY"],
+                "metrics": metrics or ["VOLATILITY"],
                 "grouping_dimensions": grouping_dimensions,
             },
         }
@@ -218,13 +221,124 @@ def test_stateful_attribution_issuer_grouping_rejects_bad_enrichment_shape() -> 
         )
 
 
-def test_stateful_attribution_rejects_active_risk_without_benchmark_exposure_contract() -> None:
-    with pytest.raises(ValueError, match="benchmark exposure history contract"):
+def test_stateful_attribution_active_risk_sources_benchmark_contract_family() -> None:
+    perf = _StubPerformanceClient()
+    core = _StubCoreClient()
+    response = asyncio.run(
+        calculate_historical_attribution_stateful(
+            _stateful_input(
+                grouping_dimensions=["SECTOR"],
+                attribution_types=["ACTIVE_RISK"],
+                metrics=["TRACKING_ERROR"],
+            ),
+            performance_client=perf,
+            core_client=core,
+            correlation_id="corr-attr-active",
+        )
+    )
+
+    assert perf.payload is not None
+    assert perf.payload["series_selection"]["include_benchmark"] is True
+    assert core.assignment_calls[0]["portfolio_id"] == "DEMO_DPM_EUR_001"
+    market_payload = core.market_series_calls[0]["request_payload"]
+    assert market_payload["series_fields"] == ["component_weight"]
+    assert market_payload["window"] == {"start_date": "2026-01-02", "end_date": "2026-01-04"}
+    assert core.index_catalog_calls[0]["request_payload"] == {"as_of_date": "2026-01-04"}
+    active_set = response.results["YTD"].attribution_sets[0]
+    assert active_set.attribution_type == "ACTIVE_RISK"
+    assert active_set.metric == "TRACKING_ERROR"
+    assert active_set.contributors
+
+
+def test_stateful_attribution_rejects_active_risk_when_benchmark_returns_missing() -> None:
+    class _NoBenchmarkPerformanceClient(_StubPerformanceClient):
+        async def get_returns_series(
+            self,
+            *,
+            request_payload: dict[str, object],
+            correlation_id: str | None,
+        ) -> dict[str, object]:
+            self.payload = request_payload
+            return {"series": {"portfolio_returns": [{"date": "2026-01-02", "return_value": "0.010"}]}}
+
+    with pytest.raises(ValueError, match="no benchmark returns"):
         asyncio.run(
             calculate_historical_attribution_stateful(
-                _stateful_input(grouping_dimensions=["SECTOR"], attribution_types=["ACTIVE_RISK"]),
+                _stateful_input(
+                    grouping_dimensions=["SECTOR"],
+                    attribution_types=["ACTIVE_RISK"],
+                    metrics=["TRACKING_ERROR"],
+                ),
+                performance_client=_NoBenchmarkPerformanceClient(),
+                core_client=_StubCoreClient(),
+                correlation_id="corr-attr",
+            )
+        )
+
+
+def test_stateful_attribution_rejects_active_risk_issuer_grouping_until_benchmark_mapping_exists() -> None:
+    with pytest.raises(ValueError, match="cannot source benchmark exposure history"):
+        asyncio.run(
+            calculate_historical_attribution_stateful(
+                _stateful_input(
+                    grouping_dimensions=["ISSUER"],
+                    attribution_types=["ACTIVE_RISK"],
+                    metrics=["TRACKING_ERROR"],
+                ),
                 performance_client=_StubPerformanceClient(),
                 core_client=_StubCoreClient(),
+                correlation_id="corr-attr",
+            )
+        )
+
+
+def test_stateful_attribution_rejects_bad_benchmark_market_series_shape() -> None:
+    class _BadBenchmarkCoreClient(_StubCoreClient):
+        async def get_benchmark_market_series(
+            self,
+            *,
+            benchmark_id: str,
+            request_payload: dict[str, object],
+            correlation_id: str | None,
+        ) -> dict[str, object]:
+            return {"component_series": "bad"}
+
+    with pytest.raises(ValueError, match="missing 'component_series' list"):
+        asyncio.run(
+            calculate_historical_attribution_stateful(
+                _stateful_input(
+                    grouping_dimensions=["SECTOR"],
+                    attribution_types=["ACTIVE_RISK"],
+                    metrics=["TRACKING_ERROR"],
+                ),
+                performance_client=_StubPerformanceClient(),
+                core_client=_BadBenchmarkCoreClient(),
+                correlation_id="corr-attr",
+            )
+        )
+
+
+def test_stateful_attribution_rejects_missing_benchmark_id() -> None:
+    class _MissingBenchmarkIdCoreClient(_StubCoreClient):
+        async def resolve_benchmark_assignment(
+            self,
+            *,
+            portfolio_id: str,
+            request_payload: dict[str, object],
+            correlation_id: str | None,
+        ) -> dict[str, object]:
+            return {}
+
+    with pytest.raises(ValueError, match="missing benchmark_id"):
+        asyncio.run(
+            calculate_historical_attribution_stateful(
+                _stateful_input(
+                    grouping_dimensions=["SECTOR"],
+                    attribution_types=["ACTIVE_RISK"],
+                    metrics=["TRACKING_ERROR"],
+                ),
+                performance_client=_StubPerformanceClient(),
+                core_client=_MissingBenchmarkIdCoreClient(),
                 correlation_id="corr-attr",
             )
         )

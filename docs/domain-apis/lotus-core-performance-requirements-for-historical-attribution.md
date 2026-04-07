@@ -207,7 +207,10 @@ Required behavior:
 2. `ACTIVE_RISK + TRACKING_ERROR` stateful:
 - needs `portfolio_returns` and `benchmark_returns` from lotus-performance
 - needs portfolio exposure timeseries from lotus-core
-- needs benchmark exposure timeseries contract (currently gap if not yet available)
+- needs benchmark assignment from lotus-core
+- needs benchmark market-series component weights from lotus-core
+- needs index catalog classification labels from lotus-core for sector/asset-class grouping
+- issuer active-risk remains gated until benchmark issuer exposure semantics are available
 
 3. `grouping_dimension=ISSUER`:
 - needs instrument enrichment-bulk from lotus-core
@@ -217,8 +220,8 @@ Required behavior:
 
 ## Gaps to Resolve (if not already live)
 
-1. Benchmark exposure history contract for active attribution in stateful mode:
-- required to fully support `ACTIVE_RISK` decomposition by grouping dimension.
+1. Benchmark issuer exposure semantics for active attribution in stateful mode:
+- required to fully support `ACTIVE_RISK` decomposition by issuer grouping.
 
 2. Explicit response metadata in both upstream services:
 - lineage and contract version fields should be stable and documented.
@@ -244,7 +247,7 @@ Required behavior:
 ## Acceptance Checklist
 
 1. Stateful `TOTAL_RISK` attribution succeeds end-to-end using upstream data only.
-2. Stateful `ACTIVE_RISK` attribution succeeds end-to-end when benchmark exposure history is available.
+2. Stateful `ACTIVE_RISK` attribution succeeds end-to-end for POSITION, SECTOR, and ASSET_CLASS using decomposed lotus-core benchmark contracts.
 3. `ISSUER` grouping succeeds with enrichment-bulk.
 4. Contract tests validate required fields and type/shape guarantees.
 5. Characterization tests lock numerical behavior for stable fixtures.

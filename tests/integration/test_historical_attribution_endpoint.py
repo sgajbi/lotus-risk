@@ -275,28 +275,46 @@ def test_historical_attribution_stateful_total_risk_happy_path() -> None:
     ]
 
 
-def test_historical_attribution_stateful_rejects_active_risk_until_benchmark_exposure_contract() -> (
-    None
-):
-    client = TestClient(app)
-    response = client.post(
-        "/analytics/risk/historical-attribution",
-        json={
-            "input_mode": "stateful",
-            "stateful_input": {
-                "portfolio_id": "DEMO_DPM_EUR_001",
-                "as_of_date": "2026-01-04",
-                "periods": [{"type": "YTD", "name": "YTD"}],
-                "attribution_options": {
-                    "attribution_types": ["ACTIVE_RISK"],
-                    "metrics": ["TRACKING_ERROR"],
-                    "grouping_dimensions": ["SECTOR"],
+def test_historical_attribution_stateful_active_risk_uses_benchmark_contract_family() -> None:
+    performance_client = build_stateful_attribution_returns_client()
+    core_client = RecordingHistoricalAttributionCoreClient()
+    with override_app_runtime(
+        lotus_performance_client=performance_client,
+        lotus_core_client=core_client,
+    ):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/historical-attribution",
+            headers={"X-Correlation-Id": "corr-attr-active-stateful"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-04",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "attribution_options": {
+                        "attribution_types": ["ACTIVE_RISK"],
+                        "metrics": ["TRACKING_ERROR"],
+                        "grouping_dimensions": ["SECTOR"],
+                    },
                 },
             },
-        },
-    )
-    assert response.status_code == 400
-    error = response.json()["error"]
-    assert error["code"] == "INVALID_INPUT"
-    assert "benchmark exposure history contract" in error["message"]
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["input_mode"] == "stateful"
+    attribution_set = body["results"]["YTD"]["attribution_sets"][0]
+    assert attribution_set["attribution_type"] == "ACTIVE_RISK"
+    assert attribution_set["metric"] == "TRACKING_ERROR"
+    assert attribution_set["contributors"]
+    assert performance_client.calls[0]["request_payload"]["series_selection"] == {
+        "include_portfolio": True,
+        "include_benchmark": True,
+        "include_risk_free": False,
+    }
+    assert core_client.assignment_calls[0]["correlation_id"] == "corr-attr-active-stateful"
+    assert core_client.market_series_calls[0]["request_payload"]["series_fields"] == [
+        "component_weight"
+    ]
+    assert core_client.index_catalog_calls[0]["request_payload"] == {"as_of_date": "2026-01-04"}
 

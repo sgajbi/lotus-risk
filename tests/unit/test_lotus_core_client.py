@@ -111,6 +111,20 @@ async def test_client_supports_add_changes_and_snapshot_routes(
         request_payload={"as_of_date": "2026-02-28"},
         correlation_id=None,
     )
+    benchmark_assignment_response = await client.resolve_benchmark_assignment(
+        portfolio_id="DEMO_DPM_EUR_001",
+        request_payload={"as_of_date": "2026-02-28"},
+        correlation_id=None,
+    )
+    benchmark_market_series_response = await client.get_benchmark_market_series(
+        benchmark_id="BMK_GLOBAL_BALANCED_60_40",
+        request_payload={"as_of_date": "2026-02-28"},
+        correlation_id=None,
+    )
+    index_catalog_response = await client.list_index_catalog(
+        request_payload={"as_of_date": "2026-02-28"},
+        correlation_id=None,
+    )
     risk_free_response = await client.get_risk_free_series(
         request_payload={
             "currency": "USD",
@@ -126,6 +140,9 @@ async def test_client_supports_add_changes_and_snapshot_routes(
     assert snapshot_response == {"ok": True}
     assert enrichment_response == {"ok": True}
     assert position_timeseries_response == {"ok": True}
+    assert benchmark_assignment_response == {"ok": True}
+    assert benchmark_market_series_response == {"ok": True}
+    assert index_catalog_response == {"ok": True}
     assert risk_free_response == {"ok": True}
     assert _FakeAsyncClient.last_request is not None
     assert _FakeAsyncClient.last_request["url"] == "http://core.local/integration/reference/risk-free-series"

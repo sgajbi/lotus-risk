@@ -14,8 +14,12 @@ from app.contracts.attribution import (
 )
 from app.contracts.risk import RiskRequestScope
 from app.services.attribution_engine import calculate_historical_attribution
+from app.services.benchmark_exposure_history import fetch_benchmark_exposure_history
 from app.services.stateful_returns_request import build_stateful_returns_series_request
-from app.services.stateful_returns_series_parser import extract_required_portfolio_returns
+from app.services.stateful_returns_series_parser import (
+    extract_required_portfolio_returns,
+    to_return_points,
+)
 
 
 class LotusPerformanceClientProtocol(Protocol):
@@ -44,6 +48,11 @@ class LotusCoreClientProtocol(Protocol):
     ) -> dict[str, Any]: ...
 
 
+def _requires_active_attribution(stateful: HistoricalAttributionStatefulInput) -> bool:
+    options = stateful.attribution_options
+    return "ACTIVE_RISK" in options.attribution_types or "TRACKING_ERROR" in options.metrics
+
+
 def _build_stateful_returns_request(stateful: HistoricalAttributionStatefulInput) -> dict[str, Any]:
     return build_stateful_returns_series_request(
         portfolio_id=stateful.portfolio_id,
@@ -52,7 +61,7 @@ def _build_stateful_returns_request(stateful: HistoricalAttributionStatefulInput
         frequency="DAILY",
         metric_basis=stateful.net_or_gross,
         reporting_currency=stateful.reporting_currency,
-        include_benchmark=False,
+        include_benchmark=_requires_active_attribution(stateful),
         include_risk_free=False,
         missing_data_policy="ALLOW_PARTIAL",
     )
@@ -249,19 +258,18 @@ async def calculate_historical_attribution_stateful(
             "stateful historical-attribution does not support grouping_dimension=CUSTOM"
         )
 
-    requires_active = (
-        "ACTIVE_RISK" in options.attribution_types or "TRACKING_ERROR" in options.metrics
-    )
-    if requires_active:
-        raise ValueError(
-            "stateful ACTIVE_RISK/TRACKING_ERROR attribution is blocked until benchmark exposure history contract is available"
-        )
+    requires_active = _requires_active_attribution(stateful)
 
     returns_response = await performance_client.get_returns_series(
         request_payload=_build_stateful_returns_request(stateful),
         correlation_id=correlation_id,
     )
-    _, portfolio_returns = extract_required_portfolio_returns(returns_response)
+    series, portfolio_returns = extract_required_portfolio_returns(returns_response)
+    benchmark_returns = to_return_points(series.get("benchmark_returns"))
+    if requires_active and not benchmark_returns:
+        raise ValueError(
+            "lotus-performance returns-series returned no benchmark returns for requested stateful active-risk attribution"
+        )
     start_date = min(point.date for point in portfolio_returns)
 
     rows = await _fetch_position_timeseries_rows(
@@ -293,6 +301,20 @@ async def calculate_historical_attribution_stateful(
     if not exposure_history:
         raise ValueError("unable to build exposure history from lotus-core position-timeseries")
 
+    benchmark_exposure_history = (
+        await fetch_benchmark_exposure_history(
+            core_client=core_client,
+            portfolio_id=stateful.portfolio_id,
+            as_of_date=stateful.as_of_date,
+            start_date=start_date,
+            reporting_currency=stateful.reporting_currency,
+            grouping_dimensions=requested_groupings,
+            correlation_id=correlation_id,
+        )
+        if requires_active
+        else []
+    )
+
     stateless_input = HistoricalAttributionStatelessInput(
         scope=RiskRequestScope(
             as_of_date=stateful.as_of_date,
@@ -301,9 +323,9 @@ async def calculate_historical_attribution_stateful(
         ),
         periods=stateful.periods,
         returns=portfolio_returns,
-        benchmark_returns=[],
+        benchmark_returns=benchmark_returns,
         exposure_history=exposure_history,
-        benchmark_exposure_history=[],
+        benchmark_exposure_history=benchmark_exposure_history,
         attribution_options=options,
     )
     return calculate_historical_attribution(

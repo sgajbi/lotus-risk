@@ -2,7 +2,7 @@
 
 | Field | Value |
 | --- | --- |
-| Status | Draft, proposed for approval |
+| Status | Draft, approved direction; Slice 1 and Slice 2 in progress on feature branch |
 | Created | 2026-04-07 |
 | Last Updated | 2026-04-07 |
 | Owners | lotus-risk |
@@ -83,8 +83,9 @@ The user also clarified two upstream ownership expectations that this RFC must h
 2. `drawdown` does not support simulation.
 3. `rolling-metrics` does not support simulation.
 4. `historical-attribution` does not support simulation.
-5. `historical-attribution` stateful `ACTIVE_RISK` is still gated by benchmark exposure-history integration.
-6. Some docs still reflect an older assumption that stateful risk-free series comes from `lotus-performance`; this is not the target architecture.
+5. `historical-attribution` stateful `ACTIVE_RISK` now uses lotus-core decomposed benchmark contracts for `POSITION`, `SECTOR`, and `ASSET_CLASS`.
+6. `historical-attribution` stateful `ACTIVE_RISK` + `ISSUER` remains gated until benchmark issuer exposure semantics are explicitly available.
+7. Some docs still reflect an older assumption that stateful risk-free series comes from `lotus-performance`; this is not the target architecture.
 
 ## Requirement-to-Implementation Traceability
 
@@ -92,8 +93,8 @@ The user also clarified two upstream ownership expectations that this RFC must h
 | --- | --- | --- | --- |
 | Support simulation only where methodologically valid | Achieved in principle, not yet fully codified in all contracts/docs | Concentration RFC and live implementation; no valid time-series simulation methodology approved for other endpoints | Keep and formalize |
 | Benchmark returns should come from `lotus-performance` | Achieved in current stateful rolling/risk design direction | lotus-performance returns-series contract and integration usage | Confirm and preserve |
-| Risk-free series should come from `lotus-core` | Not yet fully aligned in lotus-risk implementation/docs | current rolling docs and adapter assumptions still reference lotus-performance risk-free sourcing | Open |
-| Stateful active-risk attribution needs benchmark exposure history | Partially implemented overall attribution, active-risk path still gated | current adapter explicitly blocks when benchmark exposure history contract is unavailable | Open |
+| Risk-free series should come from `lotus-core` | Implemented on feature branch for stateful rolling Sharpe | rolling adapter now sources risk-free reference series through lotus-core risk-free contract | Validate live |
+| Stateful active-risk attribution needs benchmark exposure history | Implemented on feature branch for POSITION, SECTOR, and ASSET_CLASS via decomposed contracts | lotus-core benchmark assignment, market-series, and index catalog contracts | Issuer active-risk remains open |
 | Unsupported modes must be explicit and deterministic | Partially true, not final everywhere in docs/contracts | simulation reserved/rejected in some RFCs but not yet finalized across all endpoint docs/OpenAPI | Open |
 | Production hardening of upstream behavior | Improved, not complete | better runtime wiring and tests exist, but no final service-wide readiness sign-off | Open |
 | Full integrated validation against real upstreams | Partial | targeted live validations performed, not yet final full-gate sign-off | Open |
@@ -180,9 +181,19 @@ What remains is architectural alignment and live validation:
 
 This is not just a data-seeding issue. It is also a contract-ownership alignment issue.
 
-### Gap C: Stateful active-risk attribution still needs benchmark exposure history
+### Gap C: Stateful active-risk attribution still needs issuer benchmark semantics
 
-This requirement is often understated. `lotus-risk` does not merely need benchmark metadata or a current benchmark composition. It needs benchmark exposure history over time:
+The original blocker was benchmark exposure history. lotus-core confirms this is provided through a decomposed benchmark contract family rather than a monolithic benchmark exposure endpoint.
+
+For `POSITION`, `SECTOR`, and `ASSET_CLASS`, lotus-risk can derive benchmark exposure history from:
+
+1. benchmark assignment
+2. benchmark market-series component weights
+3. index catalog classification labels
+
+The remaining gap is issuer-level active attribution. `lotus-risk` still needs benchmark issuer exposure semantics before it can support `ACTIVE_RISK` + `ISSUER` statefully.
+
+For issuer support, `lotus-risk` does not merely need benchmark metadata or current benchmark composition. It needs benchmark issuer exposure history over time:
 
 1. over the requested period
 2. at the supported grouping dimensions
@@ -190,10 +201,7 @@ This requirement is often understated. `lotus-risk` does not merely need benchma
 4. with semantics aligned to portfolio exposure history
 5. in a shape that supports deterministic reconciliation and auditability
 
-If `lotus-core` already exposes that exact contract, the remaining work is lotus-risk integration.
-If not, there is still an upstream contract gap.
-
-The RFC therefore treats this as gated until verified end-to-end in real integration.
+Until that issuer-specific mapping exists, stateful issuer active-risk attribution remains gated.
 
 ### Gap D: Operational hardening is improved but not complete
 
@@ -214,7 +222,7 @@ The recent branch work materially improved integration reliability, but the serv
    - That ambiguity should now be removed.
    - Unsupported simulation should be explicit in the production contract.
 3. Historical attribution RFC wording already acknowledged benchmark exposure-history dependency.
-   - This RFC promotes that from a buried dependency to a top-level production-readiness gate.
+   - This RFC promotes the residual issuer-level dependency to a top-level production-readiness gate.
 
 ## Proposed Changes
 
@@ -234,14 +242,15 @@ The recent branch work materially improved integration reliability, but the serv
 5. `POST /analytics/risk/historical-attribution`
    - support: `stateless`, `stateful`
    - reject: `simulation`
-   - gate stateful `ACTIVE_RISK` until benchmark exposure-history integration is validated
+   - support stateful `ACTIVE_RISK` for `POSITION`, `SECTOR`, and `ASSET_CLASS`
+   - gate stateful `ACTIVE_RISK` + `ISSUER` until benchmark issuer semantics are validated
 
 ### B. Align upstream sourcing model
 
 1. Portfolio returns: `lotus-performance`
 2. Benchmark returns: `lotus-performance`
 3. Risk-free series: `lotus-core`
-4. Benchmark exposure history: `lotus-core`
+4. Benchmark exposure history: `lotus-core` via benchmark assignment, benchmark market-series, and index catalog classification labels
 
 ### C. Complete integration hardening
 
@@ -273,7 +282,7 @@ This RFC should not be marked implemented based on intent alone. The required ev
 1. contract tests proving unsupported modes fail deterministically
 2. integration tests proving stateful upstream request shape and error mapping
 3. endpoint-level tests for risk-free-backed rolling Sharpe behavior after migration to `lotus-core`
-4. endpoint-level tests for stateful active-risk attribution once benchmark exposure-history integration is completed
+4. endpoint-level tests for stateful active-risk attribution through decomposed benchmark contracts
 5. full local gate results:
    - lint
    - unit
@@ -303,7 +312,7 @@ This RFC should not be marked implemented based on intent alone. The required ev
 
 ## Open Questions
 
-1. Does `lotus-core` already expose benchmark exposure history in the exact time-series shape required for stateful `ACTIVE_RISK` attribution, or is further upstream work still required?
+1. What exact benchmark issuer exposure semantics should be used for stateful `ACTIVE_RISK` + `ISSUER` attribution?
 2. Which exact `lotus-core` risk-free contract should be the canonical integration point for rolling Sharpe and any future risk-free-backed stateful metrics?
 3. Do we want unsupported-mode responses standardized on one specific Lotus error code across all analytics endpoints, or is the current per-endpoint validation mapping sufficient as long as it is deterministic and documented?
 
@@ -317,14 +326,14 @@ This RFC should not be marked implemented based on intent alone. The required ev
    - simulation remains concentration-only in the current `lotus-risk` production surface
    - `risk/calculate`, `drawdown`, `rolling-metrics`, and `historical-attribution` do not expose simulation in the current contract
 3. Approve hard rejection of unsupported modes.
-4. Approve `historical-attribution` stateful `ACTIVE_RISK` remaining gated until benchmark exposure-history integration is validated end-to-end.
+4. Approve `historical-attribution` stateful `ACTIVE_RISK` support for `POSITION`, `SECTOR`, and `ASSET_CLASS`, with `ISSUER` remaining gated until benchmark issuer exposure semantics are available.
 
 ## Next Actions
 
 ### P0
 
 1. Verify the canonical `lotus-core` risk-free contract and migrate stateful rolling Sharpe to it.
-2. Verify whether `lotus-core` already exposes benchmark exposure history in the exact required shape.
+2. Verify benchmark issuer exposure semantics needed for stateful issuer active-risk attribution.
 3. Finalize endpoint contracts and OpenAPI so unsupported modes are explicit.
 
 ### P1
@@ -348,7 +357,7 @@ This RFC should not be marked implemented based on intent alone. The required ev
 3. Stateful rolling Sharpe uses `lotus-core` risk-free sourcing and passes live validation for supported currencies and windows.
 4. Stateful `ACTIVE_RISK` attribution is either:
    - fully integrated and validated, or
-   - explicitly unavailable with no ambiguity in the contract and a clearly documented upstream dependency gate
+   - explicitly unavailable for unsupported grouping dimensions with no ambiguity in the contract and a clearly documented upstream dependency gate
 5. Full lint/unit/integration/e2e/Docker gates pass on the final branch.
 6. Live endpoint-by-endpoint validation passes against current upstream services.
 7. OpenAPI and domain documentation reflect actual runtime behavior.

@@ -101,6 +101,47 @@ class LotusCoreClient:
             correlation_id=correlation_id,
         )
 
+    async def resolve_benchmark_assignment(
+        self,
+        *,
+        portfolio_id: str,
+        request_payload: dict[str, Any],
+        correlation_id: str | None,
+    ) -> dict[str, Any]:
+        return await self._request_json(
+            "POST",
+            f"/integration/portfolios/{portfolio_id}/benchmark-assignment",
+            json_payload=request_payload,
+            correlation_id=correlation_id,
+        )
+
+    async def get_benchmark_market_series(
+        self,
+        *,
+        benchmark_id: str,
+        request_payload: dict[str, Any],
+        correlation_id: str | None,
+    ) -> dict[str, Any]:
+        return await self._request_json(
+            "POST",
+            f"/integration/benchmarks/{benchmark_id}/market-series",
+            json_payload=request_payload,
+            correlation_id=correlation_id,
+        )
+
+    async def list_index_catalog(
+        self,
+        *,
+        request_payload: dict[str, Any],
+        correlation_id: str | None,
+    ) -> dict[str, Any]:
+        return await self._request_json(
+            "POST",
+            "/integration/indices/catalog",
+            json_payload=request_payload,
+            correlation_id=correlation_id,
+        )
+
     async def get_risk_free_series(
         self,
         *,

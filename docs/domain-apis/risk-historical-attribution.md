@@ -20,7 +20,8 @@ Provide decomposition of historical realized risk and active risk into transpare
 - Status: partially implemented
 - Current behavior:
   - `TOTAL_RISK` stateful path is implemented
-  - `ACTIVE_RISK` stateful path remains gated until benchmark exposure history is available in the exact required upstream shape
+  - `ACTIVE_RISK` stateful path is implemented for `POSITION`, `SECTOR`, and `ASSET_CLASS` grouping dimensions through lotus-core decomposed benchmark contracts
+  - `ACTIVE_RISK` + `ISSUER` remains gated until benchmark issuer exposure semantics are explicitly available
 
 ### Simulation
 
@@ -58,6 +59,9 @@ Provide decomposition of historical realized risk and active risk into transpare
 - lotus-core:
   - canonical exposure snapshots by date/grouping dimension (system of record)
   - canonical instrument and hierarchy mapping for grouping dimensions (issuer/sector/asset class)
+  - benchmark assignment for the portfolio/as-of date
+  - benchmark market-series component weights for benchmark exposure history
+  - index catalog classification labels used to map benchmark components to sector and asset-class groupings
 
 ## Expected Output Structure
 
@@ -99,3 +103,4 @@ Provide decomposition of historical realized risk and active risk into transpare
 2. v1 grouping dimension set.
 3. residual tolerance policy.
 4. rolling-window attribution inclusion in v1 or v2.
+5. benchmark issuer exposure semantics for stateful `ACTIVE_RISK` + `ISSUER`.
