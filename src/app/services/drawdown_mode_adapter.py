@@ -13,6 +13,7 @@ from app.contracts.drawdown import (
 )
 from app.contracts.risk import ReturnPoint, RiskRequestScope
 from app.services.drawdown_engine import calculate_drawdown
+from app.services.source_window import build_returns_series_window
 
 
 class LotusPerformanceClientProtocol(Protocol):
@@ -61,7 +62,10 @@ def _build_stateful_source_request(
     return {
         "portfolio_id": stateful.portfolio_id,
         "as_of_date": stateful.as_of_date.isoformat(),
-        "window": {"mode": "RELATIVE", "period": "SI"},
+        "window": build_returns_series_window(
+            periods=stateful.periods,
+            as_of_date=stateful.as_of_date,
+        ),
         "frequency": "DAILY",
         "metric_basis": stateful.net_or_gross,
         "reporting_currency": stateful.reporting_currency,
@@ -80,7 +84,7 @@ def _build_stateful_source_request(
             "calendar_policy": "BUSINESS",
         },
         "input_mode": "stateful",
-        "stateful_input": {"consumer_system": "lotus-risk"},
+        "stateful_input": {},
     }
 
 
@@ -125,3 +129,4 @@ async def calculate_drawdown_stateful(
         input_mode=DrawdownInputMode.STATEFUL,
         analysis_options=analysis_options,
     )
+

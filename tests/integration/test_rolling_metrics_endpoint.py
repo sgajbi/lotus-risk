@@ -73,6 +73,31 @@ class _AutoWiredLotusPerformanceClient:
         }
 
 
+class _AutoWiredLotusCoreClient:
+    calls: list[dict[str, object]] = []
+
+    async def get_core_snapshot(
+        self,
+        *,
+        portfolio_id: str,
+        request_payload: dict[str, object],
+        correlation_id: str | None,
+    ) -> dict[str, object]:
+        _AutoWiredLotusCoreClient.calls.append(
+            {
+                "portfolio_id": portfolio_id,
+                "request_payload": request_payload,
+                "correlation_id": correlation_id,
+            }
+        )
+        return {
+            "valuation_context": {
+                "portfolio_currency": "USD",
+                "reporting_currency": "USD",
+            }
+        }
+
+
 def _stateless_payload() -> dict[str, object]:
     return {
         "input_mode": "stateless",
@@ -130,6 +155,7 @@ def test_rolling_metrics_endpoint_stateless_contract() -> None:
 def test_rolling_metrics_endpoint_stateful_uses_lotus_performance() -> None:
     recorder = _RecordingLotusPerformanceClient()
     app.state.lotus_performance_client = recorder
+    app.state.lotus_core_client = _AutoWiredLotusCoreClient()
     client = TestClient(app)
     response = client.post(
         "/analytics/risk/rolling-metrics",
@@ -157,7 +183,8 @@ def test_rolling_metrics_endpoint_stateful_uses_lotus_performance() -> None:
     payload = recorder.calls[0]["request_payload"]
     assert isinstance(payload, dict)
     assert payload["input_mode"] == "stateful"
-    assert payload["stateful_input"] == {"consumer_system": "lotus-risk"}
+    assert payload["stateful_input"] == {}
+    assert payload["reporting_currency"] == "USD"
     assert payload["series_selection"]["include_benchmark"] is True
     assert payload["series_selection"]["include_risk_free"] is True
     assert response.json()["input_mode"] == "stateful"
@@ -168,10 +195,14 @@ def test_rolling_metrics_endpoint_stateful_autowires_performance_client() -> Non
 
     main_module_any = cast(Any, main_module)
     original = main_module_any.LotusPerformanceClient
+    original_core = main_module_any.LotusCoreClient
     try:
         main_module_any.LotusPerformanceClient = _AutoWiredLotusPerformanceClient
+        main_module_any.LotusCoreClient = _AutoWiredLotusCoreClient
         app.state.lotus_performance_client = None
+        app.state.lotus_core_client = None
         _AutoWiredLotusPerformanceClient.calls = []
+        _AutoWiredLotusCoreClient.calls = []
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/rolling-metrics",
@@ -193,6 +224,7 @@ def test_rolling_metrics_endpoint_stateful_autowires_performance_client() -> Non
         assert _AutoWiredLotusPerformanceClient.calls[0]["correlation_id"] == "corr-rolling-auto"
     finally:
         main_module_any.LotusPerformanceClient = original
+        main_module_any.LotusCoreClient = original_core
 
 
 def test_rolling_metrics_endpoint_rejects_simulation_mode_for_now() -> None:
@@ -210,3 +242,4 @@ def test_rolling_metrics_endpoint_rejects_simulation_mode_for_now() -> None:
     )
     assert response.status_code == 400
     assert "not implemented" in response.json()["error"]["message"]
+

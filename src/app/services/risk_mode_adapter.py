@@ -12,6 +12,7 @@ from app.contracts.risk import (
     StatefulRiskInput,
 )
 from app.services.risk_engine import calculate_risk
+from app.services.source_window import build_returns_series_window
 
 
 class LotusPerformanceClientProtocol(Protocol):
@@ -64,7 +65,10 @@ def _build_stateful_source_request(stateful: StatefulRiskInput) -> dict[str, Any
     return {
         "portfolio_id": stateful.portfolio_id,
         "as_of_date": stateful.as_of_date.isoformat(),
-        "window": {"mode": "RELATIVE", "period": "SI"},
+        "window": build_returns_series_window(
+            periods=stateful.periods,
+            as_of_date=stateful.as_of_date,
+        ),
         "frequency": stateful.options.frequency,
         "metric_basis": stateful.net_or_gross,
         "reporting_currency": stateful.reporting_currency,
@@ -79,7 +83,7 @@ def _build_stateful_source_request(stateful: StatefulRiskInput) -> dict[str, Any
             "calendar_policy": "BUSINESS",
         },
         "input_mode": "stateful",
-        "stateful_input": {"consumer_system": "lotus-risk"},
+        "stateful_input": {},
     }
 
 
@@ -120,3 +124,4 @@ async def calculate_risk_stateful(
         benchmark_returns=benchmark_points,
     )
     return calculate_risk(stateless_request)
+

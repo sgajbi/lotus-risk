@@ -116,7 +116,7 @@ def test_drawdown_endpoint_stateful_uses_lotus_performance() -> None:
     payload = recorder.calls[0]["request_payload"]
     assert isinstance(payload, dict)
     assert payload["input_mode"] == "stateful"
-    assert payload["stateful_input"] == {"consumer_system": "lotus-risk"}
+    assert payload["stateful_input"] == {}
     assert payload["series_selection"]["include_benchmark"] is True
     assert response.json()["input_mode"] == "stateful"
 
@@ -164,3 +164,4 @@ def test_drawdown_endpoint_stateful_autowires_performance_client() -> None:
         assert _AutoWiredLotusPerformanceClient.calls[0]["correlation_id"] == "corr-dd-auto"
     finally:
         main_module_any.LotusPerformanceClient = original
+

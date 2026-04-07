@@ -193,7 +193,12 @@ def test_stateful_attribution_total_risk_happy_path() -> None:
     )
     assert perf.payload is not None
     assert perf.payload["input_mode"] == "stateful"
-    assert perf.payload["stateful_input"] == {"consumer_system": "lotus-risk"}
+    assert perf.payload["stateful_input"] == {}
+    assert perf.payload["window"] == {
+        "mode": "EXPLICIT",
+        "from_date": "2026-01-01",
+        "to_date": "2026-01-04",
+    }
     assert len(core.position_payloads) == 2
     first_payload = core.position_payloads[0]
     assert first_payload["dimensions"] == ["sector"]
@@ -420,3 +425,4 @@ def test_build_issuer_map_skips_non_dict_and_missing_security_id_records() -> No
         )
     )
     assert issuer_map == {"SEC_A": ("ISSUER_A", None)}
+

@@ -14,6 +14,7 @@ from app.contracts.attribution import (
 )
 from app.contracts.risk import ReturnPoint, RiskRequestScope
 from app.services.attribution_engine import calculate_historical_attribution
+from app.services.source_window import build_returns_series_window
 
 
 class LotusPerformanceClientProtocol(Protocol):
@@ -73,7 +74,10 @@ def _build_stateful_returns_request(stateful: HistoricalAttributionStatefulInput
     return {
         "portfolio_id": stateful.portfolio_id,
         "as_of_date": stateful.as_of_date.isoformat(),
-        "window": {"mode": "RELATIVE", "period": "SI"},
+        "window": build_returns_series_window(
+            periods=stateful.periods,
+            as_of_date=stateful.as_of_date,
+        ),
         "frequency": "DAILY",
         "metric_basis": stateful.net_or_gross,
         "reporting_currency": stateful.reporting_currency,
@@ -88,7 +92,7 @@ def _build_stateful_returns_request(stateful: HistoricalAttributionStatefulInput
             "calendar_policy": "BUSINESS",
         },
         "input_mode": "stateful",
-        "stateful_input": {"consumer_system": "lotus-risk"},
+        "stateful_input": {},
     }
 
 
@@ -350,3 +354,4 @@ async def calculate_historical_attribution_stateful(
         stateless_input,
         input_mode=AttributionInputMode.STATEFUL,
     )
+

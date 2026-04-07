@@ -16,6 +16,7 @@ from app.integrations.lotus_performance_client import (
 class _FakeAsyncClient:
     response_factory: Callable[..., httpx.Response] | None = None
     last_request: dict[str, Any] | None = None
+    requests: list[dict[str, Any]] = []
 
     def __init__(self, *, timeout: httpx.Timeout) -> None:
         self.timeout = timeout
@@ -34,13 +35,27 @@ class _FakeAsyncClient:
     async def post(
         self, url: str, *, json: dict[str, Any], headers: dict[str, str]
     ) -> httpx.Response:
-        _FakeAsyncClient.last_request = {
+        request = {
+            "method": "POST",
             "url": url,
             "json": json,
             "headers": headers,
         }
+        _FakeAsyncClient.last_request = request
+        _FakeAsyncClient.requests.append(request)
         assert _FakeAsyncClient.response_factory is not None
-        return _FakeAsyncClient.response_factory(url=url, json=json, headers=headers)
+        return _FakeAsyncClient.response_factory(method="POST", url=url, json=json, headers=headers)
+
+    async def get(self, url: str, *, headers: dict[str, str]) -> httpx.Response:
+        request = {
+            "method": "GET",
+            "url": url,
+            "headers": headers,
+        }
+        _FakeAsyncClient.last_request = request
+        _FakeAsyncClient.requests.append(request)
+        assert _FakeAsyncClient.response_factory is not None
+        return _FakeAsyncClient.response_factory(method="GET", url=url, headers=headers)
 
 
 def _ok_response(
@@ -58,6 +73,7 @@ async def test_client_builds_headers_and_payload_for_returns_series(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(httpx, "AsyncClient", _FakeAsyncClient)
+    _FakeAsyncClient.requests = []
     _FakeAsyncClient.response_factory = lambda **_: _ok_response(
         {"series": {"portfolio_returns": []}}
     )
@@ -80,6 +96,7 @@ async def test_client_builds_headers_and_payload_for_returns_series(
 @pytest.mark.asyncio
 async def test_client_rejects_non_object_json_response(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(httpx, "AsyncClient", _FakeAsyncClient)
+    _FakeAsyncClient.requests = []
     _FakeAsyncClient.response_factory = lambda **_: _ok_response(["invalid"])
     client = LotusPerformanceClient(base_url="http://performance.local")
 
@@ -93,6 +110,7 @@ async def test_client_rejects_non_object_json_response(monkeypatch: pytest.Monke
 @pytest.mark.asyncio
 async def test_client_maps_http_status_error_with_detail(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(httpx, "AsyncClient", _FakeAsyncClient)
+    _FakeAsyncClient.requests = []
     _FakeAsyncClient.response_factory = lambda **_: _ok_response(
         {"detail": {"message": "upstream failed"}},
         status_code=503,
@@ -121,6 +139,153 @@ async def test_client_maps_http_transport_error(monkeypatch: pytest.MonkeyPatch)
         await client.get_returns_series(
             request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
             correlation_id=None,
+        )
+
+
+@pytest.mark.asyncio
+async def test_client_polls_async_returns_series_result_until_complete(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(httpx, "AsyncClient", _FakeAsyncClient)
+    _FakeAsyncClient.requests = []
+    async def _no_sleep(*_: object) -> None:
+        return None
+
+    monkeypatch.setattr("app.integrations.lotus_performance_client.asyncio.sleep", _no_sleep)
+
+    responses = iter(
+        [
+            _ok_response(
+                {
+                    "calculation_id": "calc-1",
+                    "poll_path": "/performance/executions/calc-1",
+                    "result_path": "/integration/returns/series/results/calc-1",
+                },
+                status_code=202,
+                url="http://performance.local/integration/returns/series",
+            ),
+            _ok_response(
+                {"status": "pending"},
+                url="http://performance.local/performance/executions/calc-1",
+            ),
+            _ok_response(
+                {"status": "pending"},
+                status_code=202,
+                url="http://performance.local/integration/returns/series/results/calc-1",
+            ),
+            _ok_response(
+                {"status": "completed"},
+                url="http://performance.local/performance/executions/calc-1",
+            ),
+            _ok_response(
+                {"series": {"portfolio_returns": []}},
+                url="http://performance.local/integration/returns/series/results/calc-1",
+            ),
+        ]
+    )
+    _FakeAsyncClient.response_factory = lambda **_: next(responses)
+
+    client = LotusPerformanceClient(base_url="http://performance.local")
+    response = await client.get_returns_series(
+        request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
+        correlation_id="corr-async",
+    )
+
+    assert response["series"] == {"portfolio_returns": []}
+    assert [request["method"] for request in _FakeAsyncClient.requests] == [
+        "POST",
+        "GET",
+        "GET",
+        "GET",
+        "GET",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_client_surfaces_async_execution_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(httpx, "AsyncClient", _FakeAsyncClient)
+    _FakeAsyncClient.requests = []
+
+    responses = iter(
+        [
+            _ok_response(
+                {
+                    "calculation_id": "calc-1",
+                    "poll_path": "/performance/executions/calc-1",
+                    "result_path": "/integration/returns/series/results/calc-1",
+                },
+                status_code=202,
+                url="http://performance.local/integration/returns/series",
+            ),
+            _ok_response(
+                {"status": "failed", "error_message": "No benchmark assignment found for portfolio."},
+                url="http://performance.local/performance/executions/calc-1",
+            ),
+        ]
+    )
+    _FakeAsyncClient.response_factory = lambda **_: next(responses)
+
+    client = LotusPerformanceClient(base_url="http://performance.local")
+    with pytest.raises(ValueError, match="async returns-series failed: No benchmark assignment found for portfolio."):
+        await client.get_returns_series(
+            request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
+            correlation_id="corr-async-fail",
+        )
+
+
+@pytest.mark.asyncio
+async def test_client_times_out_async_returns_series_when_result_never_completes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(httpx, "AsyncClient", _FakeAsyncClient)
+    _FakeAsyncClient.requests = []
+
+    async def _no_sleep(*_: object) -> None:
+        return None
+
+    monkeypatch.setattr("app.integrations.lotus_performance_client.asyncio.sleep", _no_sleep)
+
+    responses = iter(
+        [
+            _ok_response(
+                {
+                    "calculation_id": "calc-2",
+                    "poll_path": "/performance/executions/calc-2",
+                    "result_path": "/integration/returns/series/results/calc-2",
+                },
+                status_code=202,
+                url="http://performance.local/integration/returns/series",
+            ),
+            _ok_response(
+                {"status": "running"},
+                url="http://performance.local/performance/executions/calc-2",
+            ),
+            _ok_response(
+                {"status": "pending"},
+                status_code=202,
+                url="http://performance.local/integration/returns/series/results/calc-2",
+            ),
+            _ok_response(
+                {"status": "running"},
+                url="http://performance.local/performance/executions/calc-2",
+            ),
+            _ok_response(
+                {"status": "pending"},
+                status_code=202,
+                url="http://performance.local/integration/returns/series/results/calc-2",
+            ),
+        ]
+    )
+    _FakeAsyncClient.response_factory = lambda **_: next(responses)
+
+    client = LotusPerformanceClient(base_url="http://performance.local")
+    client._async_max_polls = 2
+    with pytest.raises(ValueError, match="did not complete within polling budget"):
+        await client.get_returns_series(
+            request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
+            correlation_id="corr-async-timeout",
         )
 
 

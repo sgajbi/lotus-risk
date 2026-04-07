@@ -166,8 +166,12 @@ def test_risk_calculate_stateful_mode_uses_lotus_performance_returns_series() ->
     assert isinstance(payload, dict)
     assert payload["portfolio_id"] == "DEMO_DPM_EUR_001"
     assert payload["input_mode"] == "stateful"
-    assert payload["stateful_input"] == {"consumer_system": "lotus-risk"}
-    assert payload["window"] == {"mode": "RELATIVE", "period": "SI"}
+    assert payload["stateful_input"] == {}
+    assert payload["window"] == {
+        "mode": "EXPLICIT",
+        "from_date": "2025-01-01",
+        "to_date": "2025-01-07",
+    }
     assert payload["series_selection"] == {
         "include_portfolio": True,
         "include_benchmark": True,
@@ -234,3 +238,4 @@ def test_metrics_endpoint_exposes_risk_metric_observability() -> None:
     text = metrics_response.text
     assert "risk_metric_requested_total" in text
     assert "risk_metric_duration_seconds" in text
+

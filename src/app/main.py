@@ -504,9 +504,13 @@ async def analytics_risk_rolling_metrics(
         performance_client = getattr(app.state, "lotus_performance_client", None)
         if performance_client is None:
             performance_client = LotusPerformanceClient()
+        core_client = getattr(app.state, "lotus_core_client", None)
+        if core_client is None:
+            core_client = LotusCoreClient()
         return await calculate_rolling_metrics_stateful(
             stateful_input,
             performance_client=performance_client,
+            core_client=core_client,
             correlation_id=request.headers.get("X-Correlation-Id"),
         )
 

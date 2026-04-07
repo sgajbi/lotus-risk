@@ -202,7 +202,7 @@ def test_historical_attribution_stateful_total_risk_happy_path() -> None:
             correlation_id: str | None,
         ) -> dict[str, object]:
             assert request_payload["input_mode"] == "stateful"
-            assert request_payload["stateful_input"] == {"consumer_system": "lotus-risk"}
+            assert request_payload["stateful_input"] == {}
             return {
                 "series": {
                     "portfolio_returns": [
@@ -308,3 +308,4 @@ def test_historical_attribution_stateful_rejects_active_risk_until_benchmark_exp
     error = response.json()["error"]
     assert error["code"] == "INVALID_INPUT"
     assert "benchmark exposure history contract" in error["message"]
+

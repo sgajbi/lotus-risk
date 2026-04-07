@@ -64,7 +64,12 @@ def test_drawdown_stateful_adapter_happy_path() -> None:
     )
     assert client.payload is not None
     assert client.payload["input_mode"] == "stateful"
-    assert client.payload["stateful_input"] == {"consumer_system": "lotus-risk"}
+    assert client.payload["stateful_input"] == {}
+    assert client.payload["window"] == {
+        "mode": "EXPLICIT",
+        "from_date": "2026-01-01",
+        "to_date": "2026-01-08",
+    }
     assert client.correlation_id == "corr-dd"
     assert "YTD" in response.results
 
@@ -181,3 +186,4 @@ def test_drawdown_stateful_adapter_skips_malformed_rows_and_allows_optional_benc
         )
     )
     assert "YTD" in response.results
+

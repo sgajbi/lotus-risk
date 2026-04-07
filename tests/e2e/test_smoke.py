@@ -351,7 +351,7 @@ class _FakeLotusPerformanceClient:
         correlation_id: str | None,
     ) -> dict[str, object]:
         assert request_payload["input_mode"] == "stateful"
-        assert request_payload["stateful_input"] == {"consumer_system": "lotus-risk"}
+        assert request_payload["stateful_input"] == {}
         return {
             "series": {
                 "portfolio_returns": [
@@ -439,3 +439,4 @@ def test_e2e_rolling_metrics_stateful_mode() -> None:
     body = response.json()
     assert body["input_mode"] == "stateful"
     assert "YTD" in body["results"]
+

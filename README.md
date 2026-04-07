@@ -20,6 +20,12 @@ uvicorn src.app.main:app --reload --port 8130
 docker compose up --build
 ```
 
+Local Docker runtime notes:
+- `lotus-risk` keeps canonical upstream hostnames in code defaults for ingress-routed and non-containerized environments.
+- For local Docker Compose runs, `docker-compose.yml` explicitly points `LOTUS_CORE_BASE_URL` to `http://host.docker.internal:8202` and `LOTUS_PERFORMANCE_BASE_URL` to `http://host.docker.internal:8002`.
+- Copy `.env.example` to `.env` only when you need to override those local defaults.
+- Stateful lotus-performance integration may complete asynchronously; local defaults use `LOTUS_PERFORMANCE_ASYNC_POLL_INTERVAL_SECONDS=1` and `LOTUS_PERFORMANCE_ASYNC_MAX_POLLS=60`.
+
 - CI and governance: .github/workflows/
 - Engineering commands: Makefile
 - Platform standards docs: docs/standards/

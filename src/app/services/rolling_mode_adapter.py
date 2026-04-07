@@ -13,12 +13,23 @@ from app.contracts.rolling import (
     RollingStatelessInput,
 )
 from app.services.rolling_engine import ROLLING_SHARPE_METRIC, calculate_rolling_metrics
+from app.services.source_window import build_returns_series_window
 
 
 class LotusPerformanceClientProtocol(Protocol):
     async def get_returns_series(
         self,
         *,
+        request_payload: dict[str, Any],
+        correlation_id: str | None,
+    ) -> dict[str, Any]: ...
+
+
+class LotusCoreClientProtocol(Protocol):
+    async def get_core_snapshot(
+        self,
+        *,
+        portfolio_id: str,
         request_payload: dict[str, Any],
         correlation_id: str | None,
     ) -> dict[str, Any]: ...
@@ -59,7 +70,10 @@ def _build_stateful_source_request(stateful: RollingStatefulInput) -> dict[str, 
     return {
         "portfolio_id": stateful.portfolio_id,
         "as_of_date": stateful.as_of_date.isoformat(),
-        "window": {"mode": "RELATIVE", "period": "SI"},
+        "window": build_returns_series_window(
+            periods=stateful.periods,
+            as_of_date=stateful.as_of_date,
+        ),
         "frequency": "DAILY",
         "metric_basis": stateful.net_or_gross,
         "reporting_currency": stateful.reporting_currency,
@@ -74,16 +88,65 @@ def _build_stateful_source_request(stateful: RollingStatefulInput) -> dict[str, 
             "calendar_policy": "BUSINESS",
         },
         "input_mode": "stateful",
-        "stateful_input": {"consumer_system": "lotus-risk"},
+        "stateful_input": {},
     }
+
+
+async def _resolve_reporting_currency(
+    *,
+    stateful: RollingStatefulInput,
+    include_risk_free: bool,
+    core_client: LotusCoreClientProtocol | None,
+    correlation_id: str | None,
+) -> str | None:
+    if stateful.reporting_currency:
+        return stateful.reporting_currency
+    if not include_risk_free:
+        return None
+    if core_client is None:
+        raise ValueError(
+            "reporting_currency is required for rolling Sharpe in stateful mode when lotus-core is unavailable"
+        )
+
+    snapshot = await core_client.get_core_snapshot(
+        portfolio_id=stateful.portfolio_id,
+        request_payload={
+            "snapshot_mode": "BASELINE",
+            "as_of_date": stateful.as_of_date.isoformat(),
+            "sections": ["portfolio_totals"],
+        },
+        correlation_id=correlation_id,
+    )
+    valuation_context = snapshot.get("valuation_context")
+    if not isinstance(valuation_context, dict):
+        raise ValueError("lotus-core core-snapshot payload missing valuation_context")
+    resolved_reporting_currency = valuation_context.get("reporting_currency")
+    if not isinstance(resolved_reporting_currency, str) or not resolved_reporting_currency:
+        resolved_reporting_currency = valuation_context.get("portfolio_currency")
+    if not isinstance(resolved_reporting_currency, str) or not resolved_reporting_currency:
+        raise ValueError(
+            "lotus-core core-snapshot payload missing portfolio/reporting currency required for rolling Sharpe"
+        )
+    return resolved_reporting_currency
 
 
 async def calculate_rolling_metrics_stateful(
     stateful: RollingStatefulInput,
     *,
     performance_client: LotusPerformanceClientProtocol,
+    core_client: LotusCoreClientProtocol | None = None,
     correlation_id: str | None,
 ) -> RollingResponse:
+    include_risk_free = ROLLING_SHARPE_METRIC in stateful.rolling_options.metrics
+    resolved_reporting_currency = await _resolve_reporting_currency(
+        stateful=stateful,
+        include_risk_free=include_risk_free,
+        core_client=core_client,
+        correlation_id=correlation_id,
+    )
+    if resolved_reporting_currency != stateful.reporting_currency:
+        stateful = stateful.model_copy(update={"reporting_currency": resolved_reporting_currency})
+
     source_payload = _build_stateful_source_request(stateful)
     source_response = await performance_client.get_returns_series(
         request_payload=source_payload,
@@ -106,7 +169,6 @@ async def calculate_rolling_metrics_stateful(
             "lotus-performance returns-series returned no benchmark returns for requested rolling benchmark metrics"
         )
 
-    include_risk_free = ROLLING_SHARPE_METRIC in stateful.rolling_options.metrics
     risk_free_points = _to_return_points(series.get("risk_free_returns"))
     if include_risk_free and not risk_free_points:
         raise ValueError(
@@ -126,3 +188,4 @@ async def calculate_rolling_metrics_stateful(
         rolling_options=stateful.rolling_options,
     )
     return calculate_rolling_metrics(stateless, input_mode=RollingInputMode.STATEFUL)
+
