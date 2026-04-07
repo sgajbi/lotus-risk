@@ -404,6 +404,8 @@ async def health_ready(response: Response) -> ReadinessResponse:
                 base_url=dependency.base_url,
                 status=dependency.status,
                 detail=dependency.detail,
+                category=dependency.category,
+                issue_code=dependency.issue_code,
             )
             for dependency in dependencies
         ],
@@ -454,6 +456,8 @@ async def ops() -> OpsResponse:
                 base_url=dependency.base_url,
                 status=dependency.status,
                 detail=dependency.detail,
+                category=dependency.category,
+                issue_code=dependency.issue_code,
             )
             for dependency in dependencies
         ],

@@ -15,6 +15,8 @@ class DependencyRuntimeView:
     base_url: str
     status: str
     detail: str | None = None
+    category: str | None = None
+    issue_code: str | None = None
 
 
 def _resolve_dependency_status_override(
@@ -65,6 +67,8 @@ def resolve_dependency_runtime_views(app: FastAPI) -> list[DependencyRuntimeView
                 base_url=dependency.base_url,
                 status=override_status if isinstance(override_status, str) else dependency.status,
                 detail=override_detail if isinstance(override_detail, str) else dependency.detail,
+                category=override.get("category") if isinstance(override.get("category"), str) else None,
+                issue_code=override.get("issue_code") if isinstance(override.get("issue_code"), str) else None,
             )
         )
     return resolved

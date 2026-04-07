@@ -21,6 +21,16 @@ class DependencyStatus(BaseModel):
         description="Additional runtime detail for operators.",
         json_schema_extra={"example": "configured"},
     )
+    category: str | None = Field(
+        default=None,
+        description="Optional structured dependency issue category such as transport, timeout, or data_gap.",
+        json_schema_extra={"example": "data_gap"},
+    )
+    issue_code: str | None = Field(
+        default=None,
+        description="Optional machine-readable issue code for degraded or unavailable dependency state.",
+        json_schema_extra={"example": "RISK_FREE_SERIES_EMPTY"},
+    )
 
 
 class OpsChecks(BaseModel):

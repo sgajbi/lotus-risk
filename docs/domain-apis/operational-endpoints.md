@@ -98,7 +98,9 @@
   - `checks.ready`
   - `checks.draining`
   - `inputModes`
-  - `dependencies[]` with `service`, canonical `baseUrl`, runtime `status`, and optional operator `detail`
+  - `dependencies[]` with `service`, canonical `baseUrl`, runtime `status`, optional operator `detail`, and optional structured metadata:
+    - `category` such as `transport`, `timeout`, or `data_gap`
+    - `issueCode` such as `UPSTREAM_HIGH_LATENCY` or `RISK_FREE_SERIES_EMPTY`
 
 ## Error Semantics
 

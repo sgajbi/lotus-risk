@@ -146,12 +146,19 @@ def test_metadata_and_ops_contract_shape() -> None:
         "lotus-performance",
     ]
     assert all(dependency["status"] == "ok" for dependency in ops_body["dependencies"])
+    assert all(dependency["category"] is None for dependency in ops_body["dependencies"])
+    assert all(dependency["issue_code"] is None for dependency in ops_body["dependencies"])
 
 
 def test_health_ready_and_ops_surface_dependency_degradation() -> None:
     with override_app_runtime(
         dependency_statuses={
-            "lotus-performance": {"status": "degraded", "detail": "high_latency"}
+            "lotus-performance": {
+                "status": "degraded",
+                "detail": "high_latency",
+                "category": "transport",
+                "issue_code": "UPSTREAM_HIGH_LATENCY",
+            }
         }
     ):
         client = TestClient(app)
@@ -168,6 +175,8 @@ def test_health_ready_and_ops_surface_dependency_degradation() -> None:
         dependency for dependency in ops_body["dependencies"] if dependency["service"] == "lotus-performance"
     )
     assert performance_dependency["detail"] == "high_latency"
+    assert performance_dependency["category"] == "transport"
+    assert performance_dependency["issue_code"] == "UPSTREAM_HIGH_LATENCY"
 
 
 def test_health_ready_fails_when_dependency_is_unavailable() -> None:
@@ -188,6 +197,37 @@ def test_health_ready_fails_when_dependency_is_unavailable() -> None:
         for dependency in readiness_body["dependencies"]
     )
     assert ops.json()["checks"]["ready"] is False
+
+
+def test_health_ready_and_ops_surface_structured_data_gap_metadata() -> None:
+    with override_app_runtime(
+        dependency_statuses={
+            "lotus-core": {
+                "status": "degraded",
+                "detail": "risk_free_series_missing_for_usd_ytd",
+                "category": "data_gap",
+                "issue_code": "RISK_FREE_SERIES_EMPTY",
+            }
+        }
+    ):
+        client = TestClient(app)
+        readiness = client.get("/health/ready")
+        ops = client.get("/ops")
+
+    assert readiness.status_code == 200
+    readiness_dependency = next(
+        dependency for dependency in readiness.json()["dependencies"] if dependency["service"] == "lotus-core"
+    )
+    assert readiness_dependency["status"] == "degraded"
+    assert readiness_dependency["category"] == "data_gap"
+    assert readiness_dependency["issue_code"] == "RISK_FREE_SERIES_EMPTY"
+
+    ops_dependency = next(
+        dependency for dependency in ops.json()["dependencies"] if dependency["service"] == "lotus-core"
+    )
+    assert ops_dependency["detail"] == "risk_free_series_missing_for_usd_ytd"
+    assert ops_dependency["category"] == "data_gap"
+    assert ops_dependency["issue_code"] == "RISK_FREE_SERIES_EMPTY"
 
 
 def test_openapi_declares_standard_error_models_for_risk_endpoints() -> None:
