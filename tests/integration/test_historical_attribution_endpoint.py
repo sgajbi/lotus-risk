@@ -1,6 +1,8 @@
 from fastapi.testclient import TestClient
 
 from app.main import app
+from tests.support.app_runtime import override_app_runtime
+from tests.support.returns_series_payloads import build_returns_series_response
 
 
 def _stateless_attribution_payload() -> dict[str, object]:
@@ -195,25 +197,33 @@ def test_historical_attribution_stateless_happy_path() -> None:
 
 def test_historical_attribution_stateful_total_risk_happy_path() -> None:
     class _FakeLotusPerformanceClient:
+        def __init__(self) -> None:
+            self.calls: list[dict[str, object | None]] = []
+
         async def get_returns_series(
             self,
             *,
             request_payload: dict[str, object],
             correlation_id: str | None,
         ) -> dict[str, object]:
-            assert request_payload["input_mode"] == "stateful"
-            assert request_payload["stateful_input"] == {}
-            return {
-                "series": {
-                    "portfolio_returns": [
-                        {"date": "2026-01-02", "return_value": "0.0100"},
-                        {"date": "2026-01-03", "return_value": "-0.0050"},
-                        {"date": "2026-01-04", "return_value": "0.0040"},
-                    ]
+            self.calls.append(
+                {
+                    "request_payload": request_payload,
+                    "correlation_id": correlation_id,
                 }
-            }
+            )
+            return build_returns_series_response(
+                portfolio_returns=[
+                    ("2026-01-02", "0.0100"),
+                    ("2026-01-03", "-0.0050"),
+                    ("2026-01-04", "0.0040"),
+                ]
+            )
 
     class _FakeLotusCoreClient:
+        def __init__(self) -> None:
+            self.position_calls: list[dict[str, object | None]] = []
+
         async def get_position_analytics_timeseries(
             self,
             *,
@@ -221,6 +231,13 @@ def test_historical_attribution_stateful_total_risk_happy_path() -> None:
             request_payload: dict[str, object],
             correlation_id: str | None,
         ) -> dict[str, object]:
+            self.position_calls.append(
+                {
+                    "portfolio_id": portfolio_id,
+                    "request_payload": request_payload,
+                    "correlation_id": correlation_id,
+                }
+            )
             return {
                 "rows": [
                     {
@@ -259,29 +276,80 @@ def test_historical_attribution_stateful_total_risk_happy_path() -> None:
         ) -> dict[str, object]:
             return {"records": []}
 
-    client = TestClient(app)
-    app.state.lotus_performance_client = _FakeLotusPerformanceClient()
-    app.state.lotus_core_client = _FakeLotusCoreClient()
-    response = client.post(
-        "/analytics/risk/historical-attribution",
-        json={
-            "input_mode": "stateful",
-            "stateful_input": {
-                "portfolio_id": "DEMO_DPM_EUR_001",
-                "as_of_date": "2026-01-04",
-                "periods": [{"type": "YTD", "name": "YTD"}],
-                "attribution_options": {
-                    "attribution_types": ["TOTAL_RISK"],
-                    "metrics": ["VOLATILITY"],
-                    "grouping_dimensions": ["SECTOR"],
+    performance_client = _FakeLotusPerformanceClient()
+    core_client = _FakeLotusCoreClient()
+    with override_app_runtime(
+        lotus_performance_client=performance_client,
+        lotus_core_client=core_client,
+    ):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/historical-attribution",
+            headers={"X-Correlation-Id": "corr-attr-stateful"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-04",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "attribution_options": {
+                        "attribution_types": ["TOTAL_RISK"],
+                        "metrics": ["VOLATILITY"],
+                        "grouping_dimensions": ["SECTOR"],
+                    },
                 },
             },
-        },
-    )
+        )
     assert response.status_code == 200
     body = response.json()
     assert body["input_mode"] == "stateful"
     assert body["results"]["YTD"]["error"] is None
+    assert performance_client.calls == [
+        {
+            "request_payload": {
+                "portfolio_id": "DEMO_DPM_EUR_001",
+                "as_of_date": "2026-01-04",
+                "input_mode": "stateful",
+                "stateful_input": {},
+                "metric_basis": "NET",
+                "window": {
+                    "mode": "EXPLICIT",
+                    "from_date": "2026-01-01",
+                    "to_date": "2026-01-04",
+                },
+                "frequency": "DAILY",
+                "reporting_currency": None,
+                "series_selection": {
+                    "include_portfolio": True,
+                    "include_benchmark": False,
+                    "include_risk_free": False,
+                },
+                "data_policy": {
+                    "missing_data_policy": "ALLOW_PARTIAL",
+                    "fill_method": "NONE",
+                    "calendar_policy": "BUSINESS",
+                },
+            },
+            "correlation_id": "corr-attr-stateful",
+        }
+    ]
+    assert core_client.position_calls == [
+        {
+            "portfolio_id": "DEMO_DPM_EUR_001",
+            "request_payload": {
+                "as_of_date": "2026-01-04",
+                "window": {
+                    "start_date": "2026-01-02",
+                    "end_date": "2026-01-04",
+                },
+                "frequency": "daily",
+                "dimensions": ["sector"],
+                "consumer_system": "lotus-risk",
+                "page": {"page_size": 5000, "page_token": None},
+            },
+            "correlation_id": "corr-attr-stateful",
+        }
+    ]
 
 
 def test_historical_attribution_stateful_rejects_active_risk_until_benchmark_exposure_contract() -> (
