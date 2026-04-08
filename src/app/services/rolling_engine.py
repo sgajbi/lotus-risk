@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import date
 from math import sqrt
 from typing import cast
+from collections.abc import Sequence
 
 import numpy as np
 import pandas as pd
@@ -224,7 +225,7 @@ def _window_series_points(
 
 
 def _benchmark_context(
-    requested_metrics: list[str],
+    requested_metrics: Sequence[str],
     benchmark_series_count: int,
     aligned_benchmark_series_count: int,
 ) -> RollingBenchmarkContext:
@@ -259,7 +260,7 @@ def _benchmark_context(
 
 
 def _risk_free_context(
-    requested_metrics: list[str],
+    requested_metrics: Sequence[str],
     risk_free_series_count: int,
     aligned_risk_free_series_count: int,
 ) -> RollingRiskFreeContext:
@@ -294,7 +295,7 @@ def _risk_free_context(
 
 
 def _request_dependency_context(
-    requested_metrics: list[str], dependency_metrics: set[str]
+    requested_metrics: Sequence[str], dependency_metrics: set[str]
 ) -> RollingRequestDependencyContext:
     requested = [metric for metric in requested_metrics if metric in dependency_metrics]
     return RollingRequestDependencyContext(
@@ -347,7 +348,7 @@ def calculate_rolling_metrics(
             results={},
             metadata=RollingMetadata(
                 annualization_basis=request.rolling_options.annualization_basis,
-                requested_metrics=list(request.rolling_options.metrics),
+                requested_metrics=[str(metric) for metric in request.rolling_options.metrics],
                 window_lengths_requested=list(request.rolling_options.window_lengths),
                 window_count_requested=len(request.rolling_options.window_lengths),
                 alignment_policy=request.rolling_options.alignment_policy,
@@ -366,7 +367,7 @@ def calculate_rolling_metrics(
 
     open_date = cast(pd.Timestamp, portfolio_df.index.min()).date()
     options = request.rolling_options
-    requested_metrics = list(options.metrics)
+    requested_metrics = [str(metric) for metric in options.metrics]
 
     results: dict[str, RollingPeriodResult] = {}
     for period in request.periods:
