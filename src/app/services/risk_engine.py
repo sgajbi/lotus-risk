@@ -195,6 +195,8 @@ def _beta(portfolio: pd.Series, benchmark: pd.Series) -> tuple[float, dict[str, 
         _as_number(covariance_pb / benchmark_variance),
         {
             "aligned_observation_count": int(portfolio.count()),
+            "portfolio_mean_return": _as_number(portfolio.mean() / 100),
+            "benchmark_mean_return": _as_number(benchmark.mean() / 100),
             "covariance": covariance_pb,
             "benchmark_variance": benchmark_variance,
         },
@@ -210,6 +212,9 @@ def _tracking_error(
         _as_number(active_std * sqrt(annual_factor)),
         {
             "aligned_observation_count": int(active.count()),
+            "annualization_factor": annual_factor,
+            "portfolio_mean_return": _as_number(portfolio.mean() / 100),
+            "benchmark_mean_return": _as_number(benchmark.mean() / 100),
             "active_mean_return": _as_number(active.mean() / 100),
             "active_volatility": active_std / 100,
         },
@@ -229,6 +234,9 @@ def _information_ratio(
         _as_number((active.mean() / tracking_err) * sqrt(annual_factor)),
         {
             "aligned_observation_count": int(active.count()),
+            "annualization_factor": annual_factor,
+            "portfolio_mean_return": _as_number(portfolio.mean() / 100),
+            "benchmark_mean_return": _as_number(benchmark.mean() / 100),
             "active_mean_return": active_mean,
             "tracking_error": tracking_error,
         },

@@ -266,6 +266,8 @@ def test_risk_calculate_stateful_mode_uses_lotus_performance_returns_series() ->
     assert metrics["VOLATILITY"]["value"] is not None
     assert metrics["BETA"]["value"] is not None
     assert metrics["BETA"]["details"]["aligned_observation_count"] == len(RISK_STATEFUL_RETURNS)
+    assert "portfolio_mean_return" in metrics["BETA"]["details"]
+    assert "benchmark_mean_return" in metrics["BETA"]["details"]
     assert "covariance" in metrics["BETA"]["details"]
     assert "benchmark_variance" in metrics["BETA"]["details"]
 
@@ -286,12 +288,20 @@ def test_risk_calculate_stateless_benchmark_metrics_expose_components() -> None:
     assert response.status_code == 200
     metrics = response.json()["results"]["Explicit"]["metrics"]
     assert metrics["BETA"]["details"]["aligned_observation_count"] == 4
+    assert "portfolio_mean_return" in metrics["BETA"]["details"]
+    assert "benchmark_mean_return" in metrics["BETA"]["details"]
     assert "covariance" in metrics["BETA"]["details"]
     assert "benchmark_variance" in metrics["BETA"]["details"]
     assert metrics["TRACKING_ERROR"]["details"]["aligned_observation_count"] == 4
+    assert metrics["TRACKING_ERROR"]["details"]["annualization_factor"] == 252
+    assert "portfolio_mean_return" in metrics["TRACKING_ERROR"]["details"]
+    assert "benchmark_mean_return" in metrics["TRACKING_ERROR"]["details"]
     assert "active_mean_return" in metrics["TRACKING_ERROR"]["details"]
     assert "active_volatility" in metrics["TRACKING_ERROR"]["details"]
     assert metrics["INFORMATION_RATIO"]["details"]["aligned_observation_count"] == 4
+    assert metrics["INFORMATION_RATIO"]["details"]["annualization_factor"] == 252
+    assert "portfolio_mean_return" in metrics["INFORMATION_RATIO"]["details"]
+    assert "benchmark_mean_return" in metrics["INFORMATION_RATIO"]["details"]
     assert "active_mean_return" in metrics["INFORMATION_RATIO"]["details"]
     assert "tracking_error" in metrics["INFORMATION_RATIO"]["details"]
 
