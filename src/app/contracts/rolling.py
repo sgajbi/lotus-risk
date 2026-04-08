@@ -278,10 +278,20 @@ class RollingAnalyticsRequest(BaseModel):
 
 
 class RollingMetricSummary(BaseModel):
+    total_point_count: int = Field(
+        default=0,
+        description="Total rolling observation slots evaluated for this metric/window, including null warm-up periods.",
+        json_schema_extra={"example": 90},
+    )
     computed_point_count: int = Field(
         default=0,
         description="Number of rolling observations that produced non-null values for this metric/window.",
         json_schema_extra={"example": 70},
+    )
+    coverage_ratio: float = Field(
+        default=0.0,
+        description="Computed-point coverage ratio for this metric/window (`computed_point_count / total_point_count`).",
+        json_schema_extra={"example": 0.777778},
     )
     latest_observation_date: dt.date | None = Field(
         default=None,
@@ -351,7 +361,9 @@ class RollingWindowResult(BaseModel):
         json_schema_extra={
             "example": {
                     "ROLLING_VOLATILITY": {
+                        "total_point_count": 90,
                         "computed_point_count": 70,
+                        "coverage_ratio": 0.777778,
                         "latest_observation_date": "2026-03-31",
                         "latest": 0.1374,
                         "average": 0.1221,
@@ -520,7 +532,9 @@ class RollingResponse(BaseModel):
                                 "window_length": 21,
                                 "metric_summaries": {
                                     "ROLLING_VOLATILITY": {
+                                        "total_point_count": 90,
                                         "computed_point_count": 70,
+                                        "coverage_ratio": 0.777778,
                                         "latest_observation_date": "2026-03-31",
                                         "latest": 0.12538011,
                                         "average": 0.11844792,
@@ -531,7 +545,9 @@ class RollingResponse(BaseModel):
                                         "p95": 0.15541828,
                                     },
                                     "ROLLING_BETA": {
+                                        "total_point_count": 90,
                                         "computed_point_count": 70,
+                                        "coverage_ratio": 0.777778,
                                         "latest_observation_date": "2026-03-31",
                                         "latest": -0.08222479,
                                         "average": 0.04185233,
@@ -542,7 +558,9 @@ class RollingResponse(BaseModel):
                                         "p95": 0.31680427,
                                     },
                                     "ROLLING_TRACKING_ERROR": {
+                                        "total_point_count": 90,
                                         "computed_point_count": 70,
+                                        "coverage_ratio": 0.777778,
                                         "latest_observation_date": "2026-03-31",
                                         "latest": 0.09793316,
                                         "average": 0.08741941,

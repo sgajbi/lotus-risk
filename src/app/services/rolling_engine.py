@@ -57,9 +57,12 @@ def _rolling_max_drawdown(window_decimal_returns: np.ndarray) -> float:
 
 def _summary(values: pd.Series) -> RollingMetricSummary:
     clean = values.dropna()
+    total_point_count = int(values.shape[0])
     if clean.empty:
         return RollingMetricSummary(
+            total_point_count=total_point_count,
             computed_point_count=0,
+            coverage_ratio=0.0,
             latest_observation_date=None,
             latest=None,
             average=None,
@@ -70,7 +73,9 @@ def _summary(values: pd.Series) -> RollingMetricSummary:
             p95=None,
         )
     return RollingMetricSummary(
+        total_point_count=total_point_count,
         computed_point_count=int(clean.count()),
+        coverage_ratio=float(clean.count() / total_point_count) if total_point_count else 0.0,
         latest_observation_date=cast(pd.Timestamp, clean.index[-1]).date(),
         latest=float(clean.iloc[-1]),
         average=float(clean.mean()),

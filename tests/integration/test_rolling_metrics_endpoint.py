@@ -1,5 +1,6 @@
 from typing import Any, cast
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -80,7 +81,11 @@ def test_rolling_metrics_endpoint_stateless_contract() -> None:
     assert window["window_length"] == 3
     assert "ROLLING_VOLATILITY" in window["metric_summaries"]
     summary = window["metric_summaries"]["ROLLING_VOLATILITY"]
+    assert summary["total_point_count"] == 4
     assert summary["computed_point_count"] >= 1
+    assert summary["coverage_ratio"] == pytest.approx(
+        summary["computed_point_count"] / summary["total_point_count"]
+    )
     assert summary["latest_observation_date"] == "2026-01-05"
 
 
