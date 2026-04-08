@@ -100,7 +100,15 @@ def test_risk_calculate_benchmark_requirement_behavior() -> None:
     stateless_input["benchmark_returns"] = []
     response = client.post("/analytics/risk/calculate", json=payload)
     assert response.status_code == 200
-    metrics = response.json()["results"]["Explicit"]["metrics"]
+    body = response.json()
+    metrics = body["results"]["Explicit"]["metrics"]
+    assert body["results"]["Explicit"]["benchmark_context"] == {
+        "requested": True,
+        "available": False,
+        "aligned": False,
+        "reason": "BENCHMARK_UNAVAILABLE",
+        "requested_metric_count": 3,
+    }
     assert metrics["BETA"]["value"] is None
     assert "Benchmark returns required" in metrics["BETA"]["details"]["error"]
 
@@ -155,6 +163,13 @@ def test_risk_calculate_stateful_mode_uses_lotus_performance_returns_series() ->
     assert body["results"]["YTD"]["aligned_benchmark_observation_count"] == len(
         RISK_STATEFUL_RETURNS
     )
+    assert body["results"]["YTD"]["benchmark_context"] == {
+        "requested": True,
+        "available": True,
+        "aligned": True,
+        "reason": "APPLIED",
+        "requested_metric_count": 1,
+    }
     assert metrics["VOLATILITY"]["value"] is not None
     assert metrics["BETA"]["value"] is not None
 

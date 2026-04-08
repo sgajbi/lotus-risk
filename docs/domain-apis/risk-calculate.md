@@ -73,6 +73,7 @@
   - `portfolio_observation_count`
   - `benchmark_observation_count`
   - `aligned_benchmark_observation_count`
+  - `benchmark_context` (`requested`, `available`, `aligned`, `reason`, `requested_metric_count`)
   - `metrics` map:
     - each metric:
       - `value: float | null`
@@ -89,6 +90,6 @@
 
 ## Gaps and Decisions Required
 
-1. Benchmark/risk-free sourcing remains upstream-dependent on lotus-performance + lotus-core reference-data availability; stateful benchmark metrics degrade deterministically when benchmark series is absent.
+1. Benchmark/risk-free sourcing remains upstream-dependent on lotus-performance + lotus-core reference-data availability; stateful benchmark metrics degrade deterministically when benchmark series is absent, and this is now surfaced in `benchmark_context.reason`.
 2. Standardize response metadata additions (for example `correlationId`, `contractVersion`, `asOfDate`) if this endpoint must fully match cross-platform response envelope conventions.
 
