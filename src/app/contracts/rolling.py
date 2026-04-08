@@ -293,6 +293,11 @@ class RollingMetricSummary(BaseModel):
         description="Computed-point coverage ratio for this metric/window (`computed_point_count / total_point_count`).",
         json_schema_extra={"example": 0.777778},
     )
+    min_observations_required: int = Field(
+        default=0,
+        description="Minimum observations required before this rolling metric/window can emit non-null values.",
+        json_schema_extra={"example": 21},
+    )
     warmup_point_count: int = Field(
         default=0,
         description="Expected leading warm-up slots before the rolling window reaches minimum observations.",
@@ -379,6 +384,7 @@ class RollingWindowResult(BaseModel):
                         "total_point_count": 90,
                         "computed_point_count": 70,
                         "coverage_ratio": 0.777778,
+                        "min_observations_required": 21,
                         "warmup_point_count": 20,
                         "non_computed_point_count": 20,
                         "post_warmup_gap_point_count": 0,
@@ -688,6 +694,7 @@ class RollingResponse(BaseModel):
                                         "total_point_count": 90,
                                         "computed_point_count": 70,
                                         "coverage_ratio": 0.777778,
+                                        "min_observations_required": 21,
                                         "warmup_point_count": 20,
                                         "non_computed_point_count": 20,
                                         "post_warmup_gap_point_count": 0,
@@ -704,6 +711,7 @@ class RollingResponse(BaseModel):
                                         "total_point_count": 90,
                                         "computed_point_count": 70,
                                         "coverage_ratio": 0.777778,
+                                        "min_observations_required": 21,
                                         "warmup_point_count": 20,
                                         "non_computed_point_count": 20,
                                         "post_warmup_gap_point_count": 0,
@@ -720,6 +728,7 @@ class RollingResponse(BaseModel):
                                         "total_point_count": 90,
                                         "computed_point_count": 70,
                                         "coverage_ratio": 0.777778,
+                                        "min_observations_required": 21,
                                         "warmup_point_count": 20,
                                         "non_computed_point_count": 20,
                                         "post_warmup_gap_point_count": 0,

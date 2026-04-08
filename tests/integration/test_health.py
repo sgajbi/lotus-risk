@@ -398,6 +398,12 @@ def test_rolling_openapi_examples_are_present_and_canonical() -> None:
     assert (
         response_schema["example"]["results"]["YTD"]["window_results"][0]["metric_summaries"][
             "ROLLING_VOLATILITY"
+        ]["min_observations_required"]
+        == 21
+    )
+    assert (
+        response_schema["example"]["results"]["YTD"]["window_results"][0]["metric_summaries"][
+            "ROLLING_VOLATILITY"
         ]["warmup_point_count"]
         > 0
     )

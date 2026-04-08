@@ -49,6 +49,7 @@ def _summary(series: pd.Series) -> dict[str, float]:
         "total_point_count": total_point_count,
         "computed_point_count": computed_point_count,
         "coverage_ratio": float(computed_point_count / total_point_count),
+        "min_observations_required": WINDOW_LENGTH,
         "warmup_point_count": warmup_point_count,
         "non_computed_point_count": non_computed_point_count,
         "post_warmup_gap_point_count": max(non_computed_point_count - warmup_point_count, 0),
@@ -177,6 +178,7 @@ def test_live_stateful_rolling_reconciles_selected_metrics() -> None:
         assert actual["total_point_count"] == expected["total_point_count"]
         assert actual["computed_point_count"] == expected["computed_point_count"]
         assert actual["coverage_ratio"] == pytest.approx(expected["coverage_ratio"], abs=1e-12)
+        assert actual["min_observations_required"] == expected["min_observations_required"]
         assert actual["warmup_point_count"] == expected["warmup_point_count"]
         assert actual["non_computed_point_count"] == expected["non_computed_point_count"]
         assert actual["post_warmup_gap_point_count"] == expected["post_warmup_gap_point_count"]
