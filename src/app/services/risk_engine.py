@@ -208,8 +208,9 @@ def _tracking_error(
 ) -> tuple[float, dict[str, float | int]]:
     active = portfolio - benchmark
     active_std = _as_number(active.std(ddof=1))
+    annualized_tracking_error = _as_number(active_std * sqrt(annual_factor))
     return (
-        _as_number(active_std * sqrt(annual_factor)),
+        annualized_tracking_error,
         {
             "aligned_observation_count": int(active.count()),
             "annualization_factor": annual_factor,
@@ -217,6 +218,7 @@ def _tracking_error(
             "benchmark_mean_return": _as_number(benchmark.mean() / 100),
             "active_mean_return": _as_number(active.mean() / 100),
             "active_volatility": active_std / 100,
+            "annualized_tracking_error": annualized_tracking_error / 100,
         },
     )
 
@@ -230,6 +232,8 @@ def _information_ratio(
         raise ValueError("Tracking error is zero")
     active_mean = _as_number(active.mean() / 100)
     tracking_error = _as_number(tracking_err / 100)
+    annualized_active_return = _as_number(active_mean * annual_factor)
+    annualized_tracking_error = _as_number(tracking_error * sqrt(annual_factor))
     return (
         _as_number((active.mean() / tracking_err) * sqrt(annual_factor)),
         {
@@ -239,6 +243,8 @@ def _information_ratio(
             "benchmark_mean_return": _as_number(benchmark.mean() / 100),
             "active_mean_return": active_mean,
             "tracking_error": tracking_error,
+            "annualized_active_return": annualized_active_return,
+            "annualized_tracking_error": annualized_tracking_error,
         },
     )
 
@@ -424,6 +430,9 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
                             "mean_return": mean_return,
                             "periodic_risk_free_rate": periodic_rf,
                             "excess_return": excess_return,
+                            "annualized_excess_return": _as_number(
+                                excess_return * annual_factor
+                            ),
                             "volatility": _as_number(denominator / 100),
                         },
                     )
@@ -454,6 +463,9 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
                             "periodic_mar": periodic_mar,
                             "mean_return": mean_return,
                             "excess_return": excess_return,
+                            "annualized_excess_return": _as_number(
+                                excess_return * annual_factor
+                            ),
                             "downside_observation_count": downside_count,
                             "downside_deviation": downside_deviation,
                         },

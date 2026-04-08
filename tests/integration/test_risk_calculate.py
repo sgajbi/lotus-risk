@@ -91,6 +91,7 @@ def test_risk_calculate_endpoint_happy_path_contract() -> None:
     assert metrics["SHARPE"]["details"]["mean_return"] > 0
     assert metrics["SHARPE"]["details"]["periodic_risk_free_rate"] > 0
     assert metrics["SHARPE"]["details"]["excess_return"] > 0
+    assert metrics["SHARPE"]["details"]["annualized_excess_return"] > 0
     assert metrics["SHARPE"]["details"]["volatility"] > 0
     assert metrics["VAR"]["value"] is not None
     assert metrics["VAR"]["details"]["method"] == "HISTORICAL"
@@ -147,6 +148,7 @@ def test_risk_calculate_sortino_exposes_downside_context() -> None:
     assert details["periodic_mar"] > 0
     assert details["mean_return"] > 0
     assert details["excess_return"] > 0
+    assert details["annualized_excess_return"] > 0
     assert details["downside_observation_count"] >= 1
     assert details["downside_deviation"] > 0
 
@@ -298,12 +300,15 @@ def test_risk_calculate_stateless_benchmark_metrics_expose_components() -> None:
     assert "benchmark_mean_return" in metrics["TRACKING_ERROR"]["details"]
     assert "active_mean_return" in metrics["TRACKING_ERROR"]["details"]
     assert "active_volatility" in metrics["TRACKING_ERROR"]["details"]
+    assert "annualized_tracking_error" in metrics["TRACKING_ERROR"]["details"]
     assert metrics["INFORMATION_RATIO"]["details"]["aligned_observation_count"] == 4
     assert metrics["INFORMATION_RATIO"]["details"]["annualization_factor"] == 252
     assert "portfolio_mean_return" in metrics["INFORMATION_RATIO"]["details"]
     assert "benchmark_mean_return" in metrics["INFORMATION_RATIO"]["details"]
     assert "active_mean_return" in metrics["INFORMATION_RATIO"]["details"]
     assert "tracking_error" in metrics["INFORMATION_RATIO"]["details"]
+    assert "annualized_active_return" in metrics["INFORMATION_RATIO"]["details"]
+    assert "annualized_tracking_error" in metrics["INFORMATION_RATIO"]["details"]
 
 
 def test_risk_calculate_stateful_mode_preserves_gross_metric_basis_and_currency() -> None:
