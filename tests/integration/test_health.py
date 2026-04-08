@@ -318,6 +318,38 @@ def test_drawdown_openapi_examples_are_present_and_canonical() -> None:
     ] < 0
 
 
+def test_risk_calculate_openapi_examples_are_present_and_canonical() -> None:
+    client = TestClient(app)
+    spec = client.get("/openapi.json").json()
+    request_schema = spec["components"]["schemas"]["RiskAnalyticsRequest"]
+    response_schema = spec["components"]["schemas"]["RiskResponse"]
+
+    assert request_schema["properties"]["input_mode"]["example"] == "stateless"
+    assert (
+        request_schema["properties"]["stateful_input"]["example"]["metrics"]
+        == ["VOLATILITY", "BETA", "TRACKING_ERROR", "INFORMATION_RATIO"]
+    )
+    assert (
+        request_schema["properties"]["stateful_input"]["example"]["options"]["var"][
+            "horizon_days"
+        ]
+        == 4
+    )
+    assert (
+        response_schema["example"]["results"]["YTD"]["metrics"]["VAR"]["details"][
+            "horizon_scale_method"
+        ]
+        == "SQRT_TIME"
+    )
+    assert (
+        response_schema["example"]["results"]["YTD"]["metrics"]["INFORMATION_RATIO"][
+            "details"
+        ]["annualized_active_return"]
+        > 0
+    )
+    assert response_schema["example"]["metadata"]["var_horizon_days"] == 4
+
+
 def test_concentration_rejects_legacy_payload_shape() -> None:
     client = TestClient(app)
     response = client.post(
