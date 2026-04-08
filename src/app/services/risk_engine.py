@@ -507,10 +507,12 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
                     details: dict[str, str | float | int | bool | None] = {
                         "method": request.options.var.method,
                         "confidence": request.options.var.confidence,
+                        "tail_probability": _as_number(1.0 - request.options.var.confidence),
                         "horizon_days": request.options.var.horizon_days,
                         "include_expected_shortfall": request.options.var.include_expected_shortfall,
                         "base_var": base_var,
                         "observation_count": int(metric_series.count()),
+                        "tail_observation_count": int((metric_series <= base_var).sum()),
                     }
                     if request.options.var.include_expected_shortfall:
                         base_es = _expected_shortfall(metric_series, base_var)

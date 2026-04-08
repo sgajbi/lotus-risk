@@ -1,3 +1,4 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -94,9 +95,11 @@ def test_risk_calculate_endpoint_happy_path_contract() -> None:
     assert metrics["VAR"]["value"] is not None
     assert metrics["VAR"]["details"]["method"] == "HISTORICAL"
     assert metrics["VAR"]["details"]["confidence"] == 0.95
+    assert metrics["VAR"]["details"]["tail_probability"] == pytest.approx(0.05)
     assert metrics["VAR"]["details"]["horizon_days"] == 1
     assert metrics["VAR"]["details"]["include_expected_shortfall"] is True
     assert metrics["VAR"]["details"]["observation_count"] == 4
+    assert metrics["VAR"]["details"]["tail_observation_count"] >= 1
     assert "base_var" in metrics["VAR"]["details"]
     assert "expected_shortfall" in metrics["VAR"]["details"]
 
