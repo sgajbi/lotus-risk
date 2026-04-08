@@ -15,6 +15,7 @@ from app.contracts.rolling import (
     RollingMetricSeriesPoint,
     RollingMetricSummary,
     RollingPeriodResult,
+    RollingRequestDependencyContext,
     RollingRiskFreeContext,
     RollingResponse,
     RollingStatelessInput,
@@ -280,6 +281,14 @@ def _risk_free_context(
     )
 
 
+def _request_dependency_context(requested_metrics: list[str], dependency_metrics: set[str]) -> RollingRequestDependencyContext:
+    requested = [metric for metric in requested_metrics if metric in dependency_metrics]
+    return RollingRequestDependencyContext(
+        requested=bool(requested),
+        requested_metrics=requested,
+    )
+
+
 def calculate_rolling_metrics(
     request: RollingStatelessInput,
     *,
@@ -297,6 +306,14 @@ def calculate_rolling_metrics(
             metadata=RollingMetadata(
                 annualization_basis=request.rolling_options.annualization_basis,
                 alignment_policy=request.rolling_options.alignment_policy,
+                benchmark_context=_request_dependency_context(
+                    request.rolling_options.metrics,
+                    ROLLING_BENCHMARK_METRICS,
+                ),
+                risk_free_context=_request_dependency_context(
+                    request.rolling_options.metrics,
+                    {ROLLING_SHARPE_METRIC},
+                ),
             ),
         )
 
@@ -447,5 +464,13 @@ def calculate_rolling_metrics(
         metadata=RollingMetadata(
             annualization_basis=options.annualization_basis,
             alignment_policy=options.alignment_policy,
+            benchmark_context=_request_dependency_context(
+                requested_metrics,
+                ROLLING_BENCHMARK_METRICS,
+            ),
+            risk_free_context=_request_dependency_context(
+                requested_metrics,
+                {ROLLING_SHARPE_METRIC},
+            ),
         ),
     )

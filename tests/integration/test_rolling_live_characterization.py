@@ -128,6 +128,17 @@ def test_live_stateful_rolling_reconciles_selected_metrics() -> None:
     window = period["window_results"][0]
     summaries = window["metric_summaries"]
 
+    assert body["metadata"]["benchmark_context"] == {
+        "requested": True,
+        "requested_metrics": [
+            "ROLLING_BETA",
+            "ROLLING_TRACKING_ERROR",
+        ],
+    }
+    assert body["metadata"]["risk_free_context"] == {
+        "requested": False,
+        "requested_metrics": [],
+    }
     assert period["series_count"] == len(portfolio)
     assert period["benchmark_series_count"] == len(benchmark)
     assert period["aligned_benchmark_series_count"] == len(aligned)

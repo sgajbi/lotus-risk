@@ -84,6 +84,11 @@ Provide windowed historical risk diagnostics for PB/WM portfolios with instituti
   - `error`
 - `metadata`
   - methodology and lineage references
+  - top-level dependency intent:
+    - `benchmark_context.requested`
+    - `benchmark_context.requested_metrics`
+    - `risk_free_context.requested`
+    - `risk_free_context.requested_metrics`
 
 ## Governance Alignment
 

@@ -73,6 +73,18 @@ def test_rolling_metrics_endpoint_stateless_contract() -> None:
     assert body["source_service"] == "lotus-risk"
     assert body["input_mode"] == "stateless"
     assert body["metadata"]["methodology_version"] == "rolling_metrics.v1"
+    assert body["metadata"]["benchmark_context"] == {
+        "requested": True,
+        "requested_metrics": [
+            "ROLLING_BETA",
+            "ROLLING_TRACKING_ERROR",
+            "ROLLING_INFORMATION_RATIO",
+        ],
+    }
+    assert body["metadata"]["risk_free_context"] == {
+        "requested": True,
+        "requested_metrics": ["ROLLING_SHARPE"],
+    }
     assert "YTD" in body["results"]
     assert body["results"]["YTD"]["benchmark_series_count"] == 4
     assert body["results"]["YTD"]["aligned_benchmark_series_count"] == 4
@@ -168,6 +180,14 @@ def test_rolling_metrics_endpoint_stateful_uses_lotus_performance() -> None:
     assert core_client.risk_free_calls
     body = response.json()
     assert body["input_mode"] == "stateful"
+    assert body["metadata"]["benchmark_context"] == {
+        "requested": True,
+        "requested_metrics": ["ROLLING_BETA"],
+    }
+    assert body["metadata"]["risk_free_context"] == {
+        "requested": True,
+        "requested_metrics": ["ROLLING_SHARPE"],
+    }
     assert body["results"]["YTD"]["benchmark_series_count"] == 3
     assert body["results"]["YTD"]["aligned_benchmark_series_count"] == 3
     assert body["results"]["YTD"]["risk_free_series_count"] == 3

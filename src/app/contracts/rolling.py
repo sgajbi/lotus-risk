@@ -503,6 +503,18 @@ class RollingPeriodResult(BaseModel):
     )
 
 
+class RollingRequestDependencyContext(BaseModel):
+    requested: bool = Field(
+        description="Whether this dependency family is required by any requested rolling metric.",
+        json_schema_extra={"example": True},
+    )
+    requested_metrics: list[str] = Field(
+        default_factory=list,
+        description="Requested rolling metrics that depend on this family.",
+        json_schema_extra={"example": ["ROLLING_BETA", "ROLLING_TRACKING_ERROR"]},
+    )
+
+
 class RollingMetadata(BaseModel):
     contract_version: str = Field(
         default="v1",
@@ -521,6 +533,27 @@ class RollingMetadata(BaseModel):
     alignment_policy: Literal["INNER_JOIN"] = Field(
         description="Series alignment policy used for multi-series rolling metrics.",
         json_schema_extra={"example": "INNER_JOIN"},
+    )
+    benchmark_context: RollingRequestDependencyContext = Field(
+        description="Top-level benchmark dependency context derived from the requested rolling metrics.",
+        json_schema_extra={
+            "example": {
+                "requested": True,
+                "requested_metrics": [
+                    "ROLLING_BETA",
+                    "ROLLING_TRACKING_ERROR",
+                ],
+            }
+        },
+    )
+    risk_free_context: RollingRequestDependencyContext = Field(
+        description="Top-level risk-free dependency context derived from the requested rolling metrics.",
+        json_schema_extra={
+            "example": {
+                "requested": True,
+                "requested_metrics": ["ROLLING_SHARPE"],
+            }
+        },
     )
 
 
@@ -583,6 +616,17 @@ class RollingResponse(BaseModel):
                 "methodology_version": "rolling_metrics.v1",
                 "annualization_basis": 252,
                 "alignment_policy": "INNER_JOIN",
+                "benchmark_context": {
+                    "requested": True,
+                    "requested_metrics": [
+                        "ROLLING_BETA",
+                        "ROLLING_TRACKING_ERROR",
+                    ],
+                },
+                "risk_free_context": {
+                    "requested": False,
+                    "requested_metrics": [],
+                },
             }
         },
     )
@@ -674,6 +718,17 @@ class RollingResponse(BaseModel):
                     "methodology_version": "rolling_metrics.v1",
                     "annualization_basis": 252,
                     "alignment_policy": "INNER_JOIN",
+                    "benchmark_context": {
+                        "requested": True,
+                        "requested_metrics": [
+                            "ROLLING_BETA",
+                            "ROLLING_TRACKING_ERROR",
+                        ],
+                    },
+                    "risk_free_context": {
+                        "requested": False,
+                        "requested_metrics": [],
+                    },
                 },
             }
         }
