@@ -3,7 +3,7 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from tests.support.live_returns_series import _request_json_with_retries
+from tests.support.live_returns_series import _request_json_with_retries, fetch_live_risk_free_series
 
 
 class _FakeClient:
@@ -61,3 +61,30 @@ def test_request_json_with_retries_raises_after_retry_budget(monkeypatch: pytest
         )
 
     assert len(client.calls) == 2
+
+
+def test_fetch_live_risk_free_series_uses_reference_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, object] = {}
+
+    def _fake_request_json_with_retries(**kwargs: object) -> dict[str, object]:
+        captured.update(kwargs)
+        return {"points": []}
+
+    monkeypatch.setattr(
+        "tests.support.live_returns_series._request_json_with_retries",
+        _fake_request_json_with_retries,
+    )
+
+    payload = fetch_live_risk_free_series(
+        base_url="http://core.example",
+        request_payload={"currency": "USD"},
+        request_attempts=7,
+        retry_interval_seconds=0.25,
+    )
+
+    assert payload == {"points": []}
+    assert captured["method"] == "POST"
+    assert captured["url"] == "http://core.example/integration/reference/risk-free-series"
+    assert captured["request_kwargs"] == {"json": {"currency": "USD"}}
+    assert captured["max_attempts"] == 7
+    assert captured["retry_interval_seconds"] == 0.25

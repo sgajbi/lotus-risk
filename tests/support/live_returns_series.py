@@ -75,6 +75,24 @@ def fetch_live_returns_series(
     raise AssertionError("timed out waiting for live returns-series result")
 
 
+def fetch_live_risk_free_series(
+    *,
+    base_url: str,
+    request_payload: dict[str, Any],
+    request_attempts: int = 5,
+    retry_interval_seconds: float = 1.0,
+) -> dict[str, Any]:
+    with httpx.Client(timeout=30.0) as client:
+        return _request_json_with_retries(
+            client=client,
+            method="POST",
+            url=f"{base_url}/integration/reference/risk-free-series",
+            request_kwargs={"json": request_payload},
+            max_attempts=request_attempts,
+            retry_interval_seconds=retry_interval_seconds,
+        )
+
+
 def extract_decimal_returns(rows: Sequence[dict[str, Any]]) -> list[tuple[str, float]]:
     result: list[tuple[str, float]] = []
     for row in rows:

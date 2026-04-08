@@ -115,8 +115,8 @@ Provide windowed historical risk diagnostics for PB/WM portfolios with instituti
 
 1. Expand stateful lineage metadata in response contract (`source_window`, `data_quality`, `upstream_refs`).
 2. Evaluate whether annualization basis should support both 252 and 260 in v2.
-3. rolling Sharpe remains data-dependent on lotus-core risk-free availability for the resolved currency/window. Live validation confirmed the lotus-core contract is reachable but returned no risk-free points for tested USD/SGD windows.
-4. When lotus-core returns an empty risk-free series, lotus-risk now enriches the `424 FAILED_DEPENDENCY` error details with coverage diagnostics from `/integration/reference/risk-free-series/coverage` when available:
+3. Stateful rolling Sharpe now passes live validation for the tested USD YTD window using lotus-core risk-free series.
+4. When lotus-core returns an empty risk-free series for other currencies/windows, lotus-risk enriches the `424 FAILED_DEPENDENCY` error details with coverage diagnostics from `/integration/reference/risk-free-series/coverage` when available:
    - `risk_free_currency`
    - `risk_free_total_points`
    - `risk_free_missing_dates_count`
