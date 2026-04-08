@@ -320,6 +320,7 @@ def test_historical_attribution_openapi_examples_and_description_reflect_statefu
     operation = spec["paths"]["/analytics/risk/historical-attribution"]["post"]
     description = operation["description"]
     request_schema = spec["components"]["schemas"]["HistoricalAttributionRequest"]
+    response_schema = spec["components"]["schemas"]["HistoricalAttributionResponse"]
 
     assert "POSITION, SECTOR, and ASSET_CLASS" in description
     assert "ISSUER is intentionally gated" in description
@@ -331,6 +332,20 @@ def test_historical_attribution_openapi_examples_and_description_reflect_statefu
     assert request_schema["properties"]["stateful_input"]["example"]["attribution_options"][
         "grouping_dimensions"
     ] == ["SECTOR"]
+    assert response_schema["example"]["input_mode"] == "stateful"
+    assert response_schema["example"]["results"]["YTD"]["attribution_sets"][0][
+        "attribution_type"
+    ] == "ACTIVE_RISK"
+    assert response_schema["example"]["results"]["YTD"]["attribution_sets"][0]["metric"] == (
+        "TRACKING_ERROR"
+    )
+    assert response_schema["example"]["results"]["YTD"]["attribution_sets"][0][
+        "grouping_dimension"
+    ] == "SECTOR"
+    assert response_schema["example"]["metadata"]["requested_attribution_types"] == [
+        "ACTIVE_RISK"
+    ]
+    assert response_schema["example"]["metadata"]["requested_grouping_dimensions"] == ["SECTOR"]
 
 
 def test_openapi_exposes_typed_capabilities_response_contract() -> None:

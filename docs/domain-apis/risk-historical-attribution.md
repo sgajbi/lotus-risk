@@ -108,6 +108,10 @@ Provide decomposition of historical realized risk and active risk into transpare
     - `stateful_active_risk_gated_grouping_dimensions`
     - `stateful_active_risk_gate_reason`
 
+OpenAPI now includes a canonical supported stateful `ACTIVE_RISK` + `SECTOR` example so
+clients can see the intended decomposition shape, reconciliation fields, and support metadata
+without reverse-engineering runtime responses.
+
 ## Governance Alignment
 
 - Bounded context: aligned (`lotus-risk` computes attribution; no portfolio construction ownership shift).
