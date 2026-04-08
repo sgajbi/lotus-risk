@@ -59,6 +59,8 @@ def _summary(values: pd.Series) -> RollingMetricSummary:
     clean = values.dropna()
     if clean.empty:
         return RollingMetricSummary(
+            computed_point_count=0,
+            latest_observation_date=None,
             latest=None,
             average=None,
             minimum=None,
@@ -68,6 +70,8 @@ def _summary(values: pd.Series) -> RollingMetricSummary:
             p95=None,
         )
     return RollingMetricSummary(
+        computed_point_count=int(clean.count()),
+        latest_observation_date=cast(pd.Timestamp, clean.index[-1]).date(),
         latest=float(clean.iloc[-1]),
         average=float(clean.mean()),
         minimum=float(clean.min()),

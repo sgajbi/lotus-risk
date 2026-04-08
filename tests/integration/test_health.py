@@ -371,6 +371,12 @@ def test_rolling_openapi_examples_are_present_and_canonical() -> None:
     assert response_schema["example"]["results"]["YTD"]["window_results"][0]["window_length"] == 21
     assert (
         response_schema["example"]["results"]["YTD"]["window_results"][0]["metric_summaries"][
+            "ROLLING_VOLATILITY"
+        ]["computed_point_count"]
+        > 0
+    )
+    assert (
+        response_schema["example"]["results"]["YTD"]["window_results"][0]["metric_summaries"][
             "ROLLING_TRACKING_ERROR"
         ]["latest"]
         > 0

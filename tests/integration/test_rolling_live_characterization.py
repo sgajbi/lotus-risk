@@ -42,6 +42,7 @@ def _summary(series: pd.Series) -> dict[str, float]:
     clean = series.dropna()
     assert not clean.empty, "expected rolling series to contain values"
     return {
+        "computed_point_count": int(clean.count()),
         "latest": float(clean.iloc[-1]),
         "average": float(clean.mean()),
         "minimum": float(clean.min()),
@@ -137,5 +138,7 @@ def test_live_stateful_rolling_reconciles_selected_metrics() -> None:
         "ROLLING_TRACKING_ERROR": _summary(rolling_tracking_error),
     }.items():
         actual = summaries[metric_name]
+        assert actual["computed_point_count"] == expected["computed_point_count"]
+        assert actual["latest_observation_date"] == str(aligned.index[-1].date())
         for field, expected_value in expected.items():
             assert actual[field] == pytest.approx(expected_value, abs=1e-12)

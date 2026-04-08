@@ -68,6 +68,8 @@ Provide windowed historical risk diagnostics for PB/WM portfolios with instituti
   - `window_results[]`
     - `window_length`
     - `metric_summaries`
+      - `computed_point_count`
+      - `latest_observation_date`
     - `metric_series` (optional)
   - `quality_flags[]`
   - `error`

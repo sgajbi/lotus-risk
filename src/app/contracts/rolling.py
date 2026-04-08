@@ -278,6 +278,16 @@ class RollingAnalyticsRequest(BaseModel):
 
 
 class RollingMetricSummary(BaseModel):
+    computed_point_count: int = Field(
+        default=0,
+        description="Number of rolling observations that produced non-null values for this metric/window.",
+        json_schema_extra={"example": 70},
+    )
+    latest_observation_date: dt.date | None = Field(
+        default=None,
+        description="Date of the latest non-null rolling metric value included in this summary.",
+        json_schema_extra={"example": "2026-03-31"},
+    )
     latest: float | None = Field(
         default=None,
         description="Latest rolling metric value in decimal units for this period/window.",
@@ -340,12 +350,14 @@ class RollingWindowResult(BaseModel):
         description="Rolling metric summaries keyed by metric name.",
         json_schema_extra={
             "example": {
-                "ROLLING_VOLATILITY": {
-                    "latest": 0.1374,
-                    "average": 0.1221,
-                    "minimum": 0.0913,
-                    "maximum": 0.1662,
-                    "p05": 0.0975,
+                    "ROLLING_VOLATILITY": {
+                        "computed_point_count": 70,
+                        "latest_observation_date": "2026-03-31",
+                        "latest": 0.1374,
+                        "average": 0.1221,
+                        "minimum": 0.0913,
+                        "maximum": 0.1662,
+                        "p05": 0.0975,
                     "p50": 0.1218,
                     "p95": 0.1611,
                 }
@@ -487,6 +499,8 @@ class RollingResponse(BaseModel):
                                 "window_length": 21,
                                 "metric_summaries": {
                                     "ROLLING_VOLATILITY": {
+                                        "computed_point_count": 70,
+                                        "latest_observation_date": "2026-03-31",
                                         "latest": 0.12538011,
                                         "average": 0.11844792,
                                         "minimum": 0.09122408,
@@ -496,6 +510,8 @@ class RollingResponse(BaseModel):
                                         "p95": 0.15541828,
                                     },
                                     "ROLLING_BETA": {
+                                        "computed_point_count": 70,
+                                        "latest_observation_date": "2026-03-31",
                                         "latest": -0.08222479,
                                         "average": 0.04185233,
                                         "minimum": -0.32108851,
@@ -505,6 +521,8 @@ class RollingResponse(BaseModel):
                                         "p95": 0.31680427,
                                     },
                                     "ROLLING_TRACKING_ERROR": {
+                                        "computed_point_count": 70,
+                                        "latest_observation_date": "2026-03-31",
                                         "latest": 0.09793316,
                                         "average": 0.08741941,
                                         "minimum": 0.05266133,

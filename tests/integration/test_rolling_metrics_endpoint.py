@@ -76,6 +76,9 @@ def test_rolling_metrics_endpoint_stateless_contract() -> None:
     window = body["results"]["YTD"]["window_results"][0]
     assert window["window_length"] == 3
     assert "ROLLING_VOLATILITY" in window["metric_summaries"]
+    summary = window["metric_summaries"]["ROLLING_VOLATILITY"]
+    assert summary["computed_point_count"] >= 1
+    assert summary["latest_observation_date"] == "2026-01-05"
 
 
 def test_rolling_metrics_endpoint_stateful_uses_lotus_performance() -> None:
