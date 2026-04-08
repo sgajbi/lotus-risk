@@ -65,6 +65,10 @@ Provide windowed historical risk diagnostics for PB/WM portfolios with instituti
 - `results[period_name]`
   - `start_date`
   - `end_date`
+  - `series_count`
+  - `benchmark_series_count`
+  - `aligned_benchmark_series_count`
+  - `risk_free_series_count`
   - `window_results[]`
     - `window_length`
     - `metric_summaries`

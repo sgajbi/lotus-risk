@@ -368,6 +368,9 @@ def test_rolling_openapi_examples_are_present_and_canonical() -> None:
         "ROLLING_TRACKING_ERROR",
     ]
     assert response_schema["example"]["input_mode"] == "stateful"
+    assert response_schema["example"]["results"]["YTD"]["benchmark_series_count"] == 90
+    assert response_schema["example"]["results"]["YTD"]["aligned_benchmark_series_count"] == 90
+    assert response_schema["example"]["results"]["YTD"]["risk_free_series_count"] == 0
     assert response_schema["example"]["results"]["YTD"]["window_results"][0]["window_length"] == 21
     assert (
         response_schema["example"]["results"]["YTD"]["window_results"][0]["metric_summaries"][

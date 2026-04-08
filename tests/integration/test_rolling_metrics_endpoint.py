@@ -73,6 +73,9 @@ def test_rolling_metrics_endpoint_stateless_contract() -> None:
     assert body["input_mode"] == "stateless"
     assert body["metadata"]["methodology_version"] == "rolling_metrics.v1"
     assert "YTD" in body["results"]
+    assert body["results"]["YTD"]["benchmark_series_count"] == 4
+    assert body["results"]["YTD"]["aligned_benchmark_series_count"] == 4
+    assert body["results"]["YTD"]["risk_free_series_count"] == 4
     window = body["results"]["YTD"]["window_results"][0]
     assert window["window_length"] == 3
     assert "ROLLING_VOLATILITY" in window["metric_summaries"]
@@ -145,7 +148,11 @@ def test_rolling_metrics_endpoint_stateful_uses_lotus_performance() -> None:
     assert payload["series_selection"]["include_benchmark"] is True
     assert payload["series_selection"]["include_risk_free"] is False
     assert core_client.risk_free_calls
-    assert response.json()["input_mode"] == "stateful"
+    body = response.json()
+    assert body["input_mode"] == "stateful"
+    assert body["results"]["YTD"]["benchmark_series_count"] == 3
+    assert body["results"]["YTD"]["aligned_benchmark_series_count"] == 3
+    assert body["results"]["YTD"]["risk_free_series_count"] == 3
 
 
 def test_rolling_metrics_endpoint_stateful_surfaces_missing_risk_free_after_currency_resolution() -> (
