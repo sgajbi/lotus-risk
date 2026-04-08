@@ -115,6 +115,7 @@ def test_risk_calculate_benchmark_requirement_behavior() -> None:
         "aligned": False,
         "reason": "BENCHMARK_UNAVAILABLE",
         "requested_metric_count": 3,
+        "requested_metrics": ["BETA", "TRACKING_ERROR", "INFORMATION_RATIO"],
     }
     assert metrics["BETA"]["value"] is None
     assert "Benchmark returns required" in metrics["BETA"]["details"]["error"]
@@ -182,6 +183,7 @@ def test_risk_calculate_stateful_mode_uses_lotus_performance_returns_series() ->
         "aligned": True,
         "reason": "APPLIED",
         "requested_metric_count": 1,
+        "requested_metrics": ["BETA"],
     }
     assert metrics["VOLATILITY"]["value"] is not None
     assert metrics["BETA"]["value"] is not None

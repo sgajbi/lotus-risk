@@ -418,7 +418,7 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
                 except ValueError as exc:
                     metric_map["VAR"] = _metric_error(str(exc))
 
-        benchmark_context: dict[str, str | bool | int] | None = None
+        benchmark_context: dict[str, str | bool | int | list[str]] | None = None
         if benchmark_metrics:
             requested = True
             available = not benchmark_df.empty
@@ -433,6 +433,7 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
                     else ("NO_ALIGNED_OBSERVATIONS" if aligned_count == 0 else "APPLIED")
                 ),
                 "requested_metric_count": len(benchmark_metrics),
+                "requested_metrics": benchmark_metrics,
             }
 
         results[period_name] = RiskPeriodResult(

@@ -74,7 +74,7 @@
   - `portfolio_observation_count`
   - `benchmark_observation_count`
   - `aligned_benchmark_observation_count`
-  - `benchmark_context` (`requested`, `available`, `aligned`, `reason`, `requested_metric_count`)
+  - `benchmark_context` (`requested`, `available`, `aligned`, `reason`, `requested_metric_count`, `requested_metrics`)
   - `metrics` map:
     - each metric:
       - `value: float | null`

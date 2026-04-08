@@ -395,7 +395,7 @@ class RiskPeriodResult(BaseModel):
         description="Number of aligned portfolio/benchmark observations used for benchmark-dependent metrics.",
         json_schema_extra={"example": 61},
     )
-    benchmark_context: dict[str, str | bool | int] | None = Field(
+    benchmark_context: dict[str, str | bool | int | list[str]] | None = Field(
         default=None,
         description="Execution context for benchmark-dependent metrics in this period.",
         json_schema_extra={
@@ -405,6 +405,7 @@ class RiskPeriodResult(BaseModel):
                 "aligned": True,
                 "reason": "APPLIED",
                 "requested_metric_count": 3,
+                "requested_metrics": ["BETA", "TRACKING_ERROR", "INFORMATION_RATIO"],
             }
         },
     )
@@ -534,6 +535,7 @@ class RiskResponse(BaseModel):
                         "aligned": True,
                         "reason": "APPLIED",
                         "requested_metric_count": 3,
+                        "requested_metrics": ["BETA", "TRACKING_ERROR", "INFORMATION_RATIO"],
                     },
                     "metrics": {"VOLATILITY": {"value": 0.23}},
                 }
