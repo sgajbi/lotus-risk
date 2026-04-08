@@ -351,11 +351,20 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
                     downside = downside[downside < 0]
                     if downside.empty:
                         raise ValueError("No downside observations")
+                    downside_count = int(downside.count())
                     downside_deviation = _as_number(np.sqrt((downside**2).mean()))
                     sortino = (
                         ((metric_series.mean() / 100) - periodic_mar) / downside_deviation
                     ) * sqrt(annual_factor)
-                    metric_map["SORTINO"] = RiskValue(value=_as_number(sortino))
+                    metric_map["SORTINO"] = RiskValue(
+                        value=_as_number(sortino),
+                        details={
+                            "mar_annual_rate": request.options.mar_annual_rate,
+                            "periodic_mar": periodic_mar,
+                            "downside_observation_count": downside_count,
+                            "downside_deviation": downside_deviation,
+                        },
+                    )
                 except ValueError as exc:
                     metric_map["SORTINO"] = _metric_error(str(exc))
 
@@ -408,12 +417,19 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
                         metric_series, request.options.var.method, request.options.var.confidence
                     )
                     scaled_var = base_var * sqrt(request.options.var.horizon_days)
-                    details: dict[str, str | float | int | bool | None] | None = None
+                    details: dict[str, str | float | int | bool | None] = {
+                        "method": request.options.var.method,
+                        "confidence": request.options.var.confidence,
+                        "horizon_days": request.options.var.horizon_days,
+                        "include_expected_shortfall": request.options.var.include_expected_shortfall,
+                        "base_var": base_var,
+                        "observation_count": int(metric_series.count()),
+                    }
                     if request.options.var.include_expected_shortfall:
                         base_es = _expected_shortfall(metric_series, base_var)
-                        details = {
-                            "expected_shortfall": base_es * sqrt(request.options.var.horizon_days)
-                        }
+                        details["expected_shortfall"] = (
+                            base_es * sqrt(request.options.var.horizon_days)
+                        )
                     metric_map["VAR"] = RiskValue(value=scaled_var, details=details)
                 except ValueError as exc:
                     metric_map["VAR"] = _metric_error(str(exc))

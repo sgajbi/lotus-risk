@@ -80,7 +80,7 @@
       - `value: float | null`
       - `details?: object`
         - deterministic error object on metric-level failure (`details.error`)
-        - metric-specific detail payload (for example drawdown metadata, VaR expected shortfall)
+        - metric-specific detail payload (for example drawdown metadata, Sortino downside context, VaR method/confidence/horizon/expected shortfall)
 
 ## Alignment Assessment
 

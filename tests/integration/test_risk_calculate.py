@@ -79,6 +79,32 @@ def test_risk_calculate_endpoint_happy_path_contract() -> None:
     assert metrics["VOLATILITY"]["value"] is not None
     assert metrics["SHARPE"]["value"] is not None
     assert metrics["VAR"]["value"] is not None
+    assert metrics["VAR"]["details"]["method"] == "HISTORICAL"
+    assert metrics["VAR"]["details"]["confidence"] == 0.95
+    assert metrics["VAR"]["details"]["horizon_days"] == 1
+    assert metrics["VAR"]["details"]["include_expected_shortfall"] is True
+    assert metrics["VAR"]["details"]["observation_count"] == 4
+    assert "base_var" in metrics["VAR"]["details"]
+    assert "expected_shortfall" in metrics["VAR"]["details"]
+
+
+def test_risk_calculate_sortino_exposes_downside_context() -> None:
+    client = TestClient(app)
+    payload = _request_payload()
+    stateless_input = payload["stateless_input"]
+    assert isinstance(stateless_input, dict)
+    stateless_input["metrics"] = ["SORTINO"]
+    stateless_input["options"] = {
+        "frequency": "DAILY",
+        "mar_annual_rate": 0.02,
+    }
+    response = client.post("/analytics/risk/calculate", json=payload)
+    assert response.status_code == 200
+    details = response.json()["results"]["Explicit"]["metrics"]["SORTINO"]["details"]
+    assert details["mar_annual_rate"] == 0.02
+    assert details["periodic_mar"] > 0
+    assert details["downside_observation_count"] >= 1
+    assert details["downside_deviation"] > 0
 
 
 def test_risk_calculate_endpoint_rejects_invalid_explicit_period() -> None:
