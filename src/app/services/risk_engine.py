@@ -419,9 +419,7 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
                         raise ValueError("Zero volatility")
                     mean_return = _as_number(metric_series.mean() / 100)
                     excess_return = _as_number(mean_return - periodic_rf)
-                    sharpe = (
-                        excess_return / (denominator / 100)
-                    ) * sqrt(annual_factor)
+                    sharpe = (excess_return / (denominator / 100)) * sqrt(annual_factor)
                     metric_map["SHARPE"] = RiskValue(
                         value=_as_number(sharpe),
                         details={
@@ -430,9 +428,7 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
                             "mean_return": mean_return,
                             "periodic_risk_free_rate": periodic_rf,
                             "excess_return": excess_return,
-                            "annualized_excess_return": _as_number(
-                                excess_return * annual_factor
-                            ),
+                            "annualized_excess_return": _as_number(excess_return * annual_factor),
                             "volatility": _as_number(denominator / 100),
                         },
                     )
@@ -451,9 +447,7 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
                     downside_deviation = _as_number(np.sqrt((downside**2).mean()))
                     mean_return = _as_number(metric_series.mean() / 100)
                     excess_return = _as_number(mean_return - periodic_mar)
-                    sortino = (
-                        excess_return / downside_deviation
-                    ) * sqrt(annual_factor)
+                    sortino = (excess_return / downside_deviation) * sqrt(annual_factor)
                     metric_map["SORTINO"] = RiskValue(
                         value=_as_number(sortino),
                         details={
@@ -463,9 +457,7 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
                             "periodic_mar": periodic_mar,
                             "mean_return": mean_return,
                             "excess_return": excess_return,
-                            "annualized_excess_return": _as_number(
-                                excess_return * annual_factor
-                            ),
+                            "annualized_excess_return": _as_number(excess_return * annual_factor),
                             "downside_observation_count": downside_count,
                             "downside_deviation": downside_deviation,
                         },
@@ -523,9 +515,7 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
                     base_var = _calculate_var_by_method(
                         metric_series, request.options.var.method, request.options.var.confidence
                     )
-                    horizon_scale_factor = _as_number(
-                        sqrt(request.options.var.horizon_days)
-                    )
+                    horizon_scale_factor = _as_number(sqrt(request.options.var.horizon_days))
                     scaled_var = _as_number(base_var * horizon_scale_factor)
                     tail_observation_count = int((metric_series <= base_var).sum())
                     details: dict[str, str | float | int | bool | None] = {
@@ -545,9 +535,7 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
                         base_es = _expected_shortfall(metric_series, base_var)
                         details["base_expected_shortfall"] = base_es
                         details["expected_shortfall_observation_count"] = tail_observation_count
-                        details["expected_shortfall"] = _as_number(
-                            base_es * horizon_scale_factor
-                        )
+                        details["expected_shortfall"] = _as_number(base_es * horizon_scale_factor)
                     metric_map["VAR"] = RiskValue(value=scaled_var, details=details)
                 except ValueError as exc:
                     metric_map["VAR"] = _metric_error(str(exc))

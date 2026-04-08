@@ -46,8 +46,7 @@ def _tracking_error(portfolio_returns: list[float], benchmark_returns: list[floa
 def _information_ratio(portfolio_returns: list[float], benchmark_returns: list[float]) -> float:
     active_returns = np.array(portfolio_returns) - np.array(benchmark_returns)
     return float(
-        (np.mean(active_returns) / np.std(active_returns, ddof=1))
-        * np.sqrt(ANNUALIZATION_FACTOR)
+        (np.mean(active_returns) / np.std(active_returns, ddof=1)) * np.sqrt(ANNUALIZATION_FACTOR)
     )
 
 

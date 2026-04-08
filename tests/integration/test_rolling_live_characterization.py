@@ -130,15 +130,14 @@ def test_live_stateful_rolling_reconciles_selected_metrics() -> None:
         window=WINDOW_LENGTH, min_periods=WINDOW_LENGTH
     ).std(ddof=1) * (ANNUALIZATION_BASIS**0.5)
     active = aligned["portfolio"] - aligned["benchmark"]
-    rolling_tracking_error = active.rolling(
+    rolling_tracking_error = active.rolling(window=WINDOW_LENGTH, min_periods=WINDOW_LENGTH).std(
+        ddof=1
+    ) * (ANNUALIZATION_BASIS**0.5)
+    rolling_beta = aligned["portfolio"].rolling(
         window=WINDOW_LENGTH, min_periods=WINDOW_LENGTH
-    ).std(ddof=1) * (ANNUALIZATION_BASIS**0.5)
-    rolling_beta = (
-        aligned["portfolio"].rolling(window=WINDOW_LENGTH, min_periods=WINDOW_LENGTH).cov(
-            aligned["benchmark"]
-        )
-        / aligned["benchmark"].rolling(window=WINDOW_LENGTH, min_periods=WINDOW_LENGTH).var(ddof=1)
-    )
+    ).cov(aligned["benchmark"]) / aligned["benchmark"].rolling(
+        window=WINDOW_LENGTH, min_periods=WINDOW_LENGTH
+    ).var(ddof=1)
 
     body = rolling_response.json()
     period = body["results"]["YTD"]

@@ -348,18 +348,18 @@ def test_historical_attribution_openapi_examples_and_description_reflect_statefu
         "grouping_dimensions"
     ] == ["SECTOR"]
     assert response_schema["example"]["input_mode"] == "stateful"
-    assert response_schema["example"]["results"]["YTD"]["attribution_sets"][0][
-        "attribution_type"
-    ] == "ACTIVE_RISK"
+    assert (
+        response_schema["example"]["results"]["YTD"]["attribution_sets"][0]["attribution_type"]
+        == "ACTIVE_RISK"
+    )
     assert response_schema["example"]["results"]["YTD"]["attribution_sets"][0]["metric"] == (
         "TRACKING_ERROR"
     )
-    assert response_schema["example"]["results"]["YTD"]["attribution_sets"][0][
-        "grouping_dimension"
-    ] == "SECTOR"
-    assert response_schema["example"]["metadata"]["requested_attribution_types"] == [
-        "ACTIVE_RISK"
-    ]
+    assert (
+        response_schema["example"]["results"]["YTD"]["attribution_sets"][0]["grouping_dimension"]
+        == "SECTOR"
+    )
+    assert response_schema["example"]["metadata"]["requested_attribution_types"] == ["ACTIVE_RISK"]
     assert response_schema["example"]["metadata"]["requested_grouping_dimensions"] == ["SECTOR"]
 
 
@@ -393,16 +393,12 @@ def test_drawdown_openapi_examples_are_present_and_canonical() -> None:
         ]
         is True
     )
-    assert (
-        drawdown_schema["properties"]["analysis_options"]["example"]["top_n_episodes"] == 5
-    )
+    assert drawdown_schema["properties"]["analysis_options"]["example"]["top_n_episodes"] == 5
     assert response_schema["properties"]["metadata"]["example"]["missing_benchmark_policy"] in {
         "IGNORE",
         "REQUIRE",
     }
-    assert response_schema["properties"]["results"]["example"]["YTD"]["summary"][
-        "max_drawdown"
-    ] < 0
+    assert response_schema["properties"]["results"]["example"]["YTD"]["summary"]["max_drawdown"] < 0
 
 
 def test_risk_calculate_openapi_examples_are_present_and_canonical() -> None:
@@ -412,14 +408,14 @@ def test_risk_calculate_openapi_examples_are_present_and_canonical() -> None:
     response_schema = spec["components"]["schemas"]["RiskResponse"]
 
     assert request_schema["properties"]["input_mode"]["example"] == "stateless"
+    assert request_schema["properties"]["stateful_input"]["example"]["metrics"] == [
+        "VOLATILITY",
+        "BETA",
+        "TRACKING_ERROR",
+        "INFORMATION_RATIO",
+    ]
     assert (
-        request_schema["properties"]["stateful_input"]["example"]["metrics"]
-        == ["VOLATILITY", "BETA", "TRACKING_ERROR", "INFORMATION_RATIO"]
-    )
-    assert (
-        request_schema["properties"]["stateful_input"]["example"]["options"]["var"][
-            "horizon_days"
-        ]
+        request_schema["properties"]["stateful_input"]["example"]["options"]["var"]["horizon_days"]
         == 4
     )
     assert (
@@ -429,9 +425,9 @@ def test_risk_calculate_openapi_examples_are_present_and_canonical() -> None:
         == "SQRT_TIME"
     )
     assert (
-        response_schema["example"]["results"]["YTD"]["metrics"]["INFORMATION_RATIO"][
-            "details"
-        ]["annualized_active_return"]
+        response_schema["example"]["results"]["YTD"]["metrics"]["INFORMATION_RATIO"]["details"][
+            "annualized_active_return"
+        ]
         > 0
     )
     assert response_schema["example"]["metadata"]["var_horizon_days"] == 4
@@ -464,7 +460,10 @@ def test_rolling_openapi_examples_are_present_and_canonical() -> None:
     assert response_schema["example"]["results"]["YTD"]["window_lengths_emitted"] == [21]
     assert response_schema["example"]["results"]["YTD"]["window_count_emitted"] == 1
     assert response_schema["example"]["results"]["YTD"]["benchmark_context"]["reason"] == "APPLIED"
-    assert response_schema["example"]["results"]["YTD"]["risk_free_context"]["reason"] == "NOT_REQUESTED"
+    assert (
+        response_schema["example"]["results"]["YTD"]["risk_free_context"]["reason"]
+        == "NOT_REQUESTED"
+    )
     assert response_schema["example"]["metadata"]["benchmark_context"]["requested"] is True
     assert response_schema["example"]["metadata"]["risk_free_context"]["requested"] is False
     assert response_schema["example"]["results"]["YTD"]["window_results"][0]["window_length"] == 21
