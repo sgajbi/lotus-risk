@@ -47,6 +47,21 @@ def test_integration_capabilities_contract() -> None:
         "rolling_risk_analytics",
         "historical_risk_attribution",
     }
+    workflow_by_key = {workflow["workflow_key"]: workflow for workflow in body["workflows"]}
+    assert workflow_by_key["risk_snapshot"]["endpoint_path"] == "/analytics/risk/calculate"
+    assert workflow_by_key["risk_snapshot"]["supported_input_modes"] == ["stateless", "stateful"]
+    assert workflow_by_key["risk_snapshot"]["support_status"] == "full"
+    assert "simulation is intentionally unsupported" in workflow_by_key["risk_snapshot"]["notes"]
+    assert workflow_by_key["concentration_risk"]["supported_input_modes"] == [
+        "stateless",
+        "stateful",
+        "simulation",
+    ]
+    assert workflow_by_key["historical_risk_attribution"]["support_status"] == "partial"
+    assert (
+        "stateful active-risk ISSUER remains gated"
+        in workflow_by_key["historical_risk_attribution"]["notes"]
+    )
 
 
 def _concentration_payload() -> dict[str, object]:
@@ -356,6 +371,13 @@ def test_openapi_exposes_typed_capabilities_response_contract() -> None:
         "$ref"
     ]
     assert schema_ref.endswith("/IntegrationCapabilitiesResponse")
+    workflow_schema = spec["components"]["schemas"]["CapabilityWorkflow"]
+    assert workflow_schema["properties"]["endpoint_path"]["example"] == "/analytics/risk/calculate"
+    assert workflow_schema["properties"]["supported_input_modes"]["example"] == [
+        "stateless",
+        "stateful",
+    ]
+    assert workflow_schema["properties"]["support_status"]["example"] == "full"
 
 
 def test_drawdown_openapi_examples_are_present_and_canonical() -> None:

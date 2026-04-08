@@ -42,6 +42,20 @@
   - `drawdown_analytics`
   - `concentration_risk`
   - `rolling_risk_analytics`
+  - `historical_risk_attribution`
+
+Each workflow now also publishes:
+
+- `endpoint_path`
+- `supported_input_modes`
+- `support_status`
+- `notes`
+
+This allows consumers to discover that:
+
+- concentration supports simulation
+- risk/calculate, drawdown, rolling, and historical attribution do not
+- historical attribution remains `partial` because stateful active-risk `ISSUER` is gated
 
 ## Upstream/Downstream Dependency Notes
 

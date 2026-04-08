@@ -9,7 +9,6 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.contracts.capabilities import (
     CAPABILITY_FEATURE_KEYS,
-    CAPABILITY_WORKFLOW_KEYS,
     CapabilityFeature,
     CapabilityWorkflow,
     IntegrationCapabilitiesResponse,
@@ -477,8 +476,54 @@ async def integration_capabilities() -> IntegrationCapabilitiesResponse:
         supported_input_modes=list(SUPPORTED_INPUT_MODES),
         features=[CapabilityFeature(key=feature_key) for feature_key in CAPABILITY_FEATURE_KEYS],
         workflows=[
-            CapabilityWorkflow(workflow_key=workflow_key)
-            for workflow_key in CAPABILITY_WORKFLOW_KEYS
+            CapabilityWorkflow(
+                workflow_key="risk_snapshot",
+                endpoint_path="/analytics/risk/calculate",
+                supported_input_modes=["stateless", "stateful"],
+                support_status="full",
+                notes=[
+                    "simulation is intentionally unsupported",
+                    "benchmark-dependent metrics require benchmark returns",
+                ],
+            ),
+            CapabilityWorkflow(
+                workflow_key="concentration_risk",
+                endpoint_path="/analytics/risk/concentration",
+                supported_input_modes=["stateless", "stateful", "simulation"],
+                support_status="full",
+                notes=[
+                    "simulation is supported for concentration",
+                    "issuer concentration includes coverage diagnostics",
+                ],
+            ),
+            CapabilityWorkflow(
+                workflow_key="drawdown_analytics",
+                endpoint_path="/analytics/risk/drawdown",
+                supported_input_modes=["stateless", "stateful"],
+                support_status="full",
+                notes=["simulation is intentionally unsupported"],
+            ),
+            CapabilityWorkflow(
+                workflow_key="rolling_risk_analytics",
+                endpoint_path="/analytics/risk/rolling-metrics",
+                supported_input_modes=["stateless", "stateful"],
+                support_status="full",
+                notes=[
+                    "simulation is intentionally unsupported",
+                    "stateful rolling Sharpe depends on risk-free series availability from lotus-core",
+                ],
+            ),
+            CapabilityWorkflow(
+                workflow_key="historical_risk_attribution",
+                endpoint_path="/analytics/risk/historical-attribution",
+                supported_input_modes=["stateless", "stateful"],
+                support_status="partial",
+                notes=[
+                    "simulation is intentionally unsupported",
+                    "stateful active-risk supports POSITION, SECTOR, and ASSET_CLASS",
+                    "stateful active-risk ISSUER remains gated",
+                ],
+            ),
         ],
     )
 

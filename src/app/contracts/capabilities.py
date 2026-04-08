@@ -20,6 +20,7 @@ CAPABILITY_WORKFLOW_KEYS: tuple[str, ...] = (
     "historical_risk_attribution",
 )
 SupportedInputMode = Literal["stateless", "stateful", "simulation"]
+WorkflowSupportStatus = Literal["full", "partial"]
 
 
 class CapabilityFeature(BaseModel):
@@ -44,6 +45,28 @@ class CapabilityWorkflow(BaseModel):
         description="Whether this workflow is currently enabled.",
         json_schema_extra={"example": True},
     )
+    endpoint_path: str = Field(
+        description="Primary API path implementing this workflow.",
+        json_schema_extra={"example": "/analytics/risk/calculate"},
+    )
+    supported_input_modes: list[SupportedInputMode] = Field(
+        description="Input modes supported by this workflow contract.",
+        json_schema_extra={"example": ["stateless", "stateful"]},
+    )
+    support_status: WorkflowSupportStatus = Field(
+        description="Whether the workflow is fully implemented or intentionally partial.",
+        json_schema_extra={"example": "full"},
+    )
+    notes: list[str] = Field(
+        default_factory=list,
+        description="Deterministic implementation notes or support boundaries for this workflow.",
+        json_schema_extra={
+            "example": [
+                "stateful active-risk supports POSITION, SECTOR, and ASSET_CLASS",
+                "stateful active-risk ISSUER remains gated",
+            ]
+        },
+    )
 
 
 class IntegrationCapabilitiesResponse(BaseModel):
@@ -65,5 +88,16 @@ class IntegrationCapabilitiesResponse(BaseModel):
     )
     workflows: list[CapabilityWorkflow] = Field(
         description="Workflow-level capability switches.",
-        json_schema_extra={"example": [{"workflow_key": "risk_snapshot", "enabled": True}]},
+        json_schema_extra={
+            "example": [
+                {
+                    "workflow_key": "risk_snapshot",
+                    "enabled": True,
+                    "endpoint_path": "/analytics/risk/calculate",
+                    "supported_input_modes": ["stateless", "stateful"],
+                    "support_status": "full",
+                    "notes": ["simulation is intentionally unsupported"],
+                }
+            ]
+        },
     )
