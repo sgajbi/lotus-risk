@@ -58,14 +58,20 @@ def _rolling_max_drawdown(window_decimal_returns: np.ndarray) -> float:
     return float(np.min(drawdown))
 
 
-def _summary(values: pd.Series) -> RollingMetricSummary:
+def _summary(values: pd.Series, *, min_obs: int) -> RollingMetricSummary:
     clean = values.dropna()
     total_point_count = int(values.shape[0])
+    warmup_point_count = min(total_point_count, max(min_obs - 1, 0))
+    non_computed_point_count = total_point_count - int(clean.count())
+    post_warmup_gap_point_count = max(non_computed_point_count - warmup_point_count, 0)
     if clean.empty:
         return RollingMetricSummary(
             total_point_count=total_point_count,
             computed_point_count=0,
             coverage_ratio=0.0,
+            warmup_point_count=warmup_point_count,
+            non_computed_point_count=non_computed_point_count,
+            post_warmup_gap_point_count=post_warmup_gap_point_count,
             latest_observation_date=None,
             latest=None,
             average=None,
@@ -79,6 +85,9 @@ def _summary(values: pd.Series) -> RollingMetricSummary:
         total_point_count=total_point_count,
         computed_point_count=int(clean.count()),
         coverage_ratio=float(clean.count() / total_point_count) if total_point_count else 0.0,
+        warmup_point_count=warmup_point_count,
+        non_computed_point_count=non_computed_point_count,
+        post_warmup_gap_point_count=post_warmup_gap_point_count,
         latest_observation_date=cast(pd.Timestamp, clean.index[-1]).date(),
         latest=float(clean.iloc[-1]),
         average=float(clean.mean()),
@@ -419,7 +428,8 @@ def calculate_rolling_metrics(
                     raise ValueError(f"Unsupported rolling metric: {metric_name}")
 
             summaries = {
-                metric_name: _summary(series) for metric_name, series in metric_series_map.items()
+                metric_name: _summary(series, min_obs=min_obs)
+                for metric_name, series in metric_series_map.items()
             }
 
             metric_points = (

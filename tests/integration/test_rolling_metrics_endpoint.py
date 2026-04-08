@@ -111,6 +111,9 @@ def test_rolling_metrics_endpoint_stateless_contract() -> None:
     assert summary["coverage_ratio"] == pytest.approx(
         summary["computed_point_count"] / summary["total_point_count"]
     )
+    assert summary["warmup_point_count"] == 2
+    assert summary["non_computed_point_count"] == 2
+    assert summary["post_warmup_gap_point_count"] == 0
     assert summary["latest_observation_date"] == "2026-01-05"
 
 

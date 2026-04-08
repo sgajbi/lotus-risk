@@ -78,6 +78,9 @@ Provide windowed historical risk diagnostics for PB/WM portfolios with instituti
       - `total_point_count`
       - `computed_point_count`
       - `coverage_ratio`
+      - `warmup_point_count`
+      - `non_computed_point_count`
+      - `post_warmup_gap_point_count`
       - `latest_observation_date`
     - `metric_series` (optional)
   - `quality_flags[]`

@@ -41,10 +41,17 @@ def _series(rows: list[tuple[str, float]]) -> pd.Series:
 def _summary(series: pd.Series) -> dict[str, float]:
     clean = series.dropna()
     assert not clean.empty, "expected rolling series to contain values"
+    total_point_count = int(series.shape[0])
+    computed_point_count = int(clean.count())
+    warmup_point_count = min(total_point_count, WINDOW_LENGTH - 1)
+    non_computed_point_count = total_point_count - computed_point_count
     return {
-        "total_point_count": int(series.shape[0]),
-        "computed_point_count": int(clean.count()),
-        "coverage_ratio": float(clean.count() / series.shape[0]),
+        "total_point_count": total_point_count,
+        "computed_point_count": computed_point_count,
+        "coverage_ratio": float(computed_point_count / total_point_count),
+        "warmup_point_count": warmup_point_count,
+        "non_computed_point_count": non_computed_point_count,
+        "post_warmup_gap_point_count": max(non_computed_point_count - warmup_point_count, 0),
         "latest": float(clean.iloc[-1]),
         "average": float(clean.mean()),
         "minimum": float(clean.min()),
@@ -170,6 +177,9 @@ def test_live_stateful_rolling_reconciles_selected_metrics() -> None:
         assert actual["total_point_count"] == expected["total_point_count"]
         assert actual["computed_point_count"] == expected["computed_point_count"]
         assert actual["coverage_ratio"] == pytest.approx(expected["coverage_ratio"], abs=1e-12)
+        assert actual["warmup_point_count"] == expected["warmup_point_count"]
+        assert actual["non_computed_point_count"] == expected["non_computed_point_count"]
+        assert actual["post_warmup_gap_point_count"] == expected["post_warmup_gap_point_count"]
         assert actual["latest_observation_date"] == str(aligned.index[-1].date())
         for field, expected_value in expected.items():
             assert actual[field] == pytest.approx(expected_value, abs=1e-12)
