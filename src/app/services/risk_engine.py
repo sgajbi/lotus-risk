@@ -158,30 +158,60 @@ def _expected_shortfall(returns: pd.Series, var_value: float) -> float:
     return _as_number(tail.mean())
 
 
-def _beta(portfolio: pd.Series, benchmark: pd.Series) -> float:
+def _beta(portfolio: pd.Series, benchmark: pd.Series) -> tuple[float, dict[str, float | int]]:
     covariance = np.cov(portfolio, benchmark, ddof=1)
     denominator = covariance[1, 1]
     if np.isclose(denominator, 0.0):
         raise ValueError("Benchmark variance is zero")
-    return _as_number(covariance[0, 1] / denominator)
+    covariance_pb = _as_number(covariance[0, 1])
+    benchmark_variance = _as_number(denominator)
+    return (
+        _as_number(covariance_pb / benchmark_variance),
+        {
+            "aligned_observation_count": int(portfolio.count()),
+            "covariance": covariance_pb,
+            "benchmark_variance": benchmark_variance,
+        },
+    )
 
 
-def _tracking_error(portfolio: pd.Series, benchmark: pd.Series, annual_factor: int) -> float:
+def _tracking_error(
+    portfolio: pd.Series, benchmark: pd.Series, annual_factor: int
+) -> tuple[float, dict[str, float | int]]:
     active = portfolio - benchmark
-    return _as_number(active.std(ddof=1) * sqrt(annual_factor))
+    active_std = _as_number(active.std(ddof=1))
+    return (
+        _as_number(active_std * sqrt(annual_factor)),
+        {
+            "aligned_observation_count": int(active.count()),
+            "active_mean_return": _as_number(active.mean() / 100),
+            "active_volatility": active_std / 100,
+        },
+    )
 
 
-def _information_ratio(portfolio: pd.Series, benchmark: pd.Series, annual_factor: int) -> float:
+def _information_ratio(
+    portfolio: pd.Series, benchmark: pd.Series, annual_factor: int
+) -> tuple[float, dict[str, float | int]]:
     active = portfolio - benchmark
     tracking_err = active.std(ddof=1)
     if np.isclose(tracking_err, 0.0):
         raise ValueError("Tracking error is zero")
-    return _as_number((active.mean() / tracking_err) * sqrt(annual_factor))
+    active_mean = _as_number(active.mean() / 100)
+    tracking_error = _as_number(tracking_err / 100)
+    return (
+        _as_number((active.mean() / tracking_err) * sqrt(annual_factor)),
+        {
+            "aligned_observation_count": int(active.count()),
+            "active_mean_return": active_mean,
+            "tracking_error": tracking_error,
+        },
+    )
 
 
 def _calculate_benchmark_metric(
     metric_name: str, portfolio: pd.Series, benchmark: pd.Series, annual_factor: int
-) -> float:
+) -> tuple[float, dict[str, float | int]]:
     if metric_name == "BETA":
         return _beta(portfolio, benchmark)
     if metric_name == "TRACKING_ERROR":
@@ -415,10 +445,12 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
                     with RISK_METRIC_DURATION_SECONDS.labels(metric_name=metric_name).time():
                         try:
                             _require_data(portfolio_series)
+                            value, details = _calculate_benchmark_metric(
+                                metric_name, portfolio_series, benchmark_series, annual_factor
+                            )
                             metric_map[metric_name] = RiskValue(
-                                value=_calculate_benchmark_metric(
-                                    metric_name, portfolio_series, benchmark_series, annual_factor
-                                )
+                                value=value,
+                                details=details,
                             )
                         except ValueError as exc:
                             metric_map[metric_name] = _metric_error(str(exc))

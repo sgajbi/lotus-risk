@@ -219,6 +219,35 @@ def test_risk_calculate_stateful_mode_uses_lotus_performance_returns_series() ->
     }
     assert metrics["VOLATILITY"]["value"] is not None
     assert metrics["BETA"]["value"] is not None
+    assert metrics["BETA"]["details"]["aligned_observation_count"] == len(RISK_STATEFUL_RETURNS)
+    assert "covariance" in metrics["BETA"]["details"]
+    assert "benchmark_variance" in metrics["BETA"]["details"]
+
+
+def test_risk_calculate_stateless_benchmark_metrics_expose_components() -> None:
+    client = TestClient(app)
+    payload = _request_payload()
+    stateless_input = payload["stateless_input"]
+    assert isinstance(stateless_input, dict)
+    stateless_input["metrics"] = ["BETA", "TRACKING_ERROR", "INFORMATION_RATIO"]
+    stateless_input["benchmark_returns"] = [
+        {"date": "2025-01-02", "value": 0.5},
+        {"date": "2025-01-03", "value": 1.2},
+        {"date": "2025-01-06", "value": -0.8},
+        {"date": "2025-01-07", "value": 0.1},
+    ]
+    response = client.post("/analytics/risk/calculate", json=payload)
+    assert response.status_code == 200
+    metrics = response.json()["results"]["Explicit"]["metrics"]
+    assert metrics["BETA"]["details"]["aligned_observation_count"] == 4
+    assert "covariance" in metrics["BETA"]["details"]
+    assert "benchmark_variance" in metrics["BETA"]["details"]
+    assert metrics["TRACKING_ERROR"]["details"]["aligned_observation_count"] == 4
+    assert "active_mean_return" in metrics["TRACKING_ERROR"]["details"]
+    assert "active_volatility" in metrics["TRACKING_ERROR"]["details"]
+    assert metrics["INFORMATION_RATIO"]["details"]["aligned_observation_count"] == 4
+    assert "active_mean_return" in metrics["INFORMATION_RATIO"]["details"]
+    assert "tracking_error" in metrics["INFORMATION_RATIO"]["details"]
 
 
 def test_risk_calculate_stateful_mode_preserves_gross_metric_basis_and_currency() -> None:
