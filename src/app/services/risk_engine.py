@@ -524,6 +524,7 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
                         metric_series, request.options.var.method, request.options.var.confidence
                     )
                     scaled_var = base_var * sqrt(request.options.var.horizon_days)
+                    tail_observation_count = int((metric_series <= base_var).sum())
                     details: dict[str, str | float | int | bool | None] = {
                         "method": request.options.var.method,
                         "confidence": request.options.var.confidence,
@@ -532,10 +533,12 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
                         "include_expected_shortfall": request.options.var.include_expected_shortfall,
                         "base_var": base_var,
                         "observation_count": int(metric_series.count()),
-                        "tail_observation_count": int((metric_series <= base_var).sum()),
+                        "tail_observation_count": tail_observation_count,
                     }
                     if request.options.var.include_expected_shortfall:
                         base_es = _expected_shortfall(metric_series, base_var)
+                        details["base_expected_shortfall"] = base_es
+                        details["expected_shortfall_observation_count"] = tail_observation_count
                         details["expected_shortfall"] = (
                             base_es * sqrt(request.options.var.horizon_days)
                         )

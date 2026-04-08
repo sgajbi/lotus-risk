@@ -102,6 +102,8 @@ def test_risk_calculate_endpoint_happy_path_contract() -> None:
     assert metrics["VAR"]["details"]["observation_count"] == 4
     assert metrics["VAR"]["details"]["tail_observation_count"] >= 1
     assert "base_var" in metrics["VAR"]["details"]
+    assert "base_expected_shortfall" in metrics["VAR"]["details"]
+    assert metrics["VAR"]["details"]["expected_shortfall_observation_count"] >= 1
     assert "expected_shortfall" in metrics["VAR"]["details"]
 
 
