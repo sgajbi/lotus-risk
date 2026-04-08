@@ -92,6 +92,30 @@ def test_risk_calculate_endpoint_happy_path_contract() -> None:
     assert "expected_shortfall" in metrics["VAR"]["details"]
 
 
+def test_risk_calculate_drawdown_exposes_recovery_context() -> None:
+    client = TestClient(app)
+    payload = _request_payload()
+    stateless_input = payload["stateless_input"]
+    assert isinstance(stateless_input, dict)
+    stateless_input["metrics"] = ["DRAWDOWN"]
+    stateless_input["returns"] = [
+        {"date": "2025-01-02", "value": 10.0},
+        {"date": "2025-01-03", "value": -20.0},
+        {"date": "2025-01-06", "value": 5.0},
+        {"date": "2025-01-07", "value": 20.0},
+    ]
+    response = client.post("/analytics/risk/calculate", json=payload)
+    assert response.status_code == 200
+    details = response.json()["results"]["Explicit"]["metrics"]["DRAWDOWN"]["details"]
+    assert details["peak_date"] == "2025-01-02"
+    assert details["trough_date"] == "2025-01-03"
+    assert details["recovery_date"] == "2025-01-07"
+    assert details["is_recovered"] is True
+    assert details["days_to_trough"] == 1
+    assert details["days_to_recovery"] == 4
+    assert details["time_under_water_days"] == 5
+
+
 def test_risk_calculate_sortino_exposes_downside_context() -> None:
     client = TestClient(app)
     payload = _request_payload()
