@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-04-08T01:04:47.692220+00:00",
+  "generatedAt": "2026-04-08T03:44:33.025560+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.alignment_policy",
@@ -118,11 +118,12 @@
       "example": {
         "key": "value"
       },
-      "type": "BenchmarkRequestContext",
+      "type": "RollingRequestDependencyContext",
       "locations": [
         "body"
       ],
       "observedTypes": [
+        "RollingRequestDependencyContext",
         "BenchmarkRequestContext"
       ]
     },
@@ -346,6 +347,20 @@
       ]
     },
     {
+      "semanticId": "lotus.endpoint_path",
+      "canonicalTerm": "endpoint_path",
+      "preferredName": "endpoint_path",
+      "description": "Primary API path implementing this workflow.",
+      "example": "/analytics/risk/calculate",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
       "semanticId": "lotus.enrichment_policy",
       "canonicalTerm": "enrichment_policy",
       "preferredName": "enrichment_policy",
@@ -454,6 +469,20 @@
       "preferredName": "include_episode_list",
       "description": "Whether drawdown episodes should be returned in responses.",
       "example": true,
+      "type": "boolean",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "boolean"
+      ]
+    },
+    {
+      "semanticId": "lotus.include_time_series",
+      "canonicalTerm": "include_time_series",
+      "preferredName": "include_time_series",
+      "description": "Whether rolling metric time-series points were requested for emitted windows.",
+      "example": false,
       "type": "boolean",
       "locations": [
         "body"
@@ -661,6 +690,20 @@
       ]
     },
     {
+      "semanticId": "lotus.min_observations_policy",
+      "canonicalTerm": "min_observations_policy",
+      "preferredName": "min_observations_policy",
+      "description": "Minimum observation policy used for attribution decomposition.",
+      "example": "STRICT",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
       "semanticId": "lotus.minimum_episode_depth_bps",
       "canonicalTerm": "minimum_episode_depth_bps",
       "preferredName": "minimum_episode_depth_bps",
@@ -714,6 +757,23 @@
       ],
       "observedTypes": [
         "object"
+      ]
+    },
+    {
+      "semanticId": "lotus.notes",
+      "canonicalTerm": "notes",
+      "preferredName": "notes",
+      "description": "Deterministic implementation notes or support boundaries for this workflow.",
+      "example": [
+        "stateful active-risk supports POSITION, SECTOR, and ASSET_CLASS",
+        "stateful active-risk ISSUER remains gated"
+      ],
+      "type": "array",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "array"
       ]
     },
     {
@@ -790,7 +850,7 @@
       "semanticId": "lotus.requested",
       "canonicalTerm": "requested",
       "preferredName": "requested",
-      "description": "Whether any requested metrics depend on risk-free configuration.",
+      "description": "Whether this dependency family is required by any requested rolling metric.",
       "example": true,
       "type": "boolean",
       "locations": [
@@ -801,14 +861,47 @@
       ]
     },
     {
+      "semanticId": "lotus.requested_attribution_types",
+      "canonicalTerm": "requested_attribution_types",
+      "preferredName": "requested_attribution_types",
+      "description": "Requested attribution decomposition types in canonical execution order.",
+      "example": [
+        "TOTAL_RISK",
+        "ACTIVE_RISK"
+      ],
+      "type": "array",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "array"
+      ]
+    },
+    {
+      "semanticId": "lotus.requested_grouping_dimensions",
+      "canonicalTerm": "requested_grouping_dimensions",
+      "preferredName": "requested_grouping_dimensions",
+      "description": "Requested grouping dimensions in canonical execution order.",
+      "example": [
+        "POSITION",
+        "SECTOR"
+      ],
+      "type": "array",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "array"
+      ]
+    },
+    {
       "semanticId": "lotus.requested_metrics",
       "canonicalTerm": "requested_metrics",
       "preferredName": "requested_metrics",
-      "description": "Benchmark-dependent metrics requested anywhere in this response.",
+      "description": "Requested attribution metrics in canonical execution order.",
       "example": [
-        "BETA",
-        "TRACKING_ERROR",
-        "INFORMATION_RATIO"
+        "VOLATILITY",
+        "TRACKING_ERROR"
       ],
       "type": "array",
       "locations": [
@@ -860,11 +953,12 @@
       "example": {
         "key": "value"
       },
-      "type": "RiskFreeContext",
+      "type": "RollingRequestDependencyContext",
       "locations": [
         "body"
       ],
       "observedTypes": [
+        "RollingRequestDependencyContext",
         "RiskFreeContext"
       ]
     },
@@ -1027,19 +1121,83 @@
       ]
     },
     {
+      "semanticId": "lotus.stateful_active_risk_gate_reason",
+      "canonicalTerm": "stateful_active_risk_gate_reason",
+      "preferredName": "stateful_active_risk_gate_reason",
+      "description": "Deterministic reason for any gated stateful ACTIVE_RISK grouping dimensions.",
+      "example": "benchmark issuer exposure semantics unavailable",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.stateful_active_risk_gated_grouping_dimensions",
+      "canonicalTerm": "stateful_active_risk_gated_grouping_dimensions",
+      "preferredName": "stateful_active_risk_gated_grouping_dimensions",
+      "description": "Grouping dimensions intentionally gated for stateful ACTIVE_RISK attribution.",
+      "example": [
+        "ISSUER"
+      ],
+      "type": "array",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "array"
+      ]
+    },
+    {
+      "semanticId": "lotus.stateful_active_risk_supported_grouping_dimensions",
+      "canonicalTerm": "stateful_active_risk_supported_grouping_dimensions",
+      "preferredName": "stateful_active_risk_supported_grouping_dimensions",
+      "description": "Grouping dimensions currently supported for stateful ACTIVE_RISK attribution.",
+      "example": [
+        "POSITION",
+        "SECTOR",
+        "ASSET_CLASS"
+      ],
+      "type": "array",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "array"
+      ]
+    },
+    {
       "semanticId": "lotus.stateful_input",
       "canonicalTerm": "stateful_input",
       "preferredName": "stateful_input",
-      "description": "Stateful payload. Reserved for Slice B implementation.",
+      "description": "Stateful payload for returns/exposure sourcing through lotus-performance and lotus-core. Stateful ACTIVE_RISK currently supports POSITION, SECTOR, and ASSET_CLASS; ISSUER remains gated until benchmark issuer exposure semantics are available. CUSTOM grouping is not supported in stateful mode.",
       "example": {
         "as_of_date": "2026-02-28",
+        "attribution_options": {
+          "annualization_basis": 252,
+          "attribution_types": [
+            "ACTIVE_RISK"
+          ],
+          "covariance_method": "EMPIRICAL",
+          "grouping_dimensions": [
+            "SECTOR"
+          ],
+          "metrics": [
+            "TRACKING_ERROR"
+          ],
+          "min_observations_policy": "STRICT"
+        },
+        "net_or_gross": "NET",
         "periods": [
           {
             "name": "YTD",
             "type": "YTD"
           }
         ],
-        "portfolio_id": "DEMO_DPM_EUR_001"
+        "portfolio_id": "DEMO_DPM_EUR_001",
+        "reporting_currency": "USD"
       },
       "type": "object",
       "locations": [
@@ -1094,6 +1252,20 @@
       "preferredName": "status",
       "description": "Health status indicator.",
       "example": "ok",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.support_status",
+      "canonicalTerm": "support_status",
+      "preferredName": "support_status",
+      "description": "Whether the workflow is fully implemented or intentionally partial.",
+      "example": "full",
       "type": "string",
       "locations": [
         "body"
@@ -1498,6 +1670,38 @@
       ]
     },
     {
+      "semanticId": "lotus.window_count_requested",
+      "canonicalTerm": "window_count_requested",
+      "preferredName": "window_count_requested",
+      "description": "Number of rolling window lengths requested for this response.",
+      "example": 3,
+      "type": "integer",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "integer"
+      ]
+    },
+    {
+      "semanticId": "lotus.window_lengths_requested",
+      "canonicalTerm": "window_lengths_requested",
+      "preferredName": "window_lengths_requested",
+      "description": "Rolling window lengths requested for this response.",
+      "example": [
+        21,
+        63,
+        126
+      ],
+      "type": "array",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "array"
+      ]
+    },
+    {
       "semanticId": "lotus.workflow_key",
       "canonicalTerm": "workflow_key",
       "preferredName": "workflow_key",
@@ -1519,6 +1723,15 @@
       "example": [
         {
           "enabled": true,
+          "endpoint_path": "/analytics/risk/calculate",
+          "notes": [
+            "simulation is intentionally unsupported"
+          ],
+          "support_status": "full",
+          "supported_input_modes": [
+            "stateless",
+            "stateful"
+          ],
           "workflow_key": "risk_snapshot"
         }
       ],
@@ -1917,6 +2130,38 @@
             "type": "boolean",
             "semanticId": "lotus.enabled",
             "attributeRef": "#/attributeCatalog/lotus.enabled"
+          },
+          {
+            "name": "workflows[].endpoint_path",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.endpoint_path",
+            "attributeRef": "#/attributeCatalog/lotus.endpoint_path"
+          },
+          {
+            "name": "workflows[].supported_input_modes",
+            "location": "body",
+            "required": true,
+            "type": "array",
+            "semanticId": "lotus.supported_input_modes",
+            "attributeRef": "#/attributeCatalog/lotus.supported_input_modes"
+          },
+          {
+            "name": "workflows[].support_status",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.support_status",
+            "attributeRef": "#/attributeCatalog/lotus.support_status"
+          },
+          {
+            "name": "workflows[].notes",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.notes",
+            "attributeRef": "#/attributeCatalog/lotus.notes"
           }
         ]
       }
@@ -2065,6 +2310,62 @@
             "type": "integer",
             "semanticId": "lotus.annualization_basis",
             "attributeRef": "#/attributeCatalog/lotus.annualization_basis"
+          },
+          {
+            "name": "metadata.requested_attribution_types",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.requested_attribution_types",
+            "attributeRef": "#/attributeCatalog/lotus.requested_attribution_types"
+          },
+          {
+            "name": "metadata.requested_metrics",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.requested_metrics",
+            "attributeRef": "#/attributeCatalog/lotus.requested_metrics"
+          },
+          {
+            "name": "metadata.requested_grouping_dimensions",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.requested_grouping_dimensions",
+            "attributeRef": "#/attributeCatalog/lotus.requested_grouping_dimensions"
+          },
+          {
+            "name": "metadata.min_observations_policy",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.min_observations_policy",
+            "attributeRef": "#/attributeCatalog/lotus.min_observations_policy"
+          },
+          {
+            "name": "metadata.stateful_active_risk_supported_grouping_dimensions",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.stateful_active_risk_supported_grouping_dimensions",
+            "attributeRef": "#/attributeCatalog/lotus.stateful_active_risk_supported_grouping_dimensions"
+          },
+          {
+            "name": "metadata.stateful_active_risk_gated_grouping_dimensions",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.stateful_active_risk_gated_grouping_dimensions",
+            "attributeRef": "#/attributeCatalog/lotus.stateful_active_risk_gated_grouping_dimensions"
+          },
+          {
+            "name": "metadata.stateful_active_risk_gate_reason",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.stateful_active_risk_gate_reason",
+            "attributeRef": "#/attributeCatalog/lotus.stateful_active_risk_gate_reason"
           }
         ]
       }
@@ -2888,12 +3189,100 @@
             "attributeRef": "#/attributeCatalog/lotus.annualization_basis"
           },
           {
+            "name": "metadata.requested_metrics",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.requested_metrics",
+            "attributeRef": "#/attributeCatalog/lotus.requested_metrics"
+          },
+          {
+            "name": "metadata.window_lengths_requested",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.window_lengths_requested",
+            "attributeRef": "#/attributeCatalog/lotus.window_lengths_requested"
+          },
+          {
+            "name": "metadata.window_count_requested",
+            "location": "body",
+            "required": false,
+            "type": "integer",
+            "semanticId": "lotus.window_count_requested",
+            "attributeRef": "#/attributeCatalog/lotus.window_count_requested"
+          },
+          {
             "name": "metadata.alignment_policy",
             "location": "body",
             "required": true,
             "type": "string",
             "semanticId": "lotus.alignment_policy",
             "attributeRef": "#/attributeCatalog/lotus.alignment_policy"
+          },
+          {
+            "name": "metadata.min_observations_policy",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.min_observations_policy",
+            "attributeRef": "#/attributeCatalog/lotus.min_observations_policy"
+          },
+          {
+            "name": "metadata.include_time_series",
+            "location": "body",
+            "required": true,
+            "type": "boolean",
+            "semanticId": "lotus.include_time_series",
+            "attributeRef": "#/attributeCatalog/lotus.include_time_series"
+          },
+          {
+            "name": "metadata.benchmark_context",
+            "location": "body",
+            "required": true,
+            "type": "RollingRequestDependencyContext",
+            "semanticId": "lotus.benchmark_context",
+            "attributeRef": "#/attributeCatalog/lotus.benchmark_context"
+          },
+          {
+            "name": "metadata.benchmark_context.requested",
+            "location": "body",
+            "required": true,
+            "type": "boolean",
+            "semanticId": "lotus.requested",
+            "attributeRef": "#/attributeCatalog/lotus.requested"
+          },
+          {
+            "name": "metadata.benchmark_context.requested_metrics",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.requested_metrics",
+            "attributeRef": "#/attributeCatalog/lotus.requested_metrics"
+          },
+          {
+            "name": "metadata.risk_free_context",
+            "location": "body",
+            "required": true,
+            "type": "RollingRequestDependencyContext",
+            "semanticId": "lotus.risk_free_context",
+            "attributeRef": "#/attributeCatalog/lotus.risk_free_context"
+          },
+          {
+            "name": "metadata.risk_free_context.requested",
+            "location": "body",
+            "required": true,
+            "type": "boolean",
+            "semanticId": "lotus.requested",
+            "attributeRef": "#/attributeCatalog/lotus.requested"
+          },
+          {
+            "name": "metadata.risk_free_context.requested_metrics",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.requested_metrics",
+            "attributeRef": "#/attributeCatalog/lotus.requested_metrics"
           }
         ]
       }
