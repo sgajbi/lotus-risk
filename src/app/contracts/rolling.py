@@ -605,9 +605,38 @@ class RollingMetadata(BaseModel):
         description="Annualization basis used for annualized rolling metrics.",
         json_schema_extra={"example": 252},
     )
+    requested_metrics: list[str] = Field(
+        default_factory=list,
+        description="Requested rolling metrics in canonical execution order.",
+        json_schema_extra={
+            "example": [
+                "ROLLING_VOLATILITY",
+                "ROLLING_SHARPE",
+                "ROLLING_BETA",
+            ]
+        },
+    )
+    window_lengths_requested: list[int] = Field(
+        default_factory=list,
+        description="Rolling window lengths requested for this response.",
+        json_schema_extra={"example": [21, 63, 126]},
+    )
+    window_count_requested: int = Field(
+        default=0,
+        description="Number of rolling window lengths requested for this response.",
+        json_schema_extra={"example": 3},
+    )
     alignment_policy: Literal["INNER_JOIN"] = Field(
         description="Series alignment policy used for multi-series rolling metrics.",
         json_schema_extra={"example": "INNER_JOIN"},
+    )
+    min_observations_policy: Literal["STRICT", "ALLOW_PARTIAL"] = Field(
+        description="Minimum-observations policy used across the requested rolling windows.",
+        json_schema_extra={"example": "STRICT"},
+    )
+    include_time_series: bool = Field(
+        description="Whether rolling metric time-series points were requested for emitted windows.",
+        json_schema_extra={"example": False},
     )
     benchmark_context: RollingRequestDependencyContext = Field(
         description="Top-level benchmark dependency context derived from the requested rolling metrics.",
@@ -694,7 +723,16 @@ class RollingResponse(BaseModel):
                 "contract_version": "v1",
                 "methodology_version": "rolling_metrics.v1",
                 "annualization_basis": 252,
+                "requested_metrics": [
+                    "ROLLING_VOLATILITY",
+                    "ROLLING_BETA",
+                    "ROLLING_TRACKING_ERROR",
+                ],
+                "window_lengths_requested": [21, 63],
+                "window_count_requested": 2,
                 "alignment_policy": "INNER_JOIN",
+                "min_observations_policy": "STRICT",
+                "include_time_series": False,
                 "benchmark_context": {
                     "requested": True,
                     "requested_metrics": [
@@ -818,7 +856,16 @@ class RollingResponse(BaseModel):
                     "contract_version": "v1",
                     "methodology_version": "rolling_metrics.v1",
                     "annualization_basis": 252,
+                    "requested_metrics": [
+                        "ROLLING_VOLATILITY",
+                        "ROLLING_BETA",
+                        "ROLLING_TRACKING_ERROR",
+                    ],
+                    "window_lengths_requested": [21],
+                    "window_count_requested": 1,
                     "alignment_policy": "INNER_JOIN",
+                    "min_observations_policy": "STRICT",
+                    "include_time_series": False,
                     "benchmark_context": {
                         "requested": True,
                         "requested_metrics": [

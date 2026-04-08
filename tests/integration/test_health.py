@@ -283,6 +283,23 @@ def test_openapi_declares_standard_error_models_for_risk_endpoints() -> None:
         )
 
 
+def test_openapi_exposes_enriched_rolling_metadata_examples() -> None:
+    client = TestClient(app)
+    spec = client.get("/openapi.json").json()
+    rolling_example = spec["components"]["schemas"]["RollingResponse"]["example"]
+    metadata = rolling_example["metadata"]
+
+    assert metadata["requested_metrics"] == [
+        "ROLLING_VOLATILITY",
+        "ROLLING_BETA",
+        "ROLLING_TRACKING_ERROR",
+    ]
+    assert metadata["window_lengths_requested"] == [21]
+    assert metadata["window_count_requested"] == 1
+    assert metadata["min_observations_policy"] == "STRICT"
+    assert metadata["include_time_series"] is False
+
+
 def test_openapi_exposes_typed_capabilities_response_contract() -> None:
     client = TestClient(app)
     spec = client.get("/openapi.json").json()

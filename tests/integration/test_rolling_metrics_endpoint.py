@@ -73,6 +73,18 @@ def test_rolling_metrics_endpoint_stateless_contract() -> None:
     assert body["source_service"] == "lotus-risk"
     assert body["input_mode"] == "stateless"
     assert body["metadata"]["methodology_version"] == "rolling_metrics.v1"
+    assert body["metadata"]["requested_metrics"] == [
+        "ROLLING_VOLATILITY",
+        "ROLLING_SHARPE",
+        "ROLLING_BETA",
+        "ROLLING_TRACKING_ERROR",
+        "ROLLING_INFORMATION_RATIO",
+        "ROLLING_MAX_DRAWDOWN",
+    ]
+    assert body["metadata"]["window_lengths_requested"] == [3]
+    assert body["metadata"]["window_count_requested"] == 1
+    assert body["metadata"]["min_observations_policy"] == "STRICT"
+    assert body["metadata"]["include_time_series"] is True
     assert body["metadata"]["benchmark_context"] == {
         "requested": True,
         "requested_metrics": [
@@ -194,6 +206,15 @@ def test_rolling_metrics_endpoint_stateful_uses_lotus_performance() -> None:
     assert core_client.risk_free_calls
     body = response.json()
     assert body["input_mode"] == "stateful"
+    assert body["metadata"]["requested_metrics"] == [
+        "ROLLING_VOLATILITY",
+        "ROLLING_SHARPE",
+        "ROLLING_BETA",
+    ]
+    assert body["metadata"]["window_lengths_requested"] == [2]
+    assert body["metadata"]["window_count_requested"] == 1
+    assert body["metadata"]["min_observations_policy"] == "STRICT"
+    assert body["metadata"]["include_time_series"] is False
     assert body["metadata"]["benchmark_context"] == {
         "requested": True,
         "requested_metrics": ["ROLLING_BETA"],

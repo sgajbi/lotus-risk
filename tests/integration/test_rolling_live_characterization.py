@@ -147,6 +147,13 @@ def test_live_stateful_rolling_reconciles_selected_metrics() -> None:
         "requested": False,
         "requested_metrics": [],
     }
+    assert body["metadata"]["requested_metrics"] == [
+        "ROLLING_VOLATILITY",
+        "ROLLING_BETA",
+        "ROLLING_TRACKING_ERROR",
+    ]
+    assert body["metadata"]["window_lengths_requested"] == [WINDOW_LENGTH]
+    assert body["metadata"]["window_count_requested"] == 1
     assert period["series_count"] == len(portfolio)
     assert period["benchmark_series_count"] == len(benchmark)
     assert period["aligned_benchmark_series_count"] == len(aligned)
@@ -170,6 +177,8 @@ def test_live_stateful_rolling_reconciles_selected_metrics() -> None:
     }
     assert body["metadata"]["annualization_basis"] == ANNUALIZATION_BASIS
     assert body["metadata"]["alignment_policy"] == "INNER_JOIN"
+    assert body["metadata"]["min_observations_policy"] == "STRICT"
+    assert body["metadata"]["include_time_series"] is False
     assert period["quality_flags"] == []
     assert period["error"] is None
     assert window["metric_series"] is None

@@ -92,7 +92,12 @@ Provide windowed historical risk diagnostics for PB/WM portfolios with instituti
   - `quality_flags[]`
   - `error`
 - `metadata`
-  - methodology and lineage references
+  - methodology and request execution references
+  - `requested_metrics`
+  - `window_lengths_requested`
+  - `window_count_requested`
+  - `min_observations_policy`
+  - `include_time_series`
   - top-level dependency intent:
     - `benchmark_context.requested`
     - `benchmark_context.requested_metrics`

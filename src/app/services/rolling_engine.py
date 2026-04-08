@@ -345,7 +345,12 @@ def calculate_rolling_metrics(
             results={},
             metadata=RollingMetadata(
                 annualization_basis=request.rolling_options.annualization_basis,
+                requested_metrics=list(request.rolling_options.metrics),
+                window_lengths_requested=list(request.rolling_options.window_lengths),
+                window_count_requested=len(request.rolling_options.window_lengths),
                 alignment_policy=request.rolling_options.alignment_policy,
+                min_observations_policy=request.rolling_options.min_observations_policy,
+                include_time_series=request.rolling_options.include_time_series,
                 benchmark_context=_request_dependency_context(
                     request.rolling_options.metrics,
                     ROLLING_BENCHMARK_METRICS,
@@ -516,7 +521,12 @@ def calculate_rolling_metrics(
         results=results,
         metadata=RollingMetadata(
             annualization_basis=options.annualization_basis,
+            requested_metrics=requested_metrics,
+            window_lengths_requested=list(options.window_lengths),
+            window_count_requested=len(options.window_lengths),
             alignment_policy=options.alignment_policy,
+            min_observations_policy=options.min_observations_policy,
+            include_time_series=options.include_time_series,
             benchmark_context=_request_dependency_context(
                 requested_metrics,
                 ROLLING_BENCHMARK_METRICS,
