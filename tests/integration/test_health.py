@@ -314,6 +314,25 @@ def test_openapi_exposes_historical_attribution_support_metadata() -> None:
     assert "benchmark issuer exposure semantics unavailable" in serialized_spec
 
 
+def test_historical_attribution_openapi_examples_and_description_reflect_stateful_gate() -> None:
+    client = TestClient(app)
+    spec = client.get("/openapi.json").json()
+    operation = spec["paths"]["/analytics/risk/historical-attribution"]["post"]
+    description = operation["description"]
+    request_schema = spec["components"]["schemas"]["HistoricalAttributionRequest"]
+
+    assert "POSITION, SECTOR, and ASSET_CLASS" in description
+    assert "ISSUER is intentionally gated" in description
+    assert "CUSTOM grouping is not supported in stateful mode" in description
+    assert request_schema["example"]["input_mode"] == "stateful"
+    assert request_schema["example"]["stateful_input"]["attribution_options"][
+        "grouping_dimensions"
+    ] == ["SECTOR"]
+    assert request_schema["properties"]["stateful_input"]["example"]["attribution_options"][
+        "grouping_dimensions"
+    ] == ["SECTOR"]
+
+
 def test_openapi_exposes_typed_capabilities_response_contract() -> None:
     client = TestClient(app)
     spec = client.get("/openapi.json").json()

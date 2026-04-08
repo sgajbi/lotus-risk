@@ -50,6 +50,16 @@ Provide decomposition of historical realized risk and active risk into transpare
 - optional `reporting_currency`
 - attribution options
 
+### Stateful Validation Gates
+
+- request validation rejects these combinations before any upstream call:
+  - `grouping_dimensions=["CUSTOM"]`
+  - any stateful request that needs benchmark-relative attribution semantics and includes `ISSUER`
+- request validation currently returns:
+  - HTTP `422`
+  - `error.code = INVALID_REQUEST`
+  - field-level reason in `error.details[]`
+
 ## Upstream Dependencies (Stateful)
 
 - lotus-performance:

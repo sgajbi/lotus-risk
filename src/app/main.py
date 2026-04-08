@@ -508,7 +508,10 @@ async def metrics() -> Response:
     tags=["risk-analytics"],
     description=(
         "Calculates historical risk and active-risk attribution decompositions with contributor-level "
-        "component, marginal, and percent contributions plus reconciliation diagnostics."
+        "component, marginal, and percent contributions plus reconciliation diagnostics. Supports "
+        "stateless execution and approved stateful execution. Stateful ACTIVE_RISK currently supports "
+        "POSITION, SECTOR, and ASSET_CLASS grouping dimensions; ISSUER is intentionally gated and "
+        "CUSTOM grouping is not supported in stateful mode."
     ),
 )
 async def analytics_risk_historical_attribution(

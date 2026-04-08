@@ -293,17 +293,50 @@ class HistoricalAttributionRequest(BaseModel):
         description=(
             "Stateful payload for returns/exposure sourcing through lotus-performance and lotus-core. "
             "Stateful ACTIVE_RISK currently supports POSITION, SECTOR, and ASSET_CLASS; "
-            "ISSUER remains gated until benchmark issuer exposure semantics are available."
+            "ISSUER remains gated until benchmark issuer exposure semantics are available. "
+            "CUSTOM grouping is not supported in stateful mode."
         ),
         json_schema_extra={
             "example": {
                 "portfolio_id": "DEMO_DPM_EUR_001",
                 "as_of_date": "2026-02-28",
+                "reporting_currency": "USD",
+                "net_or_gross": "NET",
                 "periods": [{"type": "YTD", "name": "YTD"}],
+                "attribution_options": {
+                    "attribution_types": ["ACTIVE_RISK"],
+                    "metrics": ["TRACKING_ERROR"],
+                    "grouping_dimensions": ["SECTOR"],
+                    "annualization_basis": 252,
+                    "covariance_method": "EMPIRICAL",
+                    "min_observations_policy": "STRICT",
+                },
             }
         },
     )
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "example": {
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-02-28",
+                    "reporting_currency": "USD",
+                    "net_or_gross": "NET",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "attribution_options": {
+                        "attribution_types": ["ACTIVE_RISK"],
+                        "metrics": ["TRACKING_ERROR"],
+                        "grouping_dimensions": ["SECTOR"],
+                        "annualization_basis": 252,
+                        "covariance_method": "EMPIRICAL",
+                        "min_observations_policy": "STRICT",
+                    },
+                },
+            }
+        },
+    )
 
     @model_validator(mode="after")
     def normalize_and_validate(self) -> "HistoricalAttributionRequest":
