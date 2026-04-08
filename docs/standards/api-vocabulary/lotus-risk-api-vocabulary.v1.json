@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-04-08T00:32:40.377021+00:00",
+  "generatedAt": "2026-04-08T00:35:29.300627+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.alignment_policy",
@@ -108,6 +108,22 @@
       ],
       "observedTypes": [
         "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.benchmark_context",
+      "canonicalTerm": "benchmark_context",
+      "preferredName": "benchmark_context",
+      "description": "Canonical benchmark context used by lotus-risk APIs.",
+      "example": {
+        "key": "value"
+      },
+      "type": "BenchmarkRequestContext",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "BenchmarkRequestContext"
       ]
     },
     {
@@ -782,6 +798,24 @@
       ],
       "observedTypes": [
         "boolean"
+      ]
+    },
+    {
+      "semanticId": "lotus.requested_metrics",
+      "canonicalTerm": "requested_metrics",
+      "preferredName": "requested_metrics",
+      "description": "Benchmark-dependent metrics requested anywhere in this response.",
+      "example": [
+        "BETA",
+        "TRACKING_ERROR",
+        "INFORMATION_RATIO"
+      ],
+      "type": "array",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "array"
       ]
     },
     {
@@ -3043,6 +3077,30 @@
             "type": "number",
             "semanticId": "lotus.periodic_rate",
             "attributeRef": "#/attributeCatalog/lotus.periodic_rate"
+          },
+          {
+            "name": "metadata.benchmark_context",
+            "location": "body",
+            "required": false,
+            "type": "BenchmarkRequestContext",
+            "semanticId": "lotus.benchmark_context",
+            "attributeRef": "#/attributeCatalog/lotus.benchmark_context"
+          },
+          {
+            "name": "metadata.benchmark_context.requested",
+            "location": "body",
+            "required": false,
+            "type": "boolean",
+            "semanticId": "lotus.requested",
+            "attributeRef": "#/attributeCatalog/lotus.requested"
+          },
+          {
+            "name": "metadata.benchmark_context.requested_metrics",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.requested_metrics",
+            "attributeRef": "#/attributeCatalog/lotus.requested_metrics"
           },
           {
             "name": "metadata.mar_annual_rate",

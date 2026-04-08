@@ -68,6 +68,7 @@
   - `methodology_version`
   - applied frequency / annualization / log-return / risk-free / VaR settings
   - `risk_free_context` (`requested`, `applied`, `reason`, `periodic_rate`)
+  - `benchmark_context` (`requested`, `requested_metrics`)
 - `results` map keyed by period name/type:
   - `start_date`
   - `end_date`

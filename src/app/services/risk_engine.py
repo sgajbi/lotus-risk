@@ -10,6 +10,7 @@ import pandas as pd
 from prometheus_client import Counter, Histogram
 
 from app.contracts.risk import (
+    BenchmarkRequestContext,
     RiskFreeContext,
     RiskPeriodResult,
     RiskResponseMetadata,
@@ -267,6 +268,7 @@ def _build_metadata(
     periodic_rf: float,
 ) -> RiskResponseMetadata:
     risk_free_requested = "SHARPE" in request.metrics
+    benchmark_metrics = [metric for metric in request.metrics if metric in BENCHMARK_METRICS]
     return RiskResponseMetadata(
         frequency=request.options.frequency,
         annualization_factor=annual_factor,
@@ -287,6 +289,10 @@ def _build_metadata(
                 )
             ),
             periodic_rate=periodic_rf if risk_free_requested else 0.0,
+        ),
+        benchmark_context=BenchmarkRequestContext(
+            requested=bool(benchmark_metrics),
+            requested_metrics=benchmark_metrics,
         ),
         mar_annual_rate=request.options.mar_annual_rate,
         var_method=request.options.var.method,

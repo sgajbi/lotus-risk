@@ -438,6 +438,19 @@ class RiskFreeContext(BaseModel):
     )
 
 
+class BenchmarkRequestContext(BaseModel):
+    requested: bool = Field(
+        default=False,
+        description="Whether any requested metrics depend on benchmark return alignment.",
+        json_schema_extra={"example": True},
+    )
+    requested_metrics: list[str] = Field(
+        default_factory=list,
+        description="Benchmark-dependent metrics requested anywhere in this response.",
+        json_schema_extra={"example": ["BETA", "TRACKING_ERROR", "INFORMATION_RATIO"]},
+    )
+
+
 class RiskResponseMetadata(BaseModel):
     contract_version: str = Field(
         default="v1",
@@ -483,6 +496,16 @@ class RiskResponseMetadata(BaseModel):
                 "applied": True,
                 "reason": "ANNUAL_RATE_APPLIED",
                 "periodic_rate": 0.00003949,
+            }
+        },
+    )
+    benchmark_context: BenchmarkRequestContext = Field(
+        default_factory=BenchmarkRequestContext,
+        description="Benchmark dependency request context for this response.",
+        json_schema_extra={
+            "example": {
+                "requested": True,
+                "requested_metrics": ["BETA", "TRACKING_ERROR", "INFORMATION_RATIO"],
             }
         },
     )
@@ -559,6 +582,10 @@ class RiskResponse(BaseModel):
                     "applied": True,
                     "reason": "ZERO_RATE",
                     "periodic_rate": 0.0,
+                },
+                "benchmark_context": {
+                    "requested": True,
+                    "requested_metrics": ["BETA", "TRACKING_ERROR", "INFORMATION_RATIO"],
                 },
                 "mar_annual_rate": 0.0,
                 "var_method": "HISTORICAL",

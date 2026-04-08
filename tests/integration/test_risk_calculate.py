@@ -65,6 +65,10 @@ def test_risk_calculate_endpoint_happy_path_contract() -> None:
     assert "Explicit" in body["results"]
     assert body["metadata"]["frequency"] == "DAILY"
     assert body["metadata"]["annualization_factor"] == 252
+    assert body["metadata"]["benchmark_context"] == {
+        "requested": False,
+        "requested_metrics": [],
+    }
     assert body["metadata"]["risk_free_context"] == {
         "requested": True,
         "applied": True,
@@ -172,6 +176,10 @@ def test_risk_calculate_benchmark_requirement_behavior() -> None:
     assert response.status_code == 200
     body = response.json()
     metrics = body["results"]["Explicit"]["metrics"]
+    assert body["metadata"]["benchmark_context"] == {
+        "requested": True,
+        "requested_metrics": ["BETA", "TRACKING_ERROR", "INFORMATION_RATIO"],
+    }
     assert body["results"]["Explicit"]["benchmark_context"] == {
         "requested": True,
         "available": False,
@@ -227,6 +235,10 @@ def test_risk_calculate_stateful_mode_uses_lotus_performance_returns_series() ->
     body = response.json()
     metrics = body["results"]["YTD"]["metrics"]
     assert body["metadata"]["frequency"] == "DAILY"
+    assert body["metadata"]["benchmark_context"] == {
+        "requested": True,
+        "requested_metrics": ["BETA"],
+    }
     assert body["metadata"]["risk_free_context"] == {
         "requested": False,
         "applied": False,
