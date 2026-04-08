@@ -21,7 +21,8 @@ Provide decomposition of historical realized risk and active risk into transpare
 - Current behavior:
   - `TOTAL_RISK` stateful path is implemented
   - `ACTIVE_RISK` stateful path is implemented for `POSITION`, `SECTOR`, and `ASSET_CLASS` grouping dimensions through the lotus-performance benchmark exposure context derived view
-  - `ACTIVE_RISK` + `ISSUER` remains gated until benchmark issuer exposure semantics are explicitly available
+  - `ACTIVE_RISK` + `ISSUER` remains gated until benchmark issuer exposure semantics are explicitly available and is rejected at request validation
+  - `CUSTOM` grouping remains unsupported in stateful mode and is rejected at request validation
 
 ### Simulation
 

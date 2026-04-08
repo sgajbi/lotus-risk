@@ -234,6 +234,34 @@ class HistoricalAttributionStatefulInput(BaseModel):
         },
     )
 
+    @model_validator(mode="after")
+    def validate_semantics(self) -> "HistoricalAttributionStatefulInput":
+        resolved_names = [period.name or period.type for period in self.periods]
+        duplicates = sorted({name for name in resolved_names if resolved_names.count(name) > 1})
+        if duplicates:
+            raise ValueError(
+                "Duplicate period names resolved in request: "
+                + ", ".join(duplicates)
+                + ". Each period name (or type fallback) must be unique."
+            )
+
+        grouping_dimensions = self.attribution_options.grouping_dimensions
+        if "CUSTOM" in grouping_dimensions:
+            raise ValueError(
+                "stateful historical-attribution does not support grouping_dimension=CUSTOM"
+            )
+
+        requires_active = (
+            "ACTIVE_RISK" in self.attribution_options.attribution_types
+            or "TRACKING_ERROR" in self.attribution_options.metrics
+        )
+        if requires_active and "ISSUER" in grouping_dimensions:
+            raise ValueError(
+                "stateful ACTIVE_RISK/TRACKING_ERROR attribution does not support "
+                "grouping_dimension=ISSUER until benchmark issuer exposure semantics are available"
+            )
+        return self
+
 
 class HistoricalAttributionRequest(BaseModel):
     input_mode: AttributionInputMode = Field(

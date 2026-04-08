@@ -417,11 +417,13 @@ def test_historical_attribution_stateful_active_risk_issuer_is_explicitly_gated(
             },
         )
 
-    assert response.status_code == 400
+    assert response.status_code == 422
     body = response.json()["error"]
-    assert body["code"] == "INVALID_INPUT"
-    assert "cannot source benchmark exposure history" in body["message"]
-    assert "grouping_dimensions=ISSUER" in body["message"]
+    assert body["code"] == "INVALID_REQUEST"
+    assert body["message"] == "Request validation failed"
+    assert any(
+        "grouping_dimension=ISSUER" in detail["msg"] for detail in body["details"]
+    )
     assert body["correlation_id"] == "corr-attr-active-issuer"
 
 
