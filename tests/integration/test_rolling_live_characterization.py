@@ -152,6 +152,8 @@ def test_live_stateful_rolling_reconciles_selected_metrics() -> None:
     assert period["aligned_benchmark_series_count"] == len(aligned)
     assert period["risk_free_series_count"] == 0
     assert period["aligned_risk_free_series_count"] == 0
+    assert period["window_lengths_requested"] == [WINDOW_LENGTH]
+    assert period["window_lengths_emitted"] == [WINDOW_LENGTH]
     assert period["benchmark_context"] == {
         "requested": True,
         "available": True,

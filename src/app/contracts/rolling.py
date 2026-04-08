@@ -519,6 +519,16 @@ class RollingPeriodResult(BaseModel):
         description="Number of aligned portfolio/risk-free observations available for rolling Sharpe.",
         json_schema_extra={"example": 41},
     )
+    window_lengths_requested: list[int] = Field(
+        default_factory=list,
+        description="Rolling window lengths requested for this period.",
+        json_schema_extra={"example": [21, 63]},
+    )
+    window_lengths_emitted: list[int] = Field(
+        default_factory=list,
+        description="Rolling window lengths actually emitted in this period result.",
+        json_schema_extra={"example": [21, 63]},
+    )
     benchmark_context: RollingBenchmarkContext = Field(
         description="Benchmark application context for benchmark-dependent rolling metrics in this period.",
         json_schema_extra={
@@ -642,6 +652,8 @@ class RollingResponse(BaseModel):
                     "series_count": 41,
                     "benchmark_series_count": 41,
                     "aligned_benchmark_series_count": 41,
+                    "window_lengths_requested": [21, 63],
+                    "window_lengths_emitted": [21, 63],
                     "benchmark_context": {
                         "requested": True,
                         "available": True,
@@ -703,6 +715,8 @@ class RollingResponse(BaseModel):
                     "series_count": 90,
                     "benchmark_series_count": 90,
                     "aligned_benchmark_series_count": 90,
+                    "window_lengths_requested": [21],
+                    "window_lengths_emitted": [21],
                     "benchmark_context": {
                         "requested": True,
                         "available": True,

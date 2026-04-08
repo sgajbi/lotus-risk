@@ -90,6 +90,8 @@ def test_rolling_metrics_endpoint_stateless_contract() -> None:
     assert body["results"]["YTD"]["aligned_benchmark_series_count"] == 4
     assert body["results"]["YTD"]["risk_free_series_count"] == 4
     assert body["results"]["YTD"]["aligned_risk_free_series_count"] == 4
+    assert body["results"]["YTD"]["window_lengths_requested"] == [3]
+    assert body["results"]["YTD"]["window_lengths_emitted"] == [3]
     assert body["results"]["YTD"]["benchmark_context"] == {
         "requested": True,
         "available": True,
@@ -202,6 +204,8 @@ def test_rolling_metrics_endpoint_stateful_uses_lotus_performance() -> None:
     assert body["results"]["YTD"]["aligned_benchmark_series_count"] == 3
     assert body["results"]["YTD"]["risk_free_series_count"] == 3
     assert body["results"]["YTD"]["aligned_risk_free_series_count"] == 3
+    assert body["results"]["YTD"]["window_lengths_requested"] == [2]
+    assert body["results"]["YTD"]["window_lengths_emitted"] == [2]
     assert body["results"]["YTD"]["benchmark_context"]["reason"] == "APPLIED"
     assert body["results"]["YTD"]["risk_free_context"]["reason"] == "APPLIED"
     assert body["results"]["YTD"]["window_results"][0]["metric_series"] is None

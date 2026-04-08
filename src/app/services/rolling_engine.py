@@ -383,6 +383,8 @@ def calculate_rolling_metrics(
                 aligned_benchmark_series_count=0,
                 risk_free_series_count=0,
                 aligned_risk_free_series_count=0,
+                window_lengths_requested=list(options.window_lengths),
+                window_lengths_emitted=[],
                 benchmark_context=_benchmark_context(requested_metrics, 0, 0),
                 risk_free_context=_risk_free_context(requested_metrics, 0, 0),
                 window_results=[],
@@ -487,6 +489,8 @@ def calculate_rolling_metrics(
             aligned_benchmark_series_count=aligned_benchmark_series_count,
             risk_free_series_count=len(risk_free_period),
             aligned_risk_free_series_count=aligned_risk_free_series_count,
+            window_lengths_requested=list(options.window_lengths),
+            window_lengths_emitted=[result.window_length for result in window_results],
             benchmark_context=_benchmark_context(
                 requested_metrics,
                 len(benchmark_period),
