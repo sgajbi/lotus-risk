@@ -25,7 +25,9 @@ def _response(status_code: int, payload: dict[str, object]) -> httpx.Response:
     return httpx.Response(status_code, json=payload, request=request)
 
 
-def test_request_json_with_retries_returns_first_non_retryable_success(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_request_json_with_retries_returns_first_non_retryable_success(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr("tests.support.live_returns_series.time.sleep", lambda _: None)
     client = _FakeClient(
         [
@@ -46,7 +48,9 @@ def test_request_json_with_retries_returns_first_non_retryable_success(monkeypat
     assert len(client.calls) == 2
 
 
-def test_request_json_with_retries_raises_after_retry_budget(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_request_json_with_retries_raises_after_retry_budget(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr("tests.support.live_returns_series.time.sleep", lambda _: None)
     client = _FakeClient(
         [
@@ -67,7 +71,9 @@ def test_request_json_with_retries_raises_after_retry_budget(monkeypatch: pytest
     assert len(client.calls) == 2
 
 
-def test_fetch_live_risk_free_series_uses_reference_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_fetch_live_risk_free_series_uses_reference_endpoint(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     captured: dict[str, object] = {}
 
     def _fake_request_json_with_retries(**kwargs: object) -> dict[str, object]:
@@ -117,9 +123,7 @@ def test_fetch_live_benchmark_exposure_context_uses_performance_endpoint(
 
     assert payload == {"rows": []}
     assert captured["method"] == "POST"
-    assert (
-        captured["url"] == "http://performance.example/integration/benchmarks/exposure-context"
-    )
+    assert captured["url"] == "http://performance.example/integration/benchmarks/exposure-context"
     assert captured["request_kwargs"] == {"json": {"portfolio_id": "PB_001"}}
     assert captured["max_attempts"] == 4
     assert captured["retry_interval_seconds"] == 0.5

@@ -293,7 +293,9 @@ def _risk_free_context(
     )
 
 
-def _request_dependency_context(requested_metrics: list[str], dependency_metrics: set[str]) -> RollingRequestDependencyContext:
+def _request_dependency_context(
+    requested_metrics: list[str], dependency_metrics: set[str]
+) -> RollingRequestDependencyContext:
     requested = [metric for metric in requested_metrics if metric in dependency_metrics]
     return RollingRequestDependencyContext(
         requested=bool(requested),

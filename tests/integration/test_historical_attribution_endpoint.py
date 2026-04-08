@@ -421,9 +421,7 @@ def test_historical_attribution_stateful_active_risk_issuer_is_explicitly_gated(
     body = response.json()["error"]
     assert body["code"] == "INVALID_REQUEST"
     assert body["message"] == "Request validation failed"
-    assert any(
-        "grouping_dimension=ISSUER" in detail["msg"] for detail in body["details"]
-    )
+    assert any("grouping_dimension=ISSUER" in detail["msg"] for detail in body["details"])
     assert body["correlation_id"] == "corr-attr-active-issuer"
 
 

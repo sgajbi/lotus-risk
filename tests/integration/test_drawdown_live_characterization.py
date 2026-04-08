@@ -98,7 +98,9 @@ def test_live_stateful_drawdown_reconciles_with_upstream_returns() -> None:
         request_payload=returns_payload,
     )
     with httpx.Client(timeout=30.0) as client:
-        drawdown_response = client.post(f"{RISK_BASE_URL}/analytics/risk/drawdown", json=drawdown_payload)
+        drawdown_response = client.post(
+            f"{RISK_BASE_URL}/analytics/risk/drawdown", json=drawdown_payload
+        )
         drawdown_response.raise_for_status()
     drawdown_body = drawdown_response.json()
 

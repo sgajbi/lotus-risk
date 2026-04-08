@@ -313,9 +313,7 @@ def _build_response(payload: ConcentrationComputationInput) -> ConcentrationResp
     current_hhi = _compute_hhi(current_values)
     proposed_hhi = _compute_hhi(proposed_values) if proposed_values else current_hhi
 
-    current_top, current_top_n = _single_position_metrics(
-        current_values, top_n=payload.top_n
-    )
+    current_top, current_top_n = _single_position_metrics(current_values, top_n=payload.top_n)
     if proposed_values:
         proposed_top, proposed_top_n = _single_position_metrics(
             proposed_values, top_n=payload.top_n
@@ -325,9 +323,7 @@ def _build_response(payload: ConcentrationComputationInput) -> ConcentrationResp
 
     current_issuer_hhi = _compute_hhi(current_issuer_values)
     proposed_issuer_hhi = (
-        _compute_hhi(proposed_issuer_values)
-        if proposed_issuer_values
-        else current_issuer_hhi
+        _compute_hhi(proposed_issuer_values) if proposed_issuer_values else current_issuer_hhi
     )
 
     current_issuer_top, _ = _single_position_metrics(current_issuer_values, top_n=1)
@@ -432,7 +428,9 @@ def _extract_issuer_map(
             continue
         security_id = _as_str(row.get("security_id"))
         if grouping_level == IssuerGroupingLevel.ULTIMATE_PARENT:
-            issuer_id = _as_str(row.get("ultimate_parent_issuer_id")) or _as_str(row.get("issuer_id"))
+            issuer_id = _as_str(row.get("ultimate_parent_issuer_id")) or _as_str(
+                row.get("issuer_id")
+            )
             issuer_name = _as_str(row.get("ultimate_parent_issuer_name")) or _as_str(
                 row.get("issuer_name")
             )
@@ -861,10 +859,12 @@ async def calculate_concentration(
                             if not security_id:
                                 continue
                             if request.issuer_grouping_level == IssuerGroupingLevel.ULTIMATE_PARENT:
-                                issuer_id = _as_str(record.get("ultimate_parent_issuer_id")) or _as_str(record.get("issuer_id"))
-                                issuer_name = _as_str(record.get("ultimate_parent_issuer_name")) or _as_str(
-                                    record.get("issuer_name")
-                                )
+                                issuer_id = _as_str(
+                                    record.get("ultimate_parent_issuer_id")
+                                ) or _as_str(record.get("issuer_id"))
+                                issuer_name = _as_str(
+                                    record.get("ultimate_parent_issuer_name")
+                                ) or _as_str(record.get("issuer_name"))
                             else:
                                 issuer_id = _as_str(record.get("issuer_id"))
                                 issuer_name = _as_str(record.get("issuer_name"))
@@ -906,9 +906,7 @@ async def calculate_concentration(
             proposed_positions=proposed_positions if proposed_positions else current_positions,
             top_n=stateless_input.top_n,
             current_issuers=current_issuers,
-            proposed_issuers=(
-                proposed_issuers if proposed_issuers else current_issuers
-            ),
+            proposed_issuers=(proposed_issuers if proposed_issuers else current_issuers),
             covered_position_count_current=covered_current,
             covered_position_count_proposed=(
                 covered_proposed if proposed_positions else covered_current

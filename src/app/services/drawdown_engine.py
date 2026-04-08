@@ -256,9 +256,7 @@ def calculate_drawdown(
                     requested=include_benchmark is True,
                     applied=False,
                     reason=(
-                        "BENCHMARK_UNAVAILABLE"
-                        if include_benchmark is True
-                        else "NOT_REQUESTED"
+                        "BENCHMARK_UNAVAILABLE" if include_benchmark is True else "NOT_REQUESTED"
                     ),
                     aligned_observation_count=0,
                 ),

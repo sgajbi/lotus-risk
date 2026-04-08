@@ -400,20 +400,20 @@ class RollingWindowResult(BaseModel):
         description="Rolling metric summaries keyed by metric name.",
         json_schema_extra={
             "example": {
-                    "ROLLING_VOLATILITY": {
-                        "total_point_count": 90,
-                        "computed_point_count": 70,
-                        "coverage_ratio": 0.777778,
-                        "min_observations_required": 21,
-                        "warmup_point_count": 20,
-                        "non_computed_point_count": 20,
-                        "post_warmup_gap_point_count": 0,
-                        "latest_observation_date": "2026-03-31",
-                        "latest": 0.1374,
-                        "average": 0.1221,
-                        "minimum": 0.0913,
-                        "maximum": 0.1662,
-                        "p05": 0.0975,
+                "ROLLING_VOLATILITY": {
+                    "total_point_count": 90,
+                    "computed_point_count": 70,
+                    "coverage_ratio": 0.777778,
+                    "min_observations_required": 21,
+                    "warmup_point_count": 20,
+                    "non_computed_point_count": 20,
+                    "post_warmup_gap_point_count": 0,
+                    "latest_observation_date": "2026-03-31",
+                    "latest": 0.1374,
+                    "average": 0.1221,
+                    "minimum": 0.0913,
+                    "maximum": 0.1662,
+                    "p05": 0.0975,
                     "p50": 0.1218,
                     "p95": 0.1611,
                 }
@@ -461,7 +461,9 @@ class RollingBenchmarkContext(BaseModel):
         description="Whether benchmark return observations aligned with portfolio observations for requested rolling metrics.",
         json_schema_extra={"example": True},
     )
-    reason: Literal["NOT_REQUESTED", "BENCHMARK_UNAVAILABLE", "NO_ALIGNED_OBSERVATIONS", "APPLIED"] = Field(
+    reason: Literal[
+        "NOT_REQUESTED", "BENCHMARK_UNAVAILABLE", "NO_ALIGNED_OBSERVATIONS", "APPLIED"
+    ] = Field(
         description="Deterministic benchmark application outcome for the period.",
         json_schema_extra={"example": "APPLIED"},
     )
@@ -480,7 +482,9 @@ class RollingRiskFreeContext(BaseModel):
         description="Whether risk-free observations aligned with portfolio observations for rolling Sharpe.",
         json_schema_extra={"example": True},
     )
-    reason: Literal["NOT_REQUESTED", "RISK_FREE_UNAVAILABLE", "NO_ALIGNED_OBSERVATIONS", "APPLIED"] = Field(
+    reason: Literal[
+        "NOT_REQUESTED", "RISK_FREE_UNAVAILABLE", "NO_ALIGNED_OBSERVATIONS", "APPLIED"
+    ] = Field(
         description="Deterministic risk-free application outcome for the period.",
         json_schema_extra={"example": "APPLIED"},
     )
@@ -762,28 +766,28 @@ class RollingResponse(BaseModel):
                     "YTD": {
                         "start_date": "2026-01-01",
                         "end_date": "2026-03-31",
-                    "series_count": 90,
-                    "benchmark_series_count": 90,
-                    "aligned_benchmark_series_count": 90,
-                    "window_lengths_requested": [21],
-                    "window_count_requested": 1,
-                    "window_lengths_emitted": [21],
-                    "window_count_emitted": 1,
-                    "benchmark_context": {
-                        "requested": True,
-                        "available": True,
-                        "aligned": True,
-                        "reason": "APPLIED",
-                    },
-                    "risk_free_series_count": 0,
-                    "aligned_risk_free_series_count": 0,
-                    "risk_free_context": {
-                        "requested": False,
-                        "available": False,
-                        "aligned": False,
-                        "reason": "NOT_REQUESTED",
-                    },
-                    "window_results": [
+                        "series_count": 90,
+                        "benchmark_series_count": 90,
+                        "aligned_benchmark_series_count": 90,
+                        "window_lengths_requested": [21],
+                        "window_count_requested": 1,
+                        "window_lengths_emitted": [21],
+                        "window_count_emitted": 1,
+                        "benchmark_context": {
+                            "requested": True,
+                            "available": True,
+                            "aligned": True,
+                            "reason": "APPLIED",
+                        },
+                        "risk_free_series_count": 0,
+                        "aligned_risk_free_series_count": 0,
+                        "risk_free_context": {
+                            "requested": False,
+                            "available": False,
+                            "aligned": False,
+                            "reason": "NOT_REQUESTED",
+                        },
+                        "window_results": [
                             {
                                 "window_length": 21,
                                 "metric_summaries": {
