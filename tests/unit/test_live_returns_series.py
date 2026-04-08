@@ -3,7 +3,11 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from tests.support.live_returns_series import _request_json_with_retries, fetch_live_risk_free_series
+from tests.support.live_returns_series import (
+    _request_json_with_retries,
+    fetch_live_benchmark_exposure_context,
+    fetch_live_risk_free_series,
+)
 
 
 class _FakeClient:
@@ -88,3 +92,34 @@ def test_fetch_live_risk_free_series_uses_reference_endpoint(monkeypatch: pytest
     assert captured["request_kwargs"] == {"json": {"currency": "USD"}}
     assert captured["max_attempts"] == 7
     assert captured["retry_interval_seconds"] == 0.25
+
+
+def test_fetch_live_benchmark_exposure_context_uses_performance_endpoint(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {}
+
+    def _fake_request_json_with_retries(**kwargs: object) -> dict[str, object]:
+        captured.update(kwargs)
+        return {"rows": []}
+
+    monkeypatch.setattr(
+        "tests.support.live_returns_series._request_json_with_retries",
+        _fake_request_json_with_retries,
+    )
+
+    payload = fetch_live_benchmark_exposure_context(
+        base_url="http://performance.example",
+        request_payload={"portfolio_id": "PB_001"},
+        request_attempts=4,
+        retry_interval_seconds=0.5,
+    )
+
+    assert payload == {"rows": []}
+    assert captured["method"] == "POST"
+    assert (
+        captured["url"] == "http://performance.example/integration/benchmarks/exposure-context"
+    )
+    assert captured["request_kwargs"] == {"json": {"portfolio_id": "PB_001"}}
+    assert captured["max_attempts"] == 4
+    assert captured["retry_interval_seconds"] == 0.5

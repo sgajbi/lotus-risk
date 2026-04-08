@@ -133,3 +133,10 @@ Provide decomposition of historical realized risk and active risk into transpare
   - `ISSUER`
 - gate reason:
   - benchmark issuer exposure semantics unavailable from the lotus-performance benchmark exposure context
+
+## Live Validation Note
+
+- live platform characterization currently confirms:
+  - lotus-performance benchmark exposure context works for supported stateful dimensions such as `SECTOR`
+  - lotus-performance benchmark exposure context rejects `grouping_dimensions=["ISSUER"]`
+  - lotus-risk rejects stateful `ACTIVE_RISK` + `ISSUER` at request validation with HTTP `422`
