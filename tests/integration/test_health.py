@@ -350,6 +350,34 @@ def test_risk_calculate_openapi_examples_are_present_and_canonical() -> None:
     assert response_schema["example"]["metadata"]["var_horizon_days"] == 4
 
 
+def test_rolling_openapi_examples_are_present_and_canonical() -> None:
+    client = TestClient(app)
+    spec = client.get("/openapi.json").json()
+    request_schema = spec["components"]["schemas"]["RollingAnalyticsRequest"]
+    response_schema = spec["components"]["schemas"]["RollingResponse"]
+
+    assert request_schema["properties"]["input_mode"]["example"] == "stateless"
+    assert request_schema["properties"]["stateful_input"]["example"]["rolling_options"][
+        "window_lengths"
+    ] == [21, 63]
+    assert request_schema["properties"]["stateful_input"]["example"]["rolling_options"][
+        "metrics"
+    ] == [
+        "ROLLING_VOLATILITY",
+        "ROLLING_BETA",
+        "ROLLING_TRACKING_ERROR",
+    ]
+    assert response_schema["example"]["input_mode"] == "stateful"
+    assert response_schema["example"]["results"]["YTD"]["window_results"][0]["window_length"] == 21
+    assert (
+        response_schema["example"]["results"]["YTD"]["window_results"][0]["metric_summaries"][
+            "ROLLING_TRACKING_ERROR"
+        ]["latest"]
+        > 0
+    )
+    assert response_schema["example"]["metadata"]["alignment_policy"] == "INNER_JOIN"
+
+
 def test_concentration_rejects_legacy_payload_shape() -> None:
     client = TestClient(app)
     response = client.post(

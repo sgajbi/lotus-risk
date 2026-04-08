@@ -624,7 +624,9 @@ async def analytics_risk_drawdown(
     tags=["risk-analytics"],
     description=(
         "Calculates rolling-window historical risk diagnostics including volatility, Sharpe, beta, "
-        "tracking error, information ratio, and rolling max drawdown."
+        "tracking error, information ratio, and rolling max drawdown. Supports stateless and "
+        "stateful execution, explicit rolling window configuration, benchmark-aware metrics, and "
+        "optional rolling time-series emission."
     ),
 )
 async def analytics_risk_rolling_metrics(

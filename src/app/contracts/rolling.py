@@ -251,6 +251,18 @@ class RollingAnalyticsRequest(BaseModel):
                 "portfolio_id": "DEMO_DPM_EUR_001",
                 "as_of_date": "2026-02-28",
                 "periods": [{"type": "YTD", "name": "YTD"}],
+                "rolling_options": {
+                    "window_lengths": [21, 63],
+                    "metrics": [
+                        "ROLLING_VOLATILITY",
+                        "ROLLING_BETA",
+                        "ROLLING_TRACKING_ERROR",
+                    ],
+                    "annualization_basis": 252,
+                    "min_observations_policy": "STRICT",
+                    "alignment_policy": "INNER_JOIN",
+                    "include_time_series": False,
+                },
             }
         },
     )
@@ -453,4 +465,68 @@ class RollingResponse(BaseModel):
                 "alignment_policy": "INNER_JOIN",
             }
         },
+    )
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "source_service": "lotus-risk",
+                "input_mode": "stateful",
+                "scope": {
+                    "as_of_date": "2026-03-31",
+                    "reporting_currency": "USD",
+                    "net_or_gross": "NET",
+                },
+                "results": {
+                    "YTD": {
+                        "start_date": "2026-01-01",
+                        "end_date": "2026-03-31",
+                        "series_count": 90,
+                        "window_results": [
+                            {
+                                "window_length": 21,
+                                "metric_summaries": {
+                                    "ROLLING_VOLATILITY": {
+                                        "latest": 0.12538011,
+                                        "average": 0.11844792,
+                                        "minimum": 0.09122408,
+                                        "maximum": 0.16651142,
+                                        "p05": 0.09540187,
+                                        "p50": 0.11793054,
+                                        "p95": 0.15541828,
+                                    },
+                                    "ROLLING_BETA": {
+                                        "latest": -0.08222479,
+                                        "average": 0.04185233,
+                                        "minimum": -0.32108851,
+                                        "maximum": 0.41862514,
+                                        "p05": -0.24148062,
+                                        "p50": 0.05739184,
+                                        "p95": 0.31680427,
+                                    },
+                                    "ROLLING_TRACKING_ERROR": {
+                                        "latest": 0.09793316,
+                                        "average": 0.08741941,
+                                        "minimum": 0.05266133,
+                                        "maximum": 0.12807142,
+                                        "p05": 0.05824015,
+                                        "p50": 0.08653728,
+                                        "p95": 0.12150684,
+                                    },
+                                },
+                                "metric_series": None,
+                            }
+                        ],
+                        "quality_flags": [],
+                        "error": None,
+                    }
+                },
+                "metadata": {
+                    "contract_version": "v1",
+                    "methodology_version": "rolling_metrics.v1",
+                    "annualization_basis": 252,
+                    "alignment_policy": "INNER_JOIN",
+                },
+            }
+        }
     )
