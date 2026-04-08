@@ -421,6 +421,11 @@ class RollingPeriodResult(BaseModel):
         description="Number of risk-free observations available in this period.",
         json_schema_extra={"example": 41},
     )
+    aligned_risk_free_series_count: int = Field(
+        default=0,
+        description="Number of aligned portfolio/risk-free observations available for rolling Sharpe.",
+        json_schema_extra={"example": 41},
+    )
     window_results: list[RollingWindowResult] = Field(
         default_factory=list,
         description="Rolling window results for this period.",
@@ -490,6 +495,7 @@ class RollingResponse(BaseModel):
                     "benchmark_series_count": 41,
                     "aligned_benchmark_series_count": 41,
                     "risk_free_series_count": 41,
+                    "aligned_risk_free_series_count": 41,
                     "window_results": [],
                     "quality_flags": [],
                     "error": None,
@@ -523,11 +529,12 @@ class RollingResponse(BaseModel):
                     "YTD": {
                         "start_date": "2026-01-01",
                         "end_date": "2026-03-31",
-                        "series_count": 90,
-                        "benchmark_series_count": 90,
-                        "aligned_benchmark_series_count": 90,
-                        "risk_free_series_count": 0,
-                        "window_results": [
+                    "series_count": 90,
+                    "benchmark_series_count": 90,
+                    "aligned_benchmark_series_count": 90,
+                    "risk_free_series_count": 0,
+                    "aligned_risk_free_series_count": 0,
+                    "window_results": [
                             {
                                 "window_length": 21,
                                 "metric_summaries": {

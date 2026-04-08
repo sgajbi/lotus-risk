@@ -253,6 +253,7 @@ def calculate_rolling_metrics(
                 benchmark_series_count=0,
                 aligned_benchmark_series_count=0,
                 risk_free_series_count=0,
+                aligned_risk_free_series_count=0,
                 window_results=[],
                 quality_flags=[],
                 error="Insufficient data",
@@ -274,6 +275,7 @@ def calculate_rolling_metrics(
         window_results: list[RollingWindowResult] = []
         period_flags: set[str] = set()
         aligned_benchmark_series_count = 0
+        aligned_risk_free_series_count = 0
 
         for window_length in options.window_lengths:
             min_obs = _min_observations(window_length, options.min_observations_policy)
@@ -288,7 +290,7 @@ def calculate_rolling_metrics(
                         min_obs=min_obs,
                     )
                 elif metric_name == ROLLING_SHARPE_METRIC:
-                    metric_values, flags, _ = _rolling_sharpe(
+                    metric_values, flags, aligned_count = _rolling_sharpe(
                         portfolio_period,
                         risk_free_period,
                         window_length=window_length,
@@ -297,6 +299,10 @@ def calculate_rolling_metrics(
                     )
                     metric_series_map[metric_name] = metric_values
                     period_flags.update(flags)
+                    aligned_risk_free_series_count = max(
+                        aligned_risk_free_series_count,
+                        aligned_count,
+                    )
                 elif metric_name in ROLLING_BENCHMARK_METRICS:
                     metric_values, flags, aligned_count = _rolling_benchmark_metrics(
                         metric_name,
@@ -344,6 +350,7 @@ def calculate_rolling_metrics(
             benchmark_series_count=len(benchmark_period),
             aligned_benchmark_series_count=aligned_benchmark_series_count,
             risk_free_series_count=len(risk_free_period),
+            aligned_risk_free_series_count=aligned_risk_free_series_count,
             window_results=window_results,
             quality_flags=sorted(period_flags),
             error=None,

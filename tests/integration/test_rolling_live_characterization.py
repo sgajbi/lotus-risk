@@ -132,6 +132,7 @@ def test_live_stateful_rolling_reconciles_selected_metrics() -> None:
     assert period["benchmark_series_count"] == len(benchmark)
     assert period["aligned_benchmark_series_count"] == len(aligned)
     assert period["risk_free_series_count"] == 0
+    assert period["aligned_risk_free_series_count"] == 0
     assert body["metadata"]["annualization_basis"] == ANNUALIZATION_BASIS
     assert body["metadata"]["alignment_policy"] == "INNER_JOIN"
     assert period["quality_flags"] == []
