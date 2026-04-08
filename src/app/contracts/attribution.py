@@ -31,6 +31,14 @@ def _default_groupings() -> list[GroupingDimension]:
     return ["POSITION"]
 
 
+def _default_stateful_active_risk_supported_groupings() -> list[GroupingDimension]:
+    return ["POSITION", "SECTOR", "ASSET_CLASS"]
+
+
+def _default_stateful_active_risk_gated_groupings() -> list[GroupingDimension]:
+    return ["ISSUER"]
+
+
 class AttributionOptions(BaseModel):
     attribution_types: list[AttributionType] = Field(
         default_factory=_default_attribution_types,
@@ -503,12 +511,12 @@ class HistoricalAttributionMetadata(BaseModel):
         json_schema_extra={"example": "STRICT"},
     )
     stateful_active_risk_supported_grouping_dimensions: list[GroupingDimension] = Field(
-        default_factory=lambda: ["POSITION", "SECTOR", "ASSET_CLASS"],
+        default_factory=_default_stateful_active_risk_supported_groupings,
         description="Grouping dimensions currently supported for stateful ACTIVE_RISK attribution.",
         json_schema_extra={"example": ["POSITION", "SECTOR", "ASSET_CLASS"]},
     )
     stateful_active_risk_gated_grouping_dimensions: list[GroupingDimension] = Field(
-        default_factory=lambda: ["ISSUER"],
+        default_factory=_default_stateful_active_risk_gated_groupings,
         description="Grouping dimensions intentionally gated for stateful ACTIVE_RISK attribution.",
         json_schema_extra={"example": ["ISSUER"]},
     )

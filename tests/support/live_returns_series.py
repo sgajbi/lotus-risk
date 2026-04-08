@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, cast
 
 import httpx
 
@@ -12,7 +12,7 @@ RETRYABLE_STATUS_CODES = {502, 503, 504}
 
 def _request_json_with_retries(
     *,
-    client: httpx.Client,
+    client: Any,
     method: str,
     url: str,
     request_kwargs: dict[str, Any] | None = None,
@@ -25,7 +25,7 @@ def _request_json_with_retries(
         response = client.request(method, url, **kwargs)
         if response.status_code not in RETRYABLE_STATUS_CODES:
             response.raise_for_status()
-            return response.json()
+            return cast(dict[str, Any], response.json())
         last_response = response
         if attempt < max_attempts - 1:
             time.sleep(retry_interval_seconds)
@@ -116,7 +116,7 @@ def extract_decimal_returns(rows: Sequence[dict[str, Any]]) -> list[tuple[str, f
     for row in rows:
         date_value = row.get("date")
         return_value = row.get("return_value")
-        if not isinstance(date_value, str):
+        if not isinstance(date_value, str) or return_value is None:
             continue
         result.append((date_value, float(return_value)))
     return result

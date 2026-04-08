@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import date
 from math import sqrt
 from collections.abc import Sequence
-from typing import cast
+from typing import Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -195,7 +195,7 @@ def _build_metadata(
     *,
     analysis_options: DrawdownAnalysisOptions,
     include_benchmark: bool | None,
-    missing_benchmark_policy: str | None,
+    missing_benchmark_policy: Literal["IGNORE", "REQUIRE"] | None,
 ) -> DrawdownMetadata:
     return DrawdownMetadata(
         include_underwater_series=analysis_options.include_underwater_series,
@@ -215,7 +215,7 @@ def calculate_drawdown(
     input_mode: DrawdownInputMode,
     analysis_options: DrawdownAnalysisOptions,
     include_benchmark: bool | None = None,
-    missing_benchmark_policy: str | None = None,
+    missing_benchmark_policy: Literal["IGNORE", "REQUIRE"] | None = None,
 ) -> DrawdownResponse:
     returns_df = _build_returns_df(request.returns)
     benchmark_df = _build_returns_df(request.benchmark_returns)
