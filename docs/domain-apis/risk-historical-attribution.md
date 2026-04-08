@@ -137,6 +137,7 @@ Provide decomposition of historical realized risk and active risk into transpare
 ## Live Validation Note
 
 - live platform characterization currently confirms:
+  - lotus-risk stateful `ACTIVE_RISK` works live for supported grouping dimensions such as `SECTOR`
   - lotus-performance benchmark exposure context works for supported stateful dimensions such as `SECTOR`
   - lotus-performance benchmark exposure context rejects `grouping_dimensions=["ISSUER"]`
   - lotus-risk rejects stateful `ACTIVE_RISK` + `ISSUER` at request validation with HTTP `422`
