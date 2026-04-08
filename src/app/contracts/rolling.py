@@ -393,6 +393,44 @@ class RollingWindowResult(BaseModel):
     )
 
 
+class RollingBenchmarkContext(BaseModel):
+    requested: bool = Field(
+        description="Whether any benchmark-dependent rolling metrics were requested for this period.",
+        json_schema_extra={"example": True},
+    )
+    available: bool = Field(
+        description="Whether benchmark return observations were available in this period.",
+        json_schema_extra={"example": True},
+    )
+    aligned: bool = Field(
+        description="Whether benchmark return observations aligned with portfolio observations for requested rolling metrics.",
+        json_schema_extra={"example": True},
+    )
+    reason: Literal["NOT_REQUESTED", "BENCHMARK_UNAVAILABLE", "NO_ALIGNED_OBSERVATIONS", "APPLIED"] = Field(
+        description="Deterministic benchmark application outcome for the period.",
+        json_schema_extra={"example": "APPLIED"},
+    )
+
+
+class RollingRiskFreeContext(BaseModel):
+    requested: bool = Field(
+        description="Whether rolling Sharpe was requested for this period.",
+        json_schema_extra={"example": True},
+    )
+    available: bool = Field(
+        description="Whether risk-free observations were available in this period.",
+        json_schema_extra={"example": True},
+    )
+    aligned: bool = Field(
+        description="Whether risk-free observations aligned with portfolio observations for rolling Sharpe.",
+        json_schema_extra={"example": True},
+    )
+    reason: Literal["NOT_REQUESTED", "RISK_FREE_UNAVAILABLE", "NO_ALIGNED_OBSERVATIONS", "APPLIED"] = Field(
+        description="Deterministic risk-free application outcome for the period.",
+        json_schema_extra={"example": "APPLIED"},
+    )
+
+
 class RollingPeriodResult(BaseModel):
     start_date: dt.date = Field(
         description="Resolved period start date.",
@@ -425,6 +463,28 @@ class RollingPeriodResult(BaseModel):
         default=0,
         description="Number of aligned portfolio/risk-free observations available for rolling Sharpe.",
         json_schema_extra={"example": 41},
+    )
+    benchmark_context: RollingBenchmarkContext = Field(
+        description="Benchmark application context for benchmark-dependent rolling metrics in this period.",
+        json_schema_extra={
+            "example": {
+                "requested": True,
+                "available": True,
+                "aligned": True,
+                "reason": "APPLIED",
+            }
+        },
+    )
+    risk_free_context: RollingRiskFreeContext = Field(
+        description="Risk-free application context for rolling Sharpe in this period.",
+        json_schema_extra={
+            "example": {
+                "requested": False,
+                "available": False,
+                "aligned": False,
+                "reason": "NOT_REQUESTED",
+            }
+        },
     )
     window_results: list[RollingWindowResult] = Field(
         default_factory=list,
@@ -494,8 +554,20 @@ class RollingResponse(BaseModel):
                     "series_count": 41,
                     "benchmark_series_count": 41,
                     "aligned_benchmark_series_count": 41,
+                    "benchmark_context": {
+                        "requested": True,
+                        "available": True,
+                        "aligned": True,
+                        "reason": "APPLIED",
+                    },
                     "risk_free_series_count": 41,
                     "aligned_risk_free_series_count": 41,
+                    "risk_free_context": {
+                        "requested": True,
+                        "available": True,
+                        "aligned": True,
+                        "reason": "APPLIED",
+                    },
                     "window_results": [],
                     "quality_flags": [],
                     "error": None,
@@ -532,8 +604,20 @@ class RollingResponse(BaseModel):
                     "series_count": 90,
                     "benchmark_series_count": 90,
                     "aligned_benchmark_series_count": 90,
+                    "benchmark_context": {
+                        "requested": True,
+                        "available": True,
+                        "aligned": True,
+                        "reason": "APPLIED",
+                    },
                     "risk_free_series_count": 0,
                     "aligned_risk_free_series_count": 0,
+                    "risk_free_context": {
+                        "requested": False,
+                        "available": False,
+                        "aligned": False,
+                        "reason": "NOT_REQUESTED",
+                    },
                     "window_results": [
                             {
                                 "window_length": 21,

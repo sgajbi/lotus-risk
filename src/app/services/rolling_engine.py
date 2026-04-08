@@ -10,10 +10,12 @@ import pandas as pd
 from app.contracts.rolling import (
     ROLLING_BENCHMARK_METRICS,
     RollingInputMode,
+    RollingBenchmarkContext,
     RollingMetadata,
     RollingMetricSeriesPoint,
     RollingMetricSummary,
     RollingPeriodResult,
+    RollingRiskFreeContext,
     RollingResponse,
     RollingStatelessInput,
     RollingWindowResult,
@@ -208,6 +210,76 @@ def _window_series_points(
     ]
 
 
+def _benchmark_context(
+    requested_metrics: list[str],
+    benchmark_series_count: int,
+    aligned_benchmark_series_count: int,
+) -> RollingBenchmarkContext:
+    requested = any(metric in ROLLING_BENCHMARK_METRICS for metric in requested_metrics)
+    if not requested:
+        return RollingBenchmarkContext(
+            requested=False,
+            available=False,
+            aligned=False,
+            reason="NOT_REQUESTED",
+        )
+    if benchmark_series_count == 0:
+        return RollingBenchmarkContext(
+            requested=True,
+            available=False,
+            aligned=False,
+            reason="BENCHMARK_UNAVAILABLE",
+        )
+    if aligned_benchmark_series_count == 0:
+        return RollingBenchmarkContext(
+            requested=True,
+            available=True,
+            aligned=False,
+            reason="NO_ALIGNED_OBSERVATIONS",
+        )
+    return RollingBenchmarkContext(
+        requested=True,
+        available=True,
+        aligned=True,
+        reason="APPLIED",
+    )
+
+
+def _risk_free_context(
+    requested_metrics: list[str],
+    risk_free_series_count: int,
+    aligned_risk_free_series_count: int,
+) -> RollingRiskFreeContext:
+    requested = ROLLING_SHARPE_METRIC in requested_metrics
+    if not requested:
+        return RollingRiskFreeContext(
+            requested=False,
+            available=False,
+            aligned=False,
+            reason="NOT_REQUESTED",
+        )
+    if risk_free_series_count == 0:
+        return RollingRiskFreeContext(
+            requested=True,
+            available=False,
+            aligned=False,
+            reason="RISK_FREE_UNAVAILABLE",
+        )
+    if aligned_risk_free_series_count == 0:
+        return RollingRiskFreeContext(
+            requested=True,
+            available=True,
+            aligned=False,
+            reason="NO_ALIGNED_OBSERVATIONS",
+        )
+    return RollingRiskFreeContext(
+        requested=True,
+        available=True,
+        aligned=True,
+        reason="APPLIED",
+    )
+
+
 def calculate_rolling_metrics(
     request: RollingStatelessInput,
     *,
@@ -254,6 +326,8 @@ def calculate_rolling_metrics(
                 aligned_benchmark_series_count=0,
                 risk_free_series_count=0,
                 aligned_risk_free_series_count=0,
+                benchmark_context=_benchmark_context(requested_metrics, 0, 0),
+                risk_free_context=_risk_free_context(requested_metrics, 0, 0),
                 window_results=[],
                 quality_flags=[],
                 error="Insufficient data",
@@ -351,6 +425,16 @@ def calculate_rolling_metrics(
             aligned_benchmark_series_count=aligned_benchmark_series_count,
             risk_free_series_count=len(risk_free_period),
             aligned_risk_free_series_count=aligned_risk_free_series_count,
+            benchmark_context=_benchmark_context(
+                requested_metrics,
+                len(benchmark_period),
+                aligned_benchmark_series_count,
+            ),
+            risk_free_context=_risk_free_context(
+                requested_metrics,
+                len(risk_free_period),
+                aligned_risk_free_series_count,
+            ),
             window_results=window_results,
             quality_flags=sorted(period_flags),
             error=None,

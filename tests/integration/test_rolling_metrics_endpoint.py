@@ -78,6 +78,18 @@ def test_rolling_metrics_endpoint_stateless_contract() -> None:
     assert body["results"]["YTD"]["aligned_benchmark_series_count"] == 4
     assert body["results"]["YTD"]["risk_free_series_count"] == 4
     assert body["results"]["YTD"]["aligned_risk_free_series_count"] == 4
+    assert body["results"]["YTD"]["benchmark_context"] == {
+        "requested": True,
+        "available": True,
+        "aligned": True,
+        "reason": "APPLIED",
+    }
+    assert body["results"]["YTD"]["risk_free_context"] == {
+        "requested": True,
+        "available": True,
+        "aligned": True,
+        "reason": "APPLIED",
+    }
     window = body["results"]["YTD"]["window_results"][0]
     assert window["window_length"] == 3
     assert "ROLLING_VOLATILITY" in window["metric_summaries"]
@@ -160,6 +172,8 @@ def test_rolling_metrics_endpoint_stateful_uses_lotus_performance() -> None:
     assert body["results"]["YTD"]["aligned_benchmark_series_count"] == 3
     assert body["results"]["YTD"]["risk_free_series_count"] == 3
     assert body["results"]["YTD"]["aligned_risk_free_series_count"] == 3
+    assert body["results"]["YTD"]["benchmark_context"]["reason"] == "APPLIED"
+    assert body["results"]["YTD"]["risk_free_context"]["reason"] == "APPLIED"
 
 
 def test_rolling_metrics_endpoint_stateful_surfaces_missing_risk_free_after_currency_resolution() -> (
