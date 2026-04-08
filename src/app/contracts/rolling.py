@@ -371,6 +371,26 @@ class RollingMetricSeriesPoint(BaseModel):
     )
 
 
+class RollingMetricSeriesContext(BaseModel):
+    requested: bool = Field(
+        description="Whether rolling time-series points were requested for this window.",
+        json_schema_extra={"example": True},
+    )
+    included: bool = Field(
+        description="Whether rolling time-series points are included in the response for this window.",
+        json_schema_extra={"example": True},
+    )
+    emitted_point_count: int = Field(
+        default=0,
+        description="Number of time-series points emitted for this window.",
+        json_schema_extra={"example": 90},
+    )
+    reason: Literal["INCLUDED", "OMITTED_BY_REQUEST", "NO_METRIC_SERIES"] = Field(
+        description="Deterministic reason for time-series inclusion behavior in this window.",
+        json_schema_extra={"example": "INCLUDED"},
+    )
+
+
 class RollingWindowResult(BaseModel):
     window_length: int = Field(
         description="Rolling window length in observations.",
@@ -413,6 +433,17 @@ class RollingWindowResult(BaseModel):
                     },
                 }
             ]
+        },
+    )
+    metric_series_context: RollingMetricSeriesContext = Field(
+        description="Time-series inclusion context for this rolling window.",
+        json_schema_extra={
+            "example": {
+                "requested": True,
+                "included": True,
+                "emitted_point_count": 90,
+                "reason": "INCLUDED",
+            }
         },
     )
 
@@ -741,6 +772,12 @@ class RollingResponse(BaseModel):
                                         "p50": 0.08653728,
                                         "p95": 0.12150684,
                                     },
+                                },
+                                "metric_series_context": {
+                                    "requested": False,
+                                    "included": False,
+                                    "emitted_point_count": 0,
+                                    "reason": "OMITTED_BY_REQUEST",
                                 },
                                 "metric_series": None,
                             }

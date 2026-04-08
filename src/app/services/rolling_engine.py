@@ -13,6 +13,7 @@ from app.contracts.rolling import (
     RollingBenchmarkContext,
     RollingMetadata,
     RollingMetricSeriesPoint,
+    RollingMetricSeriesContext,
     RollingMetricSummary,
     RollingPeriodResult,
     RollingRequestDependencyContext,
@@ -300,6 +301,34 @@ def _request_dependency_context(requested_metrics: list[str], dependency_metrics
     )
 
 
+def _metric_series_context(
+    *,
+    include_time_series: bool,
+    metric_points: list[RollingMetricSeriesPoint] | None,
+) -> RollingMetricSeriesContext:
+    emitted_point_count = len(metric_points or [])
+    if not include_time_series:
+        return RollingMetricSeriesContext(
+            requested=False,
+            included=False,
+            emitted_point_count=0,
+            reason="OMITTED_BY_REQUEST",
+        )
+    if emitted_point_count == 0:
+        return RollingMetricSeriesContext(
+            requested=True,
+            included=False,
+            emitted_point_count=0,
+            reason="NO_METRIC_SERIES",
+        )
+    return RollingMetricSeriesContext(
+        requested=True,
+        included=True,
+        emitted_point_count=emitted_point_count,
+        reason="INCLUDED",
+    )
+
+
 def calculate_rolling_metrics(
     request: RollingStatelessInput,
     *,
@@ -443,6 +472,10 @@ def calculate_rolling_metrics(
                     window_length=window_length,
                     metric_summaries=summaries,
                     metric_series=metric_points,
+                    metric_series_context=_metric_series_context(
+                        include_time_series=options.include_time_series,
+                        metric_points=metric_points,
+                    ),
                 )
             )
 

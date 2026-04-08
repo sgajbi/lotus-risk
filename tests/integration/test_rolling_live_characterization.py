@@ -168,6 +168,13 @@ def test_live_stateful_rolling_reconciles_selected_metrics() -> None:
     assert body["metadata"]["alignment_policy"] == "INNER_JOIN"
     assert period["quality_flags"] == []
     assert period["error"] is None
+    assert window["metric_series"] is None
+    assert window["metric_series_context"] == {
+        "requested": False,
+        "included": False,
+        "emitted_point_count": 0,
+        "reason": "OMITTED_BY_REQUEST",
+    }
 
     for metric_name, expected in {
         "ROLLING_VOLATILITY": _summary(rolling_volatility),

@@ -104,6 +104,12 @@ def test_rolling_metrics_endpoint_stateless_contract() -> None:
     }
     window = body["results"]["YTD"]["window_results"][0]
     assert window["window_length"] == 3
+    assert window["metric_series_context"] == {
+        "requested": True,
+        "included": True,
+        "emitted_point_count": 4,
+        "reason": "INCLUDED",
+    }
     assert "ROLLING_VOLATILITY" in window["metric_summaries"]
     summary = window["metric_summaries"]["ROLLING_VOLATILITY"]
     assert summary["total_point_count"] == 4
@@ -198,6 +204,13 @@ def test_rolling_metrics_endpoint_stateful_uses_lotus_performance() -> None:
     assert body["results"]["YTD"]["aligned_risk_free_series_count"] == 3
     assert body["results"]["YTD"]["benchmark_context"]["reason"] == "APPLIED"
     assert body["results"]["YTD"]["risk_free_context"]["reason"] == "APPLIED"
+    assert body["results"]["YTD"]["window_results"][0]["metric_series"] is None
+    assert body["results"]["YTD"]["window_results"][0]["metric_series_context"] == {
+        "requested": False,
+        "included": False,
+        "emitted_point_count": 0,
+        "reason": "OMITTED_BY_REQUEST",
+    }
 
 
 def test_rolling_metrics_endpoint_stateful_surfaces_missing_risk_free_after_currency_resolution() -> (

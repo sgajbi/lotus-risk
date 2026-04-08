@@ -378,6 +378,12 @@ def test_rolling_openapi_examples_are_present_and_canonical() -> None:
     assert response_schema["example"]["metadata"]["risk_free_context"]["requested"] is False
     assert response_schema["example"]["results"]["YTD"]["window_results"][0]["window_length"] == 21
     assert (
+        response_schema["example"]["results"]["YTD"]["window_results"][0]["metric_series_context"][
+            "reason"
+        ]
+        == "OMITTED_BY_REQUEST"
+    )
+    assert (
         response_schema["example"]["results"]["YTD"]["window_results"][0]["metric_summaries"][
             "ROLLING_VOLATILITY"
         ]["total_point_count"]
