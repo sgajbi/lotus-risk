@@ -85,4 +85,6 @@ async def calculate_drawdown_stateful(
         stateless,
         input_mode=DrawdownInputMode.STATEFUL,
         analysis_options=analysis_options,
+        include_benchmark=stateful.benchmark_policy.include_benchmark,
+        missing_benchmark_policy=stateful.benchmark_policy.missing_benchmark_policy,
     )

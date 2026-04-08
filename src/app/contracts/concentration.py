@@ -28,6 +28,11 @@ class CurrentPosition(BaseModel):
         description="Canonical security identifier in the baseline portfolio state.",
         json_schema_extra={"example": "AAPL.US"},
     )
+    security_name: str | None = Field(
+        default=None,
+        description="Optional security display name for user-facing concentration interpretation.",
+        json_schema_extra={"example": "Apple Inc."},
+    )
     quantity: float | None = Field(
         default=None,
         description="Baseline quantity for the position.",
@@ -59,6 +64,11 @@ class ProjectedPosition(BaseModel):
     security_id: str = Field(
         description="Canonical security identifier in the projected portfolio state.",
         json_schema_extra={"example": "AAPL.US"},
+    )
+    security_name: str | None = Field(
+        default=None,
+        description="Optional projected security display name for user-facing concentration interpretation.",
+        json_schema_extra={"example": "Apple Inc."},
     )
     proposed_quantity: float | None = Field(
         default=None,
@@ -325,7 +335,78 @@ class ConcentrationRequest(BaseModel):
         json_schema_extra={"example": "merge_caller_then_core"},
     )
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {
+                    "input_mode": "stateless",
+                    "issuer_grouping_level": "legal_issuer",
+                    "enrichment_policy": "use_caller_only",
+                    "stateless_input": {
+                        "current_positions": [
+                            {
+                                "security_id": "AAA",
+                                "security_name": "Alpha Fund",
+                                "quantity": 50,
+                                "issuer_id": "ISSUER_ALPHA",
+                            },
+                            {
+                                "security_id": "BBB",
+                                "security_name": "Beta Bond",
+                                "quantity": 30,
+                                "issuer_id": "ISSUER_BETA",
+                            },
+                        ],
+                        "projected_positions": [
+                            {
+                                "security_id": "AAA",
+                                "security_name": "Alpha Fund",
+                                "proposed_quantity": 45,
+                                "issuer_id": "ISSUER_ALPHA",
+                            },
+                            {
+                                "security_id": "BBB",
+                                "security_name": "Beta Bond",
+                                "proposed_quantity": 35,
+                                "issuer_id": "ISSUER_BETA",
+                            },
+                        ],
+                        "top_n": 2,
+                    },
+                },
+                {
+                    "input_mode": "stateful",
+                    "issuer_grouping_level": "ultimate_parent",
+                    "enrichment_policy": "merge_caller_then_core",
+                    "stateful_input": {
+                        "portfolio_id": "PB_SG_GLOBAL_BAL_001",
+                        "as_of_date": "2026-03-31",
+                        "reporting_currency": "USD",
+                        "include_cash_positions": True,
+                        "include_zero_quantity_positions": False,
+                        "top_n": 10,
+                    },
+                },
+                {
+                    "input_mode": "simulation",
+                    "issuer_grouping_level": "ultimate_parent",
+                    "simulation_input": {
+                        "portfolio_id": "PB_SG_GLOBAL_BAL_001",
+                        "as_of_date": "2026-03-31",
+                        "top_n": 10,
+                        "simulation_changes": [
+                            {
+                                "security_id": "FO_EQ_AAPL_US",
+                                "transaction_type": "BUY",
+                                "quantity": 10,
+                            }
+                        ],
+                    },
+                },
+            ]
+        },
+    )
 
     @model_validator(mode="after")
     def normalize_and_validate(self) -> "ConcentrationRequest":
@@ -385,6 +466,60 @@ class SinglePositionConcentration(BaseModel):
         description="Top-N parameter used for cumulative concentration calculations.",
         json_schema_extra={"example": 10},
     )
+    top_position_current: "TopPositionDriver" = Field(
+        description="Top baseline position driver with identifier and display metadata.",
+        json_schema_extra={
+            "example": {
+                "security_id": "FO_FUND_PIMCO_INC",
+                "security_name": "PIMCO GIS Income Fund",
+                "weight": 0.23014,
+            }
+        },
+    )
+    top_position_proposed: "TopPositionDriver" = Field(
+        description="Top proposed position driver with identifier and display metadata.",
+        json_schema_extra={
+            "example": {
+                "security_id": "FO_FUND_PIMCO_INC",
+                "security_name": "PIMCO GIS Income Fund",
+                "weight": 0.22968,
+            }
+        },
+    )
+
+
+class TopPositionDriver(BaseModel):
+    security_id: str | None = Field(
+        default=None,
+        description="Security identifier of the top concentration-driving position.",
+        json_schema_extra={"example": "FO_FUND_PIMCO_INC"},
+    )
+    security_name: str | None = Field(
+        default=None,
+        description="Display name of the top concentration-driving position when available.",
+        json_schema_extra={"example": "PIMCO GIS Income Fund"},
+    )
+    weight: float = Field(
+        description="Portfolio weight of the top concentration-driving position.",
+        json_schema_extra={"example": 0.23014},
+    )
+
+
+class TopIssuerDriver(BaseModel):
+    issuer_id: str | None = Field(
+        default=None,
+        description="Issuer identifier of the top concentration-driving issuer bucket.",
+        json_schema_extra={"example": "ULTIMATE_PIMCO"},
+    )
+    issuer_name: str | None = Field(
+        default=None,
+        description="Display name of the top concentration-driving issuer bucket when available.",
+        json_schema_extra={"example": "Pacific Investment Management Company LLC"},
+    )
+    weight: float = Field(
+        description="Portfolio weight of the top concentration-driving issuer bucket.",
+        json_schema_extra={"example": 0.245075},
+    )
 
 
 class IssuerCoverageStatus(str, Enum):
@@ -438,10 +573,46 @@ class IssuerConcentration(BaseModel):
         description="Total proposed positions evaluated for issuer coverage.",
         json_schema_extra={"example": 31},
     )
+    uncovered_position_count_current: int = Field(
+        description="Baseline positions without issuer coverage after enrichment resolution.",
+        json_schema_extra={"example": 5},
+    )
+    uncovered_position_count_proposed: int = Field(
+        description="Proposed positions without issuer coverage after enrichment resolution.",
+        json_schema_extra={"example": 4},
+    )
+    coverage_ratio_current: float = Field(
+        description="Covered baseline positions divided by total baseline positions.",
+        json_schema_extra={"example": 0.833333},
+    )
+    coverage_ratio_proposed: float = Field(
+        description="Covered proposed positions divided by total proposed positions.",
+        json_schema_extra={"example": 0.870968},
+    )
     note: str | None = Field(
         default=None,
         description="Optional diagnostics note when issuer coverage is partial or unavailable.",
         json_schema_extra={"example": "issuer_id missing in lotus-core instrument_enrichment"},
+    )
+    top_issuer_current: TopIssuerDriver = Field(
+        description="Top baseline issuer concentration driver with identifier and display metadata.",
+        json_schema_extra={
+            "example": {
+                "issuer_id": "ULTIMATE_PIMCO",
+                "issuer_name": "Pacific Investment Management Company LLC",
+                "weight": 0.245075,
+            }
+        },
+    )
+    top_issuer_proposed: TopIssuerDriver = Field(
+        description="Top proposed issuer concentration driver with identifier and display metadata.",
+        json_schema_extra={
+            "example": {
+                "issuer_id": "ULTIMATE_PIMCO",
+                "issuer_name": "Pacific Investment Management Company LLC",
+                "weight": 0.244585,
+            }
+        },
     )
 
 
@@ -494,6 +665,24 @@ class ConcentrationMetadata(BaseModel):
         description="Session expiration timestamp returned by lotus-core when session lifecycle is created.",
         json_schema_extra={"example": "2026-02-28T10:30:00Z"},
     )
+    issuer_grouping_level: IssuerGroupingLevel = Field(
+        description="Issuer grouping level applied to issuer concentration calculations.",
+        json_schema_extra={"example": "ultimate_parent"},
+    )
+    enrichment_policy: EnrichmentPolicy = Field(
+        description="Issuer enrichment policy applied for issuer concentration calculations.",
+        json_schema_extra={"example": "merge_caller_then_core"},
+    )
+    include_cash_positions: bool | None = Field(
+        default=None,
+        description="Whether cash positions were included in the evaluated concentration universe.",
+        json_schema_extra={"example": True},
+    )
+    include_zero_quantity_positions: bool | None = Field(
+        default=None,
+        description="Whether zero-quantity positions were included in the evaluated concentration universe.",
+        json_schema_extra={"example": False},
+    )
 
 
 class ConcentrationResponse(BaseModel):
@@ -522,6 +711,16 @@ class ConcentrationResponse(BaseModel):
                 "top_n_cumulative_weight_proposed": 0.4551,
                 "top_n_cumulative_weight_delta": 0.0428,
                 "top_n": 10,
+                "top_position_current": {
+                    "security_id": "FO_FUND_PIMCO_INC",
+                    "security_name": "PIMCO GIS Income Fund",
+                    "weight": 0.1245,
+                },
+                "top_position_proposed": {
+                    "security_id": "FO_FUND_PIMCO_INC",
+                    "security_name": "PIMCO GIS Income Fund",
+                    "weight": 0.142,
+                },
             }
         },
     )
@@ -540,7 +739,21 @@ class ConcentrationResponse(BaseModel):
                 "covered_position_count_proposed": 27,
                 "total_position_count_current": 30,
                 "total_position_count_proposed": 31,
+                "uncovered_position_count_current": 5,
+                "uncovered_position_count_proposed": 4,
+                "coverage_ratio_current": 0.833333,
+                "coverage_ratio_proposed": 0.870968,
                 "note": "issuer_id missing in lotus-core instrument_enrichment",
+                "top_issuer_current": {
+                    "issuer_id": "ULTIMATE_PIMCO",
+                    "issuer_name": "Pacific Investment Management Company LLC",
+                    "weight": 0.18,
+                },
+                "top_issuer_proposed": {
+                    "issuer_id": "ULTIMATE_PIMCO",
+                    "issuer_name": "Pacific Investment Management Company LLC",
+                    "weight": 0.21,
+                },
             }
         },
     )
@@ -566,6 +779,90 @@ class ConcentrationResponse(BaseModel):
                 "simulation_session_id": "SIM_0001",
                 "simulation_session_version": 3,
                 "session_expires_at": "2026-02-28T10:30:00Z",
+                "issuer_grouping_level": "ultimate_parent",
+                "enrichment_policy": "merge_caller_then_core",
+                "include_cash_positions": True,
+                "include_zero_quantity_positions": False,
             }
         },
+    )
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "source_service": "lotus-risk",
+                    "input_mode": "stateful",
+                    "risk_proxy": {
+                        "hhi_current": 1345.677131,
+                        "hhi_proposed": 1345.677131,
+                        "hhi_delta": 0.0,
+                    },
+                    "single_position_concentration": {
+                        "top_position_weight_current": 0.23014,
+                        "top_position_weight_proposed": 0.23014,
+                        "top_position_weight_delta": 0.0,
+                        "top_n_cumulative_weight_current": 0.992137,
+                        "top_n_cumulative_weight_proposed": 0.992137,
+                        "top_n_cumulative_weight_delta": 0.0,
+                        "top_n": 10,
+                        "top_position_current": {
+                            "security_id": "FO_FUND_PIMCO_INC",
+                            "security_name": "PIMCO GIS Income Fund",
+                            "weight": 0.23014,
+                        },
+                        "top_position_proposed": {
+                            "security_id": "FO_FUND_PIMCO_INC",
+                            "security_name": "PIMCO GIS Income Fund",
+                            "weight": 0.23014,
+                        },
+                    },
+                    "issuer_concentration": {
+                        "hhi_current": 1666.519669,
+                        "hhi_proposed": 1666.519669,
+                        "hhi_delta": 0.0,
+                        "top_issuer_weight_current": 0.245075,
+                        "top_issuer_weight_proposed": 0.245075,
+                        "top_issuer_weight_delta": 0.0,
+                        "coverage_status": "complete",
+                        "covered_position_count_current": 11,
+                        "covered_position_count_proposed": 11,
+                        "total_position_count_current": 11,
+                        "total_position_count_proposed": 11,
+                        "uncovered_position_count_current": 0,
+                        "uncovered_position_count_proposed": 0,
+                        "coverage_ratio_current": 1.0,
+                        "coverage_ratio_proposed": 1.0,
+                        "note": None,
+                        "top_issuer_current": {
+                            "issuer_id": "ULTIMATE_BLACKROCK",
+                            "issuer_name": "BlackRock, Inc.",
+                            "weight": 0.245075,
+                        },
+                        "top_issuer_proposed": {
+                            "issuer_id": "ULTIMATE_BLACKROCK",
+                            "issuer_name": "BlackRock, Inc.",
+                            "weight": 0.245075,
+                        },
+                    },
+                    "valuation_context": {
+                        "portfolio_currency": "USD",
+                        "reporting_currency": "USD",
+                        "position_basis": "market_value_base",
+                        "weight_basis": "total_market_value_base",
+                    },
+                    "metadata": {
+                        "as_of_date": "2026-03-31",
+                        "portfolio_id": "PB_SG_GLOBAL_BAL_001",
+                        "simulation_session_id": None,
+                        "simulation_session_version": None,
+                        "session_expires_at": None,
+                        "issuer_grouping_level": "ultimate_parent",
+                        "enrichment_policy": "merge_caller_then_core",
+                        "include_cash_positions": True,
+                        "include_zero_quantity_positions": False,
+                    },
+                }
+            ]
+        }
     )

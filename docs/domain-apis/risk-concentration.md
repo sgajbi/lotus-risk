@@ -6,146 +6,293 @@
 
 ## Purpose
 
-Compute concentration analytics using one canonical API contract across three execution modes.
+Compute portfolio concentration analytics from current and proposed holdings using one canonical contract across:
 
-Returned analytics blocks:
+- `stateless`
+- `stateful`
+- `simulation`
 
-1. Portfolio concentration (`riskProxy`):
- - `hhiCurrent`
- - `hhiProposed`
- - `hhiDelta`
-2. Single-position concentration:
- - top position weight
- - top-N cumulative weight
-3. Issuer concentration:
- - issuer HHI current/proposed/delta
- - top issuer weight current/proposed/delta
- - coverage diagnostics
+The API returns three decision-oriented blocks:
 
-## Execution Modes
+1. `risk_proxy`
+   - portfolio-level HHI
+   - current / proposed / delta
+2. `single_position_concentration`
+   - top position weight
+   - top-`n` cumulative weight
+   - identity of the top position in each state
+3. `issuer_concentration`
+   - issuer-level HHI
+   - top issuer weight
+   - identity of the top issuer in each state
+   - issuer coverage diagnostics
 
-### Stateless
+## Supported Modes
 
-Caller supplies `currentPositions` and `projectedPositions` directly in `statelessInput`.
+### `stateless`
 
-### Stateful
+Caller provides:
 
-Caller supplies identifiers in `statefulInput` (`portfolioId`, `asOfDate`, optional policy fields).
-`lotus-risk` sources baseline positions from lotus-core `core-snapshot` (`BASELINE` mode).
+- `stateless_input.current_positions`
+- `stateless_input.projected_positions`
 
-### Simulation
+`lotus-risk` computes concentration directly from caller-supplied values. Position values use:
 
-Caller supplies simulation context in `simulationInput`.
-`lotus-risk` orchestrates lotus-core simulation session APIs, then pulls baseline/projected positions from `core-snapshot` (`SIMULATION` mode).
+1. `market_value_base` when present
+2. `quantity` as fallback
 
-## Request Methodology
+### `stateful`
 
-### Canonical envelope
+Caller provides:
+
+- `stateful_input.portfolio_id`
+- `stateful_input.as_of_date`
+
+`lotus-risk` calls lotus-core `core-snapshot` in `BASELINE` mode and computes concentration from the baseline portfolio state.
+
+### `simulation`
+
+Caller provides:
+
+- `simulation_input.portfolio_id`
+- `simulation_input.as_of_date`
+- `simulation_input.simulation_changes`
+
+`lotus-risk` orchestrates lotus-core simulation session APIs, then calls lotus-core `core-snapshot` in `SIMULATION` mode to evaluate baseline vs projected concentration.
+
+## Canonical Request Envelope
 
 ```json
 {
-  "inputMode": "stateless | stateful | simulation",
-  "statelessInput": {},
-  "statefulInput": {},
-  "simulationInput": {},
-  "issuerGroupingLevel": "ultimate_parent | legal_issuer",
-  "enrichmentPolicy": "merge_caller_then_core | use_caller_only | core_only"
+  "input_mode": "stateless | stateful | simulation",
+  "stateless_input": {},
+  "stateful_input": {},
+  "simulation_input": {},
+  "issuer_grouping_level": "ultimate_parent | legal_issuer",
+  "enrichment_policy": "merge_caller_then_core | use_caller_only | core_only"
 }
 ```
 
-Legacy top-level payload aliases are not supported.
+Legacy camelCase aliases are not supported.
 
-### Issuer flags
+## Issuer Grouping and Enrichment
 
-1. `issuerGroupingLevel`
- - `ultimate_parent` (default)
- - `legal_issuer`
-2. `enrichmentPolicy`
- - `merge_caller_then_core` (default): caller mappings override, core fills missing
- - `use_caller_only`: only caller issuer mappings are used
- - `core_only`: only lotus-core enrichment is used
+### `issuer_grouping_level`
 
-### Caller enrichment options
+- `ultimate_parent`
+  - default
+  - groups positions by ultimate parent issuer when available, else legal issuer fallback
+- `legal_issuer`
+  - groups positions by legal issuer only
 
-1. Stateless:
- - positions can include `issuerId` and `ultimateParentIssuerId`
- - if missing and policy permits, lotus-risk calls lotus-core enrichment for missing mappings
-2. Stateful/simulation:
- - caller can pass `issuerMappings[]` keyed by `securityId`
- - lotus-core `instrument_enrichment` remains the primary source
+### `enrichment_policy`
 
-## Engine Behavior
+- `merge_caller_then_core`
+  - default
+  - caller mappings win
+  - lotus-core fills gaps
+- `use_caller_only`
+  - only caller-supplied issuer mappings are used
+- `core_only`
+  - only lotus-core enrichment is used
 
-### HHI computation
+### Caller-supplied issuer mapping inputs
 
-For any input set, HHI is computed from positive market values (fallback: positive quantities):
+#### `stateless`
 
-- weight_i = abs(value_i) / sum(abs(value))
-- HHI = sum(weight_i^2) * 10000
+Caller can provide issuer keys directly on each position row:
+
+- `issuer_id`
+- `ultimate_parent_issuer_id`
+
+Optional display fields may also be provided on positions:
+
+- `security_name`
+
+#### `stateful` / `simulation`
+
+Caller can provide `issuer_mappings[]` keyed by `security_id`, while lotus-core `instrument_enrichment` remains the primary source of canonical issuer enrichment.
+
+## Calculation Behavior
+
+### Portfolio HHI
+
+For any state:
+
+- `v_i = abs(position_value_i)`
+- `V = sum_i v_i`
+- `w_i = v_i / V`
+- `HHI = sum_i (w_i^2) * 10000`
+
+If no valid positive values are available, HHI is `0`.
 
 ### Single-position concentration
 
-1. top position weight
-2. top-N cumulative weight (`topN`, default `10`)
+For each state:
+
+- `top_position_weight = max_i(w_i)`
+- `top_n_cumulative_weight = sum of largest n position weights`
+
+The response also identifies the top position:
+
+- `single_position_concentration.top_position_current`
+- `single_position_concentration.top_position_proposed`
+
+These fields contain:
+
+- `security_id`
+- `security_name`
+- `weight`
 
 ### Issuer concentration
 
-1. Group positions by issuer key per `issuerGroupingLevel`.
-2. Compute issuer-level HHI on grouped totals.
-3. Compute top issuer weight.
-4. Emit coverage diagnostics:
- - `coverageStatus` = `complete | partial | unavailable`
- - covered/total counts
- - optional `note`
+1. Resolve issuer key per position using `issuer_grouping_level`.
+2. Aggregate position values by issuer.
+3. Compute issuer weights from issuer-level totals.
+4. Compute issuer HHI and top issuer weight.
 
-No silent fallback is allowed when issuer mappings are missing.
+The response also identifies the top issuer:
 
-## Simulation Session Behavior
+- `issuer_concentration.top_issuer_current`
+- `issuer_concentration.top_issuer_proposed`
 
-1. First call without `sessionId`: lotus-risk creates lotus-core session and returns metadata.
-2. Iterative calls with `sessionId`: lotus-risk reuses existing session.
-3. Reset: omit `sessionId` or set `startNewSession=true`.
-4. `sessionTtlHours` is allowed only for new sessions and must be within `1..168`.
+These fields contain:
 
-### Iterative change semantics (normative)
+- `issuer_id`
+- `issuer_name`
+- `weight`
 
-1. `simulationChanges[]` is treated as the delta payload for the current call.
-2. lotus-risk forwards these changes to lotus-core session changes API for the resolved session.
-3. Changes are additive at session level unless the caller starts a new session.
-4. Use `expectedVersion` to guard against concurrent edits on the same session.
-5. Response includes:
- - `simulationSessionId`
- - `simulationSessionVersion`
- - `sessionExpiresAt` (when available)
+## Coverage Semantics
 
-### Recommended caller workflow
+`issuer_concentration` is always returned, even when enrichment is incomplete.
 
-1. Initial simulation:
- - omit `sessionId`
- - optionally set `sessionTtlHours`
- - send first `simulationChanges[]`
-2. Continue simulation:
- - pass returned `sessionId`
- - send incremental `simulationChanges[]`
- - optionally pass `expectedVersion` from previous response
-3. Restart scenario:
- - set `startNewSession=true` (or omit `sessionId`)
- - send fresh `simulationChanges[]`
+Coverage fields:
 
-## Integration Dependencies
+- `coverage_status`
+  - `complete`
+  - `partial`
+  - `unavailable`
+- `covered_position_count_current`
+- `covered_position_count_proposed`
+- `total_position_count_current`
+- `total_position_count_proposed`
+- `uncovered_position_count_current`
+- `uncovered_position_count_proposed`
+- `coverage_ratio_current`
+- `coverage_ratio_proposed`
+- `note`
 
-### Required from lotus-core
+Interpretation:
+
+1. `complete`
+   - every counted position was mapped to an issuer key
+2. `partial`
+   - at least one position was mapped, but some were not
+3. `unavailable`
+   - no issuer mapping coverage was available for the counted positions
+
+`coverage_ratio_current` and `coverage_ratio_proposed` provide the same information in decimal form for faster consumer-side decisioning and thresholding.
+
+`uncovered_position_count_current` and `uncovered_position_count_proposed` make the issuer enrichment gap explicit without requiring consumers to subtract totals from covered counts.
+
+No silent fallback is allowed. If issuer enrichment is incomplete, the response makes that explicit through coverage fields.
+
+## Cash Handling
+
+`include_cash_positions` materially changes the concentration denominator.
+
+Business interpretation:
+
+- `true`
+  - concentration is measured against the full portfolio including cash
+  - useful when cash is part of the investable balance the banker is monitoring
+- `false`
+  - concentration is measured only across invested positions
+  - useful when the banker wants a pure invested-book concentration view
+
+## Simulation Session Semantics
+
+1. If `session_id` is absent or `start_new_session=true`, lotus-risk creates a new lotus-core simulation session.
+2. `simulation_changes[]` are forwarded to lotus-core for the resolved session.
+3. Changes are additive within the session unless a new session is started.
+4. `expected_version` can be supplied for optimistic concurrency.
+5. The response returns simulation metadata when available:
+   - `metadata.simulation_session_id`
+   - `metadata.simulation_session_version`
+   - `metadata.session_expires_at`
+
+## Upstream Dependencies
+
+### lotus-core
+
+Required APIs:
 
 1. `POST /integration/portfolios/{portfolio_id}/core-snapshot`
- - baseline/projected positions + instrument enrichment
+   - baseline or simulation snapshot
+   - positions
+   - portfolio totals
+   - instrument enrichment
 2. `POST /simulation-sessions`
 3. `POST /simulation-sessions/{session_id}/changes`
-4. (for stateless enrichment fallback) bulk enrichment endpoint for security list
+4. bulk instrument enrichment for stateless enrichment fallback
 
-## Output Coverage Semantics
+There is no lotus-performance dependency for concentration.
 
-`issuerConcentration` is always present. If mappings are incomplete:
+## Response Blocks
 
-1. values are computed on covered subset
-2. coverage fields communicate quality
-3. `note` explains why coverage is partial/unavailable
+### `risk_proxy`
+
+- `hhi_current`
+- `hhi_proposed`
+- `hhi_delta`
+
+### `single_position_concentration`
+
+- `top_position_weight_current`
+- `top_position_weight_proposed`
+- `top_position_weight_delta`
+- `top_n_cumulative_weight_current`
+- `top_n_cumulative_weight_proposed`
+- `top_n_cumulative_weight_delta`
+- `top_n`
+- `top_position_current`
+- `top_position_proposed`
+
+### `issuer_concentration`
+
+- `hhi_current`
+- `hhi_proposed`
+- `hhi_delta`
+- `top_issuer_weight_current`
+- `top_issuer_weight_proposed`
+- `top_issuer_weight_delta`
+- `coverage_status`
+- coverage counters
+- uncovered counts
+- coverage ratios
+- `note`
+- `top_issuer_current`
+- `top_issuer_proposed`
+
+### `valuation_context`
+
+When provided by lotus-core:
+
+- `portfolio_currency`
+- `reporting_currency`
+- `position_basis`
+- `weight_basis`
+
+### `metadata`
+
+Depending on mode:
+
+- `portfolio_id`
+- `as_of_date`
+- simulation session metadata
+- `issuer_grouping_level`
+- `enrichment_policy`
+- `include_cash_positions`
+- `include_zero_quantity_positions`
+
+These fields make the response self-describing. Consumers do not need to infer which issuer grouping or enrichment policy produced the issuer concentration output.

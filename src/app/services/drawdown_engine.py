@@ -13,7 +13,9 @@ from app.contracts.drawdown import (
     DrawdownAnalysisOptions,
     DrawdownEpisode,
     DrawdownInputMode,
+    DrawdownMetadata,
     DrawdownPeriodResult,
+    RelativeDrawdownContext,
     DrawdownResponse,
     DrawdownStatelessInput,
     DrawdownSummary,
@@ -189,16 +191,45 @@ def _period_name(period: RiskRequestPeriod) -> str:
     return period.name or period.type
 
 
+def _build_metadata(
+    *,
+    analysis_options: DrawdownAnalysisOptions,
+    include_benchmark: bool | None,
+    missing_benchmark_policy: str | None,
+) -> DrawdownMetadata:
+    return DrawdownMetadata(
+        include_underwater_series=analysis_options.include_underwater_series,
+        include_episode_list=analysis_options.include_episode_list,
+        top_n_episodes=analysis_options.top_n_episodes,
+        cdar_alpha=analysis_options.cdar_alpha,
+        minimum_episode_depth_bps=analysis_options.minimum_episode_depth_bps,
+        duration_unit=analysis_options.duration_unit,
+        include_benchmark=include_benchmark,
+        missing_benchmark_policy=missing_benchmark_policy,
+    )
+
+
 def calculate_drawdown(
     request: DrawdownStatelessInput,
     *,
     input_mode: DrawdownInputMode,
     analysis_options: DrawdownAnalysisOptions,
+    include_benchmark: bool | None = None,
+    missing_benchmark_policy: str | None = None,
 ) -> DrawdownResponse:
     returns_df = _build_returns_df(request.returns)
     benchmark_df = _build_returns_df(request.benchmark_returns)
     if returns_df.empty:
-        return DrawdownResponse(input_mode=input_mode, scope=request.scope, results={})
+        return DrawdownResponse(
+            input_mode=input_mode,
+            scope=request.scope,
+            results={},
+            metadata=_build_metadata(
+                analysis_options=analysis_options,
+                include_benchmark=include_benchmark,
+                missing_benchmark_policy=missing_benchmark_policy,
+            ),
+        )
 
     open_date = cast(pd.Timestamp, returns_df.index.min()).date()
     results: dict[str, DrawdownPeriodResult] = {}
@@ -216,9 +247,21 @@ def calculate_drawdown(
             results[_period_name(period)] = DrawdownPeriodResult(
                 start_date=start,
                 end_date=end,
+                portfolio_observation_count=0,
+                benchmark_observation_count=0,
                 summary=None,
                 episodes=[],
                 relative_to_benchmark=None,
+                relative_to_benchmark_context=RelativeDrawdownContext(
+                    requested=include_benchmark is True,
+                    applied=False,
+                    reason=(
+                        "BENCHMARK_UNAVAILABLE"
+                        if include_benchmark is True
+                        else "NOT_REQUESTED"
+                    ),
+                    aligned_observation_count=0,
+                ),
                 underwater_series=None,
                 error="Insufficient data",
             )
@@ -258,6 +301,12 @@ def calculate_drawdown(
         )
 
         relative_summary: RelativeDrawdownSummary | None = None
+        relative_context = RelativeDrawdownContext(
+            requested=include_benchmark is True,
+            applied=False,
+            reason="NOT_REQUESTED" if include_benchmark is not True else "BENCHMARK_UNAVAILABLE",
+            aligned_observation_count=0,
+        )
         if not benchmark_df.empty:
             benchmark_series = _filter_period(benchmark_df, start=start, end=end)
             aligned = pd.merge(
@@ -266,6 +315,12 @@ def calculate_drawdown(
                 left_index=True,
                 right_index=True,
                 how="inner",
+            )
+            relative_context = RelativeDrawdownContext(
+                requested=include_benchmark is True,
+                applied=not aligned.empty,
+                reason="APPLIED" if not aligned.empty else "NO_ALIGNED_OBSERVATIONS",
+                aligned_observation_count=len(aligned),
             )
             if not aligned.empty:
                 active_returns = aligned["portfolio"] - aligned["benchmark"]
@@ -281,14 +336,22 @@ def calculate_drawdown(
                     max_drawdown=active_summary.max_drawdown,
                     max_drawdown_peak_date=active_summary.max_drawdown_peak_date,
                     max_drawdown_trough_date=active_summary.max_drawdown_trough_date,
+                    max_drawdown_recovery_date=active_summary.max_drawdown_recovery_date,
+                    is_recovered=active_summary.is_recovered,
+                    days_to_trough=active_summary.days_to_trough,
+                    days_to_recovery=active_summary.days_to_recovery,
+                    time_under_water_days=active_summary.time_under_water_days or 0,
                 )
 
         results[_period_name(period)] = DrawdownPeriodResult(
             start_date=start,
             end_date=end,
+            portfolio_observation_count=len(portfolio_series),
+            benchmark_observation_count=len(benchmark_series) if not benchmark_df.empty else 0,
             summary=summary,
             episodes=episode_models,
             relative_to_benchmark=relative_summary,
+            relative_to_benchmark_context=relative_context,
             underwater_series=(
                 _to_underwater_series(drawdown)
                 if analysis_options.include_underwater_series
@@ -301,4 +364,9 @@ def calculate_drawdown(
         input_mode=input_mode,
         scope=request.scope,
         results=results,
+        metadata=_build_metadata(
+            analysis_options=analysis_options,
+            include_benchmark=include_benchmark,
+            missing_benchmark_policy=missing_benchmark_policy,
+        ),
     )

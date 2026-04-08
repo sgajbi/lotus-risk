@@ -57,14 +57,19 @@
 - `results[period_name]`
   - `start_date`
   - `end_date`
+  - `portfolio_observation_count`
+  - `benchmark_observation_count`
   - `summary` (max drawdown, timing, TUW, ulcer, DaR/CDaR)
   - `episodes[]` (top-N worst by depth)
-  - `relative_to_benchmark` (optional)
+  - `relative_to_benchmark` (optional; active drawdown depth plus timing/recovery fields)
+- `relative_to_benchmark_context` (requested/applied/aligned-observation status)
   - `underwater_series` (optional)
   - `error` (period-level deterministic error when data is insufficient)
 - `metadata`
   - `contract_version`
   - `methodology_version`
+  - applied analysis options
+  - applied benchmark policy
 
 ## Upstream / Downstream Contracts
 
@@ -81,6 +86,43 @@
 - Bounded context ownership: aligned (`lotus-risk` remains analytics owner).
 - Vocabulary and API governance: aligned with RFC-0067 (snake_case canonical names, no alias terms).
 - Mode envelope consistency: aligned with existing risk/concentration patterns.
+
+## Response Auditability
+
+The response metadata now echoes the applied drawdown configuration so consumers can interpret results without reconstructing the request:
+
+- `include_underwater_series`
+- `include_episode_list`
+- `top_n_episodes`
+- `cdar_alpha`
+- `minimum_episode_depth_bps`
+- `duration_unit`
+- `include_benchmark`
+- `missing_benchmark_policy`
+
+## Business Interpretation Notes
+
+- `max_drawdown = 0.0` means the realized wealth path never fell below its in-period running peak. This is a valid outcome, not missing data.
+- `relative_to_benchmark` is computed on the active return path `(portfolio - benchmark)`, not on the benchmark standalone wealth path.
+- `relative_to_benchmark_context.applied = false` means the caller asked for benchmark-relative drawdown but lotus-risk did not have aligned benchmark observations for that period.
+- `relative_to_benchmark_context.reason` explains why relative drawdown was or was not computed:
+  - `NOT_REQUESTED`
+  - `BENCHMARK_UNAVAILABLE`
+  - `NO_ALIGNED_OBSERVATIONS`
+  - `APPLIED`
+- `portfolio_observation_count` and `benchmark_observation_count` show how much realized history supported the period result and should be checked before over-interpreting short windows.
+- `time_under_water_days` counts observations below the running peak. It is a persistence signal, not simply the gap between peak and trough dates.
+- `is_recovered = false` means the path had not returned to its prior peak by period end. In that case `max_drawdown_recovery_date` and `days_to_recovery` remain `null`.
+- `episodes[]` is filtered by `minimum_episode_depth_bps` and truncated by `top_n_episodes`, so it is a ranked decision support view rather than a full event ledger unless the caller requests it that way.
+
+## Example Use
+
+- Private banker review:
+  - use `summary.max_drawdown`, `summary.time_under_water_days`, and `summary.is_recovered` to judge whether the client experienced a meaningful realized loss and whether it recovered quickly.
+- Benchmark-relative review:
+  - use `relative_to_benchmark.max_drawdown` and `relative_to_benchmark.time_under_water_days` to judge whether underperformance was both deep and persistent.
+- QA / operations:
+  - use `metadata` to confirm whether benchmark-relative drawdown, underwater series, and episode filters were actually applied.
 
 ## Remaining Gaps
 

@@ -56,6 +56,10 @@ def test_drawdown_stateful_adapter_happy_path() -> None:
     }
     assert client.correlation_id == "corr-dd"
     assert "YTD" in response.results
+    assert response.metadata.include_benchmark is True
+    assert response.metadata.missing_benchmark_policy == "REQUIRE"
+    assert response.metadata.top_n_episodes == 5
+    assert response.metadata.duration_unit == "BUSINESS_DAYS"
 
 
 def test_drawdown_stateful_adapter_requires_series_payload() -> None:
@@ -170,3 +174,5 @@ def test_drawdown_stateful_adapter_skips_malformed_rows_and_allows_optional_benc
         )
     )
     assert "YTD" in response.results
+    assert response.metadata.include_benchmark is False
+    assert response.metadata.missing_benchmark_policy == "IGNORE"

@@ -304,7 +304,7 @@ def test_stateful_attribution_rejects_active_risk_when_benchmark_returns_missing
 def test_stateful_attribution_rejects_active_risk_issuer_grouping_until_benchmark_mapping_exists() -> (
     None
 ):
-    with pytest.raises(ValueError, match="cannot source benchmark exposure history"):
+    with pytest.raises(ValueError, match="grouping_dimension=ISSUER"):
         asyncio.run(
             calculate_historical_attribution_stateful(
                 _stateful_input(

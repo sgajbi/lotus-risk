@@ -10,7 +10,10 @@ import pandas as pd
 from prometheus_client import Counter, Histogram
 
 from app.contracts.risk import (
+    BenchmarkRequestContext,
+    RiskFreeContext,
     RiskPeriodResult,
+    RiskResponseMetadata,
     RiskResponse,
     RiskStatelessCalculationInput,
     RiskValue,
@@ -102,17 +105,42 @@ def _drawdown(returns: pd.Series) -> dict[str, str | float | None]:
             "peak_date": None,
             "trough_date": None,
             "max_drawdown_date": None,
+            "recovery_date": None,
+            "is_recovered": True,
+            "days_to_trough": None,
+            "days_to_recovery": None,
+            "time_under_water_days": 0,
         }
 
     trough_idx = cast(pd.Timestamp, drawdown.idxmin())
     peak_idx = cast(pd.Timestamp, wealth.loc[:trough_idx].idxmax())
     max_drawdown = _as_number(cast(float, drawdown.loc[trough_idx] * 100))
+    peak_value = _as_number(cast(float, peak.loc[trough_idx]))
+    post_trough_wealth = wealth.loc[trough_idx:]
+    recovery_candidates = post_trough_wealth[post_trough_wealth >= peak_value]
+    recovery_idx = (
+        cast(pd.Timestamp, recovery_candidates.index[0]) if not recovery_candidates.empty else None
+    )
+    days_to_trough = int((trough_idx - peak_idx).days)
+    if recovery_idx is not None:
+        days_to_recovery = int((recovery_idx - trough_idx).days)
+        time_under_water_days = int((recovery_idx - peak_idx).days)
+        recovery_date = str(recovery_idx.date())
+    else:
+        days_to_recovery = None
+        time_under_water_days = int((wealth.index[-1] - peak_idx).days)
+        recovery_date = None
     trough_date = str(trough_idx.date())
     return {
         "max_drawdown": max_drawdown,
         "peak_date": str(peak_idx.date()),
         "trough_date": trough_date,
         "max_drawdown_date": trough_date,
+        "recovery_date": recovery_date,
+        "is_recovered": recovery_idx is not None,
+        "days_to_trough": days_to_trough,
+        "days_to_recovery": days_to_recovery,
+        "time_under_water_days": time_under_water_days,
     }
 
 
@@ -156,30 +184,74 @@ def _expected_shortfall(returns: pd.Series, var_value: float) -> float:
     return _as_number(tail.mean())
 
 
-def _beta(portfolio: pd.Series, benchmark: pd.Series) -> float:
+def _beta(portfolio: pd.Series, benchmark: pd.Series) -> tuple[float, dict[str, float | int]]:
     covariance = np.cov(portfolio, benchmark, ddof=1)
     denominator = covariance[1, 1]
     if np.isclose(denominator, 0.0):
         raise ValueError("Benchmark variance is zero")
-    return _as_number(covariance[0, 1] / denominator)
+    covariance_pb = _as_number(covariance[0, 1])
+    benchmark_variance = _as_number(denominator)
+    return (
+        _as_number(covariance_pb / benchmark_variance),
+        {
+            "aligned_observation_count": int(portfolio.count()),
+            "portfolio_mean_return": _as_number(portfolio.mean() / 100),
+            "benchmark_mean_return": _as_number(benchmark.mean() / 100),
+            "covariance": covariance_pb,
+            "benchmark_variance": benchmark_variance,
+        },
+    )
 
 
-def _tracking_error(portfolio: pd.Series, benchmark: pd.Series, annual_factor: int) -> float:
+def _tracking_error(
+    portfolio: pd.Series, benchmark: pd.Series, annual_factor: int
+) -> tuple[float, dict[str, float | int]]:
     active = portfolio - benchmark
-    return _as_number(active.std(ddof=1) * sqrt(annual_factor))
+    active_std = _as_number(active.std(ddof=1))
+    annualized_tracking_error = _as_number(active_std * sqrt(annual_factor))
+    return (
+        annualized_tracking_error,
+        {
+            "aligned_observation_count": int(active.count()),
+            "annualization_factor": annual_factor,
+            "portfolio_mean_return": _as_number(portfolio.mean() / 100),
+            "benchmark_mean_return": _as_number(benchmark.mean() / 100),
+            "active_mean_return": _as_number(active.mean() / 100),
+            "active_volatility": active_std / 100,
+            "annualized_tracking_error": annualized_tracking_error / 100,
+        },
+    )
 
 
-def _information_ratio(portfolio: pd.Series, benchmark: pd.Series, annual_factor: int) -> float:
+def _information_ratio(
+    portfolio: pd.Series, benchmark: pd.Series, annual_factor: int
+) -> tuple[float, dict[str, float | int]]:
     active = portfolio - benchmark
     tracking_err = active.std(ddof=1)
     if np.isclose(tracking_err, 0.0):
         raise ValueError("Tracking error is zero")
-    return _as_number((active.mean() / tracking_err) * sqrt(annual_factor))
+    active_mean = _as_number(active.mean() / 100)
+    tracking_error = _as_number(tracking_err / 100)
+    annualized_active_return = _as_number(active_mean * annual_factor)
+    annualized_tracking_error = _as_number(tracking_error * sqrt(annual_factor))
+    return (
+        _as_number((active.mean() / tracking_err) * sqrt(annual_factor)),
+        {
+            "aligned_observation_count": int(active.count()),
+            "annualization_factor": annual_factor,
+            "portfolio_mean_return": _as_number(portfolio.mean() / 100),
+            "benchmark_mean_return": _as_number(benchmark.mean() / 100),
+            "active_mean_return": active_mean,
+            "tracking_error": tracking_error,
+            "annualized_active_return": annualized_active_return,
+            "annualized_tracking_error": annualized_tracking_error,
+        },
+    )
 
 
 def _calculate_benchmark_metric(
     metric_name: str, portfolio: pd.Series, benchmark: pd.Series, annual_factor: int
-) -> float:
+) -> tuple[float, dict[str, float | int]]:
     if metric_name == "BETA":
         return _beta(portfolio, benchmark)
     if metric_name == "TRACKING_ERROR":
@@ -203,12 +275,65 @@ def _record_metric_request(metrics: Sequence[str]) -> None:
         RISK_METRIC_REQUESTED_TOTAL.labels(metric_name=metric).inc()
 
 
+def _build_metadata(
+    request: RiskStatelessCalculationInput,
+    *,
+    annual_factor: int,
+    periodic_rf: float,
+) -> RiskResponseMetadata:
+    risk_free_requested = "SHARPE" in request.metrics
+    benchmark_metrics = [metric for metric in request.metrics if metric in BENCHMARK_METRICS]
+    return RiskResponseMetadata(
+        frequency=request.options.frequency,
+        annualization_factor=annual_factor,
+        use_log_returns=request.options.use_log_returns,
+        risk_free_mode=request.options.risk_free_mode,
+        risk_free_annual_rate=request.options.risk_free_annual_rate,
+        risk_free_context=RiskFreeContext(
+            requested=risk_free_requested,
+            applied=risk_free_requested,
+            reason=(
+                "NOT_REQUESTED"
+                if not risk_free_requested
+                else (
+                    "ANNUAL_RATE_APPLIED"
+                    if request.options.risk_free_mode == "ANNUAL_RATE"
+                    and request.options.risk_free_annual_rate is not None
+                    else "ZERO_RATE"
+                )
+            ),
+            periodic_rate=periodic_rf if risk_free_requested else 0.0,
+        ),
+        benchmark_context=BenchmarkRequestContext(
+            requested=bool(benchmark_metrics),
+            requested_metrics=benchmark_metrics,
+        ),
+        mar_annual_rate=request.options.mar_annual_rate,
+        var_method=request.options.var.method,
+        var_confidence=request.options.var.confidence,
+        var_horizon_days=request.options.var.horizon_days,
+    )
+
+
 def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
     _record_metric_request(request.metrics)
 
+    annual_factor = (
+        request.options.annualization_factor
+        or {
+            "DAILY": 252,
+            "WEEKLY": 52,
+            "MONTHLY": 12,
+        }[request.options.frequency]
+    )
+
     returns_df = pd.DataFrame([{"date": p.date, "value": p.value} for p in request.returns])
     if returns_df.empty:
-        return RiskResponse(scope=request.scope, results={})
+        return RiskResponse(
+            scope=request.scope,
+            results={},
+            metadata=_build_metadata(request, annual_factor=annual_factor, periodic_rf=0.0),
+        )
 
     returns_df["date"] = pd.to_datetime(returns_df["date"])
     returns_df = returns_df.sort_values("date").set_index("date")
@@ -219,15 +344,6 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
     if not benchmark_df.empty:
         benchmark_df["date"] = pd.to_datetime(benchmark_df["date"])
         benchmark_df = benchmark_df.sort_values("date").set_index("date")
-
-    annual_factor = (
-        request.options.annualization_factor
-        or {
-            "DAILY": 252,
-            "WEEKLY": 52,
-            "MONTHLY": 12,
-        }[request.options.frequency]
-    )
 
     periodic_rf = 0.0
     if (
@@ -265,8 +381,14 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
             with RISK_METRIC_DURATION_SECONDS.labels(metric_name="VOLATILITY").time():
                 try:
                     _require_data(metric_series)
+                    standard_deviation = _as_number(metric_series.std(ddof=1) / 100)
                     metric_map["VOLATILITY"] = RiskValue(
-                        value=_as_number(metric_series.std(ddof=1) * sqrt(annual_factor))
+                        value=_as_number(standard_deviation * sqrt(annual_factor) * 100),
+                        details={
+                            "observation_count": int(metric_series.count()),
+                            "standard_deviation": standard_deviation,
+                            "annualization_factor": annual_factor,
+                        },
                     )
                 except ValueError as exc:
                     metric_map["VOLATILITY"] = _metric_error(str(exc))
@@ -295,10 +417,25 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
                     denominator = metric_series.std(ddof=1)
                     if np.isclose(denominator, 0.0):
                         raise ValueError("Zero volatility")
+                    mean_return = _as_number(metric_series.mean() / 100)
+                    excess_return = _as_number(mean_return - periodic_rf)
                     sharpe = (
-                        (metric_series.mean() / 100 - periodic_rf) / (denominator / 100)
+                        excess_return / (denominator / 100)
                     ) * sqrt(annual_factor)
-                    metric_map["SHARPE"] = RiskValue(value=_as_number(sharpe))
+                    metric_map["SHARPE"] = RiskValue(
+                        value=_as_number(sharpe),
+                        details={
+                            "observation_count": int(metric_series.count()),
+                            "annualization_factor": annual_factor,
+                            "mean_return": mean_return,
+                            "periodic_risk_free_rate": periodic_rf,
+                            "excess_return": excess_return,
+                            "annualized_excess_return": _as_number(
+                                excess_return * annual_factor
+                            ),
+                            "volatility": _as_number(denominator / 100),
+                        },
+                    )
                 except ValueError as exc:
                     metric_map["SHARPE"] = _metric_error(str(exc))
 
@@ -310,15 +447,35 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
                     downside = downside[downside < 0]
                     if downside.empty:
                         raise ValueError("No downside observations")
+                    downside_count = int(downside.count())
                     downside_deviation = _as_number(np.sqrt((downside**2).mean()))
+                    mean_return = _as_number(metric_series.mean() / 100)
+                    excess_return = _as_number(mean_return - periodic_mar)
                     sortino = (
-                        ((metric_series.mean() / 100) - periodic_mar) / downside_deviation
+                        excess_return / downside_deviation
                     ) * sqrt(annual_factor)
-                    metric_map["SORTINO"] = RiskValue(value=_as_number(sortino))
+                    metric_map["SORTINO"] = RiskValue(
+                        value=_as_number(sortino),
+                        details={
+                            "observation_count": int(metric_series.count()),
+                            "annualization_factor": annual_factor,
+                            "mar_annual_rate": request.options.mar_annual_rate,
+                            "periodic_mar": periodic_mar,
+                            "mean_return": mean_return,
+                            "excess_return": excess_return,
+                            "annualized_excess_return": _as_number(
+                                excess_return * annual_factor
+                            ),
+                            "downside_observation_count": downside_count,
+                            "downside_deviation": downside_deviation,
+                        },
+                    )
                 except ValueError as exc:
                     metric_map["SORTINO"] = _metric_error(str(exc))
 
         benchmark_metrics = [m for m in request.metrics if m in BENCHMARK_METRICS]
+        benchmark_period = pd.Series(dtype=float)
+        aligned = pd.DataFrame(columns=["portfolio", "benchmark"])
         if benchmark_metrics:
             if benchmark_df.empty:
                 for metric_name in benchmark_metrics:
@@ -349,10 +506,12 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
                     with RISK_METRIC_DURATION_SECONDS.labels(metric_name=metric_name).time():
                         try:
                             _require_data(portfolio_series)
+                            value, details = _calculate_benchmark_metric(
+                                metric_name, portfolio_series, benchmark_series, annual_factor
+                            )
                             metric_map[metric_name] = RiskValue(
-                                value=_calculate_benchmark_metric(
-                                    metric_name, portfolio_series, benchmark_series, annual_factor
-                                )
+                                value=value,
+                                details=details,
                             )
                         except ValueError as exc:
                             metric_map[metric_name] = _metric_error(str(exc))
@@ -364,17 +523,65 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
                     base_var = _calculate_var_by_method(
                         metric_series, request.options.var.method, request.options.var.confidence
                     )
-                    scaled_var = base_var * sqrt(request.options.var.horizon_days)
-                    details: dict[str, str | float | int | bool | None] | None = None
+                    horizon_scale_factor = _as_number(
+                        sqrt(request.options.var.horizon_days)
+                    )
+                    scaled_var = _as_number(base_var * horizon_scale_factor)
+                    tail_observation_count = int((metric_series <= base_var).sum())
+                    details: dict[str, str | float | int | bool | None] = {
+                        "method": request.options.var.method,
+                        "confidence": request.options.var.confidence,
+                        "tail_probability": _as_number(1.0 - request.options.var.confidence),
+                        "base_horizon_days": 1,
+                        "horizon_days": request.options.var.horizon_days,
+                        "horizon_scale_method": "SQRT_TIME",
+                        "horizon_scale_factor": horizon_scale_factor,
+                        "include_expected_shortfall": request.options.var.include_expected_shortfall,
+                        "base_var": base_var,
+                        "observation_count": int(metric_series.count()),
+                        "tail_observation_count": tail_observation_count,
+                    }
                     if request.options.var.include_expected_shortfall:
                         base_es = _expected_shortfall(metric_series, base_var)
-                        details = {
-                            "expected_shortfall": base_es * sqrt(request.options.var.horizon_days)
-                        }
+                        details["base_expected_shortfall"] = base_es
+                        details["expected_shortfall_observation_count"] = tail_observation_count
+                        details["expected_shortfall"] = _as_number(
+                            base_es * horizon_scale_factor
+                        )
                     metric_map["VAR"] = RiskValue(value=scaled_var, details=details)
                 except ValueError as exc:
                     metric_map["VAR"] = _metric_error(str(exc))
 
-        results[period_name] = RiskPeriodResult(start_date=start, end_date=end, metrics=metric_map)
+        benchmark_context: dict[str, str | bool | int | list[str]] | None = None
+        if benchmark_metrics:
+            requested = True
+            available = not benchmark_df.empty
+            aligned_count = len(aligned)
+            benchmark_context = {
+                "requested": requested,
+                "available": available,
+                "aligned": aligned_count > 0,
+                "reason": (
+                    "BENCHMARK_UNAVAILABLE"
+                    if not available
+                    else ("NO_ALIGNED_OBSERVATIONS" if aligned_count == 0 else "APPLIED")
+                ),
+                "requested_metric_count": len(benchmark_metrics),
+                "requested_metrics": benchmark_metrics,
+            }
 
-    return RiskResponse(scope=request.scope, results=results)
+        results[period_name] = RiskPeriodResult(
+            start_date=start,
+            end_date=end,
+            portfolio_observation_count=len(period_returns),
+            benchmark_observation_count=(len(benchmark_period) if benchmark_metrics else 0),
+            aligned_benchmark_observation_count=(len(aligned) if benchmark_metrics else 0),
+            benchmark_context=benchmark_context,
+            metrics=metric_map,
+        )
+
+    return RiskResponse(
+        scope=request.scope,
+        results=results,
+        metadata=_build_metadata(request, annual_factor=annual_factor, periodic_rf=periodic_rf),
+    )

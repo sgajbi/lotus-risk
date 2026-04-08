@@ -234,6 +234,34 @@ class HistoricalAttributionStatefulInput(BaseModel):
         },
     )
 
+    @model_validator(mode="after")
+    def validate_semantics(self) -> "HistoricalAttributionStatefulInput":
+        resolved_names = [period.name or period.type for period in self.periods]
+        duplicates = sorted({name for name in resolved_names if resolved_names.count(name) > 1})
+        if duplicates:
+            raise ValueError(
+                "Duplicate period names resolved in request: "
+                + ", ".join(duplicates)
+                + ". Each period name (or type fallback) must be unique."
+            )
+
+        grouping_dimensions = self.attribution_options.grouping_dimensions
+        if "CUSTOM" in grouping_dimensions:
+            raise ValueError(
+                "stateful historical-attribution does not support grouping_dimension=CUSTOM"
+            )
+
+        requires_active = (
+            "ACTIVE_RISK" in self.attribution_options.attribution_types
+            or "TRACKING_ERROR" in self.attribution_options.metrics
+        )
+        if requires_active and "ISSUER" in grouping_dimensions:
+            raise ValueError(
+                "stateful ACTIVE_RISK/TRACKING_ERROR attribution does not support "
+                "grouping_dimension=ISSUER until benchmark issuer exposure semantics are available"
+            )
+        return self
+
 
 class HistoricalAttributionRequest(BaseModel):
     input_mode: AttributionInputMode = Field(
@@ -262,16 +290,53 @@ class HistoricalAttributionRequest(BaseModel):
     )
     stateful_input: HistoricalAttributionStatefulInput | None = Field(
         default=None,
-        description="Stateful payload. Reserved for Slice B implementation.",
+        description=(
+            "Stateful payload for returns/exposure sourcing through lotus-performance and lotus-core. "
+            "Stateful ACTIVE_RISK currently supports POSITION, SECTOR, and ASSET_CLASS; "
+            "ISSUER remains gated until benchmark issuer exposure semantics are available. "
+            "CUSTOM grouping is not supported in stateful mode."
+        ),
         json_schema_extra={
             "example": {
                 "portfolio_id": "DEMO_DPM_EUR_001",
                 "as_of_date": "2026-02-28",
+                "reporting_currency": "USD",
+                "net_or_gross": "NET",
                 "periods": [{"type": "YTD", "name": "YTD"}],
+                "attribution_options": {
+                    "attribution_types": ["ACTIVE_RISK"],
+                    "metrics": ["TRACKING_ERROR"],
+                    "grouping_dimensions": ["SECTOR"],
+                    "annualization_basis": 252,
+                    "covariance_method": "EMPIRICAL",
+                    "min_observations_policy": "STRICT",
+                },
             }
         },
     )
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "example": {
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-02-28",
+                    "reporting_currency": "USD",
+                    "net_or_gross": "NET",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "attribution_options": {
+                        "attribution_types": ["ACTIVE_RISK"],
+                        "metrics": ["TRACKING_ERROR"],
+                        "grouping_dimensions": ["SECTOR"],
+                        "annualization_basis": 252,
+                        "covariance_method": "EMPIRICAL",
+                        "min_observations_policy": "STRICT",
+                    },
+                },
+            }
+        },
+    )
 
     @model_validator(mode="after")
     def normalize_and_validate(self) -> "HistoricalAttributionRequest":
@@ -418,6 +483,40 @@ class HistoricalAttributionMetadata(BaseModel):
         description="Annualization basis used for annualized metrics.",
         json_schema_extra={"example": 252},
     )
+    requested_attribution_types: list[AttributionType] = Field(
+        default_factory=list,
+        description="Requested attribution decomposition types in canonical execution order.",
+        json_schema_extra={"example": ["TOTAL_RISK", "ACTIVE_RISK"]},
+    )
+    requested_metrics: list[AttributionMetric] = Field(
+        default_factory=list,
+        description="Requested attribution metrics in canonical execution order.",
+        json_schema_extra={"example": ["VOLATILITY", "TRACKING_ERROR"]},
+    )
+    requested_grouping_dimensions: list[GroupingDimension] = Field(
+        default_factory=list,
+        description="Requested grouping dimensions in canonical execution order.",
+        json_schema_extra={"example": ["POSITION", "SECTOR"]},
+    )
+    min_observations_policy: Literal["STRICT", "ALLOW_PARTIAL"] = Field(
+        description="Minimum observation policy used for attribution decomposition.",
+        json_schema_extra={"example": "STRICT"},
+    )
+    stateful_active_risk_supported_grouping_dimensions: list[GroupingDimension] = Field(
+        default_factory=lambda: ["POSITION", "SECTOR", "ASSET_CLASS"],
+        description="Grouping dimensions currently supported for stateful ACTIVE_RISK attribution.",
+        json_schema_extra={"example": ["POSITION", "SECTOR", "ASSET_CLASS"]},
+    )
+    stateful_active_risk_gated_grouping_dimensions: list[GroupingDimension] = Field(
+        default_factory=lambda: ["ISSUER"],
+        description="Grouping dimensions intentionally gated for stateful ACTIVE_RISK attribution.",
+        json_schema_extra={"example": ["ISSUER"]},
+    )
+    stateful_active_risk_gate_reason: str = Field(
+        default="benchmark issuer exposure semantics unavailable",
+        description="Deterministic reason for any gated stateful ACTIVE_RISK grouping dimensions.",
+        json_schema_extra={"example": "benchmark issuer exposure semantics unavailable"},
+    )
 
 
 class HistoricalAttributionResponse(BaseModel):
@@ -461,6 +560,85 @@ class HistoricalAttributionResponse(BaseModel):
                 "methodology_version": "historical_attribution.v1",
                 "covariance_method": "EMPIRICAL",
                 "annualization_basis": 252,
+                "requested_attribution_types": ["TOTAL_RISK", "ACTIVE_RISK"],
+                "requested_metrics": ["VOLATILITY", "TRACKING_ERROR"],
+                "requested_grouping_dimensions": ["SECTOR"],
+                "min_observations_policy": "STRICT",
+                "stateful_active_risk_supported_grouping_dimensions": [
+                    "POSITION",
+                    "SECTOR",
+                    "ASSET_CLASS",
+                ],
+                "stateful_active_risk_gated_grouping_dimensions": ["ISSUER"],
+                "stateful_active_risk_gate_reason": "benchmark issuer exposure semantics unavailable",
             }
         },
+    )
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "source_service": "lotus-risk",
+                "input_mode": "stateful",
+                "scope": {
+                    "as_of_date": "2026-02-28",
+                    "reporting_currency": "USD",
+                    "net_or_gross": "NET",
+                },
+                "results": {
+                    "YTD": {
+                        "start_date": "2026-01-01",
+                        "end_date": "2026-02-28",
+                        "attribution_sets": [
+                            {
+                                "attribution_type": "ACTIVE_RISK",
+                                "metric": "TRACKING_ERROR",
+                                "grouping_dimension": "SECTOR",
+                                "total_value": 0.0642,
+                                "reconciled_sum": 0.0638,
+                                "residual": 0.0004,
+                                "contributors": [
+                                    {
+                                        "group_key": "SECTOR_TECH",
+                                        "group_label": "Technology",
+                                        "weight_average": 0.245,
+                                        "marginal_contribution": 0.0911,
+                                        "component_contribution": 0.0223,
+                                        "percent_contribution": 0.3474,
+                                    },
+                                    {
+                                        "group_key": "SECTOR_HEALTH",
+                                        "group_label": "Healthcare",
+                                        "weight_average": 0.184,
+                                        "marginal_contribution": -0.0312,
+                                        "component_contribution": -0.0057,
+                                        "percent_contribution": -0.0888,
+                                    },
+                                ],
+                                "quality_flags": [],
+                            }
+                        ],
+                        "error": None,
+                    }
+                },
+                "metadata": {
+                    "contract_version": "v1",
+                    "methodology_version": "historical_attribution.v1",
+                    "covariance_method": "EMPIRICAL",
+                    "annualization_basis": 252,
+                    "requested_attribution_types": ["ACTIVE_RISK"],
+                    "requested_metrics": ["TRACKING_ERROR"],
+                    "requested_grouping_dimensions": ["SECTOR"],
+                    "min_observations_policy": "STRICT",
+                    "stateful_active_risk_supported_grouping_dimensions": [
+                        "POSITION",
+                        "SECTOR",
+                        "ASSET_CLASS",
+                    ],
+                    "stateful_active_risk_gated_grouping_dimensions": ["ISSUER"],
+                    "stateful_active_risk_gate_reason": (
+                        "benchmark issuer exposure semantics unavailable"
+                    ),
+                },
+            }
+        }
     )

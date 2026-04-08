@@ -63,15 +63,25 @@
 ## Expected Output Structure
 
 - `scope` (echoed normalized request scope)
+- `metadata`
+  - `contract_version`
+  - `methodology_version`
+  - applied frequency / annualization / log-return / risk-free / VaR settings
+  - `risk_free_context` (`requested`, `applied`, `reason`, `periodic_rate`)
+  - `benchmark_context` (`requested`, `requested_metrics`)
 - `results` map keyed by period name/type:
-  - `startDate`
-  - `endDate`
+  - `start_date`
+  - `end_date`
+  - `portfolio_observation_count`
+  - `benchmark_observation_count`
+  - `aligned_benchmark_observation_count`
+  - `benchmark_context` (`requested`, `available`, `aligned`, `reason`, `requested_metric_count`, `requested_metrics`)
   - `metrics` map:
     - each metric:
       - `value: float | null`
       - `details?: object`
         - deterministic error object on metric-level failure (`details.error`)
-        - metric-specific detail payload (for example drawdown metadata, VaR expected shortfall)
+        - metric-specific detail payload (for example drawdown peak/trough/recovery context, Volatility/Sharpe/Sortino observation plus periodic/annualized numerator context, benchmark metric aligned-sample plus periodic/annualized active-return context, VaR method/confidence/tail depth/base expected shortfall plus explicit square-root-of-time horizon scaling context)
 
 ## Alignment Assessment
 
@@ -82,6 +92,6 @@
 
 ## Gaps and Decisions Required
 
-1. Benchmark/risk-free sourcing remains upstream-dependent on lotus-performance + lotus-core reference-data availability; stateful benchmark metrics degrade deterministically when benchmark series is absent.
+1. Benchmark/risk-free sourcing remains upstream-dependent on lotus-performance + lotus-core reference-data availability; stateful benchmark metrics degrade deterministically when benchmark series is absent, and this is now surfaced in `benchmark_context.reason`. Risk-free application for Sharpe is surfaced separately in `metadata.risk_free_context`.
 2. Standardize response metadata additions (for example `correlationId`, `contractVersion`, `asOfDate`) if this endpoint must fully match cross-platform response envelope conventions.
 

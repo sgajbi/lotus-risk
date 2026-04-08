@@ -50,6 +50,8 @@ def test_drawdown_engine_returns_period_summary_episode_and_underwater() -> None
     )
     period = response.results["YTD"]
     assert period.error is None
+    assert period.portfolio_observation_count == 7
+    assert period.benchmark_observation_count == 7
     assert period.summary is not None
     assert period.summary.max_drawdown is not None
     assert period.summary.max_drawdown < 0
@@ -61,6 +63,20 @@ def test_drawdown_engine_returns_period_summary_episode_and_underwater() -> None
     assert period.underwater_series is not None
     assert len(period.underwater_series) > 0
     assert period.relative_to_benchmark is not None
+    assert period.relative_to_benchmark_context.requested is False
+    assert period.relative_to_benchmark_context.applied is True
+    assert period.relative_to_benchmark_context.reason == "APPLIED"
+    assert period.relative_to_benchmark_context.aligned_observation_count == 7
+    assert period.relative_to_benchmark.max_drawdown is not None
+    assert period.relative_to_benchmark.days_to_trough is not None
+    assert period.relative_to_benchmark.time_under_water_days >= 0
+    assert response.metadata.include_underwater_series is True
+    assert response.metadata.include_episode_list is True
+    assert response.metadata.top_n_episodes == 5
+    assert response.metadata.cdar_alpha == 0.95
+    assert response.metadata.duration_unit == "BUSINESS_DAYS"
+    assert response.metadata.include_benchmark is None
+    assert response.metadata.missing_benchmark_policy is None
 
 
 def test_drawdown_engine_handles_empty_returns() -> None:
@@ -77,6 +93,8 @@ def test_drawdown_engine_handles_empty_returns() -> None:
         analysis_options=DrawdownAnalysisOptions.model_validate({}),
     )
     assert response.results == {}
+    assert response.metadata.include_episode_list is True
+    assert response.metadata.include_benchmark is None
 
 
 def test_drawdown_engine_respects_episode_threshold_and_top_n() -> None:
@@ -145,8 +163,73 @@ def test_drawdown_engine_sets_period_error_when_window_has_no_observations() -> 
         request,
         input_mode=DrawdownInputMode.STATELESS,
         analysis_options=DrawdownAnalysisOptions.model_validate({}),
+        include_benchmark=True,
     )
     assert response.results["empty"].error == "Insufficient data"
+    assert response.results["empty"].portfolio_observation_count == 0
+    assert response.results["empty"].benchmark_observation_count == 0
+    assert response.results["empty"].relative_to_benchmark_context.requested is True
+    assert response.results["empty"].relative_to_benchmark_context.applied is False
+    assert response.results["empty"].relative_to_benchmark_context.reason == "BENCHMARK_UNAVAILABLE"
+
+
+def test_drawdown_engine_reports_unapplied_relative_context_when_benchmark_missing() -> None:
+    request = DrawdownStatelessInput.model_validate(
+        {
+            "scope": {"as_of_date": "2026-01-08", "net_or_gross": "NET"},
+            "periods": [{"type": "YTD", "name": "YTD"}],
+            "returns": [
+                {"date": "2026-01-02", "value": 1.0},
+                {"date": "2026-01-03", "value": -3.0},
+            ],
+            "benchmark_returns": [],
+        }
+    )
+    response = calculate_drawdown(
+        request,
+        input_mode=DrawdownInputMode.STATELESS,
+        analysis_options=DrawdownAnalysisOptions.model_validate({}),
+        include_benchmark=True,
+    )
+    period = response.results["YTD"]
+    assert period.portfolio_observation_count == 2
+    assert period.benchmark_observation_count == 0
+    assert period.relative_to_benchmark is None
+    assert period.relative_to_benchmark_context.requested is True
+    assert period.relative_to_benchmark_context.applied is False
+    assert period.relative_to_benchmark_context.reason == "BENCHMARK_UNAVAILABLE"
+    assert period.relative_to_benchmark_context.aligned_observation_count == 0
+
+
+def test_drawdown_engine_reports_no_aligned_observations_reason() -> None:
+    request = DrawdownStatelessInput.model_validate(
+        {
+            "scope": {"as_of_date": "2026-01-08", "net_or_gross": "NET"},
+            "periods": [{"type": "YTD", "name": "YTD"}],
+            "returns": [
+                {"date": "2026-01-02", "value": 1.0},
+                {"date": "2026-01-03", "value": -3.0},
+            ],
+            "benchmark_returns": [
+                {"date": "2026-01-06", "value": 0.4},
+                {"date": "2026-01-07", "value": 0.4},
+            ],
+        }
+    )
+    response = calculate_drawdown(
+        request,
+        input_mode=DrawdownInputMode.STATELESS,
+        analysis_options=DrawdownAnalysisOptions.model_validate({}),
+        include_benchmark=True,
+    )
+    period = response.results["YTD"]
+    assert period.portfolio_observation_count == 2
+    assert period.benchmark_observation_count == 2
+    assert period.relative_to_benchmark is None
+    assert period.relative_to_benchmark_context.requested is True
+    assert period.relative_to_benchmark_context.applied is False
+    assert period.relative_to_benchmark_context.reason == "NO_ALIGNED_OBSERVATIONS"
+    assert period.relative_to_benchmark_context.aligned_observation_count == 0
 
 
 def test_drawdown_engine_empty_summary_and_duration_guard_branches() -> None:

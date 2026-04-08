@@ -9,7 +9,6 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.contracts.capabilities import (
     CAPABILITY_FEATURE_KEYS,
-    CAPABILITY_WORKFLOW_KEYS,
     CapabilityFeature,
     CapabilityWorkflow,
     IntegrationCapabilitiesResponse,
@@ -477,8 +476,54 @@ async def integration_capabilities() -> IntegrationCapabilitiesResponse:
         supported_input_modes=list(SUPPORTED_INPUT_MODES),
         features=[CapabilityFeature(key=feature_key) for feature_key in CAPABILITY_FEATURE_KEYS],
         workflows=[
-            CapabilityWorkflow(workflow_key=workflow_key)
-            for workflow_key in CAPABILITY_WORKFLOW_KEYS
+            CapabilityWorkflow(
+                workflow_key="risk_snapshot",
+                endpoint_path="/analytics/risk/calculate",
+                supported_input_modes=["stateless", "stateful"],
+                support_status="full",
+                notes=[
+                    "simulation is intentionally unsupported",
+                    "benchmark-dependent metrics require benchmark returns",
+                ],
+            ),
+            CapabilityWorkflow(
+                workflow_key="concentration_risk",
+                endpoint_path="/analytics/risk/concentration",
+                supported_input_modes=["stateless", "stateful", "simulation"],
+                support_status="full",
+                notes=[
+                    "simulation is supported for concentration",
+                    "issuer concentration includes coverage diagnostics",
+                ],
+            ),
+            CapabilityWorkflow(
+                workflow_key="drawdown_analytics",
+                endpoint_path="/analytics/risk/drawdown",
+                supported_input_modes=["stateless", "stateful"],
+                support_status="full",
+                notes=["simulation is intentionally unsupported"],
+            ),
+            CapabilityWorkflow(
+                workflow_key="rolling_risk_analytics",
+                endpoint_path="/analytics/risk/rolling-metrics",
+                supported_input_modes=["stateless", "stateful"],
+                support_status="full",
+                notes=[
+                    "simulation is intentionally unsupported",
+                    "stateful rolling Sharpe depends on risk-free series availability from lotus-core",
+                ],
+            ),
+            CapabilityWorkflow(
+                workflow_key="historical_risk_attribution",
+                endpoint_path="/analytics/risk/historical-attribution",
+                supported_input_modes=["stateless", "stateful"],
+                support_status="partial",
+                notes=[
+                    "simulation is intentionally unsupported",
+                    "stateful active-risk supports POSITION, SECTOR, and ASSET_CLASS",
+                    "stateful active-risk ISSUER remains gated",
+                ],
+            ),
         ],
     )
 
@@ -508,7 +553,10 @@ async def metrics() -> Response:
     tags=["risk-analytics"],
     description=(
         "Calculates historical risk and active-risk attribution decompositions with contributor-level "
-        "component, marginal, and percent contributions plus reconciliation diagnostics."
+        "component, marginal, and percent contributions plus reconciliation diagnostics. Supports "
+        "stateless execution and approved stateful execution. Stateful ACTIVE_RISK currently supports "
+        "POSITION, SECTOR, and ASSET_CLASS grouping dimensions; ISSUER is intentionally gated and "
+        "CUSTOM grouping is not supported in stateful mode."
     ),
 )
 async def analytics_risk_historical_attribution(
@@ -551,8 +599,10 @@ async def analytics_risk_historical_attribution(
     summary="Calculate concentration risk analytics",
     tags=["risk-analytics"],
     description=(
-        "Calculates concentration-risk HHI metrics from current and projected position "
-        "weights. Returns current, proposed, and delta concentration."
+        "Calculates portfolio, single-position, and issuer concentration analytics across "
+        "stateless, stateful, and simulation modes. Returns position-level HHI, top-position "
+        "weight, top-N cumulative weight, issuer-level HHI, top-issuer weight, issuer coverage "
+        "diagnostics, and top concentration drivers for current and proposed states."
     ),
 )
 async def analytics_risk_concentration(
@@ -577,8 +627,10 @@ async def analytics_risk_concentration(
     summary="Calculate realized drawdown analytics",
     tags=["risk-analytics"],
     description=(
-        "Calculates historical drawdown analytics including max drawdown, episode diagnostics, "
-        "time-under-water, ulcer index, and conditional drawdown metrics."
+        "Calculates realized drawdown analytics for stateless or stateful return histories, including "
+        "max drawdown, episode diagnostics, time-under-water, ulcer index, drawdown-at-risk, and "
+        "benchmark-relative drawdown timing. The response echoes applied analysis and benchmark policy "
+        "settings so downstream consumers can interpret results without reconstructing the request."
     ),
 )
 async def analytics_risk_drawdown(
@@ -620,7 +672,9 @@ async def analytics_risk_drawdown(
     tags=["risk-analytics"],
     description=(
         "Calculates rolling-window historical risk diagnostics including volatility, Sharpe, beta, "
-        "tracking error, information ratio, and rolling max drawdown."
+        "tracking error, information ratio, and rolling max drawdown. Supports stateless and "
+        "stateful execution, explicit rolling window configuration, benchmark-aware metrics, and "
+        "optional rolling time-series emission."
     ),
 )
 async def analytics_risk_rolling_metrics(

@@ -26,9 +26,19 @@ def test_integration_capabilities_response_contract() -> None:
         policy_version="risk.v1",
         supported_input_modes=["stateless", "stateful", "simulation"],
         features=[CapabilityFeature(key=CAPABILITY_FEATURE_KEYS[0])],
-        workflows=[CapabilityWorkflow(workflow_key=CAPABILITY_WORKFLOW_KEYS[0])],
+        workflows=[
+            CapabilityWorkflow(
+                workflow_key=CAPABILITY_WORKFLOW_KEYS[0],
+                endpoint_path="/analytics/risk/calculate",
+                supported_input_modes=["stateless", "stateful"],
+                support_status="full",
+                notes=["simulation is intentionally unsupported"],
+            )
+        ],
     ).model_dump()
     assert payload["source_service"] == "lotus-risk"
     assert payload["policy_version"] == "risk.v1"
     assert payload["supported_input_modes"] == ["stateless", "stateful", "simulation"]
     assert payload["workflows"][0]["workflow_key"] == CAPABILITY_WORKFLOW_KEYS[0]
+    assert payload["workflows"][0]["endpoint_path"] == "/analytics/risk/calculate"
+    assert payload["workflows"][0]["support_status"] == "full"

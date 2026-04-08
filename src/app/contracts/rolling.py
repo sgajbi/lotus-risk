@@ -251,6 +251,18 @@ class RollingAnalyticsRequest(BaseModel):
                 "portfolio_id": "DEMO_DPM_EUR_001",
                 "as_of_date": "2026-02-28",
                 "periods": [{"type": "YTD", "name": "YTD"}],
+                "rolling_options": {
+                    "window_lengths": [21, 63],
+                    "metrics": [
+                        "ROLLING_VOLATILITY",
+                        "ROLLING_BETA",
+                        "ROLLING_TRACKING_ERROR",
+                    ],
+                    "annualization_basis": 252,
+                    "min_observations_policy": "STRICT",
+                    "alignment_policy": "INNER_JOIN",
+                    "include_time_series": False,
+                },
             }
         },
     )
@@ -266,6 +278,46 @@ class RollingAnalyticsRequest(BaseModel):
 
 
 class RollingMetricSummary(BaseModel):
+    total_point_count: int = Field(
+        default=0,
+        description="Total rolling observation slots evaluated for this metric/window, including null warm-up periods.",
+        json_schema_extra={"example": 90},
+    )
+    computed_point_count: int = Field(
+        default=0,
+        description="Number of rolling observations that produced non-null values for this metric/window.",
+        json_schema_extra={"example": 70},
+    )
+    coverage_ratio: float = Field(
+        default=0.0,
+        description="Computed-point coverage ratio for this metric/window (`computed_point_count / total_point_count`).",
+        json_schema_extra={"example": 0.777778},
+    )
+    min_observations_required: int = Field(
+        default=0,
+        description="Minimum observations required before this rolling metric/window can emit non-null values.",
+        json_schema_extra={"example": 21},
+    )
+    warmup_point_count: int = Field(
+        default=0,
+        description="Expected leading warm-up slots before the rolling window reaches minimum observations.",
+        json_schema_extra={"example": 20},
+    )
+    non_computed_point_count: int = Field(
+        default=0,
+        description="Total slots that did not produce a rolling value for this metric/window.",
+        json_schema_extra={"example": 20},
+    )
+    post_warmup_gap_point_count: int = Field(
+        default=0,
+        description="Non-computed slots beyond expected warm-up, indicating additional data/alignment gaps.",
+        json_schema_extra={"example": 0},
+    )
+    latest_observation_date: dt.date | None = Field(
+        default=None,
+        description="Date of the latest non-null rolling metric value included in this summary.",
+        json_schema_extra={"example": "2026-03-31"},
+    )
     latest: float | None = Field(
         default=None,
         description="Latest rolling metric value in decimal units for this period/window.",
@@ -319,6 +371,26 @@ class RollingMetricSeriesPoint(BaseModel):
     )
 
 
+class RollingMetricSeriesContext(BaseModel):
+    requested: bool = Field(
+        description="Whether rolling time-series points were requested for this window.",
+        json_schema_extra={"example": True},
+    )
+    included: bool = Field(
+        description="Whether rolling time-series points are included in the response for this window.",
+        json_schema_extra={"example": True},
+    )
+    emitted_point_count: int = Field(
+        default=0,
+        description="Number of time-series points emitted for this window.",
+        json_schema_extra={"example": 90},
+    )
+    reason: Literal["INCLUDED", "OMITTED_BY_REQUEST", "NO_METRIC_SERIES"] = Field(
+        description="Deterministic reason for time-series inclusion behavior in this window.",
+        json_schema_extra={"example": "INCLUDED"},
+    )
+
+
 class RollingWindowResult(BaseModel):
     window_length: int = Field(
         description="Rolling window length in observations.",
@@ -328,12 +400,20 @@ class RollingWindowResult(BaseModel):
         description="Rolling metric summaries keyed by metric name.",
         json_schema_extra={
             "example": {
-                "ROLLING_VOLATILITY": {
-                    "latest": 0.1374,
-                    "average": 0.1221,
-                    "minimum": 0.0913,
-                    "maximum": 0.1662,
-                    "p05": 0.0975,
+                    "ROLLING_VOLATILITY": {
+                        "total_point_count": 90,
+                        "computed_point_count": 70,
+                        "coverage_ratio": 0.777778,
+                        "min_observations_required": 21,
+                        "warmup_point_count": 20,
+                        "non_computed_point_count": 20,
+                        "post_warmup_gap_point_count": 0,
+                        "latest_observation_date": "2026-03-31",
+                        "latest": 0.1374,
+                        "average": 0.1221,
+                        "minimum": 0.0913,
+                        "maximum": 0.1662,
+                        "p05": 0.0975,
                     "p50": 0.1218,
                     "p95": 0.1611,
                 }
@@ -355,6 +435,55 @@ class RollingWindowResult(BaseModel):
             ]
         },
     )
+    metric_series_context: RollingMetricSeriesContext = Field(
+        description="Time-series inclusion context for this rolling window.",
+        json_schema_extra={
+            "example": {
+                "requested": True,
+                "included": True,
+                "emitted_point_count": 90,
+                "reason": "INCLUDED",
+            }
+        },
+    )
+
+
+class RollingBenchmarkContext(BaseModel):
+    requested: bool = Field(
+        description="Whether any benchmark-dependent rolling metrics were requested for this period.",
+        json_schema_extra={"example": True},
+    )
+    available: bool = Field(
+        description="Whether benchmark return observations were available in this period.",
+        json_schema_extra={"example": True},
+    )
+    aligned: bool = Field(
+        description="Whether benchmark return observations aligned with portfolio observations for requested rolling metrics.",
+        json_schema_extra={"example": True},
+    )
+    reason: Literal["NOT_REQUESTED", "BENCHMARK_UNAVAILABLE", "NO_ALIGNED_OBSERVATIONS", "APPLIED"] = Field(
+        description="Deterministic benchmark application outcome for the period.",
+        json_schema_extra={"example": "APPLIED"},
+    )
+
+
+class RollingRiskFreeContext(BaseModel):
+    requested: bool = Field(
+        description="Whether rolling Sharpe was requested for this period.",
+        json_schema_extra={"example": True},
+    )
+    available: bool = Field(
+        description="Whether risk-free observations were available in this period.",
+        json_schema_extra={"example": True},
+    )
+    aligned: bool = Field(
+        description="Whether risk-free observations aligned with portfolio observations for rolling Sharpe.",
+        json_schema_extra={"example": True},
+    )
+    reason: Literal["NOT_REQUESTED", "RISK_FREE_UNAVAILABLE", "NO_ALIGNED_OBSERVATIONS", "APPLIED"] = Field(
+        description="Deterministic risk-free application outcome for the period.",
+        json_schema_extra={"example": "APPLIED"},
+    )
 
 
 class RollingPeriodResult(BaseModel):
@@ -369,6 +498,68 @@ class RollingPeriodResult(BaseModel):
     series_count: int = Field(
         description="Number of portfolio return observations used in this period.",
         json_schema_extra={"example": 41},
+    )
+    benchmark_series_count: int = Field(
+        default=0,
+        description="Number of benchmark return observations available in this period.",
+        json_schema_extra={"example": 41},
+    )
+    aligned_benchmark_series_count: int = Field(
+        default=0,
+        description="Number of aligned portfolio/benchmark observations available for benchmark-dependent rolling metrics.",
+        json_schema_extra={"example": 41},
+    )
+    risk_free_series_count: int = Field(
+        default=0,
+        description="Number of risk-free observations available in this period.",
+        json_schema_extra={"example": 41},
+    )
+    aligned_risk_free_series_count: int = Field(
+        default=0,
+        description="Number of aligned portfolio/risk-free observations available for rolling Sharpe.",
+        json_schema_extra={"example": 41},
+    )
+    window_lengths_requested: list[int] = Field(
+        default_factory=list,
+        description="Rolling window lengths requested for this period.",
+        json_schema_extra={"example": [21, 63]},
+    )
+    window_count_requested: int = Field(
+        default=0,
+        description="Number of rolling window lengths requested for this period.",
+        json_schema_extra={"example": 2},
+    )
+    window_lengths_emitted: list[int] = Field(
+        default_factory=list,
+        description="Rolling window lengths actually emitted in this period result.",
+        json_schema_extra={"example": [21, 63]},
+    )
+    window_count_emitted: int = Field(
+        default=0,
+        description="Number of rolling window lengths actually emitted in this period result.",
+        json_schema_extra={"example": 2},
+    )
+    benchmark_context: RollingBenchmarkContext = Field(
+        description="Benchmark application context for benchmark-dependent rolling metrics in this period.",
+        json_schema_extra={
+            "example": {
+                "requested": True,
+                "available": True,
+                "aligned": True,
+                "reason": "APPLIED",
+            }
+        },
+    )
+    risk_free_context: RollingRiskFreeContext = Field(
+        description="Risk-free application context for rolling Sharpe in this period.",
+        json_schema_extra={
+            "example": {
+                "requested": False,
+                "available": False,
+                "aligned": False,
+                "reason": "NOT_REQUESTED",
+            }
+        },
     )
     window_results: list[RollingWindowResult] = Field(
         default_factory=list,
@@ -387,6 +578,18 @@ class RollingPeriodResult(BaseModel):
     )
 
 
+class RollingRequestDependencyContext(BaseModel):
+    requested: bool = Field(
+        description="Whether this dependency family is required by any requested rolling metric.",
+        json_schema_extra={"example": True},
+    )
+    requested_metrics: list[str] = Field(
+        default_factory=list,
+        description="Requested rolling metrics that depend on this family.",
+        json_schema_extra={"example": ["ROLLING_BETA", "ROLLING_TRACKING_ERROR"]},
+    )
+
+
 class RollingMetadata(BaseModel):
     contract_version: str = Field(
         default="v1",
@@ -402,9 +605,59 @@ class RollingMetadata(BaseModel):
         description="Annualization basis used for annualized rolling metrics.",
         json_schema_extra={"example": 252},
     )
+    requested_metrics: list[str] = Field(
+        default_factory=list,
+        description="Requested rolling metrics in canonical execution order.",
+        json_schema_extra={
+            "example": [
+                "ROLLING_VOLATILITY",
+                "ROLLING_SHARPE",
+                "ROLLING_BETA",
+            ]
+        },
+    )
+    window_lengths_requested: list[int] = Field(
+        default_factory=list,
+        description="Rolling window lengths requested for this response.",
+        json_schema_extra={"example": [21, 63, 126]},
+    )
+    window_count_requested: int = Field(
+        default=0,
+        description="Number of rolling window lengths requested for this response.",
+        json_schema_extra={"example": 3},
+    )
     alignment_policy: Literal["INNER_JOIN"] = Field(
         description="Series alignment policy used for multi-series rolling metrics.",
         json_schema_extra={"example": "INNER_JOIN"},
+    )
+    min_observations_policy: Literal["STRICT", "ALLOW_PARTIAL"] = Field(
+        description="Minimum-observations policy used across the requested rolling windows.",
+        json_schema_extra={"example": "STRICT"},
+    )
+    include_time_series: bool = Field(
+        description="Whether rolling metric time-series points were requested for emitted windows.",
+        json_schema_extra={"example": False},
+    )
+    benchmark_context: RollingRequestDependencyContext = Field(
+        description="Top-level benchmark dependency context derived from the requested rolling metrics.",
+        json_schema_extra={
+            "example": {
+                "requested": True,
+                "requested_metrics": [
+                    "ROLLING_BETA",
+                    "ROLLING_TRACKING_ERROR",
+                ],
+            }
+        },
+    )
+    risk_free_context: RollingRequestDependencyContext = Field(
+        description="Top-level risk-free dependency context derived from the requested rolling metrics.",
+        json_schema_extra={
+            "example": {
+                "requested": True,
+                "requested_metrics": ["ROLLING_SHARPE"],
+            }
+        },
     )
 
 
@@ -436,6 +689,26 @@ class RollingResponse(BaseModel):
                     "start_date": "2026-01-01",
                     "end_date": "2026-02-28",
                     "series_count": 41,
+                    "benchmark_series_count": 41,
+                    "aligned_benchmark_series_count": 41,
+                    "window_lengths_requested": [21, 63],
+                    "window_count_requested": 2,
+                    "window_lengths_emitted": [21, 63],
+                    "window_count_emitted": 2,
+                    "benchmark_context": {
+                        "requested": True,
+                        "available": True,
+                        "aligned": True,
+                        "reason": "APPLIED",
+                    },
+                    "risk_free_series_count": 41,
+                    "aligned_risk_free_series_count": 41,
+                    "risk_free_context": {
+                        "requested": True,
+                        "available": True,
+                        "aligned": True,
+                        "reason": "APPLIED",
+                    },
                     "window_results": [],
                     "quality_flags": [],
                     "error": None,
@@ -450,7 +723,161 @@ class RollingResponse(BaseModel):
                 "contract_version": "v1",
                 "methodology_version": "rolling_metrics.v1",
                 "annualization_basis": 252,
+                "requested_metrics": [
+                    "ROLLING_VOLATILITY",
+                    "ROLLING_BETA",
+                    "ROLLING_TRACKING_ERROR",
+                ],
+                "window_lengths_requested": [21, 63],
+                "window_count_requested": 2,
                 "alignment_policy": "INNER_JOIN",
+                "min_observations_policy": "STRICT",
+                "include_time_series": False,
+                "benchmark_context": {
+                    "requested": True,
+                    "requested_metrics": [
+                        "ROLLING_BETA",
+                        "ROLLING_TRACKING_ERROR",
+                    ],
+                },
+                "risk_free_context": {
+                    "requested": False,
+                    "requested_metrics": [],
+                },
             }
         },
+    )
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "source_service": "lotus-risk",
+                "input_mode": "stateful",
+                "scope": {
+                    "as_of_date": "2026-03-31",
+                    "reporting_currency": "USD",
+                    "net_or_gross": "NET",
+                },
+                "results": {
+                    "YTD": {
+                        "start_date": "2026-01-01",
+                        "end_date": "2026-03-31",
+                    "series_count": 90,
+                    "benchmark_series_count": 90,
+                    "aligned_benchmark_series_count": 90,
+                    "window_lengths_requested": [21],
+                    "window_count_requested": 1,
+                    "window_lengths_emitted": [21],
+                    "window_count_emitted": 1,
+                    "benchmark_context": {
+                        "requested": True,
+                        "available": True,
+                        "aligned": True,
+                        "reason": "APPLIED",
+                    },
+                    "risk_free_series_count": 0,
+                    "aligned_risk_free_series_count": 0,
+                    "risk_free_context": {
+                        "requested": False,
+                        "available": False,
+                        "aligned": False,
+                        "reason": "NOT_REQUESTED",
+                    },
+                    "window_results": [
+                            {
+                                "window_length": 21,
+                                "metric_summaries": {
+                                    "ROLLING_VOLATILITY": {
+                                        "total_point_count": 90,
+                                        "computed_point_count": 70,
+                                        "coverage_ratio": 0.777778,
+                                        "min_observations_required": 21,
+                                        "warmup_point_count": 20,
+                                        "non_computed_point_count": 20,
+                                        "post_warmup_gap_point_count": 0,
+                                        "latest_observation_date": "2026-03-31",
+                                        "latest": 0.12538011,
+                                        "average": 0.11844792,
+                                        "minimum": 0.09122408,
+                                        "maximum": 0.16651142,
+                                        "p05": 0.09540187,
+                                        "p50": 0.11793054,
+                                        "p95": 0.15541828,
+                                    },
+                                    "ROLLING_BETA": {
+                                        "total_point_count": 90,
+                                        "computed_point_count": 70,
+                                        "coverage_ratio": 0.777778,
+                                        "min_observations_required": 21,
+                                        "warmup_point_count": 20,
+                                        "non_computed_point_count": 20,
+                                        "post_warmup_gap_point_count": 0,
+                                        "latest_observation_date": "2026-03-31",
+                                        "latest": -0.08222479,
+                                        "average": 0.04185233,
+                                        "minimum": -0.32108851,
+                                        "maximum": 0.41862514,
+                                        "p05": -0.24148062,
+                                        "p50": 0.05739184,
+                                        "p95": 0.31680427,
+                                    },
+                                    "ROLLING_TRACKING_ERROR": {
+                                        "total_point_count": 90,
+                                        "computed_point_count": 70,
+                                        "coverage_ratio": 0.777778,
+                                        "min_observations_required": 21,
+                                        "warmup_point_count": 20,
+                                        "non_computed_point_count": 20,
+                                        "post_warmup_gap_point_count": 0,
+                                        "latest_observation_date": "2026-03-31",
+                                        "latest": 0.09793316,
+                                        "average": 0.08741941,
+                                        "minimum": 0.05266133,
+                                        "maximum": 0.12807142,
+                                        "p05": 0.05824015,
+                                        "p50": 0.08653728,
+                                        "p95": 0.12150684,
+                                    },
+                                },
+                                "metric_series_context": {
+                                    "requested": False,
+                                    "included": False,
+                                    "emitted_point_count": 0,
+                                    "reason": "OMITTED_BY_REQUEST",
+                                },
+                                "metric_series": None,
+                            }
+                        ],
+                        "quality_flags": [],
+                        "error": None,
+                    }
+                },
+                "metadata": {
+                    "contract_version": "v1",
+                    "methodology_version": "rolling_metrics.v1",
+                    "annualization_basis": 252,
+                    "requested_metrics": [
+                        "ROLLING_VOLATILITY",
+                        "ROLLING_BETA",
+                        "ROLLING_TRACKING_ERROR",
+                    ],
+                    "window_lengths_requested": [21],
+                    "window_count_requested": 1,
+                    "alignment_policy": "INNER_JOIN",
+                    "min_observations_policy": "STRICT",
+                    "include_time_series": False,
+                    "benchmark_context": {
+                        "requested": True,
+                        "requested_metrics": [
+                            "ROLLING_BETA",
+                            "ROLLING_TRACKING_ERROR",
+                        ],
+                    },
+                    "risk_free_context": {
+                        "requested": False,
+                        "requested_metrics": [],
+                    },
+                },
+            }
+        }
     )

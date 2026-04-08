@@ -337,6 +337,19 @@ class RiskAnalyticsRequest(BaseModel):
                 "as_of_date": "2026-02-27",
                 "reporting_currency": "USD",
                 "client_id": "CLIENT_1000123",
+                "periods": [{"type": "YTD", "name": "YTD"}],
+                "metrics": ["VOLATILITY", "BETA", "TRACKING_ERROR", "INFORMATION_RATIO"],
+                "options": {
+                    "frequency": "DAILY",
+                    "risk_free_mode": "ZERO",
+                    "mar_annual_rate": 0.0,
+                    "var": {
+                        "method": "HISTORICAL",
+                        "confidence": 0.95,
+                        "horizon_days": 4,
+                        "include_expected_shortfall": True,
+                    },
+                },
             }
         },
     )
@@ -367,7 +380,17 @@ class RiskValue(BaseModel):
     details: dict[str, str | float | int | bool | None] | None = Field(
         default=None,
         description="Optional metric-specific details or deterministic error payload.",
-        json_schema_extra={"example": {"error": "Insufficient data"}},
+        json_schema_extra={
+            "example": {
+                "observation_count": 90,
+                "annualization_factor": 252,
+                "mean_return": 0.0010093159,
+                "periodic_risk_free_rate": 0.0,
+                "excess_return": 0.0010093159,
+                "annualized_excess_return": 0.254347604,
+                "volatility": 0.0078985986,
+            }
+        },
     )
 
 
@@ -380,9 +403,154 @@ class RiskPeriodResult(BaseModel):
         description="Resolved period end date after semantic normalization.",
         json_schema_extra={"example": "2025-03-31"},
     )
+    portfolio_observation_count: int = Field(
+        default=0,
+        description="Number of portfolio return observations used for this period result.",
+        json_schema_extra={"example": 64},
+    )
+    benchmark_observation_count: int = Field(
+        default=0,
+        description="Number of benchmark return observations available for this period result.",
+        json_schema_extra={"example": 64},
+    )
+    aligned_benchmark_observation_count: int = Field(
+        default=0,
+        description="Number of aligned portfolio/benchmark observations used for benchmark-dependent metrics.",
+        json_schema_extra={"example": 61},
+    )
+    benchmark_context: dict[str, str | bool | int | list[str]] | None = Field(
+        default=None,
+        description="Execution context for benchmark-dependent metrics in this period.",
+        json_schema_extra={
+            "example": {
+                "requested": True,
+                "available": True,
+                "aligned": True,
+                "reason": "APPLIED",
+                "requested_metric_count": 3,
+                "requested_metrics": ["BETA", "TRACKING_ERROR", "INFORMATION_RATIO"],
+            }
+        },
+    )
     metrics: dict[str, RiskValue] = Field(
         description="Metric values keyed by metric name.",
-        json_schema_extra={"example": {"VOLATILITY": {"value": 0.23}}},
+        json_schema_extra={"example": {"VOLATILITY": {"value": 9.75}, "SHARPE": {"value": 2.61}}},
+    )
+
+
+class RiskFreeContext(BaseModel):
+    requested: bool = Field(
+        default=False,
+        description="Whether any requested metrics depend on risk-free configuration.",
+        json_schema_extra={"example": True},
+    )
+    applied: bool = Field(
+        default=False,
+        description="Whether risk-free configuration was applied to at least one requested metric.",
+        json_schema_extra={"example": True},
+    )
+    reason: Literal["NOT_REQUESTED", "ZERO_RATE", "ANNUAL_RATE_APPLIED"] = Field(
+        default="NOT_REQUESTED",
+        description="Deterministic explanation of how risk-free configuration affected this response.",
+        json_schema_extra={"example": "ANNUAL_RATE_APPLIED"},
+    )
+    periodic_rate: float = Field(
+        default=0.0,
+        description="Applied periodic risk-free rate as a decimal return after annualization.",
+        json_schema_extra={"example": 0.00003949},
+    )
+
+
+class BenchmarkRequestContext(BaseModel):
+    requested: bool = Field(
+        default=False,
+        description="Whether any requested metrics depend on benchmark return alignment.",
+        json_schema_extra={"example": True},
+    )
+    requested_metrics: list[str] = Field(
+        default_factory=list,
+        description="Benchmark-dependent metrics requested anywhere in this response.",
+        json_schema_extra={"example": ["BETA", "TRACKING_ERROR", "INFORMATION_RATIO"]},
+    )
+
+
+class RiskResponseMetadata(BaseModel):
+    contract_version: str = Field(
+        default="v1",
+        description="Risk analytics contract version.",
+        json_schema_extra={"example": "v1"},
+    )
+    methodology_version: str = Field(
+        default="risk.v1",
+        description="Methodology version used for the risk engine.",
+        json_schema_extra={"example": "risk.v1"},
+    )
+    frequency: Literal["DAILY", "WEEKLY", "MONTHLY"] = Field(
+        default="DAILY",
+        description="Applied return sampling frequency.",
+        json_schema_extra={"example": "DAILY"},
+    )
+    annualization_factor: int = Field(
+        default=252,
+        description="Applied annualization factor after defaults or overrides.",
+        json_schema_extra={"example": 252},
+    )
+    use_log_returns: bool = Field(
+        default=False,
+        description="Whether returns were transformed to log returns before metric evaluation.",
+        json_schema_extra={"example": False},
+    )
+    risk_free_mode: Literal["ZERO", "ANNUAL_RATE"] = Field(
+        default="ZERO",
+        description="Applied risk-free mode for Sharpe calculations.",
+        json_schema_extra={"example": "ZERO"},
+    )
+    risk_free_annual_rate: float | None = Field(
+        default=None,
+        description="Applied annual risk-free rate when risk_free_mode=ANNUAL_RATE.",
+        json_schema_extra={"example": 0.01},
+    )
+    risk_free_context: RiskFreeContext = Field(
+        default_factory=RiskFreeContext,
+        description="Applied risk-free interpretation context for Sharpe calculations.",
+        json_schema_extra={
+            "example": {
+                "requested": True,
+                "applied": True,
+                "reason": "ANNUAL_RATE_APPLIED",
+                "periodic_rate": 0.00003949,
+            }
+        },
+    )
+    benchmark_context: BenchmarkRequestContext = Field(
+        default_factory=BenchmarkRequestContext,
+        description="Benchmark dependency request context for this response.",
+        json_schema_extra={
+            "example": {
+                "requested": True,
+                "requested_metrics": ["BETA", "TRACKING_ERROR", "INFORMATION_RATIO"],
+            }
+        },
+    )
+    mar_annual_rate: float = Field(
+        default=0.0,
+        description="Applied annual minimum acceptable return for Sortino calculations.",
+        json_schema_extra={"example": 0.0},
+    )
+    var_method: Literal["HISTORICAL", "GAUSSIAN", "CORNISH_FISHER"] = Field(
+        default="HISTORICAL",
+        description="Applied Value-at-Risk method.",
+        json_schema_extra={"example": "HISTORICAL"},
+    )
+    var_confidence: float = Field(
+        default=0.99,
+        description="Applied Value-at-Risk confidence level.",
+        json_schema_extra={"example": 0.95},
+    )
+    var_horizon_days: int = Field(
+        default=1,
+        description="Applied Value-at-Risk horizon in business days.",
+        json_schema_extra={"example": 1},
     )
 
 
@@ -404,8 +572,184 @@ class RiskResponse(BaseModel):
                 "explicit_q1_2025": {
                     "start_date": "2025-01-01",
                     "end_date": "2025-03-31",
+                    "portfolio_observation_count": 64,
+                    "benchmark_observation_count": 64,
+                    "aligned_benchmark_observation_count": 61,
+                    "benchmark_context": {
+                        "requested": True,
+                        "available": True,
+                        "aligned": True,
+                        "reason": "APPLIED",
+                        "requested_metric_count": 3,
+                        "requested_metrics": ["BETA", "TRACKING_ERROR", "INFORMATION_RATIO"],
+                    },
                     "metrics": {"VOLATILITY": {"value": 0.23}},
                 }
             }
         },
+    )
+    metadata: RiskResponseMetadata = Field(
+        default_factory=RiskResponseMetadata,
+        description="Risk contract and applied option metadata.",
+        json_schema_extra={
+            "example": {
+                "contract_version": "v1",
+                "methodology_version": "risk.v1",
+                "frequency": "DAILY",
+                "annualization_factor": 252,
+                "use_log_returns": False,
+                "risk_free_mode": "ZERO",
+                "risk_free_annual_rate": None,
+                "risk_free_context": {
+                    "requested": True,
+                    "applied": True,
+                    "reason": "ZERO_RATE",
+                    "periodic_rate": 0.0,
+                },
+                "benchmark_context": {
+                    "requested": True,
+                    "requested_metrics": ["BETA", "TRACKING_ERROR", "INFORMATION_RATIO"],
+                },
+                "mar_annual_rate": 0.0,
+                "var_method": "HISTORICAL",
+                "var_confidence": 0.95,
+                "var_horizon_days": 1,
+            }
+        },
+    )
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "scope": {
+                    "as_of_date": "2026-03-31",
+                    "reporting_currency": "USD",
+                    "net_or_gross": "NET",
+                },
+                "results": {
+                    "YTD": {
+                        "start_date": "2026-01-01",
+                        "end_date": "2026-03-31",
+                        "portfolio_observation_count": 90,
+                        "benchmark_observation_count": 90,
+                        "aligned_benchmark_observation_count": 90,
+                        "benchmark_context": {
+                            "requested": True,
+                            "available": True,
+                            "aligned": True,
+                            "reason": "APPLIED",
+                            "requested_metric_count": 3,
+                            "requested_metrics": [
+                                "BETA",
+                                "TRACKING_ERROR",
+                                "INFORMATION_RATIO",
+                            ],
+                        },
+                        "metrics": {
+                            "VOLATILITY": {
+                                "value": 12.538011,
+                                "details": {
+                                    "observation_count": 90,
+                                    "standard_deviation": 0.0078985986,
+                                    "annualization_factor": 252,
+                                },
+                            },
+                            "SHARPE": {
+                                "value": 2.029072,
+                                "details": {
+                                    "observation_count": 90,
+                                    "annualization_factor": 252,
+                                    "mean_return": 0.0010093159,
+                                    "periodic_risk_free_rate": 0.0,
+                                    "excess_return": 0.0010093159,
+                                    "annualized_excess_return": 0.254347604,
+                                    "volatility": 0.0078985986,
+                                },
+                            },
+                            "BETA": {
+                                "value": -0.08222479,
+                                "details": {
+                                    "aligned_observation_count": 90,
+                                    "portfolio_mean_return": 0.0010093159,
+                                    "benchmark_mean_return": 0.0004210968,
+                                    "covariance": -0.0002246556,
+                                    "benchmark_variance": 0.0027322129,
+                                },
+                            },
+                            "TRACKING_ERROR": {
+                                "value": 9.79331573,
+                                "details": {
+                                    "aligned_observation_count": 90,
+                                    "annualization_factor": 252,
+                                    "portfolio_mean_return": 0.0010093159,
+                                    "benchmark_mean_return": 0.0004210968,
+                                    "active_mean_return": 0.0005882191,
+                                    "active_volatility": 0.006169209,
+                                    "annualized_tracking_error": 0.0979331573,
+                                },
+                            },
+                            "INFORMATION_RATIO": {
+                                "value": 1.5135958,
+                                "details": {
+                                    "aligned_observation_count": 90,
+                                    "annualization_factor": 252,
+                                    "portfolio_mean_return": 0.0010093159,
+                                    "benchmark_mean_return": 0.0004210968,
+                                    "active_mean_return": 0.0005882191,
+                                    "tracking_error": 0.006169209,
+                                    "annualized_active_return": 0.1482312153,
+                                    "annualized_tracking_error": 0.0979331573,
+                                },
+                            },
+                            "VAR": {
+                                "value": -1.55,
+                                "details": {
+                                    "method": "HISTORICAL",
+                                    "confidence": 0.95,
+                                    "tail_probability": 0.05,
+                                    "base_horizon_days": 1,
+                                    "horizon_days": 4,
+                                    "horizon_scale_method": "SQRT_TIME",
+                                    "horizon_scale_factor": 2.0,
+                                    "include_expected_shortfall": True,
+                                    "base_var": -0.775,
+                                    "observation_count": 90,
+                                    "tail_observation_count": 5,
+                                    "base_expected_shortfall": -1.0,
+                                    "expected_shortfall_observation_count": 5,
+                                    "expected_shortfall": -2.0,
+                                },
+                            },
+                        },
+                    }
+                },
+                "metadata": {
+                    "contract_version": "v1",
+                    "methodology_version": "risk.v1",
+                    "frequency": "DAILY",
+                    "annualization_factor": 252,
+                    "use_log_returns": False,
+                    "risk_free_mode": "ZERO",
+                    "risk_free_annual_rate": None,
+                    "risk_free_context": {
+                        "requested": True,
+                        "applied": True,
+                        "reason": "ZERO_RATE",
+                        "periodic_rate": 0.0,
+                    },
+                    "benchmark_context": {
+                        "requested": True,
+                        "requested_metrics": [
+                            "BETA",
+                            "TRACKING_ERROR",
+                            "INFORMATION_RATIO",
+                        ],
+                    },
+                    "mar_annual_rate": 0.0,
+                    "var_method": "HISTORICAL",
+                    "var_confidence": 0.95,
+                    "var_horizon_days": 4,
+                },
+            }
+        }
     )

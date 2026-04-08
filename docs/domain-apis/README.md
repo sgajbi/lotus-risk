@@ -56,6 +56,8 @@ This package documents the current `lotus-risk` API surface and evaluates it aga
 - Legacy concentration payload aliases are removed; canonical envelope is required.
 - `/ops` endpoint is implemented with typed diagnostics contract.
 - Legacy endpoint `/analytics/workbench/risk-proxy` is removed from runtime surface.
+- The current service-wide readiness view is maintained in the endpoint matrix and reflects the
+  current gold-standard status by endpoint and mode.
 
 See per-endpoint detail:
 

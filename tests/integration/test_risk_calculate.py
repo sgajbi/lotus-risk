@@ -1,3 +1,4 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -63,10 +64,125 @@ def test_risk_calculate_endpoint_happy_path_contract() -> None:
     body = response.json()
     assert "results" in body
     assert "Explicit" in body["results"]
+    assert body["metadata"]["frequency"] == "DAILY"
+    assert body["metadata"]["annualization_factor"] == 252
+    assert body["metadata"]["benchmark_context"] == {
+        "requested": False,
+        "requested_metrics": [],
+    }
+    assert body["metadata"]["risk_free_context"] == {
+        "requested": True,
+        "applied": True,
+        "reason": "ANNUAL_RATE_APPLIED",
+        "periodic_rate": body["metadata"]["risk_free_context"]["periodic_rate"],
+    }
+    assert body["metadata"]["risk_free_context"]["periodic_rate"] > 0
     metrics = body["results"]["Explicit"]["metrics"]
+    assert body["results"]["Explicit"]["portfolio_observation_count"] == 4
+    assert body["results"]["Explicit"]["benchmark_observation_count"] == 0
+    assert body["results"]["Explicit"]["aligned_benchmark_observation_count"] == 0
     assert metrics["VOLATILITY"]["value"] is not None
+    assert metrics["VOLATILITY"]["details"]["observation_count"] == 4
+    assert metrics["VOLATILITY"]["details"]["annualization_factor"] == 252
+    assert metrics["VOLATILITY"]["details"]["standard_deviation"] > 0
     assert metrics["SHARPE"]["value"] is not None
+    assert metrics["SHARPE"]["details"]["observation_count"] == 4
+    assert metrics["SHARPE"]["details"]["annualization_factor"] == 252
+    assert metrics["SHARPE"]["details"]["mean_return"] > 0
+    assert metrics["SHARPE"]["details"]["periodic_risk_free_rate"] > 0
+    assert metrics["SHARPE"]["details"]["excess_return"] > 0
+    assert metrics["SHARPE"]["details"]["annualized_excess_return"] > 0
+    assert metrics["SHARPE"]["details"]["volatility"] > 0
     assert metrics["VAR"]["value"] is not None
+    assert metrics["VAR"]["details"]["method"] == "HISTORICAL"
+    assert metrics["VAR"]["details"]["confidence"] == 0.95
+    assert metrics["VAR"]["details"]["tail_probability"] == pytest.approx(0.05)
+    assert metrics["VAR"]["details"]["base_horizon_days"] == 1
+    assert metrics["VAR"]["details"]["horizon_days"] == 1
+    assert metrics["VAR"]["details"]["horizon_scale_method"] == "SQRT_TIME"
+    assert metrics["VAR"]["details"]["horizon_scale_factor"] == pytest.approx(1.0)
+    assert metrics["VAR"]["details"]["include_expected_shortfall"] is True
+    assert metrics["VAR"]["details"]["observation_count"] == 4
+    assert metrics["VAR"]["details"]["tail_observation_count"] >= 1
+    assert "base_var" in metrics["VAR"]["details"]
+    assert "base_expected_shortfall" in metrics["VAR"]["details"]
+    assert metrics["VAR"]["details"]["expected_shortfall_observation_count"] >= 1
+    assert "expected_shortfall" in metrics["VAR"]["details"]
+
+
+def test_risk_calculate_var_exposes_horizon_scaling_context() -> None:
+    client = TestClient(app)
+    payload = _request_payload()
+    stateless_input = payload["stateless_input"]
+    assert isinstance(stateless_input, dict)
+    stateless_input["metrics"] = ["VAR"]
+    stateless_input["options"] = {
+        "frequency": "DAILY",
+        "var": {
+            "method": "HISTORICAL",
+            "confidence": 0.95,
+            "horizon_days": 4,
+            "include_expected_shortfall": True,
+        },
+    }
+    response = client.post("/analytics/risk/calculate", json=payload)
+    assert response.status_code == 200
+    details = response.json()["results"]["Explicit"]["metrics"]["VAR"]["details"]
+    assert details["base_horizon_days"] == 1
+    assert details["horizon_days"] == 4
+    assert details["horizon_scale_method"] == "SQRT_TIME"
+    assert details["horizon_scale_factor"] == pytest.approx(2.0)
+    assert details["expected_shortfall"] == pytest.approx(
+        details["base_expected_shortfall"] * details["horizon_scale_factor"]
+    )
+
+
+def test_risk_calculate_drawdown_exposes_recovery_context() -> None:
+    client = TestClient(app)
+    payload = _request_payload()
+    stateless_input = payload["stateless_input"]
+    assert isinstance(stateless_input, dict)
+    stateless_input["metrics"] = ["DRAWDOWN"]
+    stateless_input["returns"] = [
+        {"date": "2025-01-02", "value": 10.0},
+        {"date": "2025-01-03", "value": -20.0},
+        {"date": "2025-01-06", "value": 5.0},
+        {"date": "2025-01-07", "value": 20.0},
+    ]
+    response = client.post("/analytics/risk/calculate", json=payload)
+    assert response.status_code == 200
+    details = response.json()["results"]["Explicit"]["metrics"]["DRAWDOWN"]["details"]
+    assert details["peak_date"] == "2025-01-02"
+    assert details["trough_date"] == "2025-01-03"
+    assert details["recovery_date"] == "2025-01-07"
+    assert details["is_recovered"] is True
+    assert details["days_to_trough"] == 1
+    assert details["days_to_recovery"] == 4
+    assert details["time_under_water_days"] == 5
+
+
+def test_risk_calculate_sortino_exposes_downside_context() -> None:
+    client = TestClient(app)
+    payload = _request_payload()
+    stateless_input = payload["stateless_input"]
+    assert isinstance(stateless_input, dict)
+    stateless_input["metrics"] = ["SORTINO"]
+    stateless_input["options"] = {
+        "frequency": "DAILY",
+        "mar_annual_rate": 0.02,
+    }
+    response = client.post("/analytics/risk/calculate", json=payload)
+    assert response.status_code == 200
+    details = response.json()["results"]["Explicit"]["metrics"]["SORTINO"]["details"]
+    assert details["observation_count"] == 4
+    assert details["annualization_factor"] == 252
+    assert details["mar_annual_rate"] == 0.02
+    assert details["periodic_mar"] > 0
+    assert details["mean_return"] > 0
+    assert details["excess_return"] > 0
+    assert details["annualized_excess_return"] > 0
+    assert details["downside_observation_count"] >= 1
+    assert details["downside_deviation"] > 0
 
 
 def test_risk_calculate_endpoint_rejects_invalid_explicit_period() -> None:
@@ -95,7 +211,20 @@ def test_risk_calculate_benchmark_requirement_behavior() -> None:
     stateless_input["benchmark_returns"] = []
     response = client.post("/analytics/risk/calculate", json=payload)
     assert response.status_code == 200
-    metrics = response.json()["results"]["Explicit"]["metrics"]
+    body = response.json()
+    metrics = body["results"]["Explicit"]["metrics"]
+    assert body["metadata"]["benchmark_context"] == {
+        "requested": True,
+        "requested_metrics": ["BETA", "TRACKING_ERROR", "INFORMATION_RATIO"],
+    }
+    assert body["results"]["Explicit"]["benchmark_context"] == {
+        "requested": True,
+        "available": False,
+        "aligned": False,
+        "reason": "BENCHMARK_UNAVAILABLE",
+        "requested_metric_count": 3,
+        "requested_metrics": ["BETA", "TRACKING_ERROR", "INFORMATION_RATIO"],
+    }
     assert metrics["BETA"]["value"] is None
     assert "Benchmark returns required" in metrics["BETA"]["details"]["error"]
 
@@ -140,9 +269,78 @@ def test_risk_calculate_stateful_mode_uses_lotus_performance_returns_series() ->
         "include_risk_free": False,
     }
     assert performance_client.calls[0]["correlation_id"] == "corr-risk-stateful"
-    metrics = response.json()["results"]["YTD"]["metrics"]
+    body = response.json()
+    metrics = body["results"]["YTD"]["metrics"]
+    assert body["metadata"]["frequency"] == "DAILY"
+    assert body["metadata"]["benchmark_context"] == {
+        "requested": True,
+        "requested_metrics": ["BETA"],
+    }
+    assert body["metadata"]["risk_free_context"] == {
+        "requested": False,
+        "applied": False,
+        "reason": "NOT_REQUESTED",
+        "periodic_rate": 0.0,
+    }
+    assert body["results"]["YTD"]["portfolio_observation_count"] == len(RISK_STATEFUL_RETURNS)
+    assert body["results"]["YTD"]["benchmark_observation_count"] == len(
+        RISK_STATEFUL_BENCHMARK_RETURNS
+    )
+    assert body["results"]["YTD"]["aligned_benchmark_observation_count"] == len(
+        RISK_STATEFUL_RETURNS
+    )
+    assert body["results"]["YTD"]["benchmark_context"] == {
+        "requested": True,
+        "available": True,
+        "aligned": True,
+        "reason": "APPLIED",
+        "requested_metric_count": 1,
+        "requested_metrics": ["BETA"],
+    }
     assert metrics["VOLATILITY"]["value"] is not None
     assert metrics["BETA"]["value"] is not None
+    assert metrics["BETA"]["details"]["aligned_observation_count"] == len(RISK_STATEFUL_RETURNS)
+    assert "portfolio_mean_return" in metrics["BETA"]["details"]
+    assert "benchmark_mean_return" in metrics["BETA"]["details"]
+    assert "covariance" in metrics["BETA"]["details"]
+    assert "benchmark_variance" in metrics["BETA"]["details"]
+
+
+def test_risk_calculate_stateless_benchmark_metrics_expose_components() -> None:
+    client = TestClient(app)
+    payload = _request_payload()
+    stateless_input = payload["stateless_input"]
+    assert isinstance(stateless_input, dict)
+    stateless_input["metrics"] = ["BETA", "TRACKING_ERROR", "INFORMATION_RATIO"]
+    stateless_input["benchmark_returns"] = [
+        {"date": "2025-01-02", "value": 0.5},
+        {"date": "2025-01-03", "value": 1.2},
+        {"date": "2025-01-06", "value": -0.8},
+        {"date": "2025-01-07", "value": 0.1},
+    ]
+    response = client.post("/analytics/risk/calculate", json=payload)
+    assert response.status_code == 200
+    metrics = response.json()["results"]["Explicit"]["metrics"]
+    assert metrics["BETA"]["details"]["aligned_observation_count"] == 4
+    assert "portfolio_mean_return" in metrics["BETA"]["details"]
+    assert "benchmark_mean_return" in metrics["BETA"]["details"]
+    assert "covariance" in metrics["BETA"]["details"]
+    assert "benchmark_variance" in metrics["BETA"]["details"]
+    assert metrics["TRACKING_ERROR"]["details"]["aligned_observation_count"] == 4
+    assert metrics["TRACKING_ERROR"]["details"]["annualization_factor"] == 252
+    assert "portfolio_mean_return" in metrics["TRACKING_ERROR"]["details"]
+    assert "benchmark_mean_return" in metrics["TRACKING_ERROR"]["details"]
+    assert "active_mean_return" in metrics["TRACKING_ERROR"]["details"]
+    assert "active_volatility" in metrics["TRACKING_ERROR"]["details"]
+    assert "annualized_tracking_error" in metrics["TRACKING_ERROR"]["details"]
+    assert metrics["INFORMATION_RATIO"]["details"]["aligned_observation_count"] == 4
+    assert metrics["INFORMATION_RATIO"]["details"]["annualization_factor"] == 252
+    assert "portfolio_mean_return" in metrics["INFORMATION_RATIO"]["details"]
+    assert "benchmark_mean_return" in metrics["INFORMATION_RATIO"]["details"]
+    assert "active_mean_return" in metrics["INFORMATION_RATIO"]["details"]
+    assert "tracking_error" in metrics["INFORMATION_RATIO"]["details"]
+    assert "annualized_active_return" in metrics["INFORMATION_RATIO"]["details"]
+    assert "annualized_tracking_error" in metrics["INFORMATION_RATIO"]["details"]
 
 
 def test_risk_calculate_stateful_mode_preserves_gross_metric_basis_and_currency() -> None:

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any, Protocol
 
@@ -16,6 +16,8 @@ from app.contracts.concentration import (
     IssuerGroupingLevel,
     IssuerConcentration,
     IssuerCoverageStatus,
+    TopIssuerDriver,
+    TopPositionDriver,
     IssuerMappingInput,
     SinglePositionConcentration,
     SimulationConcentrationInput,
@@ -61,13 +63,33 @@ class LotusCoreClientProtocol(Protocol):
 
 
 @dataclass
+class IssuerIdentity:
+    issuer_id: str
+    issuer_name: str | None = None
+
+
+@dataclass
+class PositionEntry:
+    security_id: str | None
+    security_name: str | None
+    value: float
+
+
+@dataclass
+class IssuerEntry:
+    issuer_id: str | None
+    issuer_name: str | None
+    value: float
+
+
+@dataclass
 class ConcentrationComputationInput:
     input_mode: ConcentrationInputMode
-    current_values: list[float]
-    proposed_values: list[float]
+    current_positions: list[PositionEntry]
+    proposed_positions: list[PositionEntry]
     top_n: int
-    current_issuer_values: list[float]
-    proposed_issuer_values: list[float]
+    current_issuers: list[IssuerEntry]
+    proposed_issuers: list[IssuerEntry]
     covered_position_count_current: int
     covered_position_count_proposed: int
     total_position_count_current: int
@@ -75,6 +97,30 @@ class ConcentrationComputationInput:
     issuer_note: str | None = None
     valuation_context: ConcentrationValuationContext | None = None
     metadata: ConcentrationMetadata | None = None
+
+
+def _build_metadata(
+    *,
+    request: ConcentrationRequest,
+    as_of_date: date | None = None,
+    portfolio_id: str | None = None,
+    simulation_session_id: str | None = None,
+    simulation_session_version: int | None = None,
+    session_expires_at: datetime | None = None,
+    include_cash_positions: bool | None = None,
+    include_zero_quantity_positions: bool | None = None,
+) -> ConcentrationMetadata:
+    return ConcentrationMetadata(
+        as_of_date=as_of_date,
+        portfolio_id=portfolio_id,
+        simulation_session_id=simulation_session_id,
+        simulation_session_version=simulation_session_version,
+        session_expires_at=session_expires_at,
+        issuer_grouping_level=request.issuer_grouping_level,
+        enrichment_policy=request.enrichment_policy,
+        include_cash_positions=include_cash_positions,
+        include_zero_quantity_positions=include_zero_quantity_positions,
+    )
 
 
 def _to_decimal(value: Any) -> Decimal | None:
@@ -106,22 +152,34 @@ def _extract_values_from_snapshot_positions(positions: list[dict[str, Any]] | No
 
 def _extract_values_from_stateless_payload(
     payload: StatelessConcentrationInput,
-) -> tuple[list[tuple[str | None, float]], list[tuple[str | None, float]]]:
-    current_rows: list[tuple[str | None, float]] = []
+) -> tuple[list[PositionEntry], list[PositionEntry]]:
+    current_rows: list[PositionEntry] = []
     for position in payload.current_positions:
         candidate = _to_decimal(position.market_value_base)
         if candidate is None:
             candidate = _to_decimal(position.quantity)
         if candidate is not None:
-            current_rows.append((position.security_id, float(candidate)))
+            current_rows.append(
+                PositionEntry(
+                    security_id=position.security_id,
+                    security_name=position.security_name,
+                    value=float(candidate),
+                )
+            )
 
-    proposed_rows: list[tuple[str | None, float]] = []
+    proposed_rows: list[PositionEntry] = []
     for projected_position in payload.projected_positions:
         candidate = _to_decimal(projected_position.projected_market_value_base)
         if candidate is None:
             candidate = _to_decimal(projected_position.proposed_quantity)
         if candidate is not None:
-            proposed_rows.append((projected_position.security_id, float(candidate)))
+            proposed_rows.append(
+                PositionEntry(
+                    security_id=projected_position.security_id,
+                    security_name=projected_position.security_name,
+                    value=float(candidate),
+                )
+            )
 
     return current_rows, proposed_rows
 
@@ -130,40 +188,64 @@ def _issuer_key_from_mapping(
     mapping: IssuerMappingInput,
     *,
     grouping_level: IssuerGroupingLevel,
-) -> str | None:
+) -> IssuerIdentity | None:
     if grouping_level == IssuerGroupingLevel.ULTIMATE_PARENT:
-        return mapping.ultimate_parent_issuer_id or mapping.issuer_id
-    return mapping.issuer_id
+        issuer_id = mapping.ultimate_parent_issuer_id or mapping.issuer_id
+        issuer_name = mapping.ultimate_parent_issuer_name or mapping.issuer_name
+    else:
+        issuer_id = mapping.issuer_id
+        issuer_name = mapping.issuer_name
+    if not issuer_id:
+        return None
+    return IssuerIdentity(issuer_id=issuer_id, issuer_name=issuer_name)
 
 
 def _issuer_key_from_position(
     *,
     issuer_id: str | None,
+    issuer_name: str | None,
     ultimate_parent_issuer_id: str | None,
+    ultimate_parent_issuer_name: str | None,
     grouping_level: IssuerGroupingLevel,
-) -> str | None:
+) -> IssuerIdentity | None:
     if grouping_level == IssuerGroupingLevel.ULTIMATE_PARENT:
-        return ultimate_parent_issuer_id or issuer_id
-    return issuer_id
+        resolved_id = ultimate_parent_issuer_id or issuer_id
+        resolved_name = ultimate_parent_issuer_name or issuer_name
+    else:
+        resolved_id = issuer_id
+        resolved_name = issuer_name
+    if not resolved_id:
+        return None
+    return IssuerIdentity(issuer_id=resolved_id, issuer_name=resolved_name)
 
 
 def _to_weighted_values(
-    rows: list[tuple[str | None, float]],
+    rows: list[PositionEntry],
     *,
-    issuer_by_security: dict[str, str],
-) -> tuple[list[float], list[float], int, int]:
-    current_values: list[float] = []
-    issuer_totals: dict[str, float] = {}
+    issuer_by_security: dict[str, IssuerIdentity],
+) -> tuple[list[PositionEntry], list[IssuerEntry], int, int]:
+    issuer_totals: dict[str, IssuerEntry] = {}
     covered = 0
     total = 0
-    for security_id, numeric_value in rows:
-        current_values.append(numeric_value)
+    for row in rows:
         total += 1
-        if security_id and security_id in issuer_by_security:
-            issuer_id = issuer_by_security[security_id]
-            issuer_totals[issuer_id] = issuer_totals.get(issuer_id, 0.0) + numeric_value
+        if row.security_id and row.security_id in issuer_by_security:
+            issuer = issuer_by_security[row.security_id]
+            existing = issuer_totals.get(issuer.issuer_id)
+            if existing is None:
+                issuer_totals[issuer.issuer_id] = IssuerEntry(
+                    issuer_id=issuer.issuer_id,
+                    issuer_name=issuer.issuer_name,
+                    value=row.value,
+                )
+            else:
+                existing.value += row.value
             covered += 1
-    return current_values, list(issuer_totals.values()), covered, total
+    return rows, list(issuer_totals.values()), covered, total
+
+
+def _values(entries: list[PositionEntry] | list[IssuerEntry]) -> list[float]:
+    return [entry.value for entry in entries]
 
 
 def _compute_hhi(values: list[float]) -> float:
@@ -184,36 +266,88 @@ def _single_position_metrics(values: list[float], *, top_n: int) -> tuple[float,
     return top_weight, top_n_weight
 
 
+def _top_position_driver(entries: list[PositionEntry]) -> TopPositionDriver:
+    total = sum(abs(entry.value) for entry in entries)
+    if total <= 0 or not entries:
+        return TopPositionDriver(security_id=None, security_name=None, weight=0.0)
+    top_entry = max(entries, key=lambda entry: (abs(entry.value), entry.security_id or ""))
+    return TopPositionDriver(
+        security_id=top_entry.security_id,
+        security_name=top_entry.security_name,
+        weight=_round(abs(top_entry.value) / total),
+    )
+
+
+def _top_issuer_driver(entries: list[IssuerEntry]) -> TopIssuerDriver:
+    total = sum(abs(entry.value) for entry in entries)
+    if total <= 0 or not entries:
+        return TopIssuerDriver(issuer_id=None, issuer_name=None, weight=0.0)
+    top_entry = max(entries, key=lambda entry: (abs(entry.value), entry.issuer_id or ""))
+    return TopIssuerDriver(
+        issuer_id=top_entry.issuer_id,
+        issuer_name=top_entry.issuer_name,
+        weight=_round(abs(top_entry.value) / total),
+    )
+
+
 def _round(value: float) -> float:
     return round(value, _ROUND_PRECISION)
 
 
+def _coverage_ratio(covered: int, total: int) -> float:
+    if total <= 0:
+        return 0.0
+    return _round(covered / total)
+
+
+def _uncovered_count(covered: int, total: int) -> int:
+    return max(total - covered, 0)
+
+
 def _build_response(payload: ConcentrationComputationInput) -> ConcentrationResponse:
-    current_hhi = _compute_hhi(payload.current_values)
-    proposed_hhi = _compute_hhi(payload.proposed_values) if payload.proposed_values else current_hhi
+    current_values = _values(payload.current_positions)
+    proposed_values = _values(payload.proposed_positions)
+    current_issuer_values = _values(payload.current_issuers)
+    proposed_issuer_values = _values(payload.proposed_issuers)
+
+    current_hhi = _compute_hhi(current_values)
+    proposed_hhi = _compute_hhi(proposed_values) if proposed_values else current_hhi
 
     current_top, current_top_n = _single_position_metrics(
-        payload.current_values, top_n=payload.top_n
+        current_values, top_n=payload.top_n
     )
-    if payload.proposed_values:
+    if proposed_values:
         proposed_top, proposed_top_n = _single_position_metrics(
-            payload.proposed_values, top_n=payload.top_n
+            proposed_values, top_n=payload.top_n
         )
     else:
         proposed_top, proposed_top_n = current_top, current_top_n
 
-    current_issuer_hhi = _compute_hhi(payload.current_issuer_values)
+    current_issuer_hhi = _compute_hhi(current_issuer_values)
     proposed_issuer_hhi = (
-        _compute_hhi(payload.proposed_issuer_values)
-        if payload.proposed_issuer_values
+        _compute_hhi(proposed_issuer_values)
+        if proposed_issuer_values
         else current_issuer_hhi
     )
 
-    current_issuer_top, _ = _single_position_metrics(payload.current_issuer_values, top_n=1)
-    if payload.proposed_issuer_values:
-        proposed_issuer_top, _ = _single_position_metrics(payload.proposed_issuer_values, top_n=1)
+    current_issuer_top, _ = _single_position_metrics(current_issuer_values, top_n=1)
+    if proposed_issuer_values:
+        proposed_issuer_top, _ = _single_position_metrics(proposed_issuer_values, top_n=1)
     else:
         proposed_issuer_top = current_issuer_top
+
+    current_top_position = _top_position_driver(payload.current_positions)
+    proposed_top_position = (
+        _top_position_driver(payload.proposed_positions)
+        if payload.proposed_positions
+        else current_top_position
+    )
+    current_top_issuer = _top_issuer_driver(payload.current_issuers)
+    proposed_top_issuer = (
+        _top_issuer_driver(payload.proposed_issuers)
+        if payload.proposed_issuers
+        else current_top_issuer
+    )
 
     coverage_status = IssuerCoverageStatus.UNAVAILABLE
     if payload.total_position_count_current > 0 or payload.total_position_count_proposed > 0:
@@ -244,6 +378,8 @@ def _build_response(payload: ConcentrationComputationInput) -> ConcentrationResp
             top_n_cumulative_weight_proposed=_round(proposed_top_n),
             top_n_cumulative_weight_delta=_round(proposed_top_n - current_top_n),
             top_n=payload.top_n,
+            top_position_current=current_top_position,
+            top_position_proposed=proposed_top_position,
         ),
         issuer_concentration=IssuerConcentration(
             hhi_current=_round(current_issuer_hhi),
@@ -257,7 +393,25 @@ def _build_response(payload: ConcentrationComputationInput) -> ConcentrationResp
             covered_position_count_proposed=payload.covered_position_count_proposed,
             total_position_count_current=payload.total_position_count_current,
             total_position_count_proposed=payload.total_position_count_proposed,
+            uncovered_position_count_current=_uncovered_count(
+                payload.covered_position_count_current,
+                payload.total_position_count_current,
+            ),
+            uncovered_position_count_proposed=_uncovered_count(
+                payload.covered_position_count_proposed,
+                payload.total_position_count_proposed,
+            ),
+            coverage_ratio_current=_coverage_ratio(
+                payload.covered_position_count_current,
+                payload.total_position_count_current,
+            ),
+            coverage_ratio_proposed=_coverage_ratio(
+                payload.covered_position_count_proposed,
+                payload.total_position_count_proposed,
+            ),
             note=payload.issuer_note,
+            top_issuer_current=current_top_issuer,
+            top_issuer_proposed=proposed_top_issuer,
         ),
         valuation_context=payload.valuation_context,
         metadata=payload.metadata,
@@ -268,34 +422,66 @@ def _extract_issuer_map(
     sections: dict[str, Any],
     *,
     grouping_level: IssuerGroupingLevel,
-) -> tuple[dict[str, str], str | None]:
+) -> tuple[dict[str, IssuerIdentity], str | None]:
     enrichment = sections.get("instrument_enrichment")
     if not isinstance(enrichment, list):
         return {}, "instrument_enrichment missing from lotus-core snapshot"
-    issuer_by_security: dict[str, str] = {}
+    issuer_by_security: dict[str, IssuerIdentity] = {}
     for row in enrichment:
         if not isinstance(row, dict):
             continue
         security_id = _as_str(row.get("security_id"))
         if grouping_level == IssuerGroupingLevel.ULTIMATE_PARENT:
-            issuer_id = _as_str(row.get("ultimate_parent_issuer_id")) or _as_str(
-                row.get("issuer_id")
+            issuer_id = _as_str(row.get("ultimate_parent_issuer_id")) or _as_str(row.get("issuer_id"))
+            issuer_name = _as_str(row.get("ultimate_parent_issuer_name")) or _as_str(
+                row.get("issuer_name")
             )
         else:
             issuer_id = _as_str(row.get("issuer_id"))
+            issuer_name = _as_str(row.get("issuer_name"))
         if security_id and issuer_id:
-            issuer_by_security[security_id] = issuer_id
+            issuer_by_security[security_id] = IssuerIdentity(
+                issuer_id=issuer_id,
+                issuer_name=issuer_name,
+            )
     if not issuer_by_security:
         return {}, "issuer_id missing in lotus-core instrument_enrichment"
     return issuer_by_security, None
+
+
+def _apply_snapshot_display_names(
+    sections: dict[str, Any],
+    issuer_by_security: dict[str, IssuerIdentity],
+) -> None:
+    enrichment = sections.get("instrument_enrichment")
+    if not isinstance(enrichment, list):
+        return
+    security_names: dict[str, str] = {}
+    for row in enrichment:
+        if not isinstance(row, dict):
+            continue
+        security_id = _as_str(row.get("security_id"))
+        instrument_name = _as_str(row.get("instrument_name"))
+        if security_id and instrument_name:
+            security_names[security_id] = instrument_name
+    for section_name in ("positions_baseline", "positions_projected", "positions_delta"):
+        positions = sections.get(section_name)
+        if not isinstance(positions, list):
+            continue
+        for row in positions:
+            if not isinstance(row, dict):
+                continue
+            security_id = _as_str(row.get("security_id"))
+            if security_id and security_id in security_names and "instrument_name" not in row:
+                row["instrument_name"] = security_names[security_id]
 
 
 def _caller_issuer_map(
     *,
     mappings: list[IssuerMappingInput],
     grouping_level: IssuerGroupingLevel,
-) -> dict[str, str]:
-    issuer_by_security: dict[str, str] = {}
+) -> dict[str, IssuerIdentity]:
+    issuer_by_security: dict[str, IssuerIdentity] = {}
     for mapping in mappings:
         issuer_key = _issuer_key_from_mapping(mapping, grouping_level=grouping_level)
         if issuer_key:
@@ -305,10 +491,10 @@ def _caller_issuer_map(
 
 def _merge_issuer_maps(
     *,
-    caller_map: dict[str, str],
-    core_map: dict[str, str],
+    caller_map: dict[str, IssuerIdentity],
+    core_map: dict[str, IssuerIdentity],
     policy: EnrichmentPolicy,
-) -> dict[str, str]:
+) -> dict[str, IssuerIdentity]:
     if policy == EnrichmentPolicy.USE_CALLER_ONLY:
         return dict(caller_map)
     if policy == EnrichmentPolicy.CORE_ONLY:
@@ -320,30 +506,46 @@ def _merge_issuer_maps(
 
 def _extract_values_with_issuer_from_snapshot(
     positions: list[dict[str, Any]] | None,
-    issuer_by_security: dict[str, str],
-) -> tuple[list[float], list[float], int, int]:
-    values = _extract_values_from_snapshot_positions(positions)
+    issuer_by_security: dict[str, IssuerIdentity],
+) -> tuple[list[PositionEntry], list[IssuerEntry], int, int]:
     if not positions:
-        return values, [], 0, 0
-    issuer_totals: dict[str, float] = {}
+        return [], [], 0, 0
+    position_entries: list[PositionEntry] = []
+    issuer_totals: dict[str, IssuerEntry] = {}
     covered = 0
     total = 0
     for position in positions:
         if not isinstance(position, dict):
             continue
         security_id = _as_str(position.get("security_id"))
+        security_name = _as_str(position.get("instrument_name"))
         candidate = _to_decimal(position.get("market_value_base"))
         if candidate is None:
             candidate = _to_decimal(position.get("quantity"))
         if candidate is None:
             continue
+        numeric_value = float(candidate)
+        position_entries.append(
+            PositionEntry(
+                security_id=security_id,
+                security_name=security_name,
+                value=numeric_value,
+            )
+        )
         total += 1
         if security_id and security_id in issuer_by_security:
-            issuer_totals[issuer_by_security[security_id]] = issuer_totals.get(
-                issuer_by_security[security_id], 0.0
-            ) + float(candidate)
+            issuer = issuer_by_security[security_id]
+            existing = issuer_totals.get(issuer.issuer_id)
+            if existing is None:
+                issuer_totals[issuer.issuer_id] = IssuerEntry(
+                    issuer_id=issuer.issuer_id,
+                    issuer_name=issuer.issuer_name,
+                    value=numeric_value,
+                )
+            else:
+                existing.value += numeric_value
             covered += 1
-    return values, list(issuer_totals.values()), covered, total
+    return position_entries, list(issuer_totals.values()), covered, total
 
 
 async def _resolve_stateful(
@@ -381,6 +583,7 @@ async def _resolve_stateful(
     core_issuer_map, issuer_note = _extract_issuer_map(
         sections, grouping_level=request.issuer_grouping_level
     )
+    _apply_snapshot_display_names(sections, core_issuer_map)
     caller_map = _caller_issuer_map(
         mappings=stateful.issuer_mappings,
         grouping_level=request.issuer_grouping_level,
@@ -390,23 +593,26 @@ async def _resolve_stateful(
         core_map=core_issuer_map,
         policy=request.enrichment_policy,
     )
-    baseline_values, baseline_issuer_values, covered_baseline, total_baseline = (
+    baseline_positions, baseline_issuers, covered_baseline, total_baseline = (
         _extract_values_with_issuer_from_snapshot(
             sections.get("positions_baseline"), issuer_by_security
         )
     )
     valuation = _extract_valuation_context(snapshot.get("valuation_context"))
-    metadata = ConcentrationMetadata(
+    metadata = _build_metadata(
+        request=request,
         as_of_date=stateful.as_of_date,
         portfolio_id=stateful.portfolio_id,
+        include_cash_positions=stateful.include_cash_positions,
+        include_zero_quantity_positions=stateful.include_zero_quantity_positions,
     )
     return ConcentrationComputationInput(
         input_mode=ConcentrationInputMode.STATEFUL,
-        current_values=baseline_values,
-        proposed_values=baseline_values,
+        current_positions=baseline_positions,
+        proposed_positions=baseline_positions,
         top_n=stateful.top_n,
-        current_issuer_values=baseline_issuer_values,
-        proposed_issuer_values=baseline_issuer_values,
+        current_issuers=baseline_issuers,
+        proposed_issuers=baseline_issuers,
         covered_position_count_current=covered_baseline,
         covered_position_count_proposed=covered_baseline,
         total_position_count_current=total_baseline,
@@ -534,6 +740,7 @@ async def _resolve_simulation(
     core_issuer_map, issuer_note = _extract_issuer_map(
         sections, grouping_level=request.issuer_grouping_level
     )
+    _apply_snapshot_display_names(sections, core_issuer_map)
     caller_map = _caller_issuer_map(
         mappings=simulation.issuer_mappings,
         grouping_level=request.issuer_grouping_level,
@@ -543,20 +750,20 @@ async def _resolve_simulation(
         core_map=core_issuer_map,
         policy=request.enrichment_policy,
     )
-    baseline_values, baseline_issuer_values, covered_baseline, total_baseline = (
+    baseline_positions, baseline_issuers, covered_baseline, total_baseline = (
         _extract_values_with_issuer_from_snapshot(
             sections.get("positions_baseline"), issuer_by_security
         )
     )
-    projected_values, projected_issuer_values, covered_projected, total_projected = (
+    projected_positions, projected_issuers, covered_projected, total_projected = (
         _extract_values_with_issuer_from_snapshot(
             sections.get("positions_projected"), issuer_by_security
         )
     )
-    if not projected_values:
-        projected_values = baseline_values
-    if not projected_issuer_values:
-        projected_issuer_values = baseline_issuer_values
+    if not projected_positions:
+        projected_positions = baseline_positions
+    if not projected_issuers:
+        projected_issuers = baseline_issuers
         covered_projected = covered_baseline
         total_projected = total_baseline
 
@@ -565,20 +772,23 @@ async def _resolve_simulation(
         session_version = _as_int(snapshot_simulation.get("version")) or session_version
 
     valuation = _extract_valuation_context(snapshot.get("valuation_context"))
-    metadata = ConcentrationMetadata(
+    metadata = _build_metadata(
+        request=request,
         as_of_date=simulation.as_of_date,
         portfolio_id=simulation.portfolio_id,
         simulation_session_id=session_id,
         simulation_session_version=session_version,
         session_expires_at=session_expires_at,
+        include_cash_positions=simulation.include_cash_positions,
+        include_zero_quantity_positions=simulation.include_zero_quantity_positions,
     )
     return ConcentrationComputationInput(
         input_mode=ConcentrationInputMode.SIMULATION,
-        current_values=baseline_values,
-        proposed_values=projected_values,
+        current_positions=baseline_positions,
+        proposed_positions=projected_positions,
         top_n=simulation.top_n,
-        current_issuer_values=baseline_issuer_values,
-        proposed_issuer_values=projected_issuer_values,
+        current_issuers=baseline_issuers,
+        proposed_issuers=projected_issuers,
         covered_position_count_current=covered_baseline,
         covered_position_count_proposed=covered_projected,
         total_position_count_current=total_baseline,
@@ -601,11 +811,13 @@ async def calculate_concentration(
         assert stateless_input is not None
         current_rows, proposed_rows = _extract_values_from_stateless_payload(stateless_input)
 
-        caller_issuer_map: dict[str, str] = {}
+        caller_issuer_map: dict[str, IssuerIdentity] = {}
         for position in stateless_input.current_positions:
             issuer_key = _issuer_key_from_position(
                 issuer_id=position.issuer_id,
+                issuer_name=None,
                 ultimate_parent_issuer_id=position.ultimate_parent_issuer_id,
+                ultimate_parent_issuer_name=None,
                 grouping_level=request.issuer_grouping_level,
             )
             if issuer_key:
@@ -613,13 +825,15 @@ async def calculate_concentration(
         for projected_position in stateless_input.projected_positions:
             issuer_key = _issuer_key_from_position(
                 issuer_id=projected_position.issuer_id,
+                issuer_name=None,
                 ultimate_parent_issuer_id=projected_position.ultimate_parent_issuer_id,
+                ultimate_parent_issuer_name=None,
                 grouping_level=request.issuer_grouping_level,
             )
             if issuer_key:
                 caller_issuer_map[projected_position.security_id] = issuer_key
 
-        core_issuer_map: dict[str, str] = {}
+        core_issuer_map: dict[str, IssuerIdentity] = {}
         issuer_note: str | None = None
         if (
             request.enrichment_policy != EnrichmentPolicy.USE_CALLER_ONLY
@@ -627,9 +841,9 @@ async def calculate_concentration(
         ):
             security_ids = sorted(
                 {
-                    security_id
-                    for security_id, _ in [*current_rows, *proposed_rows]
-                    if security_id is not None
+                    row.security_id
+                    for row in [*current_rows, *proposed_rows]
+                    if row.security_id is not None
                 }
             )
             if security_ids:
@@ -647,13 +861,18 @@ async def calculate_concentration(
                             if not security_id:
                                 continue
                             if request.issuer_grouping_level == IssuerGroupingLevel.ULTIMATE_PARENT:
-                                issuer_id = _as_str(
-                                    record.get("ultimate_parent_issuer_id")
-                                ) or _as_str(record.get("issuer_id"))
+                                issuer_id = _as_str(record.get("ultimate_parent_issuer_id")) or _as_str(record.get("issuer_id"))
+                                issuer_name = _as_str(record.get("ultimate_parent_issuer_name")) or _as_str(
+                                    record.get("issuer_name")
+                                )
                             else:
                                 issuer_id = _as_str(record.get("issuer_id"))
+                                issuer_name = _as_str(record.get("issuer_name"))
                             if issuer_id:
-                                core_issuer_map[security_id] = issuer_id
+                                core_issuer_map[security_id] = IssuerIdentity(
+                                    issuer_id=issuer_id,
+                                    issuer_name=issuer_name,
+                                )
                     else:
                         issuer_note = "lotus-core enrichment payload missing records list"
                 except ValueError:
@@ -665,11 +884,11 @@ async def calculate_concentration(
             policy=request.enrichment_policy,
         )
 
-        current_values, current_issuer_values, covered_current, total_current = _to_weighted_values(
+        current_positions, current_issuers, covered_current, total_current = _to_weighted_values(
             current_rows,
             issuer_by_security=issuer_by_security,
         )
-        proposed_values, proposed_issuer_values, covered_proposed, total_proposed = (
+        proposed_positions, proposed_issuers, covered_proposed, total_proposed = (
             _to_weighted_values(
                 proposed_rows,
                 issuer_by_security=issuer_by_security,
@@ -683,20 +902,25 @@ async def calculate_concentration(
             issuer_note = "issuer mapping unavailable for stateless payload"
         payload = ConcentrationComputationInput(
             input_mode=ConcentrationInputMode.STATELESS,
-            current_values=current_values,
-            proposed_values=proposed_values if proposed_values else current_values,
+            current_positions=current_positions,
+            proposed_positions=proposed_positions if proposed_positions else current_positions,
             top_n=stateless_input.top_n,
-            current_issuer_values=current_issuer_values,
-            proposed_issuer_values=(
-                proposed_issuer_values if proposed_issuer_values else current_issuer_values
+            current_issuers=current_issuers,
+            proposed_issuers=(
+                proposed_issuers if proposed_issuers else current_issuers
             ),
             covered_position_count_current=covered_current,
             covered_position_count_proposed=(
-                covered_proposed if proposed_values else covered_current
+                covered_proposed if proposed_positions else covered_current
             ),
             total_position_count_current=total_current,
-            total_position_count_proposed=(total_proposed if proposed_values else total_current),
+            total_position_count_proposed=(total_proposed if proposed_positions else total_current),
             issuer_note=issuer_note,
+            metadata=_build_metadata(
+                request=request,
+                include_cash_positions=None,
+                include_zero_quantity_positions=None,
+            ),
         )
         return _build_response(payload)
 

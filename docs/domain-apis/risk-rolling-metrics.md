@@ -65,14 +65,44 @@ Provide windowed historical risk diagnostics for PB/WM portfolios with instituti
 - `results[period_name]`
   - `start_date`
   - `end_date`
+  - `series_count`
+  - `benchmark_series_count`
+  - `aligned_benchmark_series_count`
+  - `benchmark_context`
+  - `risk_free_series_count`
+  - `aligned_risk_free_series_count`
+  - `risk_free_context`
+  - `window_lengths_requested`
+  - `window_count_requested`
+  - `window_lengths_emitted`
+  - `window_count_emitted`
   - `window_results[]`
     - `window_length`
     - `metric_summaries`
+      - `total_point_count`
+      - `computed_point_count`
+      - `coverage_ratio`
+      - `min_observations_required`
+      - `warmup_point_count`
+      - `non_computed_point_count`
+      - `post_warmup_gap_point_count`
+      - `latest_observation_date`
+    - `metric_series_context`
     - `metric_series` (optional)
   - `quality_flags[]`
   - `error`
 - `metadata`
-  - methodology and lineage references
+  - methodology and request execution references
+  - `requested_metrics`
+  - `window_lengths_requested`
+  - `window_count_requested`
+  - `min_observations_policy`
+  - `include_time_series`
+  - top-level dependency intent:
+    - `benchmark_context.requested`
+    - `benchmark_context.requested_metrics`
+    - `risk_free_context.requested`
+    - `risk_free_context.requested_metrics`
 
 ## Governance Alignment
 
@@ -85,8 +115,8 @@ Provide windowed historical risk diagnostics for PB/WM portfolios with instituti
 
 1. Expand stateful lineage metadata in response contract (`source_window`, `data_quality`, `upstream_refs`).
 2. Evaluate whether annualization basis should support both 252 and 260 in v2.
-3. rolling Sharpe remains data-dependent on lotus-core risk-free availability for the resolved currency/window. Live validation confirmed the lotus-core contract is reachable but returned no risk-free points for tested USD/SGD windows.
-4. When lotus-core returns an empty risk-free series, lotus-risk now enriches the `424 FAILED_DEPENDENCY` error details with coverage diagnostics from `/integration/reference/risk-free-series/coverage` when available:
+3. Stateful rolling Sharpe now passes live validation for the tested USD YTD window using lotus-core risk-free series.
+4. When lotus-core returns an empty risk-free series for other currencies/windows, lotus-risk enriches the `424 FAILED_DEPENDENCY` error details with coverage diagnostics from `/integration/reference/risk-free-series/coverage` when available:
    - `risk_free_currency`
    - `risk_free_total_points`
    - `risk_free_missing_dates_count`

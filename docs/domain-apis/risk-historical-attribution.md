@@ -21,7 +21,8 @@ Provide decomposition of historical realized risk and active risk into transpare
 - Current behavior:
   - `TOTAL_RISK` stateful path is implemented
   - `ACTIVE_RISK` stateful path is implemented for `POSITION`, `SECTOR`, and `ASSET_CLASS` grouping dimensions through the lotus-performance benchmark exposure context derived view
-  - `ACTIVE_RISK` + `ISSUER` remains gated until benchmark issuer exposure semantics are explicitly available
+  - `ACTIVE_RISK` + `ISSUER` remains gated until benchmark issuer exposure semantics are explicitly available and is rejected at request validation
+  - `CUSTOM` grouping remains unsupported in stateful mode and is rejected at request validation
 
 ### Simulation
 
@@ -48,6 +49,16 @@ Provide decomposition of historical realized risk and active risk into transpare
 - optional `client_id`
 - optional `reporting_currency`
 - attribution options
+
+### Stateful Validation Gates
+
+- request validation rejects these combinations before any upstream call:
+  - `grouping_dimensions=["CUSTOM"]`
+  - any stateful request that needs benchmark-relative attribution semantics and includes `ISSUER`
+- request validation currently returns:
+  - HTTP `422`
+  - `error.code = INVALID_REQUEST`
+  - field-level reason in `error.details[]`
 
 ## Upstream Dependencies (Stateful)
 
@@ -87,7 +98,19 @@ Provide decomposition of historical realized risk and active risk into transpare
     - `quality_flags[]`
   - `error`
 - `metadata`
-  - methodology, covariance, annualization, lineage references
+  - methodology, covariance, annualization, and requested execution scope
+  - `requested_attribution_types`
+  - `requested_metrics`
+  - `requested_grouping_dimensions`
+  - `min_observations_policy`
+  - stateful active-risk support contract:
+    - `stateful_active_risk_supported_grouping_dimensions`
+    - `stateful_active_risk_gated_grouping_dimensions`
+    - `stateful_active_risk_gate_reason`
+
+OpenAPI now includes a canonical supported stateful `ACTIVE_RISK` + `SECTOR` example so
+clients can see the intended decomposition shape, reconciliation fields, and support metadata
+without reverse-engineering runtime responses.
 
 ## Governance Alignment
 
@@ -103,3 +126,22 @@ Provide decomposition of historical realized risk and active risk into transpare
 3. residual tolerance policy.
 4. rolling-window attribution inclusion in v1 or v2.
 5. benchmark issuer exposure semantics for stateful `ACTIVE_RISK` + `ISSUER`.
+
+## Current Stateful Active-Risk Support Matrix
+
+- supported:
+  - `POSITION`
+  - `SECTOR`
+  - `ASSET_CLASS`
+- gated:
+  - `ISSUER`
+- gate reason:
+  - benchmark issuer exposure semantics unavailable from the lotus-performance benchmark exposure context
+
+## Live Validation Note
+
+- live platform characterization currently confirms:
+  - lotus-risk stateful `ACTIVE_RISK` works live for supported grouping dimensions such as `SECTOR`
+  - lotus-performance benchmark exposure context works for supported stateful dimensions such as `SECTOR`
+  - lotus-performance benchmark exposure context rejects `grouping_dimensions=["ISSUER"]`
+  - lotus-risk rejects stateful `ACTIVE_RISK` + `ISSUER` at request validation with HTTP `422`

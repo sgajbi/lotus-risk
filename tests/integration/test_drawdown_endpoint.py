@@ -45,6 +45,9 @@ def test_drawdown_endpoint_stateless_contract() -> None:
     assert "YTD" in body["results"]
     assert body["results"]["YTD"]["summary"]["max_drawdown"] is not None
     assert body["results"]["YTD"]["underwater_series"] is not None
+    assert body["metadata"]["include_underwater_series"] is True
+    assert body["metadata"]["include_episode_list"] is True
+    assert body["metadata"]["include_benchmark"] is None
 
 
 def test_drawdown_endpoint_stateful_uses_lotus_performance() -> None:
@@ -81,7 +84,19 @@ def test_drawdown_endpoint_stateful_uses_lotus_performance() -> None:
     assert payload["input_mode"] == "stateful"
     assert payload["stateful_input"] == {}
     assert payload["series_selection"]["include_benchmark"] is True
-    assert response.json()["input_mode"] == "stateful"
+    body = response.json()
+    assert body["input_mode"] == "stateful"
+    assert body["results"]["YTD"]["portfolio_observation_count"] == len(JAN_2026_PORTFOLIO_RETURNS)
+    assert body["results"]["YTD"]["benchmark_observation_count"] == len(
+        JAN_2026_DRAWDOWN_BENCHMARK_RETURNS
+    )
+    assert body["metadata"]["include_benchmark"] is True
+    assert body["metadata"]["missing_benchmark_policy"] == "REQUIRE"
+    assert body["metadata"]["top_n_episodes"] == 3
+    assert body["results"]["YTD"]["relative_to_benchmark_context"]["requested"] is True
+    assert body["results"]["YTD"]["relative_to_benchmark_context"]["applied"] is True
+    assert body["results"]["YTD"]["relative_to_benchmark_context"]["reason"] == "APPLIED"
+    assert body["results"]["YTD"]["relative_to_benchmark"]["time_under_water_days"] >= 0
 
 
 def test_drawdown_endpoint_rejects_simulation_mode_at_contract_boundary() -> None:

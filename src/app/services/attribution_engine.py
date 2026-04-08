@@ -266,6 +266,10 @@ def calculate_historical_attribution(
             metadata=HistoricalAttributionMetadata(
                 covariance_method=request.attribution_options.covariance_method,
                 annualization_basis=request.attribution_options.annualization_basis,
+                requested_attribution_types=list(request.attribution_options.attribution_types),
+                requested_metrics=list(request.attribution_options.metrics),
+                requested_grouping_dimensions=list(request.attribution_options.grouping_dimensions),
+                min_observations_policy=request.attribution_options.min_observations_policy,
             ),
         )
 
@@ -349,5 +353,9 @@ def calculate_historical_attribution(
         metadata=HistoricalAttributionMetadata(
             covariance_method=options.covariance_method,
             annualization_basis=options.annualization_basis,
+            requested_attribution_types=list(options.attribution_types),
+            requested_metrics=list(options.metrics),
+            requested_grouping_dimensions=list(options.grouping_dimensions),
+            min_observations_policy=options.min_observations_policy,
         ),
     )

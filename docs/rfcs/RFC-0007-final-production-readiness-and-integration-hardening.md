@@ -2,18 +2,18 @@
 
 | Field | Value |
 | --- | --- |
-| Status | Implemented for lotus-risk scope; merged readiness program complete except external upstream data blocker in lotus-core issue #294 |
+| Status | Implemented for lotus-risk scope; remaining functional gap is issuer active-risk benchmark semantics |
 | Created | 2026-04-07 |
 | Last Updated | 2026-04-07 |
 | Owners | lotus-risk |
 | Depends On | lotus-core, lotus-performance |
 | Related Standards | lotus-platform RFC-0067, RFC-0003, RFC-0005, RFC-0006 |
 | Scope | Cross-repo |
-| Implementation Classification | lotus-risk implementation complete for Slice 1, Slice 2, P0 benchmark exposure migration, dependency error hardening, ops/readiness hardening, and validation evidence; remaining live rolling Sharpe blocker is upstream lotus-core risk-free data readiness |
+| Implementation Classification | lotus-risk implementation complete for Slice 1, Slice 2, P0 benchmark exposure migration, dependency error hardening, ops/readiness hardening, and validation evidence; remaining functional gap is issuer active-risk benchmark semantics |
 
 ## Executive Summary
 
-`lotus-risk` is materially stronger than before: the implemented endpoint surface is credible, the stateful integrations are real, and the test stack is substantially improved. The lotus-risk implementation work defined by this RFC is complete. The only remaining blocker is external upstream data readiness for lotus-core risk-free coverage, tracked separately in lotus-core issue `#294`.
+`lotus-risk` is materially stronger than before: the implemented endpoint surface is credible, the stateful integrations are real, and the test stack is substantially improved. The lotus-risk implementation work defined by this RFC is complete except for the intentionally gated issuer active-risk stateful path, which still requires benchmark issuer exposure semantics.
 
 The remaining work is no longer about adding arbitrary features. It is about finishing the contract, removing ambiguity, aligning upstream ownership to bounded contexts, hardening integration behavior, and proving readiness with evidence.
 
@@ -39,9 +39,9 @@ The remaining readiness work discussed for `lotus-risk` was:
 
 The specific blockers identified were:
 
-1. upstream risk-free reference data availability for stateful rolling Sharpe
-2. final pre-merge gate and live integrated validation evidence
-3. performance-aligned benchmark exposure view for stateful active-risk attribution
+1. final pre-merge gate and live integrated validation evidence
+2. performance-aligned benchmark exposure view for stateful active-risk attribution
+3. issuer-level benchmark exposure semantics for stateful active-risk attribution
 4. final production observability and dependency-readiness sign-off
 
 The user also clarified two upstream ownership expectations that this RFC must honor:
@@ -89,7 +89,7 @@ The user further clarified that benchmark exposure can reasonably be exposed by 
 5. `historical-attribution` stateful `ACTIVE_RISK` now uses the lotus-performance benchmark exposure context for `POSITION`, `SECTOR`, and `ASSET_CLASS`.
 6. The active-risk attribution integration now follows the target architecture: benchmark returns and benchmark exposures are sourced through lotus-performance so they share the same effective date grid, benchmark version, and calculation lineage.
 7. `historical-attribution` stateful `ACTIVE_RISK` + `ISSUER` remains gated until benchmark issuer exposure semantics are explicitly available.
-8. Stateful rolling Sharpe now uses `lotus-core` for risk-free series; the remaining gap is upstream data population for tested currency/window combinations.
+8. Stateful rolling Sharpe now uses `lotus-core` for risk-free series and passes live validation for the tested USD YTD path.
 
 ## Requirement-to-Implementation Traceability
 
@@ -97,11 +97,11 @@ The user further clarified that benchmark exposure can reasonably be exposed by 
 | --- | --- | --- | --- |
 | Support simulation only where methodologically valid | Implemented on feature branch | Concentration supports simulation; risk/calculate, drawdown, rolling-metrics, and historical-attribution now expose stateless/stateful only | Keep and preserve |
 | Benchmark returns should come from `lotus-performance` | Achieved in current stateful rolling/risk design direction | lotus-performance returns-series contract and integration usage | Confirm and preserve |
-| Risk-free series should come from `lotus-core` | Implemented on feature branch for stateful rolling Sharpe | rolling adapter now sources risk-free reference series through lotus-core risk-free contract; live contract call succeeds but current upstream data returned `points: []` for tested USD/SGD windows | Upstream data readiness remains |
+| Risk-free series should come from `lotus-core` | Implemented on feature branch for stateful rolling Sharpe | rolling adapter now sources risk-free reference series through lotus-core risk-free contract; live validation now succeeds for the tested USD YTD path | Complete for current validated path |
 | Stateful active-risk attribution needs benchmark exposure history | Implemented on feature branch for POSITION, SECTOR, and ASSET_CLASS via lotus-performance benchmark exposure context | lotus-performance `/integration/benchmarks/exposure-context` backed by lotus-core lineage | Preserve; issuer semantics remain gated |
 | Unsupported modes must be explicit and deterministic | Implemented on feature branch | unsupported simulation modes are removed from non-concentration request schemas and rejected at validation boundary | Keep and preserve |
 | Production hardening of upstream behavior | Improved, not complete | better runtime wiring and tests exist, but no final service-wide readiness sign-off | Open |
-| Full integrated validation against real upstreams | Partial | live Docker validation passes for operational endpoints, stateful risk, drawdown, rolling without Sharpe, historical-attribution total/active risk, concentration stateful, and concentration simulation; rolling Sharpe remains data-dependent on lotus-core risk-free points | Open until upstream risk-free data is populated |
+| Full integrated validation against real upstreams | Partial | live Docker validation passes for operational endpoints, stateful risk, drawdown, rolling including Sharpe for the validated USD YTD path, historical-attribution total/active risk, concentration stateful, and concentration simulation | Open until final issuer active-risk semantics are resolved and full release evidence is assembled |
 | Production-grade observability | Implemented on feature branch | correlation/error propagation improved; dependency-aware `/health/ready` and `/ops` now expose structured issue metadata (`category`, `issue_code`) for degraded and unavailable dependencies | Keep and preserve |
 
 ## Design Reasoning and Trade-offs
@@ -172,7 +172,7 @@ Current reality is already clear enough to make the decision:
 
 This has been implemented on the feature branch. The remaining action is to preserve this contract through final PR review and avoid reintroducing placeholder simulation language in OpenAPI or domain documentation.
 
-### Gap B: Stateful rolling Sharpe still needs upstream risk-free data availability
+### Gap B: Stateful rolling Sharpe production readiness is now evidenced for the validated path
 
 The current implementation already proves that `lotus-risk` can:
 
@@ -184,9 +184,9 @@ Architectural alignment is now implemented on the feature branch:
 
 1. stateful risk-free series should come from `lotus-core`
 2. lotus-risk calls the lotus-core risk-free series contract directly
-3. live validation confirms the contract returns successfully, but the tested windows returned no risk-free points
+3. live validation confirms the contract returns successfully and produces a valid stateful rolling Sharpe response for the tested USD YTD path
 
-The remaining gap is upstream data readiness. `lotus-risk` should continue to fail deterministically when the contract returns no usable risk-free points; `lotus-core` must provide populated risk-free series for supported currencies/windows before stateful rolling Sharpe can be called production-ready for those scenarios.
+Residual risk is now narrower: `lotus-risk` should continue to fail deterministically when the contract returns no usable risk-free points for other currencies/windows, but the previously blocked live path is no longer a general production-readiness blocker.
 
 ### Gap C: Stateful active-risk attribution still needs issuer benchmark semantics
 

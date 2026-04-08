@@ -10,6 +10,11 @@ from app.contracts.concentration import (
     IssuerMappingInput,
 )
 from app.services.concentration_engine import (
+    IssuerEntry,
+    IssuerIdentity,
+    PositionEntry,
+    _coverage_ratio,
+    _uncovered_count,
     _caller_issuer_map,
     _extract_issuer_map,
     _extract_values_with_issuer_from_snapshot,
@@ -70,7 +75,7 @@ def test_helper_extract_issuer_map_branches() -> None:
         grouping_level=IssuerGroupingLevel.LEGAL_ISSUER,
     )
     assert note is None
-    assert issuer_map["SEC_A"] == "ISSUER_A"
+    assert issuer_map["SEC_A"] == IssuerIdentity(issuer_id="ISSUER_A", issuer_name=None)
 
     empty_map, empty_note = _extract_issuer_map(
         {"instrument_enrichment": [{"security_id": "SEC_A"}]},
@@ -92,7 +97,7 @@ def test_helper_caller_issuer_map_ultimate_parent_branch() -> None:
         mappings=mappings,
         grouping_level=IssuerGroupingLevel.ULTIMATE_PARENT,
     )
-    assert issuer_map["SEC_A"] == "PARENT_A"
+    assert issuer_map["SEC_A"] == IssuerIdentity(issuer_id="PARENT_A", issuer_name=None)
 
 
 def test_extract_values_with_issuer_handles_fallback_and_non_dict_rows() -> None:
@@ -103,12 +108,22 @@ def test_extract_values_with_issuer_handles_fallback_and_non_dict_rows() -> None
     ]
     values, issuer_values, covered, total = _extract_values_with_issuer_from_snapshot(
         cast(list[dict[str, Any]] | None, rows),
-        {"SEC_A": "ISSUER_A"},
+        {"SEC_A": IssuerIdentity(issuer_id="ISSUER_A", issuer_name=None)},
     )
-    assert values == [10.0]
-    assert issuer_values == [10.0]
+    assert values == [PositionEntry(security_id="SEC_A", security_name=None, value=10.0)]
+    assert issuer_values == [IssuerEntry(issuer_id="ISSUER_A", issuer_name=None, value=10.0)]
     assert covered == 1
     assert total == 1
+
+
+def test_coverage_ratio_handles_zero_and_rounding() -> None:
+    assert _coverage_ratio(0, 0) == 0.0
+    assert _coverage_ratio(2, 3) == 0.666667
+
+
+def test_uncovered_count_never_goes_negative() -> None:
+    assert _uncovered_count(2, 3) == 1
+    assert _uncovered_count(5, 3) == 0
 
 
 @pytest.mark.asyncio
@@ -141,3 +156,7 @@ async def test_stateless_concentration_sets_note_when_core_records_shape_invalid
     assert (
         response.issuer_concentration.note == "lotus-core enrichment payload missing records list"
     )
+    assert response.issuer_concentration.uncovered_position_count_current == 1
+    assert response.issuer_concentration.uncovered_position_count_proposed == 1
+    assert response.issuer_concentration.coverage_ratio_current == 0.0
+    assert response.issuer_concentration.coverage_ratio_proposed == 0.0

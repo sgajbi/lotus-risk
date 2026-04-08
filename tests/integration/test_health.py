@@ -47,6 +47,21 @@ def test_integration_capabilities_contract() -> None:
         "rolling_risk_analytics",
         "historical_risk_attribution",
     }
+    workflow_by_key = {workflow["workflow_key"]: workflow for workflow in body["workflows"]}
+    assert workflow_by_key["risk_snapshot"]["endpoint_path"] == "/analytics/risk/calculate"
+    assert workflow_by_key["risk_snapshot"]["supported_input_modes"] == ["stateless", "stateful"]
+    assert workflow_by_key["risk_snapshot"]["support_status"] == "full"
+    assert "simulation is intentionally unsupported" in workflow_by_key["risk_snapshot"]["notes"]
+    assert workflow_by_key["concentration_risk"]["supported_input_modes"] == [
+        "stateless",
+        "stateful",
+        "simulation",
+    ]
+    assert workflow_by_key["historical_risk_attribution"]["support_status"] == "partial"
+    assert (
+        "stateful active-risk ISSUER remains gated"
+        in workflow_by_key["historical_risk_attribution"]["notes"]
+    )
 
 
 def _concentration_payload() -> dict[str, object]:
@@ -283,6 +298,71 @@ def test_openapi_declares_standard_error_models_for_risk_endpoints() -> None:
         )
 
 
+def test_openapi_exposes_enriched_rolling_metadata_examples() -> None:
+    client = TestClient(app)
+    spec = client.get("/openapi.json").json()
+    rolling_example = spec["components"]["schemas"]["RollingResponse"]["example"]
+    metadata = rolling_example["metadata"]
+
+    assert metadata["requested_metrics"] == [
+        "ROLLING_VOLATILITY",
+        "ROLLING_BETA",
+        "ROLLING_TRACKING_ERROR",
+    ]
+    assert metadata["window_lengths_requested"] == [21]
+    assert metadata["window_count_requested"] == 1
+    assert metadata["min_observations_policy"] == "STRICT"
+    assert metadata["include_time_series"] is False
+
+
+def test_openapi_exposes_historical_attribution_support_metadata() -> None:
+    client = TestClient(app)
+    spec = client.get("/openapi.json").json()
+    serialized_spec = str(spec)
+
+    assert "requested_attribution_types" in serialized_spec
+    assert "requested_metrics" in serialized_spec
+    assert "requested_grouping_dimensions" in serialized_spec
+    assert "min_observations_policy" in serialized_spec
+    assert "stateful_active_risk_supported_grouping_dimensions" in serialized_spec
+    assert "stateful_active_risk_gated_grouping_dimensions" in serialized_spec
+    assert "benchmark issuer exposure semantics unavailable" in serialized_spec
+
+
+def test_historical_attribution_openapi_examples_and_description_reflect_stateful_gate() -> None:
+    client = TestClient(app)
+    spec = client.get("/openapi.json").json()
+    operation = spec["paths"]["/analytics/risk/historical-attribution"]["post"]
+    description = operation["description"]
+    request_schema = spec["components"]["schemas"]["HistoricalAttributionRequest"]
+    response_schema = spec["components"]["schemas"]["HistoricalAttributionResponse"]
+
+    assert "POSITION, SECTOR, and ASSET_CLASS" in description
+    assert "ISSUER is intentionally gated" in description
+    assert "CUSTOM grouping is not supported in stateful mode" in description
+    assert request_schema["example"]["input_mode"] == "stateful"
+    assert request_schema["example"]["stateful_input"]["attribution_options"][
+        "grouping_dimensions"
+    ] == ["SECTOR"]
+    assert request_schema["properties"]["stateful_input"]["example"]["attribution_options"][
+        "grouping_dimensions"
+    ] == ["SECTOR"]
+    assert response_schema["example"]["input_mode"] == "stateful"
+    assert response_schema["example"]["results"]["YTD"]["attribution_sets"][0][
+        "attribution_type"
+    ] == "ACTIVE_RISK"
+    assert response_schema["example"]["results"]["YTD"]["attribution_sets"][0]["metric"] == (
+        "TRACKING_ERROR"
+    )
+    assert response_schema["example"]["results"]["YTD"]["attribution_sets"][0][
+        "grouping_dimension"
+    ] == "SECTOR"
+    assert response_schema["example"]["metadata"]["requested_attribution_types"] == [
+        "ACTIVE_RISK"
+    ]
+    assert response_schema["example"]["metadata"]["requested_grouping_dimensions"] == ["SECTOR"]
+
+
 def test_openapi_exposes_typed_capabilities_response_contract() -> None:
     client = TestClient(app)
     spec = client.get("/openapi.json").json()
@@ -291,6 +371,152 @@ def test_openapi_exposes_typed_capabilities_response_contract() -> None:
         "$ref"
     ]
     assert schema_ref.endswith("/IntegrationCapabilitiesResponse")
+    workflow_schema = spec["components"]["schemas"]["CapabilityWorkflow"]
+    assert workflow_schema["properties"]["endpoint_path"]["example"] == "/analytics/risk/calculate"
+    assert workflow_schema["properties"]["supported_input_modes"]["example"] == [
+        "stateless",
+        "stateful",
+    ]
+    assert workflow_schema["properties"]["support_status"]["example"] == "full"
+
+
+def test_drawdown_openapi_examples_are_present_and_canonical() -> None:
+    client = TestClient(app)
+    spec = client.get("/openapi.json").json()
+    drawdown_schema = spec["components"]["schemas"]["DrawdownAnalyticsRequest"]
+    response_schema = spec["components"]["schemas"]["DrawdownResponse"]
+
+    assert drawdown_schema["properties"]["input_mode"]["example"] == "stateful"
+    assert (
+        drawdown_schema["properties"]["stateful_input"]["example"]["benchmark_policy"][
+            "include_benchmark"
+        ]
+        is True
+    )
+    assert (
+        drawdown_schema["properties"]["analysis_options"]["example"]["top_n_episodes"] == 5
+    )
+    assert response_schema["properties"]["metadata"]["example"]["missing_benchmark_policy"] in {
+        "IGNORE",
+        "REQUIRE",
+    }
+    assert response_schema["properties"]["results"]["example"]["YTD"]["summary"][
+        "max_drawdown"
+    ] < 0
+
+
+def test_risk_calculate_openapi_examples_are_present_and_canonical() -> None:
+    client = TestClient(app)
+    spec = client.get("/openapi.json").json()
+    request_schema = spec["components"]["schemas"]["RiskAnalyticsRequest"]
+    response_schema = spec["components"]["schemas"]["RiskResponse"]
+
+    assert request_schema["properties"]["input_mode"]["example"] == "stateless"
+    assert (
+        request_schema["properties"]["stateful_input"]["example"]["metrics"]
+        == ["VOLATILITY", "BETA", "TRACKING_ERROR", "INFORMATION_RATIO"]
+    )
+    assert (
+        request_schema["properties"]["stateful_input"]["example"]["options"]["var"][
+            "horizon_days"
+        ]
+        == 4
+    )
+    assert (
+        response_schema["example"]["results"]["YTD"]["metrics"]["VAR"]["details"][
+            "horizon_scale_method"
+        ]
+        == "SQRT_TIME"
+    )
+    assert (
+        response_schema["example"]["results"]["YTD"]["metrics"]["INFORMATION_RATIO"][
+            "details"
+        ]["annualized_active_return"]
+        > 0
+    )
+    assert response_schema["example"]["metadata"]["var_horizon_days"] == 4
+
+
+def test_rolling_openapi_examples_are_present_and_canonical() -> None:
+    client = TestClient(app)
+    spec = client.get("/openapi.json").json()
+    request_schema = spec["components"]["schemas"]["RollingAnalyticsRequest"]
+    response_schema = spec["components"]["schemas"]["RollingResponse"]
+
+    assert request_schema["properties"]["input_mode"]["example"] == "stateless"
+    assert request_schema["properties"]["stateful_input"]["example"]["rolling_options"][
+        "window_lengths"
+    ] == [21, 63]
+    assert request_schema["properties"]["stateful_input"]["example"]["rolling_options"][
+        "metrics"
+    ] == [
+        "ROLLING_VOLATILITY",
+        "ROLLING_BETA",
+        "ROLLING_TRACKING_ERROR",
+    ]
+    assert response_schema["example"]["input_mode"] == "stateful"
+    assert response_schema["example"]["results"]["YTD"]["benchmark_series_count"] == 90
+    assert response_schema["example"]["results"]["YTD"]["aligned_benchmark_series_count"] == 90
+    assert response_schema["example"]["results"]["YTD"]["risk_free_series_count"] == 0
+    assert response_schema["example"]["results"]["YTD"]["aligned_risk_free_series_count"] == 0
+    assert response_schema["example"]["results"]["YTD"]["window_lengths_requested"] == [21]
+    assert response_schema["example"]["results"]["YTD"]["window_count_requested"] == 1
+    assert response_schema["example"]["results"]["YTD"]["window_lengths_emitted"] == [21]
+    assert response_schema["example"]["results"]["YTD"]["window_count_emitted"] == 1
+    assert response_schema["example"]["results"]["YTD"]["benchmark_context"]["reason"] == "APPLIED"
+    assert response_schema["example"]["results"]["YTD"]["risk_free_context"]["reason"] == "NOT_REQUESTED"
+    assert response_schema["example"]["metadata"]["benchmark_context"]["requested"] is True
+    assert response_schema["example"]["metadata"]["risk_free_context"]["requested"] is False
+    assert response_schema["example"]["results"]["YTD"]["window_results"][0]["window_length"] == 21
+    assert (
+        response_schema["example"]["results"]["YTD"]["window_results"][0]["metric_series_context"][
+            "reason"
+        ]
+        == "OMITTED_BY_REQUEST"
+    )
+    assert (
+        response_schema["example"]["results"]["YTD"]["window_results"][0]["metric_summaries"][
+            "ROLLING_VOLATILITY"
+        ]["total_point_count"]
+        == 90
+    )
+    assert (
+        response_schema["example"]["results"]["YTD"]["window_results"][0]["metric_summaries"][
+            "ROLLING_VOLATILITY"
+        ]["computed_point_count"]
+        > 0
+    )
+    assert (
+        response_schema["example"]["results"]["YTD"]["window_results"][0]["metric_summaries"][
+            "ROLLING_VOLATILITY"
+        ]["coverage_ratio"]
+        > 0
+    )
+    assert (
+        response_schema["example"]["results"]["YTD"]["window_results"][0]["metric_summaries"][
+            "ROLLING_VOLATILITY"
+        ]["min_observations_required"]
+        == 21
+    )
+    assert (
+        response_schema["example"]["results"]["YTD"]["window_results"][0]["metric_summaries"][
+            "ROLLING_VOLATILITY"
+        ]["warmup_point_count"]
+        > 0
+    )
+    assert (
+        response_schema["example"]["results"]["YTD"]["window_results"][0]["metric_summaries"][
+            "ROLLING_VOLATILITY"
+        ]["post_warmup_gap_point_count"]
+        == 0
+    )
+    assert (
+        response_schema["example"]["results"]["YTD"]["window_results"][0]["metric_summaries"][
+            "ROLLING_TRACKING_ERROR"
+        ]["latest"]
+        > 0
+    )
+    assert response_schema["example"]["metadata"]["alignment_policy"] == "INNER_JOIN"
 
 
 def test_concentration_rejects_legacy_payload_shape() -> None:
@@ -328,6 +554,8 @@ def test_concentration_stateful_mode_uses_lotus_core_snapshot() -> None:
     assert body["input_mode"] == "stateful"
     assert body["risk_proxy"]["hhi_current"] == 6800.0
     assert body["metadata"]["portfolio_id"] == "DEMO_DPM_EUR_001"
+    assert body["metadata"]["issuer_grouping_level"] == "ultimate_parent"
+    assert body["metadata"]["enrichment_policy"] == "merge_caller_then_core"
 
 
 def test_concentration_simulation_mode_reuses_or_creates_session_and_returns_metadata() -> None:
@@ -358,3 +586,5 @@ def test_concentration_simulation_mode_reuses_or_creates_session_and_returns_met
     assert body["risk_proxy"]["hhi_proposed"] == 8200.0
     assert body["metadata"]["simulation_session_id"] == "SIM_0001"
     assert body["metadata"]["simulation_session_version"] == 3
+    assert body["metadata"]["issuer_grouping_level"] == "ultimate_parent"
+    assert body["metadata"]["enrichment_policy"] == "merge_caller_then_core"

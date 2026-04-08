@@ -1,17 +1,62 @@
 # Endpoint Matrix
 
-| Endpoint | Category | Purpose | Modes Supported Now | Target Modes | Primary Upstream Inputs | Primary Downstream Consumers | Availability |
-|---|---|---|---|---|---|---|---|
-| `GET /health` | Operational | compatibility health | operational | operational | none | platform stack probes, ops tooling | exists |
-| `GET /health/live` | Operational | liveness | operational | operational | none | orchestrator/container probes | exists |
-| `GET /health/ready` | Operational | readiness | operational | operational | internal runtime state + dependency runtime view for lotus-core and lotus-performance | orchestrator/container probes | exists |
-| `GET /metadata` | Operational | service/version/rounding metadata | operational | operational | internal constants | tooling/ops/clients | exists |
-| `GET /metrics` | Operational | Prometheus metrics | operational | operational | internal metrics registry | observability stack | exists |
-| `GET /ops` | Operational | consolidated operational diagnostics | operational | operational | runtime readiness + canonical dependency configuration/runtime status for lotus-core and lotus-performance | ops/platform automation | exists |
-| `GET /integration/capabilities` | Integration | capability/workflow publication | integration metadata | integration metadata | internal typed constants | lotus-gateway capability aggregator | exists (context-aware query shaping needs enhancement) |
-| `POST /analytics/risk/calculate` | Domain analytics | portfolio risk metrics | stateless + stateful | stateless + stateful | stateful return sourcing via lotus-performance (`/integration/returns/series` with `input_mode=stateful`, `stateful_input is an empty envelope; consumer identity is stamped by lotus-performance server-side`) | lotus-report, external/advanced integrations, future gateway flows | exists (simulation intentionally unsupported) |
-| `POST /analytics/risk/drawdown` | Domain analytics | realized drawdown analytics | stateless + stateful | stateless + stateful | stateful return sourcing via lotus-performance (`/integration/returns/series` with `input_mode=stateful`, `stateful_input is an empty envelope; consumer identity is stamped by lotus-performance server-side`) | lotus-report, lotus-gateway, PB/WM advisory channels | exists (simulation intentionally unsupported) |
-| `POST /analytics/risk/rolling-metrics` | Domain analytics | rolling historical risk diagnostics (volatility, Sharpe, beta, tracking error, information ratio, rolling max drawdown) | stateless + stateful | stateless + stateful | stateful sourcing via lotus-performance for portfolio/benchmark returns using the longest required explicit window; lotus-core provides risk-free reference series and reporting-currency resolution for Sharpe requests when caller omits `reporting_currency` | lotus-report, lotus-gateway, PB/WM advisory channels | partial (simulation intentionally unsupported; Sharpe remains data-dependent on lotus-core risk-free availability) |
-| `POST /analytics/risk/historical-attribution` | Domain analytics | historical risk and active-risk attribution decomposition | stateless + stateful | stateless + stateful | stateless caller-supplied returns/exposures; stateful sourcing uses lotus-performance for portfolio/benchmark returns and benchmark exposure context, and lotus-core for portfolio exposure history and instrument enrichment | lotus-report, lotus-gateway, PB/WM advisory workflows | partial (stateful `TOTAL_RISK` exists; stateful `ACTIVE_RISK` supports POSITION/SECTOR/ASSET_CLASS; issuer active-risk remains gated by benchmark issuer semantics) |
-| `POST /analytics/risk/concentration` | Domain analytics | concentration HHI metrics | stateless + stateful + simulation | stateless + stateful + simulation | stateful/simulation sourcing via lotus-core snapshot and simulation session contracts | direct consumers + migrated gateway path | exists |
-| `POST /analytics/workbench/risk-proxy` | Legacy compatibility | removed endpoint | none | none | none | none | removed |
+This matrix is the current service-wide readiness view for `lotus-risk`.
+
+Status meanings:
+
+- `full`: implemented, documented, and validated to the current production standard
+- `partial`: implemented for an approved subset, with an explicit remaining gap
+- `operational`: non-domain endpoint; available and working
+- `removed`: intentionally absent from the runtime surface
+
+## Endpoint Readiness
+
+| Endpoint | Category | Purpose | Supported Modes | Gold-Standard Status | Primary Upstream Inputs | Remaining Gap / Constraint |
+|---|---|---|---|---|---|---|
+| `GET /health` | Operational | compatibility health | operational | operational | none | none |
+| `GET /health/live` | Operational | liveness | operational | operational | none | none |
+| `GET /health/ready` | Operational | dependency-aware readiness | operational | operational | internal runtime state + dependency runtime view for lotus-core and lotus-performance | none |
+| `GET /metadata` | Operational | service/version/rounding metadata | operational | operational | internal constants | none |
+| `GET /metrics` | Operational | Prometheus metrics | operational | operational | internal metrics registry | none |
+| `GET /ops` | Operational | consolidated operational diagnostics | operational | operational | runtime readiness + canonical dependency configuration/runtime status for lotus-core and lotus-performance | none |
+| `GET /integration/capabilities` | Integration | capability/workflow publication | integration metadata | full | internal typed constants and support metadata | query shaping by consumer/tenant is still intentionally absent |
+| `POST /analytics/risk/calculate` | Domain analytics | portfolio risk metrics | `stateless`, `stateful` | full | stateful return sourcing via lotus-performance | simulation is intentionally unsupported |
+| `POST /analytics/risk/drawdown` | Domain analytics | realized drawdown analytics | `stateless`, `stateful` | full | stateful return sourcing via lotus-performance | simulation is intentionally unsupported |
+| `POST /analytics/risk/rolling-metrics` | Domain analytics | rolling historical risk diagnostics | `stateless`, `stateful` | full | lotus-performance for portfolio/benchmark returns; lotus-core for risk-free series and reporting-currency resolution | simulation is intentionally unsupported; rolling Sharpe remains data-dependent on live lotus-core risk-free coverage for unvalidated currencies/windows |
+| `POST /analytics/risk/historical-attribution` | Domain analytics | historical risk and active-risk attribution decomposition | `stateless`, `stateful` | partial | stateless caller-supplied returns/exposures; stateful sourcing uses lotus-performance for portfolio/benchmark returns and benchmark exposure context, and lotus-core for portfolio exposure history and instrument enrichment | stateful `ACTIVE_RISK` supports `POSITION`, `SECTOR`, and `ASSET_CLASS`; `ISSUER` remains gated by benchmark issuer exposure semantics; simulation is intentionally unsupported |
+| `POST /analytics/risk/concentration` | Domain analytics | concentration analytics and HHI metrics | `stateless`, `stateful`, `simulation` | full | lotus-core snapshot and simulation session contracts | none |
+| `POST /analytics/workbench/risk-proxy` | Legacy compatibility | removed endpoint | none | removed | none | intentionally removed from runtime and OpenAPI |
+
+## Mode Support Detail
+
+| Endpoint | Stateless | Stateful | Simulation |
+|---|---|---|---|
+| `POST /analytics/risk/calculate` | full | full | unsupported by contract |
+| `POST /analytics/risk/drawdown` | full | full | unsupported by contract |
+| `POST /analytics/risk/rolling-metrics` | full | full | unsupported by contract |
+| `POST /analytics/risk/historical-attribution` | full | partial | unsupported by contract |
+| `POST /analytics/risk/concentration` | full | full | full |
+
+## Highest-Value Remaining Gap
+
+The only remaining material functional gap inside the approved API surface is:
+
+- stateful `ACTIVE_RISK` historical attribution with `grouping_dimension=ISSUER`
+
+Current handling is intentional and explicit:
+
+- request validation rejects unsupported stateful issuer requests with HTTP `422`
+- `/integration/capabilities` marks historical attribution as `partial`
+- OpenAPI and domain docs describe the gate
+- live characterization proves:
+  - supported stateful `SECTOR` active-risk works
+  - upstream benchmark exposure context rejects `ISSUER`
+
+## Related Detail Docs
+
+- [integration-capabilities.md](C:\Users\Sandeep\projects\lotus-risk\docs\domain-apis\integration-capabilities.md)
+- [risk-calculate.md](C:\Users\Sandeep\projects\lotus-risk\docs\domain-apis\risk-calculate.md)
+- [risk-drawdown.md](C:\Users\Sandeep\projects\lotus-risk\docs\domain-apis\risk-drawdown.md)
+- [risk-rolling-metrics.md](C:\Users\Sandeep\projects\lotus-risk\docs\domain-apis\risk-rolling-metrics.md)
+- [risk-historical-attribution.md](C:\Users\Sandeep\projects\lotus-risk\docs\domain-apis\risk-historical-attribution.md)
+- [risk-concentration.md](C:\Users\Sandeep\projects\lotus-risk\docs\domain-apis\risk-concentration.md)
