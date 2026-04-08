@@ -177,6 +177,28 @@ def test_metadata_endpoint() -> None:
     assert response.json()["service"].startswith("lotus-")
 
 
+def test_integration_capabilities_endpoint_exposes_support_matrix() -> None:
+    client = TestClient(app)
+    response = client.get("/integration/capabilities")
+    assert response.status_code == 200
+
+    body = response.json()
+    workflow_by_key = {workflow["workflow_key"]: workflow for workflow in body["workflows"]}
+
+    assert workflow_by_key["concentration_risk"]["endpoint_path"] == "/analytics/risk/concentration"
+    assert workflow_by_key["concentration_risk"]["supported_input_modes"] == [
+        "stateless",
+        "stateful",
+        "simulation",
+    ]
+    assert workflow_by_key["concentration_risk"]["support_status"] == "full"
+    assert workflow_by_key["historical_risk_attribution"]["support_status"] == "partial"
+    assert (
+        "stateful active-risk ISSUER remains gated"
+        in workflow_by_key["historical_risk_attribution"]["notes"]
+    )
+
+
 def test_e2e_risk_calculate_happy_path() -> None:
     client = TestClient(app)
     response = client.post("/analytics/risk/calculate", json=_risk_payload())
@@ -448,3 +470,29 @@ def test_e2e_historical_attribution_stateful_active_risk_mode() -> None:
     assert attribution_set["contributors"]
     assert performance_client.benchmark_exposure_context_calls
     assert not hasattr(core_client, "get_benchmark_market_series")
+
+
+def test_e2e_historical_attribution_stateful_issuer_is_rejected_at_boundary() -> None:
+    client = TestClient(app)
+    response = client.post(
+        "/analytics/risk/historical-attribution",
+        json={
+            "input_mode": "stateful",
+            "stateful_input": {
+                "portfolio_id": "DEMO_DPM_EUR_001",
+                "as_of_date": "2026-01-04",
+                "periods": [{"type": "YTD", "name": "YTD"}],
+                "attribution_options": {
+                    "attribution_types": ["ACTIVE_RISK"],
+                    "metrics": ["TRACKING_ERROR"],
+                    "grouping_dimensions": ["ISSUER"],
+                },
+            },
+        },
+    )
+
+    assert response.status_code == 422
+    body = response.json()
+    assert body["error"]["code"] == "INVALID_REQUEST"
+    detail_messages = [detail["msg"] for detail in body["error"]["details"]]
+    assert any("grouping_dimension=ISSUER" in message for message in detail_messages)
