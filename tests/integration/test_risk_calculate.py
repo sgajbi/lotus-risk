@@ -78,6 +78,10 @@ def test_risk_calculate_endpoint_happy_path_contract() -> None:
     assert body["results"]["Explicit"]["aligned_benchmark_observation_count"] == 0
     assert metrics["VOLATILITY"]["value"] is not None
     assert metrics["SHARPE"]["value"] is not None
+    assert metrics["SHARPE"]["details"]["mean_return"] > 0
+    assert metrics["SHARPE"]["details"]["periodic_risk_free_rate"] > 0
+    assert metrics["SHARPE"]["details"]["excess_return"] > 0
+    assert metrics["SHARPE"]["details"]["volatility"] > 0
     assert metrics["VAR"]["value"] is not None
     assert metrics["VAR"]["details"]["method"] == "HISTORICAL"
     assert metrics["VAR"]["details"]["confidence"] == 0.95
@@ -103,6 +107,8 @@ def test_risk_calculate_sortino_exposes_downside_context() -> None:
     details = response.json()["results"]["Explicit"]["metrics"]["SORTINO"]["details"]
     assert details["mar_annual_rate"] == 0.02
     assert details["periodic_mar"] > 0
+    assert details["mean_return"] > 0
+    assert details["excess_return"] > 0
     assert details["downside_observation_count"] >= 1
     assert details["downside_deviation"] > 0
 

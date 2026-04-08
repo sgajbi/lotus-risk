@@ -336,10 +336,20 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
                     denominator = metric_series.std(ddof=1)
                     if np.isclose(denominator, 0.0):
                         raise ValueError("Zero volatility")
+                    mean_return = _as_number(metric_series.mean() / 100)
+                    excess_return = _as_number(mean_return - periodic_rf)
                     sharpe = (
-                        (metric_series.mean() / 100 - periodic_rf) / (denominator / 100)
+                        excess_return / (denominator / 100)
                     ) * sqrt(annual_factor)
-                    metric_map["SHARPE"] = RiskValue(value=_as_number(sharpe))
+                    metric_map["SHARPE"] = RiskValue(
+                        value=_as_number(sharpe),
+                        details={
+                            "mean_return": mean_return,
+                            "periodic_risk_free_rate": periodic_rf,
+                            "excess_return": excess_return,
+                            "volatility": _as_number(denominator / 100),
+                        },
+                    )
                 except ValueError as exc:
                     metric_map["SHARPE"] = _metric_error(str(exc))
 
@@ -353,14 +363,18 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
                         raise ValueError("No downside observations")
                     downside_count = int(downside.count())
                     downside_deviation = _as_number(np.sqrt((downside**2).mean()))
+                    mean_return = _as_number(metric_series.mean() / 100)
+                    excess_return = _as_number(mean_return - periodic_mar)
                     sortino = (
-                        ((metric_series.mean() / 100) - periodic_mar) / downside_deviation
+                        excess_return / downside_deviation
                     ) * sqrt(annual_factor)
                     metric_map["SORTINO"] = RiskValue(
                         value=_as_number(sortino),
                         details={
                             "mar_annual_rate": request.options.mar_annual_rate,
                             "periodic_mar": periodic_mar,
+                            "mean_return": mean_return,
+                            "excess_return": excess_return,
                             "downside_observation_count": downside_count,
                             "downside_deviation": downside_deviation,
                         },
