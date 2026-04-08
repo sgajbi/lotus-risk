@@ -524,10 +524,20 @@ class RollingPeriodResult(BaseModel):
         description="Rolling window lengths requested for this period.",
         json_schema_extra={"example": [21, 63]},
     )
+    window_count_requested: int = Field(
+        default=0,
+        description="Number of rolling window lengths requested for this period.",
+        json_schema_extra={"example": 2},
+    )
     window_lengths_emitted: list[int] = Field(
         default_factory=list,
         description="Rolling window lengths actually emitted in this period result.",
         json_schema_extra={"example": [21, 63]},
+    )
+    window_count_emitted: int = Field(
+        default=0,
+        description="Number of rolling window lengths actually emitted in this period result.",
+        json_schema_extra={"example": 2},
     )
     benchmark_context: RollingBenchmarkContext = Field(
         description="Benchmark application context for benchmark-dependent rolling metrics in this period.",
@@ -653,7 +663,9 @@ class RollingResponse(BaseModel):
                     "benchmark_series_count": 41,
                     "aligned_benchmark_series_count": 41,
                     "window_lengths_requested": [21, 63],
+                    "window_count_requested": 2,
                     "window_lengths_emitted": [21, 63],
+                    "window_count_emitted": 2,
                     "benchmark_context": {
                         "requested": True,
                         "available": True,
@@ -716,7 +728,9 @@ class RollingResponse(BaseModel):
                     "benchmark_series_count": 90,
                     "aligned_benchmark_series_count": 90,
                     "window_lengths_requested": [21],
+                    "window_count_requested": 1,
                     "window_lengths_emitted": [21],
+                    "window_count_emitted": 1,
                     "benchmark_context": {
                         "requested": True,
                         "available": True,

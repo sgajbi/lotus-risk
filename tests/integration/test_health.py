@@ -373,7 +373,9 @@ def test_rolling_openapi_examples_are_present_and_canonical() -> None:
     assert response_schema["example"]["results"]["YTD"]["risk_free_series_count"] == 0
     assert response_schema["example"]["results"]["YTD"]["aligned_risk_free_series_count"] == 0
     assert response_schema["example"]["results"]["YTD"]["window_lengths_requested"] == [21]
+    assert response_schema["example"]["results"]["YTD"]["window_count_requested"] == 1
     assert response_schema["example"]["results"]["YTD"]["window_lengths_emitted"] == [21]
+    assert response_schema["example"]["results"]["YTD"]["window_count_emitted"] == 1
     assert response_schema["example"]["results"]["YTD"]["benchmark_context"]["reason"] == "APPLIED"
     assert response_schema["example"]["results"]["YTD"]["risk_free_context"]["reason"] == "NOT_REQUESTED"
     assert response_schema["example"]["metadata"]["benchmark_context"]["requested"] is True
