@@ -10,6 +10,7 @@ import pandas as pd
 from prometheus_client import Counter, Histogram
 
 from app.contracts.risk import (
+    RiskFreeContext,
     RiskPeriodResult,
     RiskResponseMetadata,
     RiskResponse,
@@ -208,13 +209,30 @@ def _build_metadata(
     request: RiskStatelessCalculationInput,
     *,
     annual_factor: int,
+    periodic_rf: float,
 ) -> RiskResponseMetadata:
+    risk_free_requested = "SHARPE" in request.metrics
     return RiskResponseMetadata(
         frequency=request.options.frequency,
         annualization_factor=annual_factor,
         use_log_returns=request.options.use_log_returns,
         risk_free_mode=request.options.risk_free_mode,
         risk_free_annual_rate=request.options.risk_free_annual_rate,
+        risk_free_context=RiskFreeContext(
+            requested=risk_free_requested,
+            applied=risk_free_requested,
+            reason=(
+                "NOT_REQUESTED"
+                if not risk_free_requested
+                else (
+                    "ANNUAL_RATE_APPLIED"
+                    if request.options.risk_free_mode == "ANNUAL_RATE"
+                    and request.options.risk_free_annual_rate is not None
+                    else "ZERO_RATE"
+                )
+            ),
+            periodic_rate=periodic_rf if risk_free_requested else 0.0,
+        ),
         mar_annual_rate=request.options.mar_annual_rate,
         var_method=request.options.var.method,
         var_confidence=request.options.var.confidence,
@@ -239,7 +257,7 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
         return RiskResponse(
             scope=request.scope,
             results={},
-            metadata=_build_metadata(request, annual_factor=annual_factor),
+            metadata=_build_metadata(request, annual_factor=annual_factor, periodic_rf=0.0),
         )
 
     returns_df["date"] = pd.to_datetime(returns_df["date"])
@@ -430,5 +448,5 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
     return RiskResponse(
         scope=request.scope,
         results=results,
-        metadata=_build_metadata(request, annual_factor=annual_factor),
+        metadata=_build_metadata(request, annual_factor=annual_factor, periodic_rf=periodic_rf),
     )

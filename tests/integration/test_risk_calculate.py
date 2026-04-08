@@ -65,6 +65,13 @@ def test_risk_calculate_endpoint_happy_path_contract() -> None:
     assert "Explicit" in body["results"]
     assert body["metadata"]["frequency"] == "DAILY"
     assert body["metadata"]["annualization_factor"] == 252
+    assert body["metadata"]["risk_free_context"] == {
+        "requested": True,
+        "applied": True,
+        "reason": "ANNUAL_RATE_APPLIED",
+        "periodic_rate": body["metadata"]["risk_free_context"]["periodic_rate"],
+    }
+    assert body["metadata"]["risk_free_context"]["periodic_rate"] > 0
     metrics = body["results"]["Explicit"]["metrics"]
     assert body["results"]["Explicit"]["portfolio_observation_count"] == 4
     assert body["results"]["Explicit"]["benchmark_observation_count"] == 0
@@ -156,6 +163,12 @@ def test_risk_calculate_stateful_mode_uses_lotus_performance_returns_series() ->
     body = response.json()
     metrics = body["results"]["YTD"]["metrics"]
     assert body["metadata"]["frequency"] == "DAILY"
+    assert body["metadata"]["risk_free_context"] == {
+        "requested": False,
+        "applied": False,
+        "reason": "NOT_REQUESTED",
+        "periodic_rate": 0.0,
+    }
     assert body["results"]["YTD"]["portfolio_observation_count"] == len(RISK_STATEFUL_RETURNS)
     assert body["results"]["YTD"]["benchmark_observation_count"] == len(
         RISK_STATEFUL_BENCHMARK_RETURNS

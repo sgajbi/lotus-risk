@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-04-08T00:01:12.041446+00:00",
+  "generatedAt": "2026-04-08T00:06:29.532272+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.alignment_policy",
@@ -66,6 +66,20 @@
       ],
       "observedTypes": [
         "integer"
+      ]
+    },
+    {
+      "semanticId": "lotus.applied",
+      "canonicalTerm": "applied",
+      "preferredName": "applied",
+      "description": "Whether risk-free configuration was applied to at least one requested metric.",
+      "example": true,
+      "type": "boolean",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "boolean"
       ]
     },
     {
@@ -687,6 +701,20 @@
       ]
     },
     {
+      "semanticId": "lotus.periodic_rate",
+      "canonicalTerm": "periodic_rate",
+      "preferredName": "periodic_rate",
+      "description": "Applied periodic risk-free rate as a decimal return after annualization.",
+      "example": 3.949e-05,
+      "type": "number",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "number"
+      ]
+    },
+    {
       "semanticId": "lotus.policy_version",
       "canonicalTerm": "policy_version",
       "preferredName": "policy_version",
@@ -715,6 +743,20 @@
       ]
     },
     {
+      "semanticId": "lotus.reason",
+      "canonicalTerm": "reason",
+      "preferredName": "reason",
+      "description": "Deterministic explanation of how risk-free configuration affected this response.",
+      "example": "ANNUAL_RATE_APPLIED",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
       "semanticId": "lotus.reporting_currency",
       "canonicalTerm": "reporting_currency",
       "preferredName": "reporting_currency",
@@ -726,6 +768,20 @@
       ],
       "observedTypes": [
         "object"
+      ]
+    },
+    {
+      "semanticId": "lotus.requested",
+      "canonicalTerm": "requested",
+      "preferredName": "requested",
+      "description": "Whether any requested metrics depend on risk-free configuration.",
+      "example": true,
+      "type": "boolean",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "boolean"
       ]
     },
     {
@@ -760,6 +816,22 @@
       ],
       "observedTypes": [
         "object"
+      ]
+    },
+    {
+      "semanticId": "lotus.risk_free_context",
+      "canonicalTerm": "risk_free_context",
+      "preferredName": "risk_free_context",
+      "description": "Canonical risk free context used by lotus-risk APIs.",
+      "example": {
+        "key": "value"
+      },
+      "type": "RiskFreeContext",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "RiskFreeContext"
       ]
     },
     {
@@ -2931,6 +3003,46 @@
             "type": "object",
             "semanticId": "lotus.risk_free_annual_rate",
             "attributeRef": "#/attributeCatalog/lotus.risk_free_annual_rate"
+          },
+          {
+            "name": "metadata.risk_free_context",
+            "location": "body",
+            "required": false,
+            "type": "RiskFreeContext",
+            "semanticId": "lotus.risk_free_context",
+            "attributeRef": "#/attributeCatalog/lotus.risk_free_context"
+          },
+          {
+            "name": "metadata.risk_free_context.requested",
+            "location": "body",
+            "required": false,
+            "type": "boolean",
+            "semanticId": "lotus.requested",
+            "attributeRef": "#/attributeCatalog/lotus.requested"
+          },
+          {
+            "name": "metadata.risk_free_context.applied",
+            "location": "body",
+            "required": false,
+            "type": "boolean",
+            "semanticId": "lotus.applied",
+            "attributeRef": "#/attributeCatalog/lotus.applied"
+          },
+          {
+            "name": "metadata.risk_free_context.reason",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.reason",
+            "attributeRef": "#/attributeCatalog/lotus.reason"
+          },
+          {
+            "name": "metadata.risk_free_context.periodic_rate",
+            "location": "body",
+            "required": false,
+            "type": "number",
+            "semanticId": "lotus.periodic_rate",
+            "attributeRef": "#/attributeCatalog/lotus.periodic_rate"
           },
           {
             "name": "metadata.mar_annual_rate",

@@ -67,6 +67,7 @@
   - `contract_version`
   - `methodology_version`
   - applied frequency / annualization / log-return / risk-free / VaR settings
+  - `risk_free_context` (`requested`, `applied`, `reason`, `periodic_rate`)
 - `results` map keyed by period name/type:
   - `start_date`
   - `end_date`
@@ -90,6 +91,6 @@
 
 ## Gaps and Decisions Required
 
-1. Benchmark/risk-free sourcing remains upstream-dependent on lotus-performance + lotus-core reference-data availability; stateful benchmark metrics degrade deterministically when benchmark series is absent, and this is now surfaced in `benchmark_context.reason`.
+1. Benchmark/risk-free sourcing remains upstream-dependent on lotus-performance + lotus-core reference-data availability; stateful benchmark metrics degrade deterministically when benchmark series is absent, and this is now surfaced in `benchmark_context.reason`. Risk-free application for Sharpe is surfaced separately in `metadata.risk_free_context`.
 2. Standardize response metadata additions (for example `correlationId`, `contractVersion`, `asOfDate`) if this endpoint must fully match cross-platform response envelope conventions.
 

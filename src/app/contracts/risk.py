@@ -414,6 +414,29 @@ class RiskPeriodResult(BaseModel):
     )
 
 
+class RiskFreeContext(BaseModel):
+    requested: bool = Field(
+        default=False,
+        description="Whether any requested metrics depend on risk-free configuration.",
+        json_schema_extra={"example": True},
+    )
+    applied: bool = Field(
+        default=False,
+        description="Whether risk-free configuration was applied to at least one requested metric.",
+        json_schema_extra={"example": True},
+    )
+    reason: Literal["NOT_REQUESTED", "ZERO_RATE", "ANNUAL_RATE_APPLIED"] = Field(
+        default="NOT_REQUESTED",
+        description="Deterministic explanation of how risk-free configuration affected this response.",
+        json_schema_extra={"example": "ANNUAL_RATE_APPLIED"},
+    )
+    periodic_rate: float = Field(
+        default=0.0,
+        description="Applied periodic risk-free rate as a decimal return after annualization.",
+        json_schema_extra={"example": 0.00003949},
+    )
+
+
 class RiskResponseMetadata(BaseModel):
     contract_version: str = Field(
         default="v1",
@@ -449,6 +472,18 @@ class RiskResponseMetadata(BaseModel):
         default=None,
         description="Applied annual risk-free rate when risk_free_mode=ANNUAL_RATE.",
         json_schema_extra={"example": 0.01},
+    )
+    risk_free_context: RiskFreeContext = Field(
+        default_factory=RiskFreeContext,
+        description="Applied risk-free interpretation context for Sharpe calculations.",
+        json_schema_extra={
+            "example": {
+                "requested": True,
+                "applied": True,
+                "reason": "ANNUAL_RATE_APPLIED",
+                "periodic_rate": 0.00003949,
+            }
+        },
     )
     mar_annual_rate: float = Field(
         default=0.0,
@@ -517,6 +552,12 @@ class RiskResponse(BaseModel):
                 "use_log_returns": False,
                 "risk_free_mode": "ZERO",
                 "risk_free_annual_rate": None,
+                "risk_free_context": {
+                    "requested": True,
+                    "applied": True,
+                    "reason": "ZERO_RATE",
+                    "periodic_rate": 0.0,
+                },
                 "mar_annual_rate": 0.0,
                 "var_method": "HISTORICAL",
                 "var_confidence": 0.95,
