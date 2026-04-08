@@ -361,8 +361,14 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
             with RISK_METRIC_DURATION_SECONDS.labels(metric_name="VOLATILITY").time():
                 try:
                     _require_data(metric_series)
+                    standard_deviation = _as_number(metric_series.std(ddof=1) / 100)
                     metric_map["VOLATILITY"] = RiskValue(
-                        value=_as_number(metric_series.std(ddof=1) * sqrt(annual_factor))
+                        value=_as_number(standard_deviation * sqrt(annual_factor) * 100),
+                        details={
+                            "observation_count": int(metric_series.count()),
+                            "standard_deviation": standard_deviation,
+                            "annualization_factor": annual_factor,
+                        },
                     )
                 except ValueError as exc:
                     metric_map["VOLATILITY"] = _metric_error(str(exc))
@@ -399,6 +405,8 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
                     metric_map["SHARPE"] = RiskValue(
                         value=_as_number(sharpe),
                         details={
+                            "observation_count": int(metric_series.count()),
+                            "annualization_factor": annual_factor,
                             "mean_return": mean_return,
                             "periodic_risk_free_rate": periodic_rf,
                             "excess_return": excess_return,
@@ -426,6 +434,8 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
                     metric_map["SORTINO"] = RiskValue(
                         value=_as_number(sortino),
                         details={
+                            "observation_count": int(metric_series.count()),
+                            "annualization_factor": annual_factor,
                             "mar_annual_rate": request.options.mar_annual_rate,
                             "periodic_mar": periodic_mar,
                             "mean_return": mean_return,

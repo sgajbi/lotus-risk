@@ -77,7 +77,12 @@ def test_risk_calculate_endpoint_happy_path_contract() -> None:
     assert body["results"]["Explicit"]["benchmark_observation_count"] == 0
     assert body["results"]["Explicit"]["aligned_benchmark_observation_count"] == 0
     assert metrics["VOLATILITY"]["value"] is not None
+    assert metrics["VOLATILITY"]["details"]["observation_count"] == 4
+    assert metrics["VOLATILITY"]["details"]["annualization_factor"] == 252
+    assert metrics["VOLATILITY"]["details"]["standard_deviation"] > 0
     assert metrics["SHARPE"]["value"] is not None
+    assert metrics["SHARPE"]["details"]["observation_count"] == 4
+    assert metrics["SHARPE"]["details"]["annualization_factor"] == 252
     assert metrics["SHARPE"]["details"]["mean_return"] > 0
     assert metrics["SHARPE"]["details"]["periodic_risk_free_rate"] > 0
     assert metrics["SHARPE"]["details"]["excess_return"] > 0
@@ -129,6 +134,8 @@ def test_risk_calculate_sortino_exposes_downside_context() -> None:
     response = client.post("/analytics/risk/calculate", json=payload)
     assert response.status_code == 200
     details = response.json()["results"]["Explicit"]["metrics"]["SORTINO"]["details"]
+    assert details["observation_count"] == 4
+    assert details["annualization_factor"] == 252
     assert details["mar_annual_rate"] == 0.02
     assert details["periodic_mar"] > 0
     assert details["mean_return"] > 0
