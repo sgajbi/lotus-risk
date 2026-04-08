@@ -97,7 +97,10 @@ def test_risk_calculate_endpoint_happy_path_contract() -> None:
     assert metrics["VAR"]["details"]["method"] == "HISTORICAL"
     assert metrics["VAR"]["details"]["confidence"] == 0.95
     assert metrics["VAR"]["details"]["tail_probability"] == pytest.approx(0.05)
+    assert metrics["VAR"]["details"]["base_horizon_days"] == 1
     assert metrics["VAR"]["details"]["horizon_days"] == 1
+    assert metrics["VAR"]["details"]["horizon_scale_method"] == "SQRT_TIME"
+    assert metrics["VAR"]["details"]["horizon_scale_factor"] == pytest.approx(1.0)
     assert metrics["VAR"]["details"]["include_expected_shortfall"] is True
     assert metrics["VAR"]["details"]["observation_count"] == 4
     assert metrics["VAR"]["details"]["tail_observation_count"] >= 1
@@ -105,6 +108,33 @@ def test_risk_calculate_endpoint_happy_path_contract() -> None:
     assert "base_expected_shortfall" in metrics["VAR"]["details"]
     assert metrics["VAR"]["details"]["expected_shortfall_observation_count"] >= 1
     assert "expected_shortfall" in metrics["VAR"]["details"]
+
+
+def test_risk_calculate_var_exposes_horizon_scaling_context() -> None:
+    client = TestClient(app)
+    payload = _request_payload()
+    stateless_input = payload["stateless_input"]
+    assert isinstance(stateless_input, dict)
+    stateless_input["metrics"] = ["VAR"]
+    stateless_input["options"] = {
+        "frequency": "DAILY",
+        "var": {
+            "method": "HISTORICAL",
+            "confidence": 0.95,
+            "horizon_days": 4,
+            "include_expected_shortfall": True,
+        },
+    }
+    response = client.post("/analytics/risk/calculate", json=payload)
+    assert response.status_code == 200
+    details = response.json()["results"]["Explicit"]["metrics"]["VAR"]["details"]
+    assert details["base_horizon_days"] == 1
+    assert details["horizon_days"] == 4
+    assert details["horizon_scale_method"] == "SQRT_TIME"
+    assert details["horizon_scale_factor"] == pytest.approx(2.0)
+    assert details["expected_shortfall"] == pytest.approx(
+        details["base_expected_shortfall"] * details["horizon_scale_factor"]
+    )
 
 
 def test_risk_calculate_drawdown_exposes_recovery_context() -> None:

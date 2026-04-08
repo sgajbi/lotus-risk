@@ -523,13 +523,19 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
                     base_var = _calculate_var_by_method(
                         metric_series, request.options.var.method, request.options.var.confidence
                     )
-                    scaled_var = base_var * sqrt(request.options.var.horizon_days)
+                    horizon_scale_factor = _as_number(
+                        sqrt(request.options.var.horizon_days)
+                    )
+                    scaled_var = _as_number(base_var * horizon_scale_factor)
                     tail_observation_count = int((metric_series <= base_var).sum())
                     details: dict[str, str | float | int | bool | None] = {
                         "method": request.options.var.method,
                         "confidence": request.options.var.confidence,
                         "tail_probability": _as_number(1.0 - request.options.var.confidence),
+                        "base_horizon_days": 1,
                         "horizon_days": request.options.var.horizon_days,
+                        "horizon_scale_method": "SQRT_TIME",
+                        "horizon_scale_factor": horizon_scale_factor,
                         "include_expected_shortfall": request.options.var.include_expected_shortfall,
                         "base_var": base_var,
                         "observation_count": int(metric_series.count()),
@@ -539,8 +545,8 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
                         base_es = _expected_shortfall(metric_series, base_var)
                         details["base_expected_shortfall"] = base_es
                         details["expected_shortfall_observation_count"] = tail_observation_count
-                        details["expected_shortfall"] = (
-                            base_es * sqrt(request.options.var.horizon_days)
+                        details["expected_shortfall"] = _as_number(
+                            base_es * horizon_scale_factor
                         )
                     metric_map["VAR"] = RiskValue(value=scaled_var, details=details)
                 except ValueError as exc:
