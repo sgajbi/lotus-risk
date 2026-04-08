@@ -300,6 +300,20 @@ def test_openapi_exposes_enriched_rolling_metadata_examples() -> None:
     assert metadata["include_time_series"] is False
 
 
+def test_openapi_exposes_historical_attribution_support_metadata() -> None:
+    client = TestClient(app)
+    spec = client.get("/openapi.json").json()
+    serialized_spec = str(spec)
+
+    assert "requested_attribution_types" in serialized_spec
+    assert "requested_metrics" in serialized_spec
+    assert "requested_grouping_dimensions" in serialized_spec
+    assert "min_observations_policy" in serialized_spec
+    assert "stateful_active_risk_supported_grouping_dimensions" in serialized_spec
+    assert "stateful_active_risk_gated_grouping_dimensions" in serialized_spec
+    assert "benchmark issuer exposure semantics unavailable" in serialized_spec
+
+
 def test_openapi_exposes_typed_capabilities_response_contract() -> None:
     client = TestClient(app)
     spec = client.get("/openapi.json").json()

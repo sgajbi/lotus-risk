@@ -87,7 +87,15 @@ Provide decomposition of historical realized risk and active risk into transpare
     - `quality_flags[]`
   - `error`
 - `metadata`
-  - methodology, covariance, annualization, lineage references
+  - methodology, covariance, annualization, and requested execution scope
+  - `requested_attribution_types`
+  - `requested_metrics`
+  - `requested_grouping_dimensions`
+  - `min_observations_policy`
+  - stateful active-risk support contract:
+    - `stateful_active_risk_supported_grouping_dimensions`
+    - `stateful_active_risk_gated_grouping_dimensions`
+    - `stateful_active_risk_gate_reason`
 
 ## Governance Alignment
 
@@ -103,3 +111,14 @@ Provide decomposition of historical realized risk and active risk into transpare
 3. residual tolerance policy.
 4. rolling-window attribution inclusion in v1 or v2.
 5. benchmark issuer exposure semantics for stateful `ACTIVE_RISK` + `ISSUER`.
+
+## Current Stateful Active-Risk Support Matrix
+
+- supported:
+  - `POSITION`
+  - `SECTOR`
+  - `ASSET_CLASS`
+- gated:
+  - `ISSUER`
+- gate reason:
+  - benchmark issuer exposure semantics unavailable from the lotus-performance benchmark exposure context

@@ -262,7 +262,11 @@ class HistoricalAttributionRequest(BaseModel):
     )
     stateful_input: HistoricalAttributionStatefulInput | None = Field(
         default=None,
-        description="Stateful payload. Reserved for Slice B implementation.",
+        description=(
+            "Stateful payload for returns/exposure sourcing through lotus-performance and lotus-core. "
+            "Stateful ACTIVE_RISK currently supports POSITION, SECTOR, and ASSET_CLASS; "
+            "ISSUER remains gated until benchmark issuer exposure semantics are available."
+        ),
         json_schema_extra={
             "example": {
                 "portfolio_id": "DEMO_DPM_EUR_001",
@@ -418,6 +422,40 @@ class HistoricalAttributionMetadata(BaseModel):
         description="Annualization basis used for annualized metrics.",
         json_schema_extra={"example": 252},
     )
+    requested_attribution_types: list[AttributionType] = Field(
+        default_factory=list,
+        description="Requested attribution decomposition types in canonical execution order.",
+        json_schema_extra={"example": ["TOTAL_RISK", "ACTIVE_RISK"]},
+    )
+    requested_metrics: list[AttributionMetric] = Field(
+        default_factory=list,
+        description="Requested attribution metrics in canonical execution order.",
+        json_schema_extra={"example": ["VOLATILITY", "TRACKING_ERROR"]},
+    )
+    requested_grouping_dimensions: list[GroupingDimension] = Field(
+        default_factory=list,
+        description="Requested grouping dimensions in canonical execution order.",
+        json_schema_extra={"example": ["POSITION", "SECTOR"]},
+    )
+    min_observations_policy: Literal["STRICT", "ALLOW_PARTIAL"] = Field(
+        description="Minimum observation policy used for attribution decomposition.",
+        json_schema_extra={"example": "STRICT"},
+    )
+    stateful_active_risk_supported_grouping_dimensions: list[GroupingDimension] = Field(
+        default_factory=lambda: ["POSITION", "SECTOR", "ASSET_CLASS"],
+        description="Grouping dimensions currently supported for stateful ACTIVE_RISK attribution.",
+        json_schema_extra={"example": ["POSITION", "SECTOR", "ASSET_CLASS"]},
+    )
+    stateful_active_risk_gated_grouping_dimensions: list[GroupingDimension] = Field(
+        default_factory=lambda: ["ISSUER"],
+        description="Grouping dimensions intentionally gated for stateful ACTIVE_RISK attribution.",
+        json_schema_extra={"example": ["ISSUER"]},
+    )
+    stateful_active_risk_gate_reason: str = Field(
+        default="benchmark issuer exposure semantics unavailable",
+        description="Deterministic reason for any gated stateful ACTIVE_RISK grouping dimensions.",
+        json_schema_extra={"example": "benchmark issuer exposure semantics unavailable"},
+    )
 
 
 class HistoricalAttributionResponse(BaseModel):
@@ -461,6 +499,17 @@ class HistoricalAttributionResponse(BaseModel):
                 "methodology_version": "historical_attribution.v1",
                 "covariance_method": "EMPIRICAL",
                 "annualization_basis": 252,
+                "requested_attribution_types": ["TOTAL_RISK", "ACTIVE_RISK"],
+                "requested_metrics": ["VOLATILITY", "TRACKING_ERROR"],
+                "requested_grouping_dimensions": ["SECTOR"],
+                "min_observations_policy": "STRICT",
+                "stateful_active_risk_supported_grouping_dimensions": [
+                    "POSITION",
+                    "SECTOR",
+                    "ASSET_CLASS",
+                ],
+                "stateful_active_risk_gated_grouping_dimensions": ["ISSUER"],
+                "stateful_active_risk_gate_reason": "benchmark issuer exposure semantics unavailable",
             }
         },
     )

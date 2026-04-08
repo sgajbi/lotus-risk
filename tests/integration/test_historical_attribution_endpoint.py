@@ -194,6 +194,20 @@ def test_historical_attribution_stateless_happy_path() -> None:
     body = response.json()
     assert body["source_service"] == "lotus-risk"
     assert body["input_mode"] == "stateless"
+    assert body["metadata"]["requested_attribution_types"] == ["TOTAL_RISK", "ACTIVE_RISK"]
+    assert body["metadata"]["requested_metrics"] == ["VOLATILITY", "TRACKING_ERROR"]
+    assert body["metadata"]["requested_grouping_dimensions"] == ["SECTOR"]
+    assert body["metadata"]["min_observations_policy"] == "STRICT"
+    assert body["metadata"]["stateful_active_risk_supported_grouping_dimensions"] == [
+        "POSITION",
+        "SECTOR",
+        "ASSET_CLASS",
+    ]
+    assert body["metadata"]["stateful_active_risk_gated_grouping_dimensions"] == ["ISSUER"]
+    assert (
+        body["metadata"]["stateful_active_risk_gate_reason"]
+        == "benchmark issuer exposure semantics unavailable"
+    )
     assert "YTD" in body["results"]
     ytd = body["results"]["YTD"]
     assert ytd["error"] is None
@@ -228,6 +242,10 @@ def test_historical_attribution_stateful_total_risk_happy_path() -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["input_mode"] == "stateful"
+    assert body["metadata"]["requested_attribution_types"] == ["TOTAL_RISK"]
+    assert body["metadata"]["requested_metrics"] == ["VOLATILITY"]
+    assert body["metadata"]["requested_grouping_dimensions"] == ["SECTOR"]
+    assert body["metadata"]["min_observations_policy"] == "STRICT"
     assert body["results"]["YTD"]["error"] is None
     assert performance_client.calls == [
         {
