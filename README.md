@@ -12,6 +12,8 @@ make openapi-gate
 make ci
 ```
 
+`make ci` is the local PR-merge-quality gate. It runs dependency verification, contract governance, migration smoke, project-scoped security audit, split test suites, coverage, and Docker build validation.
+
 ```powershell
 uvicorn src.app.main:app --reload --port 8130
 ```
