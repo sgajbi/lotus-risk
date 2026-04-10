@@ -4,22 +4,27 @@ import re
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-KEYWORDS = (
+MONETARY_KEYWORD_COMPONENTS = {
     "amount",
-    "price",
-    "rate",
-    "value",
-    "market_value",
+    "aum",
+    "balance",
+    "cash",
     "cost",
-    "pnl",
-    "return",
-    "risk",
+    "fee",
+    "fees",
+    "market",
+    "money",
+    "nav",
     "notional",
-    "weight",
-)
+    "pnl",
+    "price",
+    "principal",
+    "value",
+}
 IGNORE_DIRS = {"tests", ".venv", "venv", "docs", "rfcs", "output", "build", "dist", "__pycache__"}
 
 FLOAT_ANNOTATION = re.compile(r"\bfloat\b")
+IDENTIFIER_PATTERN = re.compile(r"\b[a-zA-Z_][a-zA-Z0-9_]*\b")
 
 
 def is_candidate(path: Path) -> bool:
@@ -27,6 +32,14 @@ def is_candidate(path: Path) -> bool:
     if any(p in parts for p in IGNORE_DIRS):
         return False
     return path.suffix == ".py"
+
+
+def has_monetary_identifier(line: str) -> bool:
+    for identifier in IDENTIFIER_PATTERN.findall(line.lower()):
+        components = {component for component in identifier.split("_") if component}
+        if MONETARY_KEYWORD_COMPONENTS.intersection(components):
+            return True
+    return False
 
 
 def scan_repo(repo_root: Path) -> list[str]:
@@ -37,7 +50,7 @@ def scan_repo(repo_root: Path) -> list[str]:
         rel = file_path.relative_to(repo_root).as_posix()
         for line_no, line in enumerate(file_path.read_text(encoding="utf-8").splitlines(), start=1):
             lowered = line.lower()
-            if not any(k in lowered for k in KEYWORDS):
+            if not has_monetary_identifier(lowered):
                 continue
             if not FLOAT_ANNOTATION.search(lowered):
                 continue
