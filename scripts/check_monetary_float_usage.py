@@ -55,12 +55,12 @@ def _parse_review_date(value: str) -> datetime:
         raise ValueError(f"Invalid review_by date format: {value!r}, expected YYYY-MM-DD") from exc
 
 
-def load_allowlist(path: Path) -> tuple[dict[str, dict], list[str], list[str]]:
+def load_allowlist(path: Path) -> tuple[dict[str, dict[str, str]], list[str], list[str]]:
     if not path.exists():
         return {}, [], []
     data = json.loads(path.read_text(encoding="utf-8"))
     raw_entries = data.get("allowlist", [])
-    entries: dict[str, dict] = {}
+    entries: dict[str, dict[str, str]] = {}
     errors: list[str] = []
     stale: list[str] = []
     today = datetime.now(tz=UTC).date()
@@ -98,10 +98,10 @@ def load_allowlist(path: Path) -> tuple[dict[str, dict], list[str], list[str]]:
 
 
 def write_allowlist(
-    path: Path, findings: list[str], existing_entries: dict[str, dict], review_by: str
+    path: Path, findings: list[str], existing_entries: dict[str, dict[str, str]], review_by: str
 ) -> None:
     generated_at = datetime.now(tz=UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-    allowlist_entries: list[dict] = []
+    allowlist_entries: list[dict[str, str]] = []
     for finding in sorted(set(findings)):
         if finding in existing_entries:
             allowlist_entries.append(existing_entries[finding])
