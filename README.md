@@ -2,6 +2,8 @@
 
 Advanced risk analytics service for Lotus platform.
 
+Repository-local engineering context: `REPOSITORY-ENGINEERING-CONTEXT.md`
+
 ## Quick Start
 
 ```powershell
