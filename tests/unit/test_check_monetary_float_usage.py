@@ -52,4 +52,3 @@ def test_scan_repo_ignores_tests_and_explicit_allow_comments(tmp_path: Path) -> 
     findings = check_monetary_float_usage.scan_repo(tmp_path)
 
     assert findings == ["src/app/engine.py:2:unauthorized_amount: float"]
-
