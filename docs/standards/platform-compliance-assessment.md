@@ -33,3 +33,9 @@
 - `python scripts/test_pyramid_gate.py`
 
 All commands passed in local verification for this change set.
+
+## Monetary Float Guard Scope
+
+- The guard now targets money-bearing identifiers only.
+- Analytics-only identifiers such as `risk`, `return`, and `weight` are no longer treated as monetary fields by default.
+- Monetary-bearing identifiers such as `amount`, `price`, `market_value`, `cash_balance`, `fee_amount`, and `notional` remain blocked unless explicitly allowlisted or annotated for temporary review.

@@ -1,0 +1,127 @@
+# Repository Engineering Context
+
+This file provides repository-local engineering context for `lotus-risk`.
+
+For platform-wide truth, read:
+
+1. `C:\Users\Sandeep\projects\lotus-platform\context\LOTUS-QUICKSTART-CONTEXT.md`
+2. `C:\Users\Sandeep\projects\lotus-platform\context\LOTUS-ENGINEERING-CONTEXT.md`
+3. `C:\Users\Sandeep\projects\lotus-platform\context\CONTEXT-REFERENCE-MAP.md`
+
+## Repository Role
+
+`lotus-risk` is the authoritative risk analytics service in Lotus.
+
+It owns drawdown, rolling risk, attribution, concentration, and related risk review analytics.
+
+## Business And Domain Responsibility
+
+This repository owns:
+
+1. risk analytics calculations,
+2. risk workspace supportability and decomposition payloads,
+3. drawdown and concentration review data,
+4. integration-ready risk contracts consumed by `lotus-gateway`.
+
+## Current-State Summary
+
+Current repository posture:
+
+1. `lotus-risk` is the domain authority for risk analytics in the ecosystem,
+2. the service supports the current Workbench risk workspace through gateway-backed contracts,
+3. the CI contract is explicit and strong, with no-alias, vocabulary, OpenAPI, test-pyramid, security, coverage, and Docker enforcement,
+4. current work often involves balancing analytical correctness, contract quality, and front-office usability.
+
+## Architecture And Module Map
+
+Primary areas:
+
+1. `src/`
+   risk application and analytics implementation.
+2. `scripts/`
+   OpenAPI, vocabulary, dependency-health, and test-pyramid governance.
+3. `docs/standards/`
+   local standards and contract guidance.
+4. `tests/`
+   unit, integration, and e2e validation.
+
+## Runtime And Integration Boundaries
+
+Runtime model:
+
+1. FastAPI-backed risk analytics service,
+2. primarily consumed through `lotus-gateway`,
+3. integrates with `lotus-core` and `lotus-performance` for stateful or cross-analytic flows where required.
+
+Boundary rules:
+
+1. risk analytics authority stays here,
+2. gateway and UI should not duplicate risk logic or narrative improperly,
+3. monetary-float governance applies only where money-bearing identifiers require it, not generic analytics terms,
+4. supportability and evidence posture should remain truthful and data-backed.
+
+## Repo-Native Commands
+
+Use these commands as the primary local contract:
+
+1. install
+   `make install`
+2. fast local gate
+   `make check`
+3. PR-grade local gate
+   `make ci`
+4. run unit tests
+   `make test-unit`
+5. run integration tests
+   `make test-integration`
+6. run e2e tests
+   `make test-e2e`
+
+## Validation And CI Expectations
+
+`lotus-risk` uses explicit CI lanes:
+
+1. `Remote Feature Lane`
+2. `Pull Request Merge Gate`
+3. `Main Releasability Gate`
+
+Important validation expectations:
+
+1. no-alias, OpenAPI, vocabulary, and test-pyramid gates are active,
+2. security audit and migration smoke are required,
+3. split test suites plus coverage and Docker build are part of the merge gate,
+4. risk correctness and evidence posture must remain aligned with the product and gateway contract.
+
+## Standards And RFCs That Govern This Repository
+
+Most relevant current governance:
+
+1. `C:\Users\Sandeep\projects\lotus-platform\rfcs\RFC-0065-lotus-performance-to-lotus-performance-and-lotus-risk-split.md`
+2. `C:\Users\Sandeep\projects\lotus-platform\rfcs\RFC-0067-centralized-api-vocabulary-inventory-and-openapi-documentation-governance.md`
+3. `C:\Users\Sandeep\projects\lotus-platform\rfcs\RFC-0072-platform-wide-multi-lane-ci-validation-and-release-governance.md`
+4. `C:\Users\Sandeep\projects\lotus-platform\rfcs\RFC-0073-lotus-ecosystem-engineering-context-and-agent-guidance-system.md`
+5. `docs/standards/`
+
+## Known Constraints And Implementation Notes
+
+1. this repo sits close to front-office-facing risk workflows, so analytical contract drift is visible quickly in the UI,
+2. over-broad governance rules can damage analytics work if they are not scoped carefully,
+3. risk evidence and supportability posture must remain data-backed, not decorative or speculative,
+4. when risk review flows change in Workbench or Gateway, this repo’s context should be checked for alignment.
+
+## Context Maintenance Rule
+
+Update this document when:
+
+1. major risk modules or payload families change,
+2. repo-native commands or CI lane expectations change,
+3. upstream integration posture changes materially,
+4. supportability, evidence, or decomposition model assumptions change,
+5. current product-facing usage or rollout posture changes.
+
+## Cross-Links
+
+1. `C:\Users\Sandeep\projects\lotus-platform\context\LOTUS-QUICKSTART-CONTEXT.md`
+2. `C:\Users\Sandeep\projects\lotus-platform\context\LOTUS-ENGINEERING-CONTEXT.md`
+3. `C:\Users\Sandeep\projects\lotus-platform\context\CONTEXT-REFERENCE-MAP.md`
+4. `C:\Users\Sandeep\projects\lotus-platform\context\Repository-Engineering-Context-Contract.md`
