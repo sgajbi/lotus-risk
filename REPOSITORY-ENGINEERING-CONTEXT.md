@@ -4,9 +4,9 @@ This file provides repository-local engineering context for `lotus-risk`.
 
 For platform-wide truth, read:
 
-1. `C:\Users\Sandeep\projects\lotus-platform\context\LOTUS-QUICKSTART-CONTEXT.md`
-2. `C:\Users\Sandeep\projects\lotus-platform\context\LOTUS-ENGINEERING-CONTEXT.md`
-3. `C:\Users\Sandeep\projects\lotus-platform\context\CONTEXT-REFERENCE-MAP.md`
+1. `../lotus-platform/context/LOTUS-QUICKSTART-CONTEXT.md`
+2. `../lotus-platform/context/LOTUS-ENGINEERING-CONTEXT.md`
+3. `../lotus-platform/context/CONTEXT-REFERENCE-MAP.md`
 
 ## Repository Role
 
@@ -96,10 +96,10 @@ Important validation expectations:
 
 Most relevant current governance:
 
-1. `C:\Users\Sandeep\projects\lotus-platform\rfcs\RFC-0065-lotus-performance-to-lotus-performance-and-lotus-risk-split.md`
-2. `C:\Users\Sandeep\projects\lotus-platform\rfcs\RFC-0067-centralized-api-vocabulary-inventory-and-openapi-documentation-governance.md`
-3. `C:\Users\Sandeep\projects\lotus-platform\rfcs\RFC-0072-platform-wide-multi-lane-ci-validation-and-release-governance.md`
-4. `C:\Users\Sandeep\projects\lotus-platform\rfcs\RFC-0073-lotus-ecosystem-engineering-context-and-agent-guidance-system.md`
+1. `../lotus-platform/rfcs/RFC-0065-lotus-performance-to-lotus-performance-and-lotus-risk-split.md`
+2. `../lotus-platform/rfcs/RFC-0067-centralized-api-vocabulary-inventory-and-openapi-documentation-governance.md`
+3. `../lotus-platform/rfcs/RFC-0072-platform-wide-multi-lane-ci-validation-and-release-governance.md`
+4. `../lotus-platform/rfcs/RFC-0073-lotus-ecosystem-engineering-context-and-agent-guidance-system.md`
 5. `docs/standards/`
 
 ## Known Constraints And Implementation Notes
@@ -121,7 +121,9 @@ Update this document when:
 
 ## Cross-Links
 
-1. `C:\Users\Sandeep\projects\lotus-platform\context\LOTUS-QUICKSTART-CONTEXT.md`
-2. `C:\Users\Sandeep\projects\lotus-platform\context\LOTUS-ENGINEERING-CONTEXT.md`
-3. `C:\Users\Sandeep\projects\lotus-platform\context\CONTEXT-REFERENCE-MAP.md`
-4. `C:\Users\Sandeep\projects\lotus-platform\context\Repository-Engineering-Context-Contract.md`
+1. `../lotus-platform/context/LOTUS-QUICKSTART-CONTEXT.md`
+2. `../lotus-platform/context/LOTUS-ENGINEERING-CONTEXT.md`
+3. `../lotus-platform/context/CONTEXT-REFERENCE-MAP.md`
+4. `../lotus-platform/context/Repository-Engineering-Context-Contract.md`
+5. [Lotus Developer Onboarding](../lotus-platform/docs/onboarding/LOTUS-DEVELOPER-ONBOARDING.md)
+6. [Lotus Agent Ramp-Up](../lotus-platform/docs/onboarding/LOTUS-AGENT-RAMP-UP.md)
