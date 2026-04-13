@@ -6,6 +6,7 @@ from typing import Any
 
 import httpx
 import pytest
+from prometheus_client import generate_latest
 
 from app.integrations.lotus_core_client import (
     DEFAULT_LOTUS_CORE_BASE_URL,
@@ -83,6 +84,10 @@ async def test_client_builds_headers_and_payload_for_session_creation(
     assert _FakeAsyncClient.last_request["json"]["ttl_hours"] == 24
     assert _FakeAsyncClient.last_request["json"]["created_by"] == "risk-agent"
     assert _FakeAsyncClient.last_request["headers"]["X-Correlation-Id"] == "corr-123"
+    metrics = generate_latest().decode("utf-8")
+    assert 'lotus_risk_upstream_requests_total{category="ok"' in metrics
+    assert 'dependency="lotus-core"' in metrics
+    assert 'operation="/simulation-sessions"' in metrics
 
 
 @pytest.mark.asyncio

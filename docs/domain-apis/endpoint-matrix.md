@@ -69,6 +69,14 @@ responsible for methodology version, observation counts, alignment policy, and c
 
 See `docs/domain-apis/risk-audit-lineage.md`.
 
+## Observability
+
+Risk analytics endpoint execution metrics are labeled by endpoint, input mode, and outcome.
+Direct upstream dependency metrics are labeled by dependency, operation, outcome, and deterministic
+failure category.
+
+See `docs/domain-apis/risk-observability.md`.
+
 ## Related Detail Docs
 
 - [integration-capabilities.md](C:\Users\Sandeep\projects\lotus-risk\docs\domain-apis\integration-capabilities.md)

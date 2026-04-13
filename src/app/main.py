@@ -1,4 +1,5 @@
-from typing import Any
+from collections.abc import Awaitable, Callable
+from typing import Any, TypeVar, cast
 
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.exceptions import RequestValidationError
@@ -42,6 +43,7 @@ from app.integrations.lotus_core_client import LotusCoreClient
 from app.integrations.lotus_performance_client import LotusPerformanceClient
 from app.middleware.correlation import CorrelationIdMiddleware
 from app.ops_runtime import resolve_ops_status, resolve_readiness_status
+from app.observability import observation_start, record_endpoint_execution
 from app.services.concentration_engine import calculate_concentration
 from app.services.attribution_engine import calculate_historical_attribution
 from app.services.attribution_mode_adapter import calculate_historical_attribution_stateful
@@ -57,6 +59,7 @@ SERVICE_NAME = "lotus-risk"
 SERVICE_VERSION = "0.1.0"
 ROUNDING_POLICY_VERSION = "v1"
 SUPPORTED_INPUT_MODES: tuple[SupportedInputMode, ...] = ("stateless", "stateful", "simulation")
+ResponseT = TypeVar("ResponseT")
 
 app = FastAPI(title=SERVICE_NAME, version=SERVICE_VERSION)
 app.add_middleware(CorrelationIdMiddleware, service_name=SERVICE_NAME)
@@ -300,6 +303,34 @@ def _default_error_code(status_code: int) -> str:
     if status_code == status.HTTP_400_BAD_REQUEST:
         return "INVALID_INPUT"
     return "REQUEST_REJECTED"
+
+
+async def _observed_endpoint(
+    *,
+    endpoint: str,
+    input_mode: str,
+    operation: Callable[[], ResponseT | Awaitable[ResponseT]],
+) -> ResponseT:
+    started_at = observation_start()
+    try:
+        result = operation()
+        if isinstance(result, Awaitable):
+            result = await result
+    except Exception:
+        record_endpoint_execution(
+            endpoint=endpoint,
+            input_mode=input_mode,
+            outcome="failure",
+            started_at=started_at,
+        )
+        raise
+    record_endpoint_execution(
+        endpoint=endpoint,
+        input_mode=input_mode,
+        outcome="success",
+        started_at=started_at,
+    )
+    return cast(ResponseT, result)
 
 
 @app.exception_handler(RequestValidationError)
@@ -563,12 +594,17 @@ async def analytics_risk_historical_attribution(
     request_payload: HistoricalAttributionRequest,
     request: Request,
 ) -> HistoricalAttributionResponse:
+    input_mode = request_payload.input_mode.value
     if request_payload.input_mode == AttributionInputMode.STATELESS:
         stateless_input = request_payload.stateless_input
         assert stateless_input is not None
-        return calculate_historical_attribution(
-            stateless_input,
-            input_mode=AttributionInputMode.STATELESS,
+        return await _observed_endpoint(
+            endpoint="historical-attribution",
+            input_mode=input_mode,
+            operation=lambda: calculate_historical_attribution(
+                stateless_input,
+                input_mode=AttributionInputMode.STATELESS,
+            ),
         )
 
     if request_payload.input_mode == AttributionInputMode.STATEFUL:
@@ -580,11 +616,15 @@ async def analytics_risk_historical_attribution(
         core_client = getattr(app.state, "lotus_core_client", None)
         if core_client is None:
             core_client = LotusCoreClient()
-        return await calculate_historical_attribution_stateful(
-            stateful_input,
-            performance_client=performance_client,
-            core_client=core_client,
-            correlation_id=request.headers.get("X-Correlation-Id"),
+        return await _observed_endpoint(
+            endpoint="historical-attribution",
+            input_mode=input_mode,
+            operation=lambda: calculate_historical_attribution_stateful(
+                stateful_input,
+                performance_client=performance_client,
+                core_client=core_client,
+                correlation_id=request.headers.get("X-Correlation-Id"),
+            ),
         )
 
     raise ValueError(
@@ -612,11 +652,15 @@ async def analytics_risk_concentration(
     core_client = getattr(app.state, "lotus_core_client", None)
     if core_client is None:
         core_client = LotusCoreClient()
-    return await calculate_concentration(
-        payload,
-        core_client=core_client,
-        correlation_id=request.headers.get("X-Correlation-Id"),
-        actor_id=request.headers.get("X-Actor-Id"),
+    return await _observed_endpoint(
+        endpoint="concentration",
+        input_mode=payload.input_mode.value,
+        operation=lambda: calculate_concentration(
+            payload,
+            core_client=core_client,
+            correlation_id=request.headers.get("X-Correlation-Id"),
+            actor_id=request.headers.get("X-Actor-Id"),
+        ),
     )
 
 
@@ -637,13 +681,18 @@ async def analytics_risk_drawdown(
     request_payload: DrawdownAnalyticsRequest,
     request: Request,
 ) -> DrawdownResponse:
+    input_mode = request_payload.input_mode.value
     if request_payload.input_mode == DrawdownInputMode.STATELESS:
         stateless_input = request_payload.stateless_input
         assert stateless_input is not None
-        return calculate_drawdown(
-            stateless_input,
-            input_mode=DrawdownInputMode.STATELESS,
-            analysis_options=request_payload.analysis_options,
+        return await _observed_endpoint(
+            endpoint="drawdown",
+            input_mode=input_mode,
+            operation=lambda: calculate_drawdown(
+                stateless_input,
+                input_mode=DrawdownInputMode.STATELESS,
+                analysis_options=request_payload.analysis_options,
+            ),
         )
 
     if request_payload.input_mode == DrawdownInputMode.STATEFUL:
@@ -652,11 +701,15 @@ async def analytics_risk_drawdown(
         performance_client = getattr(app.state, "lotus_performance_client", None)
         if performance_client is None:
             performance_client = LotusPerformanceClient()
-        return await calculate_drawdown_stateful(
-            stateful_input,
-            analysis_options=request_payload.analysis_options,
-            performance_client=performance_client,
-            correlation_id=request.headers.get("X-Correlation-Id"),
+        return await _observed_endpoint(
+            endpoint="drawdown",
+            input_mode=input_mode,
+            operation=lambda: calculate_drawdown_stateful(
+                stateful_input,
+                analysis_options=request_payload.analysis_options,
+                performance_client=performance_client,
+                correlation_id=request.headers.get("X-Correlation-Id"),
+            ),
         )
 
     raise ValueError(
@@ -681,12 +734,17 @@ async def analytics_risk_rolling_metrics(
     request_payload: RollingAnalyticsRequest,
     request: Request,
 ) -> RollingResponse:
+    input_mode = request_payload.input_mode.value
     if request_payload.input_mode == RollingInputMode.STATELESS:
         stateless_input = request_payload.stateless_input
         assert stateless_input is not None
-        return calculate_rolling_metrics(
-            stateless_input,
-            input_mode=RollingInputMode.STATELESS,
+        return await _observed_endpoint(
+            endpoint="rolling-metrics",
+            input_mode=input_mode,
+            operation=lambda: calculate_rolling_metrics(
+                stateless_input,
+                input_mode=RollingInputMode.STATELESS,
+            ),
         )
 
     if request_payload.input_mode == RollingInputMode.STATEFUL:
@@ -698,11 +756,15 @@ async def analytics_risk_rolling_metrics(
         core_client = getattr(app.state, "lotus_core_client", None)
         if core_client is None:
             core_client = LotusCoreClient()
-        return await calculate_rolling_metrics_stateful(
-            stateful_input,
-            performance_client=performance_client,
-            core_client=core_client,
-            correlation_id=request.headers.get("X-Correlation-Id"),
+        return await _observed_endpoint(
+            endpoint="rolling-metrics",
+            input_mode=input_mode,
+            operation=lambda: calculate_rolling_metrics_stateful(
+                stateful_input,
+                performance_client=performance_client,
+                core_client=core_client,
+                correlation_id=request.headers.get("X-Correlation-Id"),
+            ),
         )
 
     raise ValueError(
@@ -726,10 +788,15 @@ async def analytics_risk_calculate(
     request_payload: RiskAnalyticsRequest,
     request: Request,
 ) -> RiskResponse:
+    input_mode = request_payload.input_mode.value
     if request_payload.input_mode == RiskInputMode.STATELESS:
         stateless_input = request_payload.stateless_input
         assert stateless_input is not None
-        return calculate_risk(stateless_input)
+        return await _observed_endpoint(
+            endpoint="risk/calculate",
+            input_mode=input_mode,
+            operation=lambda: calculate_risk(stateless_input),
+        )
 
     if request_payload.input_mode == RiskInputMode.STATEFUL:
         stateful_input = request_payload.stateful_input
@@ -737,10 +804,14 @@ async def analytics_risk_calculate(
         performance_client = getattr(app.state, "lotus_performance_client", None)
         if performance_client is None:
             performance_client = LotusPerformanceClient()
-        return await calculate_risk_stateful(
-            stateful_input,
-            performance_client=performance_client,
-            correlation_id=request.headers.get("X-Correlation-Id"),
+        return await _observed_endpoint(
+            endpoint="risk/calculate",
+            input_mode=input_mode,
+            operation=lambda: calculate_risk_stateful(
+                stateful_input,
+                performance_client=performance_client,
+                correlation_id=request.headers.get("X-Correlation-Id"),
+            ),
         )
 
     raise ValueError(

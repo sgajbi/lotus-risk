@@ -78,4 +78,5 @@ See per-endpoint detail:
 - `docs/domain-apis/risk-historical-attribution.md`
 - `docs/domain-apis/risk-upstream-failure-behavior.md`
 - `docs/domain-apis/risk-audit-lineage.md`
+- `docs/domain-apis/risk-observability.md`
 - `docs/domain-apis/lotus-core-requirements-for-issuer-concentration.md`
