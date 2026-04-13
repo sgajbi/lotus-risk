@@ -60,6 +60,12 @@ def test_drawdown_stateful_adapter_happy_path() -> None:
     assert response.metadata.missing_benchmark_policy == "REQUIRE"
     assert response.metadata.top_n_episodes == 5
     assert response.metadata.duration_unit == "BUSINESS_DAYS"
+    assert response.metadata.source_services == ["lotus-risk", "lotus-performance"]
+    assert response.metadata.request_fingerprint is not None
+    assert response.metadata.request_fingerprint.startswith("sha256:")
+    assert list(response.metadata.upstream_request_fingerprints) == [
+        "lotus-performance:/integration/returns/series"
+    ]
 
 
 def test_drawdown_stateful_adapter_requires_series_payload() -> None:

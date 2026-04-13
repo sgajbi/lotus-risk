@@ -134,6 +134,17 @@ def test_stateful_adapter_happy_path() -> None:
     assert core_client.risk_free_calls[0]["correlation_id"] == "corr-rolling-stateful"
     assert response.input_mode.value == "stateful"
     assert "YTD" in response.results
+    assert response.metadata.source_services == [
+        "lotus-risk",
+        "lotus-performance",
+        "lotus-core",
+    ]
+    assert response.metadata.request_fingerprint is not None
+    assert response.metadata.request_fingerprint.startswith("sha256:")
+    assert set(response.metadata.upstream_request_fingerprints) == {
+        "lotus-performance:/integration/returns/series",
+        "lotus-core:/integration/reference/risk-free-series",
+    }
 
 
 def test_stateful_adapter_requires_series_object() -> None:

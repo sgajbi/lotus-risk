@@ -61,6 +61,14 @@ Enterprise portfolio-archetype coverage is governed by
 `docs/operations/live-risk-validation-matrix.md`. Additional archetypes must have real seeded
 portfolio IDs and endpoint-specific evidence before they are counted as validated.
 
+## Audit Lineage
+
+All analytics endpoint metadata now includes `lineage_version`, `request_fingerprint`,
+`source_services`, and `upstream_request_fingerprints`. Endpoint-specific metadata remains
+responsible for methodology version, observation counts, alignment policy, and coverage diagnostics.
+
+See `docs/domain-apis/risk-audit-lineage.md`.
+
 ## Related Detail Docs
 
 - [integration-capabilities.md](C:\Users\Sandeep\projects\lotus-risk\docs\domain-apis\integration-capabilities.md)

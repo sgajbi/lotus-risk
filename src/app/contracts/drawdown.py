@@ -6,6 +6,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.contracts.audit import AuditMetadataFields
 from app.contracts.risk import ReturnPoint, RiskRequestPeriod, RiskRequestScope
 
 
@@ -550,7 +551,7 @@ class DrawdownPeriodResult(BaseModel):
     )
 
 
-class DrawdownMetadata(BaseModel):
+class DrawdownMetadata(AuditMetadataFields):
     contract_version: str = Field(
         default="v1",
         description="Drawdown analytics contract version.",

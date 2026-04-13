@@ -18,6 +18,7 @@ from app.contracts.risk import (
     RiskStatelessCalculationInput,
     RiskValue,
 )
+from app.services.audit_lineage import fingerprint_model
 
 RISK_METRIC_REQUESTED_TOTAL = Counter(
     "risk_metric_requested_total",
@@ -285,6 +286,7 @@ def _build_metadata(
     risk_free_requested = "SHARPE" in request.metrics
     benchmark_metrics = [str(metric) for metric in request.metrics if metric in BENCHMARK_METRICS]
     return RiskResponseMetadata(
+        request_fingerprint=fingerprint_model(request),
         frequency=request.options.frequency,
         annualization_factor=annual_factor,
         use_log_returns=request.options.use_log_returns,

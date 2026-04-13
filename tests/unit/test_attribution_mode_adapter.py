@@ -189,6 +189,16 @@ def test_stateful_attribution_total_risk_happy_path() -> None:
     assert first_payload["dimensions"] == ["sector"]
     assert response.input_mode.value == "stateful"
     assert response.results["YTD"].error is None
+    assert response.metadata.source_services == [
+        "lotus-risk",
+        "lotus-performance",
+        "lotus-core",
+    ]
+    assert response.metadata.request_fingerprint is not None
+    assert response.metadata.request_fingerprint.startswith("sha256:")
+    assert list(response.metadata.upstream_request_fingerprints) == [
+        "lotus-performance:/integration/returns/series"
+    ]
 
 
 def test_stateful_attribution_asset_class_and_reporting_currency() -> None:

@@ -6,6 +6,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.contracts.audit import AuditMetadataFields
 from app.contracts.risk import ReturnPoint, RiskRequestPeriod, RiskRequestScope
 
 
@@ -594,7 +595,7 @@ class RollingRequestDependencyContext(BaseModel):
     )
 
 
-class RollingMetadata(BaseModel):
+class RollingMetadata(AuditMetadataFields):
     contract_version: str = Field(
         default="v1",
         description="Rolling metrics contract version.",

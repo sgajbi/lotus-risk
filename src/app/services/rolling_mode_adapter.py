@@ -5,6 +5,10 @@ from datetime import date
 from typing import Any, Protocol
 
 from app.contracts.risk import RiskRequestScope
+from app.services.audit_lineage import (
+    ordered_source_services,
+    upstream_request_fingerprint,
+)
 from app.contracts.rolling import (
     ROLLING_BENCHMARK_METRICS,
     RollingInputMode,
@@ -195,6 +199,7 @@ async def calculate_rolling_metrics_stateful(
     source_payload = _build_stateful_source_request(stateful)
     explicit_window = _explicit_window_bounds(source_payload)
     risk_free_response: dict[str, Any] | None = None
+    risk_free_request: dict[str, Any] | None = None
 
     if include_risk_free and core_client is None:
         raise ValueError(
@@ -297,4 +302,22 @@ async def calculate_rolling_metrics_stateful(
         risk_free_returns=risk_free_points,
         rolling_options=stateful.rolling_options,
     )
-    return calculate_rolling_metrics(stateless, input_mode=RollingInputMode.STATEFUL)
+    response = calculate_rolling_metrics(stateless, input_mode=RollingInputMode.STATEFUL)
+    dependency_services = ["lotus-performance"]
+    if include_risk_free:
+        dependency_services.append("lotus-core")
+    response.metadata.source_services = ordered_source_services(*dependency_services)
+    response.metadata.upstream_request_fingerprints = upstream_request_fingerprint(
+        service="lotus-performance",
+        operation="/integration/returns/series",
+        payload=source_payload,
+    )
+    if risk_free_request is not None:
+        response.metadata.upstream_request_fingerprints.update(
+            upstream_request_fingerprint(
+                service="lotus-core",
+                operation="/integration/reference/risk-free-series",
+                payload=risk_free_request,
+            )
+        )
+    return response

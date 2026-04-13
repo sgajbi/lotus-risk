@@ -20,6 +20,7 @@ from app.contracts.attribution import (
     HistoricalAttributionStatelessInput,
 )
 from app.contracts.risk import ReturnPoint, RiskRequestPeriod
+from app.services.audit_lineage import fingerprint_model
 from app.services.risk_engine import _resolve_period
 
 
@@ -265,6 +266,7 @@ def calculate_historical_attribution(
             scope=request.scope,
             results={},
             metadata=HistoricalAttributionMetadata(
+                request_fingerprint=fingerprint_model(request),
                 covariance_method=request.attribution_options.covariance_method,
                 annualization_basis=request.attribution_options.annualization_basis,
                 requested_attribution_types=list(request.attribution_options.attribution_types),
@@ -358,6 +360,7 @@ def calculate_historical_attribution(
         scope=request.scope,
         results=results,
         metadata=HistoricalAttributionMetadata(
+            request_fingerprint=fingerprint_model(request),
             covariance_method=options.covariance_method,
             annualization_basis=options.annualization_basis,
             requested_attribution_types=list(options.attribution_types),

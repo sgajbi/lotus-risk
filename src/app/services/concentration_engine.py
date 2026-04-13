@@ -23,6 +23,11 @@ from app.contracts.concentration import (
     SimulationConcentrationInput,
     StatelessConcentrationInput,
 )
+from app.services.audit_lineage import (
+    fingerprint_model,
+    ordered_source_services,
+    upstream_request_fingerprint,
+)
 
 SERVICE_NAME = "lotus-risk"
 _ROUND_PRECISION = 6
@@ -111,6 +116,7 @@ def _build_metadata(
     include_zero_quantity_positions: bool | None = None,
 ) -> ConcentrationMetadata:
     return ConcentrationMetadata(
+        request_fingerprint=fingerprint_model(request),
         as_of_date=as_of_date,
         portfolio_id=portfolio_id,
         simulation_session_id=simulation_session_id,
@@ -604,6 +610,12 @@ async def _resolve_stateful(
         include_cash_positions=stateful.include_cash_positions,
         include_zero_quantity_positions=stateful.include_zero_quantity_positions,
     )
+    metadata.source_services = ordered_source_services("lotus-core")
+    metadata.upstream_request_fingerprints = upstream_request_fingerprint(
+        service="lotus-core",
+        operation=f"/integration/portfolios/{stateful.portfolio_id}/core-snapshot",
+        payload=snapshot_payload,
+    )
     return ConcentrationComputationInput(
         input_mode=ConcentrationInputMode.STATEFUL,
         current_positions=baseline_positions,
@@ -782,6 +794,12 @@ async def _resolve_simulation(
         session_expires_at=session_expires_at,
         include_cash_positions=simulation.include_cash_positions,
         include_zero_quantity_positions=simulation.include_zero_quantity_positions,
+    )
+    metadata.source_services = ordered_source_services("lotus-core")
+    metadata.upstream_request_fingerprints = upstream_request_fingerprint(
+        service="lotus-core",
+        operation=f"/integration/portfolios/{simulation.portfolio_id}/core-snapshot",
+        payload=snapshot_payload,
     )
     return ConcentrationComputationInput(
         input_mode=ConcentrationInputMode.SIMULATION,

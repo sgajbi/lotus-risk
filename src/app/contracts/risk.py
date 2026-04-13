@@ -6,6 +6,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.contracts.audit import AuditMetadataFields
+
 RiskMetric = Literal[
     "VOLATILITY",
     "DRAWDOWN",
@@ -474,7 +476,7 @@ class BenchmarkRequestContext(BaseModel):
     )
 
 
-class RiskResponseMetadata(BaseModel):
+class RiskResponseMetadata(AuditMetadataFields):
     contract_version: str = Field(
         default="v1",
         description="Risk analytics contract version.",

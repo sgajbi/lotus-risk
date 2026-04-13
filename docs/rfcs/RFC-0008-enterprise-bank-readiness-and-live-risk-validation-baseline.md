@@ -497,7 +497,8 @@ Current branch evidence includes:
 8. active-risk issuer limitation is documented as intentional,
 9. Slice 1 now centralizes upstream error-detail extraction and documents deterministic failure categories for lotus-core and lotus-performance,
 10. Slice 2 now documents canonical local upstream URLs and tests live-characterization defaults against service port ownership,
-11. Slice 3 now centralizes live portfolio identity and matrix parsing in `tests/support/live_portfolio_matrix.py`, documents the live risk validation matrix, and records the truthful current breadth: canonical global balanced is validated by default while other enterprise archetypes remain pending seeded portfolio IDs.
+11. Slice 3 now centralizes live portfolio identity and matrix parsing in `tests/support/live_portfolio_matrix.py`, documents the live risk validation matrix, and records the truthful current breadth: canonical global balanced is validated by default while other enterprise archetypes remain pending seeded portfolio IDs,
+12. Slice 4 now adds common audit-lineage metadata to analytics responses: `lineage_version`, deterministic `request_fingerprint`, `source_services`, and upstream request fingerprints for directly orchestrated upstream calls.
 
 This evidence proves the current analytics baseline. It does not yet close the future enterprise-readiness slices.
 

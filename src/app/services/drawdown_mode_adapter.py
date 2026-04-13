@@ -10,6 +10,7 @@ from app.contracts.drawdown import (
     DrawdownStatelessInput,
 )
 from app.contracts.risk import RiskRequestScope
+from app.services.audit_lineage import ordered_source_services, upstream_request_fingerprint
 from app.services.drawdown_engine import calculate_drawdown
 from app.services.stateful_returns_request import build_stateful_returns_series_request
 from app.services.stateful_returns_series_parser import (
@@ -81,10 +82,17 @@ async def calculate_drawdown_stateful(
         returns=portfolio_points,
         benchmark_returns=benchmark_points,
     )
-    return calculate_drawdown(
+    response = calculate_drawdown(
         stateless,
         input_mode=DrawdownInputMode.STATEFUL,
         analysis_options=analysis_options,
         include_benchmark=stateful.benchmark_policy.include_benchmark,
         missing_benchmark_policy=stateful.benchmark_policy.missing_benchmark_policy,
     )
+    response.metadata.source_services = ordered_source_services("lotus-performance")
+    response.metadata.upstream_request_fingerprints = upstream_request_fingerprint(
+        service="lotus-performance",
+        operation="/integration/returns/series",
+        payload=source_payload,
+    )
+    return response

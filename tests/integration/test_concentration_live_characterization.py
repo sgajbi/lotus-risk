@@ -190,7 +190,21 @@ def test_live_stateful_concentration_reconciles_top_drivers() -> None:
 
     assert risk_body["source_service"] == "lotus-risk"
     assert risk_body["input_mode"] == "stateful"
-    assert risk_body["metadata"] == {
+    assert risk_body["metadata"]["lineage_version"] == "risk_audit_lineage.v1"
+    assert risk_body["metadata"]["request_fingerprint"].startswith("sha256:")
+    assert risk_body["metadata"]["source_services"] == ["lotus-risk", "lotus-core"]
+    assert risk_body["metadata"]["upstream_request_fingerprints"]
+    assert {
+        key: value
+        for key, value in risk_body["metadata"].items()
+        if key
+        not in {
+            "lineage_version",
+            "request_fingerprint",
+            "source_services",
+            "upstream_request_fingerprints",
+        }
+    } == {
         "as_of_date": AS_OF_DATE,
         "portfolio_id": PORTFOLIO_ID,
         "simulation_session_id": None,
