@@ -8,6 +8,7 @@ import httpx
 from app.upstream_errors import (
     classify_upstream_http_error,
     classify_upstream_transport_error,
+    extract_upstream_error_detail,
     invalid_upstream_payload,
 )
 
@@ -169,7 +170,7 @@ class LotusCoreClient:
                     )
                 return data
         except httpx.HTTPStatusError as exc:
-            detail = self._extract_error_detail(exc.response)
+            detail = extract_upstream_error_detail(exc.response)
             raise classify_upstream_http_error(
                 service="lotus-core",
                 operation=path,
@@ -182,19 +183,3 @@ class LotusCoreClient:
                 operation=path,
                 exc=exc,
             ) from exc
-
-    @staticmethod
-    def _extract_error_detail(response: httpx.Response) -> str:
-        try:
-            payload = response.json()
-        except ValueError:
-            return response.text or "unknown error"
-        if isinstance(payload, dict):
-            detail = payload.get("detail")
-            if isinstance(detail, str):
-                return detail
-            if isinstance(detail, dict):
-                message = detail.get("message")
-                if isinstance(message, str):
-                    return message
-        return str(payload)

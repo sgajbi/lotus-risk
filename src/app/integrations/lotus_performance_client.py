@@ -9,6 +9,7 @@ import httpx
 from app.upstream_errors import (
     classify_upstream_http_error,
     classify_upstream_transport_error,
+    extract_upstream_error_detail,
     invalid_upstream_payload,
     missing_upstream_data,
 )
@@ -70,7 +71,7 @@ class LotusPerformanceClient:
                     invalid_message="lotus-performance returned invalid JSON payload",
                 )
         except httpx.HTTPStatusError as exc:
-            detail = self._extract_error_detail(exc.response)
+            detail = extract_upstream_error_detail(exc.response)
             raise classify_upstream_http_error(
                 service="lotus-performance",
                 operation=path,
@@ -105,7 +106,7 @@ class LotusPerformanceClient:
                     invalid_message="lotus-performance returned invalid benchmark exposure context payload",
                 )
         except httpx.HTTPStatusError as exc:
-            detail = self._extract_error_detail(exc.response)
+            detail = extract_upstream_error_detail(exc.response)
             raise classify_upstream_http_error(
                 service="lotus-performance",
                 operation=path,
@@ -216,24 +217,3 @@ class LotusPerformanceClient:
                 message=invalid_message,
             )
         return payload
-
-    @staticmethod
-    def _extract_error_detail(response: httpx.Response) -> str:
-        try:
-            payload = response.json()
-        except ValueError:
-            return response.text or "unknown error"
-        if isinstance(payload, dict):
-            detail = payload.get("detail")
-            if isinstance(detail, str):
-                return detail
-            if isinstance(detail, dict):
-                message = detail.get("message")
-                if isinstance(message, str):
-                    return message
-            error = payload.get("error")
-            if isinstance(error, dict):
-                message = error.get("message")
-                if isinstance(message, str):
-                    return message
-        return str(payload)

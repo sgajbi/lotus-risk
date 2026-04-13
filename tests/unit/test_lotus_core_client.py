@@ -11,7 +11,7 @@ from app.integrations.lotus_core_client import (
     DEFAULT_LOTUS_CORE_BASE_URL,
     LotusCoreClient,
 )
-from app.upstream_errors import UpstreamServiceError
+from app.upstream_errors import UpstreamServiceError, extract_upstream_error_detail
 
 
 class _FakeAsyncClient:
@@ -212,10 +212,10 @@ def test_extract_error_detail_variants() -> None:
         text="plain text",
         request=httpx.Request("POST", "http://x"),
     )
-    assert LotusCoreClient._extract_error_detail(response_plain) == "plain text"
+    assert extract_upstream_error_detail(response_plain) == "plain text"
 
     response_dict = _ok_response({"detail": {"message": "nested message"}})
-    assert LotusCoreClient._extract_error_detail(response_dict) == "nested message"
+    assert extract_upstream_error_detail(response_dict) == "nested message"
 
 
 def test_client_defaults_to_canonical_core_service_identity(

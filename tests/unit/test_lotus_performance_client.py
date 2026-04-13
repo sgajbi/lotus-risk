@@ -11,7 +11,7 @@ from app.integrations.lotus_performance_client import (
     DEFAULT_LOTUS_PERFORMANCE_BASE_URL,
     LotusPerformanceClient,
 )
-from app.upstream_errors import UpstreamServiceError
+from app.upstream_errors import UpstreamServiceError, extract_upstream_error_detail
 
 
 class _FakeAsyncClient:
@@ -447,18 +447,16 @@ def test_client_extract_error_detail_variants() -> None:
         text="plain text",
         request=httpx.Request("POST", "http://x"),
     )
-    assert LotusPerformanceClient._extract_error_detail(response_plain) == "plain text"
+    assert extract_upstream_error_detail(response_plain) == "plain text"
 
     response_detail_str = _ok_response({"detail": "simple detail"})
-    assert LotusPerformanceClient._extract_error_detail(response_detail_str) == "simple detail"
+    assert extract_upstream_error_detail(response_detail_str) == "simple detail"
 
     response_error_obj = _ok_response({"error": {"message": "error message"}})
-    assert LotusPerformanceClient._extract_error_detail(response_error_obj) == "error message"
+    assert extract_upstream_error_detail(response_error_obj) == "error message"
 
     response_fallback_obj = _ok_response({"unexpected": "payload"})
-    assert LotusPerformanceClient._extract_error_detail(response_fallback_obj) == str(
-        {"unexpected": "payload"}
-    )
+    assert extract_upstream_error_detail(response_fallback_obj) == str({"unexpected": "payload"})
 
 
 def test_client_defaults_base_url_when_env_missing(monkeypatch: pytest.MonkeyPatch) -> None:

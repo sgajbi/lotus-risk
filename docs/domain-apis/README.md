@@ -42,8 +42,11 @@ This package documents the current `lotus-risk` API surface and evaluates it aga
 ## Current Dependency Summary
 
 - Upstream dependencies (for live ecosystem usage):
-  - Data sourcing expected from `lotus-core` integration contracts for stateful/simulation patterns.
-  - Optional derived returns path through `lotus-performance` (already used by `lotus-report`) for risk-ready daily return series.
+  - `lotus-core` provides portfolio snapshots, simulation sessions, instrument enrichment,
+    position analytics history, issuer/instrument authority, and risk-free reference series.
+  - `lotus-performance` provides portfolio returns, benchmark returns, and supported
+    benchmark exposure context for performance-aligned risk attribution.
+  - Upstream failures are mapped to deterministic Lotus error codes and structured categories.
 - Downstream consumers:
   - `lotus-gateway`
   - `lotus-report`
@@ -69,4 +72,5 @@ See per-endpoint detail:
 - `docs/domain-apis/risk-concentration.md`
 - `docs/domain-apis/risk-rolling-metrics.md`
 - `docs/domain-apis/risk-historical-attribution.md`
+- `docs/domain-apis/risk-upstream-failure-behavior.md`
 - `docs/domain-apis/lotus-core-requirements-for-issuer-concentration.md`
