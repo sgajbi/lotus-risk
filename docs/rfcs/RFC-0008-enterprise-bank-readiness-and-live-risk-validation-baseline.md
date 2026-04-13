@@ -4,14 +4,13 @@
 - Date: 2026-04-13
 - Owners: lotus-risk
 - Requires Approval From: lotus-risk maintainers, lotus-platform maintainers
-- Depends On: lotus-core, lotus-performance, lotus-gateway, lotus-platform
-- Related Standards: lotus-platform RFC-0067, RFC-0071, RFC-0072, lotus-risk RFC-0003, RFC-0004, RFC-0005, RFC-0006, RFC-0007
+- Depends On: lotus-core, lotus-performance, lotus-gateway, lotus-workbench, lotus-platform
+- Related Standards: lotus-platform RFC-0067, RFC-0071, RFC-0072, RFC-0073; lotus-risk RFC-0003, RFC-0004, RFC-0005, RFC-0006, RFC-0007
+- Implementation Classification: enterprise-readiness program; current analytics baseline is validated for canonical portfolio, final enterprise production approval remains open
 
 ## Summary
 
-`lotus-risk` has moved from prototype-shaped risk analytics toward a credible private-banking risk domain service.
-
-Recent validation and implementation work established that the service can support the canonical private-banking portfolio `PB_SG_GLOBAL_BAL_001` across the major risk analytics surfaces:
+`lotus-risk` is now credible as a private-banking risk analytics domain service for controlled Workbench and advisory workflows. The service has live evidence for the canonical portfolio `PB_SG_GLOBAL_BAL_001` across the major risk surfaces:
 
 1. volatility,
 2. Sharpe,
@@ -25,110 +24,142 @@ Recent validation and implementation work established that the service can suppo
 10. historical risk attribution,
 11. rolling risk.
 
-This RFC records the enterprise-readiness posture that follows from that work. It separates:
+This RFC defines the final enterprise-readiness program required before `lotus-risk` should be called enterprise-bank production-approved.
 
-1. what is now implemented and live-validated,
-2. what is intentionally unsupported and must remain explicit,
-3. what remains before `lotus-risk` should be called enterprise-bank production-ready.
+The central decision is conservative:
 
-The conclusion is deliberately conservative:
-
-1. `lotus-risk` is credible for controlled private-banking advisory and Workbench risk workflows,
-2. `lotus-risk` is not yet fully enterprise-bank approved for unrestricted production use,
-3. the remaining work is primarily operational resilience, audit lineage, observability, multi-portfolio validation, and final cross-service governance.
+1. `lotus-risk` is analytically credible for supported endpoints and modes,
+2. `lotus-risk` is suitable for controlled private-banking workflow rollout when dependency posture is considered,
+3. `lotus-risk` is not yet approved for unrestricted enterprise-bank production use,
+4. final approval requires explicit hardening, observability, audit lineage, multi-portfolio validation, product-surface alignment, documentation, agent context review, and branch hygiene.
 
 ## Why This RFC Exists
 
-The recent `lotus-risk` validation pass proved important analytical and contract behavior with live data. It also exposed the right next boundary.
+Recent work proved that the core analytics are no longer merely synthetic-test complete. The service now reconciles live platform data for the canonical private-banking portfolio and exposes better contracts, examples, and methodology documentation.
 
-The service is no longer mainly blocked by missing basic risk calculations. The core calculations are implemented and the canonical live portfolio has been reconciled endpoint by endpoint.
+That success creates a new risk: treating successful live calculation validation as full enterprise readiness.
 
-The remaining question is different:
+For a bank, working analytics are necessary but not sufficient. Final readiness also requires:
 
-1. can the service support enterprise-like banks,
-2. can it do so under realistic dependency, audit, model-governance, and operational expectations,
-3. can downstream product surfaces explain the results without misleading private-banking users,
-4. can the service survive misconfiguration, partial upstream failure, and wider portfolio archetypes.
+1. deterministic dependency behavior,
+2. canonical environment and URL governance,
+3. broader live-data validation,
+4. audit and model-governance evidence,
+5. production observability,
+6. truthful gateway and Workbench presentation,
+7. durable documentation and agent guidance.
 
-Without this RFC, there is a risk that the team over-reads successful live calculation validation as full enterprise production readiness.
-
-This RFC makes the distinction explicit.
+This RFC exists to prevent scope drift and define the remaining work as an explicit, slice-by-slice program.
 
 ## Problem Statement
 
-`lotus-risk` now has strong evidence that core risk analytics work for the canonical seeded private-banking portfolio. However, enterprise-bank support requires more than successful happy-path analytics.
+`lotus-risk` can now produce credible risk analytics for the canonical portfolio, but enterprise-like banks need stronger guarantees than one canonical happy path.
 
-The remaining risk areas are:
+Current gaps are:
 
-1. upstream dependency resilience is not yet proven under failure and degradation scenarios,
-2. canonical URL and environment routing can still be misconfigured too easily,
-3. issuer active-risk attribution remains intentionally unsupported because benchmark issuer exposure semantics are not available,
-4. historical attribution residuals require careful user-facing explanation,
-5. live validation is still narrow compared with a bank's portfolio universe,
-6. audit lineage and model-validation evidence need stronger end-to-end consistency,
-7. production observability still needs explicit proof across all endpoints and dependencies.
-
-The service is therefore in a strong internal-pilot or near-production posture, not a final enterprise sign-off posture.
+1. upstream failure behavior is not fully proven under timeout, retry, unavailable, malformed, and partial-data conditions,
+2. service URLs and environment variables are still easy to misconfigure, as shown by port confusion between lotus-core and lotus-performance during live validation,
+3. live validation breadth is narrow compared with the portfolio archetypes a private bank manages,
+4. audit lineage is not yet uniformly sufficient for model-review and reproducibility,
+5. observability has not been proven end-to-end for success, failure, and degraded states,
+6. downstream gateway and Workbench surfaces still need explicit validation against signed VaR, attribution residual, and unsupported-mode semantics,
+7. reusable agent guidance should be reviewed so future work starts from the current truth rather than rediscovering it.
 
 ## Goals
 
-1. Record the current live-validated `lotus-risk` analytics baseline.
-2. Define what `enterprise-bank-ready` means for `lotus-risk`.
-3. Preserve the trading-day calculation correction as a non-negotiable methodology requirement.
-4. Document the intentional `ACTIVE_RISK + ISSUER` limitation clearly and keep it out of accidental future scope.
-5. Define the remaining hardening and validation slices required before final enterprise sign-off.
-6. Ensure downstream teams understand what can be safely used today and what requires additional governance.
-7. Align analytics, API contracts, observability, and documentation with private-banking expectations.
+1. Define the enterprise-readiness target state for `lotus-risk`.
+2. Preserve the current live-validated analytics baseline with concrete evidence expectations.
+3. Make trading-day calculations a permanent methodology requirement.
+4. Keep `ACTIVE_RISK + ISSUER` intentionally unsupported until benchmark issuer exposure semantics exist.
+5. Define implementation slices with clear acceptance criteria.
+6. Require documentation, agent context, skills guidance assessment, and branch hygiene as a final slice.
+7. Make GitHub-backed asynchronous validation part of the implementation posture.
 
 ## Non-Goals
 
-1. This RFC does not introduce new risk metric families.
-2. This RFC does not require changes in `lotus-core` or `lotus-performance` for the current slice.
-3. This RFC does not turn `lotus-risk` into a market-data, benchmark-composition, or portfolio-construction service.
-4. This RFC does not claim regulatory capital model approval.
-5. This RFC does not approve unrestricted enterprise production rollout by itself.
-6. This RFC does not require `ACTIVE_RISK + ISSUER` support until upstream benchmark issuer exposure semantics exist and are approved.
+1. Add new risk metrics.
+2. Claim regulatory market-risk capital model approval.
+3. Move benchmark, portfolio, issuer, risk-free, or performance data ownership into `lotus-risk`.
+4. Require `lotus-core` or `lotus-performance` changes in the first implementation slice.
+5. Support `ACTIVE_RISK + ISSUER` without a separate approved issuer benchmark exposure contract.
+6. Approve unrestricted production rollout by publishing this RFC.
 
 ## Decision
 
-`lotus-risk` will be treated as a credible private-banking risk analytics domain service with a defined enterprise-readiness runway.
+`lotus-risk` will proceed through a seven-slice enterprise-readiness program.
 
-The service may be used for controlled internal, advisory, and Workbench risk workflows where:
+The service remains the risk analytics authority. It computes risk metrics and owns the risk API contract. It does not become a portfolio system, benchmark master, issuer hierarchy service, or market-data service.
 
-1. supported endpoints and modes are used,
-2. API contracts are consumed as documented,
-3. attribution residuals are surfaced truthfully,
-4. issuer active-risk attribution is not represented as supported,
-5. operational dependency states are considered during rollout.
+The service may be treated as controlled-workflow ready only for explicitly supported endpoints, modes, and dimensions. Unsupported capabilities must fail deterministically and must not be exposed by downstream UI or gateway affordances.
 
-The service must not be labeled fully enterprise-bank production-ready until the remaining slices in this RFC are complete.
+Final enterprise-bank production approval requires completion of all slices and a clean PR/CI/merge loop.
 
-## Current Validated Analytics Baseline
+## Readiness State Model
 
-The following endpoint families are implemented and live-validated for the canonical portfolio `PB_SG_GLOBAL_BAL_001` as of the current validation pass.
+### State 1: Running
 
-| Endpoint / Capability | Current Status | Live Validation Notes |
+The service starts and returns basic health/API responses.
+
+This state is not sufficient for banking use.
+
+### State 2: Analytics Credible
+
+The service computes supported analytics correctly for representative data and has methodology documentation, unit tests, integration tests, and live canonical portfolio evidence.
+
+`lotus-risk` is currently in this state.
+
+### State 3: Controlled Workflow Ready
+
+The service can support controlled private-banking Workbench/advisory workflows because:
+
+1. supported modes are final and documented,
+2. unsupported modes are rejected deterministically,
+3. dependency readiness is visible,
+4. canonical workflow validation is green,
+5. downstream product surfaces preserve analytical truth.
+
+`lotus-risk` is close to this state but still needs the slices in this RFC.
+
+### State 4: Enterprise Production Approved
+
+The service can support enterprise-bank production traffic because:
+
+1. dependency resilience is proven,
+2. canonical URL governance is enforced,
+3. multi-portfolio validation is complete,
+4. audit lineage is complete enough for model review,
+5. observability is proven,
+6. gateway and Workbench surfaces are aligned,
+7. documentation, context, and branch hygiene are complete.
+
+`lotus-risk` is not yet in this state.
+
+## Current Validated Baseline
+
+| Capability | Status | Evidence Standard |
 | --- | --- | --- |
-| `POST /analytics/risk/calculate` volatility | Implemented and live-validated | Uses trading-day observations and annualizes on trading-day basis. |
-| `POST /analytics/risk/calculate` Sharpe | Implemented and live-validated | Risk-free handling is explicit; methodology uses excess return over volatility. |
-| `POST /analytics/risk/calculate` Sortino | Implemented and live-validated | Downside deviation is measured relative to MAR. |
-| `POST /analytics/risk/calculate` beta | Implemented and live-validated | Uses covariance of portfolio and benchmark returns over benchmark variance. |
-| `POST /analytics/risk/calculate` tracking error | Implemented and live-validated | Uses active returns and trading-day annualization. |
-| `POST /analytics/risk/calculate` information ratio | Implemented and live-validated | Uses annualized active return over tracking error. |
-| `POST /analytics/risk/calculate` VaR | Implemented and live-validated | `HISTORICAL`, `GAUSSIAN`, and `CORNISH_FISHER` validated; output is a signed return threshold in percentage points. |
-| `POST /analytics/risk/drawdown` | Implemented and live-validated | Drawdown series is reconciled on trading-day returns. |
-| `POST /analytics/risk/concentration` | Implemented and live-validated | Stateful concentration and simulation concentration are validated. |
-| `POST /analytics/risk/historical-attribution` total risk | Implemented and live-validated | Exposure history is aligned to trading-day return observations. |
-| `POST /analytics/risk/historical-attribution` active risk | Implemented and live-validated for supported dimensions | `POSITION`, `SECTOR`, and `ASSET_CLASS` are supported; `ISSUER` is intentionally unsupported. |
-| `POST /analytics/risk/rolling-metrics` | Implemented and live-validated | Rolling volatility, Sharpe, beta, tracking error, information ratio, max drawdown, multi-window, time-series, and partial-window behavior validated. |
+| Volatility | Live-validated for canonical portfolio | Trading-day observations and 252-day annualization must reconcile. |
+| Sharpe | Live-validated for canonical portfolio | Risk-free treatment must be explicit and documented. |
+| Sortino | Live-validated for canonical portfolio | MAR and downside deviation behavior must reconcile. |
+| Drawdown | Live-validated for canonical portfolio | Drawdown chronology must use trading-day returns. |
+| Beta | Live-validated for canonical portfolio | Covariance over benchmark variance must reconcile. |
+| Tracking error | Live-validated for canonical portfolio | Active returns and annualization must reconcile. |
+| Information ratio | Live-validated for canonical portfolio | Annualized active return over tracking error must reconcile. |
+| VaR | Live-validated for `HISTORICAL`, `GAUSSIAN`, `CORNISH_FISHER` | Output must be documented as signed percentage-point return threshold. |
+| Concentration | Live-validated for stateful and simulation modes | Simulation change payloads must serialize JSON-safe dates. |
+| Historical attribution total risk | Live-validated for supported grouping | Exposure rows must align to trading-day return dates. |
+| Historical attribution active risk | Live-validated for `POSITION`, `SECTOR`, `ASSET_CLASS` | `ISSUER` remains intentionally unsupported. |
+| Rolling risk | Live-validated for supported rolling metrics | Strict and partial windows must report counts and coverage truthfully. |
 
-## Trading-Day Methodology Baseline
+## Methodology Decisions
 
-The service must compute realized historical risk metrics on trading-day observations, not calendar-day counts.
+### Trading-Day Observations
 
-The current canonical live YTD validation path receives 90 calendar observations from upstream performance data and filters them to 64 trading-day observations before risk calculation.
+Risk calculations must use trading-day observations, not calendar-day observation counts.
 
-This affects:
+The canonical YTD live path receives 90 calendar observations from upstream performance data and filters them to 64 trading-day observations before risk calculation.
+
+This is required for:
 
 1. volatility,
 2. Sharpe,
@@ -136,246 +167,226 @@ This affects:
 4. beta,
 5. tracking error,
 6. information ratio,
-7. VaR where the return sample is used,
-8. drawdown where return chronology matters,
-9. historical attribution where exposure rows must align to return dates,
-10. rolling metrics where window counts must reflect observations, not calendar days.
+7. VaR,
+8. drawdown,
+9. historical attribution,
+10. rolling metrics.
 
-This behavior is a permanent methodology requirement. Reintroducing calendar-day observation assumptions would be a correctness regression.
+Reintroducing calendar-day assumptions is a methodology regression.
 
-## VaR Interpretation Decision
+### VaR Output Semantics
 
-VaR and expected shortfall are reported as signed return thresholds in percentage points.
+VaR and expected shortfall are signed return thresholds in percentage points.
 
-Implications:
+Required downstream behavior:
 
-1. negative values indicate loss-threshold returns,
-2. positive values can be valid when the empirical or parametric lower tail remains positive for the selected period,
-3. downstream UI and reporting must not relabel positive VaR as a positive loss amount,
-4. if a consumer wants positive-loss convention, it must explicitly transform and label the value.
+1. negative VaR means the selected lower-tail threshold is a loss return,
+2. positive VaR is valid when the lower tail is still positive,
+3. consumers must not label positive VaR as a positive loss amount,
+4. any positive-loss convention must be an explicit downstream transformation.
 
-This decision supports private-banking transparency and avoids misleading risk presentation.
+### Historical Attribution Residuals
 
-## Historical Attribution Decision
-
-Historical attribution is an explainability surface, not a guarantee that every grouping is fully additive.
+Historical attribution is explainability, not a guarantee of full additive decomposition for every grouping.
 
 For active-risk attribution:
 
-1. `total_value` is the annualized active-return tracking error,
+1. `total_value` is annualized active-return tracking error,
 2. contributor rows are covariance-based explainability components,
-3. `reconciled_sum` is the sum of displayed contributor effects,
-4. `residual` is the unexplained amount after the chosen grouping is applied,
-5. consumers must display `reconciled_sum` and `residual` together.
+3. `reconciled_sum` is the displayed contributor sum,
+4. `residual` is the unexplained amount for the selected grouping,
+5. consumers must present residual and reconciled sum together.
 
-A material residual is not automatically a calculation defect. It can be a truthful result when the selected grouping does not fully explain active-risk dynamics.
+A material residual can be valid and must not be hidden.
 
 ## Intentional Limitation: ACTIVE_RISK + ISSUER
 
-`historical-attribution` stateful `ACTIVE_RISK + ISSUER` remains intentionally unsupported.
+`historical-attribution` stateful `ACTIVE_RISK + ISSUER` is intentionally unsupported.
 
-This is not a temporary accidental defect in `lotus-risk`.
+This limitation is part of the contract, not an accidental bug.
 
-The reason is methodological and contractual:
+Issuer active-risk attribution requires benchmark issuer exposure history with these semantics:
 
-1. stateful issuer active-risk attribution requires benchmark issuer exposure history over the requested period,
-2. that benchmark issuer exposure history must be aligned to benchmark returns,
-3. issuer mapping must be canonical and audit-ready,
-4. issuer hierarchy semantics must be explicit, including direct issuer versus ultimate parent behavior,
-5. the exposure contract must reconcile with portfolio issuer exposure semantics.
+1. periodized benchmark issuer exposure rows,
+2. alignment to benchmark return dates,
+3. canonical issuer identifiers,
+4. explicit direct issuer versus ultimate parent rules,
+5. classification semantics aligned to portfolio issuer exposure,
+6. reconciliation metadata suitable for audit review.
 
-Current supported active-risk grouping dimensions are:
+Supported active-risk grouping dimensions:
 
 1. `POSITION`,
 2. `SECTOR`,
 3. `ASSET_CLASS`.
 
-Current intentionally unsupported active-risk grouping dimension:
+Unsupported active-risk grouping dimension:
 
 1. `ISSUER`.
 
 Required behavior:
 
-1. `lotus-risk` must reject unsupported `ACTIVE_RISK + ISSUER` requests deterministically at the request boundary,
-2. OpenAPI and domain documentation must continue to document this limitation,
-3. no downstream UI should present issuer active-risk attribution as available,
-4. future issuer support requires a separate RFC or approved slice once upstream issuer benchmark exposure semantics exist.
+1. reject `ACTIVE_RISK + ISSUER` at request validation or deterministic contract boundary,
+2. document the limitation in OpenAPI, domain docs, and product guidance,
+3. prevent gateway and Workbench from exposing issuer active-risk controls,
+4. require a future RFC or approved slice before enabling issuer support.
 
-## Enterprise Readiness Assessment
+## API Mode Contract
 
-### Strong Areas
+| Endpoint | Stateless | Stateful | Simulation | Contract Decision |
+| --- | --- | --- | --- | --- |
+| `risk/calculate` | Supported | Supported | Unsupported | Historical realized risk only. |
+| `drawdown` | Supported | Supported | Unsupported | Historical realized drawdown only. |
+| `concentration` | Supported | Supported | Supported | Simulation is valid for projected holdings/exposures. |
+| `rolling-metrics` | Supported | Supported | Unsupported | Historical rolling diagnostics only. |
+| `historical-attribution` | Supported | Supported | Unsupported | Historical attribution only; stateful issuer active-risk unsupported. |
 
-`lotus-risk` is strong in these areas:
+## Upstream Ownership Model
 
-1. core risk metric implementation,
-2. stateful sourcing through the correct bounded contexts,
-3. trading-day methodology correction,
-4. deterministic unsupported-mode behavior,
-5. live reconciliation against canonical platform data,
-6. meaningful unit and integration coverage,
-7. OpenAPI and domain documentation quality,
-8. concentration simulation support where simulation is methodologically valid.
+| Domain | Authoritative Owner | `lotus-risk` Responsibility |
+| --- | --- | --- |
+| Portfolio holdings and snapshots | lotus-core | Consume through governed core contracts. |
+| Instrument and issuer reference data | lotus-core | Consume for concentration and enrichment-dependent analytics. |
+| Portfolio returns | lotus-performance | Consume stateful returns series. |
+| Benchmark returns | lotus-performance | Consume benchmark series with performance-aligned lineage. |
+| Benchmark exposure context for supported active-risk dimensions | lotus-performance derived view backed by lotus-core lineage | Consume for active-risk attribution where supported. |
+| Risk-free reference series | lotus-core | Consume for Sharpe and rolling Sharpe where required. |
+| Risk calculations | lotus-risk | Compute, document, test, and expose risk analytics. |
+| Product composition | lotus-gateway and lotus-workbench | Must not invent unsupported risk capability. |
 
-### Not Yet Fully Enterprise-Ready
+## Requirement Traceability
 
-`lotus-risk` still requires additional proof in these areas:
+| Requirement | Current State | Evidence / Expected Evidence | Outcome |
+| --- | --- | --- | --- |
+| Trading-day calculations | Implemented for current stateful risk-return path | Live reconciliation and OpenAPI example counts use 64 trading-day observations | Preserve and harden. |
+| Live validation for canonical portfolio | Implemented for core endpoint families | Live characterization tests for risk, drawdown, concentration, attribution, rolling | Expand to portfolio matrix. |
+| VaR method coverage | Implemented for three methods | Historical, Gaussian, and Cornish-Fisher live tests | Preserve and document signed semantics. |
+| Concentration simulation | Implemented | Simulation payload serializes `effective_date` as JSON string | Preserve. |
+| Active-risk supported dimensions | Implemented for `POSITION`, `SECTOR`, `ASSET_CLASS` | Live attribution tests | Preserve. |
+| Active-risk issuer limitation | Intentional limitation | Request boundary rejection and docs | Keep until issuer benchmark exposure contract exists. |
+| Dependency resilience | Partially implemented | Existing upstream clients classify some errors | Needs failure matrix. |
+| Canonical URL governance | Partial | Defaults exist, but misconfiguration is still easy | Needs environment governance slice. |
+| Audit lineage | Partial | Current metadata exists but is not uniform enough | Needs lineage slice. |
+| Observability | Partial | Health/ops surfaces exist, full signal proof pending | Needs observability slice. |
+| Product-surface alignment | Not complete in this repo | Requires gateway/workbench validation | Needs cross-repo validation slice. |
+| Documentation and agent context | Partial | RFC and docs updated, context/skills review pending | Final slice required. |
 
-1. upstream resilience under timeout, retry, and partial failure conditions,
-2. canonical URL enforcement across local, Docker, ingress, CI, and deployed environments,
-3. multi-portfolio live validation breadth,
-4. audit lineage and calculation reproducibility,
-5. production observability proof,
-6. cross-service readiness and degraded-state validation,
-7. final model-governance documentation and sign-off.
-
-## Enterprise Readiness State Model
-
-This RFC defines four readiness states for `lotus-risk`.
-
-### State 1: Technically Running
-
-Characteristics:
-
-1. service starts,
-2. health endpoints respond,
-3. basic analytics requests return responses.
-
-This state is not sufficient for bank usage.
-
-### State 2: Analytics Credible
-
-Characteristics:
-
-1. core metrics compute correctly for supported inputs,
-2. methodology documentation exists,
-3. unit and integration tests cover major behavior,
-4. canonical portfolio live validation passes.
-
-`lotus-risk` is currently at least in this state.
-
-### State 3: Controlled Banking Workflow Ready
-
-Characteristics:
-
-1. supported endpoint modes are final and documented,
-2. unsupported behavior is deterministic,
-3. canonical upstream sourcing is enforced,
-4. live validation covers key Workbench and advisory workflows,
-5. operational dependency status is visible enough for controlled rollout.
-
-`lotus-risk` is close to this state for the validated canonical workflow.
-
-### State 4: Enterprise Production Approved
-
-Characteristics:
-
-1. dependency resilience has been proven under failure scenarios,
-2. observability covers latency, failure classes, execution modes, and degraded states,
-3. audit lineage is complete and reproducible,
-4. multi-portfolio and edge-case validation is complete,
-5. cross-service URL and environment governance is enforced,
-6. model governance and business sign-off are complete.
-
-`lotus-risk` is not yet in this state.
-
-## Required Future Slices
+## Implementation Slices
 
 ### Slice 1: Dependency Resilience and Failure Classification
 
-Goal:
-prove that `lotus-risk` behaves deterministically under upstream failure.
+Objective:
+prove deterministic behavior under upstream failure.
 
-Required work:
+Scope:
 
-1. test lotus-core timeout behavior,
-2. test lotus-performance timeout behavior,
-3. test retryable 502/503/504 behavior,
-4. test non-retryable 400/404/422 upstream behavior,
-5. verify deterministic Lotus error codes and messages,
-6. verify correlation ID propagation through upstream failure responses,
-7. document endpoint-specific degraded behavior.
+1. lotus-core timeout behavior,
+2. lotus-performance timeout behavior,
+3. retryable 502/503/504 responses,
+4. non-retryable 400/404/422 responses,
+5. malformed upstream payloads,
+6. missing required upstream series,
+7. partial upstream data.
 
-Exit criteria:
+Implementation expectations:
 
-1. upstream failure matrix exists,
-2. tests cover every dependency and major endpoint family,
-3. `/health/ready` and `/ops` report dependency state coherently,
-4. no raw upstream exception leaks to clients.
+1. add reusable upstream failure fixtures,
+2. avoid per-endpoint copy/paste failure tests where a shared pattern is possible,
+3. verify Lotus error codes, messages, retryability, dependency names, and operation names,
+4. verify correlation ID propagation.
+
+Acceptance criteria:
+
+1. no raw upstream exception leaks to clients,
+2. failure classification is deterministic across endpoint families,
+3. `/health/ready` and `/ops` present coherent dependency state,
+4. tests cover representative failures for each upstream dependency.
 
 ### Slice 2: Canonical URL and Environment Governance
 
-Goal:
-make service-to-service routing hard to misconfigure.
+Objective:
+make service routing hard to misconfigure.
 
-Required work:
+Scope:
 
-1. inventory canonical `lotus-core`, `lotus-performance`, and `lotus-risk` URLs across local Docker and ingress,
-2. validate environment variables in startup/config tests,
-3. detect common port-confusion mistakes where possible,
-4. document canonical local live validation commands,
-5. ensure live tests default to canonical direct service URLs,
-6. ensure Docker examples and runtime docs match actual service ownership.
+1. local direct service URLs,
+2. Docker service URLs,
+3. ingress URLs,
+4. live-test defaults,
+5. `.env.example` and runtime docs.
 
-Exit criteria:
+Implementation expectations:
 
-1. local and Docker URL contract tests pass,
-2. docs have one clear canonical path,
-3. no known doc points users to the wrong service for performance integration APIs.
+1. inventory canonical URLs for `lotus-core`, `lotus-performance`, and `lotus-risk`,
+2. add config contract tests for defaults and environment overrides,
+3. document direct live validation URLs and known port ownership,
+4. detect high-risk local mistakes where feasible, especially lotus-core query port versus lotus-performance analytics port.
+
+Acceptance criteria:
+
+1. config tests pass,
+2. docs expose one canonical local validation path,
+3. live-test defaults match actual service ownership,
+4. no known `lotus-risk` doc points performance probes to lotus-core ports.
 
 ### Slice 3: Multi-Portfolio Live Validation Matrix
 
-Goal:
-prove analytics beyond one canonical balanced portfolio.
+Objective:
+prove analytics across a bank-relevant portfolio universe.
 
-Required portfolio archetypes:
+Minimum archetypes:
 
-1. balanced global portfolio,
+1. global balanced portfolio,
 2. equity-heavy portfolio,
 3. fixed-income-heavy portfolio,
 4. cash-heavy portfolio,
 5. multi-currency portfolio,
 6. short-history portfolio,
-7. sparse or missing benchmark portfolio,
+7. sparse benchmark portfolio,
 8. high-concentration portfolio.
 
-Required endpoint coverage:
+Endpoint coverage:
 
-1. risk calculate,
-2. drawdown,
-3. concentration,
-4. rolling metrics,
-5. historical attribution for supported dimensions.
+1. `risk/calculate`,
+2. `drawdown`,
+3. `concentration`,
+4. `rolling-metrics`,
+5. `historical-attribution` for supported dimensions.
 
-Exit criteria:
+Acceptance criteria:
 
-1. a live validation matrix is committed,
-2. failures are either fixed or documented as governed limitations,
-3. each endpoint has at least one edge-case live proof.
+1. matrix is committed as documentation or generated evidence,
+2. each archetype has expected supportability notes,
+3. failures are either fixed or recorded as governed limitations,
+4. canonical portfolio validation remains green.
 
 ### Slice 4: Audit Lineage and Model-Governance Evidence
 
-Goal:
-make risk results reproducible and model-reviewable.
+Objective:
+make outputs reproducible and model-reviewable.
 
-Required work:
+Scope:
 
-1. standardize calculation IDs or request fingerprints across endpoints,
-2. expose source service and source contract versions consistently,
-3. expose observation windows and alignment policies consistently,
-4. document methodology version per metric family,
-5. add reproducibility notes for live validation data,
-6. identify what evidence should be persisted by downstream reporting workflows.
+1. calculation/request fingerprinting,
+2. source service metadata,
+3. source contract versions,
+4. observation windows,
+5. alignment policy,
+6. methodology version,
+7. source series counts and coverage,
+8. downstream evidence persistence expectations.
 
-Exit criteria:
+Acceptance criteria:
 
-1. model-validation reviewer can trace output to source data and methodology,
-2. every endpoint exposes enough lineage to support audit review,
-3. methodology docs and API metadata agree.
+1. every endpoint exposes enough lineage to trace inputs and methodology,
+2. methodology docs and API metadata agree,
+3. model reviewer can reproduce or challenge a result from captured evidence,
+4. gaps are documented with owners and priority.
 
 ### Slice 5: Production Observability Proof
 
-Goal:
-prove the service is operable in production.
+Objective:
+prove the service can be operated under production conditions.
 
 Required signals:
 
@@ -388,129 +399,143 @@ Required signals:
 7. degraded or partial result conditions,
 8. correlation ID propagation.
 
-Exit criteria:
+Acceptance criteria:
 
-1. metrics and logs are verified for representative successful and failing requests,
-2. dashboards or operator docs identify the key signals,
-3. alerting recommendations are documented for dependency degradation and calculation failures.
+1. representative success and failure requests produce expected logs/metrics,
+2. operator docs identify the key signals,
+3. alerting recommendations exist for dependency degradation and calculation failure,
+4. evidence can be used in PR review without relying on screenshots alone.
 
 ### Slice 6: Gateway and Product-Surface Alignment
 
-Goal:
-ensure Workbench and other consumers present risk results truthfully.
+Objective:
+ensure downstream consumers preserve risk truth.
 
-Required work:
+Scope:
 
-1. verify `lotus-gateway` does not transform signed VaR into misleading loss labels,
-2. verify attribution residuals are passed through and displayed clearly,
-3. verify unsupported issuer active-risk attribution is not exposed in UI affordances,
-4. verify concentration simulation is the only simulation flow presented for current risk analytics,
-5. validate canonical Workbench risk panels against the final API contract.
+1. `lotus-gateway` contract mapping,
+2. Workbench risk panels,
+3. signed VaR labels,
+4. attribution residual display,
+5. unsupported issuer active-risk affordances,
+6. simulation mode affordances.
 
-Exit criteria:
+Acceptance criteria:
 
-1. no UI feature claims unsupported backend capability,
-2. labels and explanations match methodology docs,
-3. gateway contract remains aligned with `lotus-risk` OpenAPI.
+1. gateway does not transform signed VaR into misleading loss labels,
+2. Workbench displays or preserves attribution residuals truthfully,
+3. issuer active-risk is not offered as supported,
+4. concentration is the only simulation-enabled risk flow in the current contract,
+5. gateway and Workbench validation evidence is linked from the final implementation evidence.
+
+### Slice 7: Documentation, Agent Context, Skills Guidance, and Branch Hygiene
+
+Objective:
+close the implementation with durable knowledge and clean repository state.
+
+Scope:
+
+1. update endpoint docs and methodology docs changed by prior slices,
+2. update `REPOSITORY-ENGINEERING-CONTEXT.md` if repository truth changes,
+3. update central Lotus context only if platform-wide routing, validation, or ownership truth changes,
+4. assess whether any Lotus skills or guidance should change,
+5. document the outcome of the skills/guidance assessment even if no changes are needed,
+6. ensure RFC status and implementation evidence are current,
+7. run repo-native gates,
+8. push final branch state,
+9. use GitHub checks asynchronously and fix forward promptly,
+10. merge only after green checks and truthful evidence,
+11. delete local and remote feature branch after merge if requested by the delivery workflow,
+12. sync local `main` to remote `main`.
+
+Skills and guidance assessment must explicitly consider:
+
+1. whether `lotus-backend-delivery-governance` should mention trading-day validation for risk/performance analytics,
+2. whether `lotus-methodology-doc-v3` should include signed-threshold guidance for risk metrics such as VaR,
+3. whether `lotus-qa-platform-validator` should include a risk analytics live-validation matrix pattern,
+4. whether central context should document canonical direct service ports for risk/performance/core live validation,
+5. whether no skill/context change is warranted because the finding is repo-local.
+
+Acceptance criteria:
+
+1. docs and context are updated or explicitly assessed as unchanged,
+2. branch is clean,
+3. commits are small, meaningful, and truthful,
+4. GitHub checks are green or failures are fixed forward,
+5. final report lists validation commands, CI status, remaining limitations, and branch hygiene outcome.
+
+## Validation Strategy
+
+Use both local repo-native checks and GitHub asynchronous checks.
+
+Minimum local checks per implementation slice:
+
+1. targeted unit/integration tests for changed behavior,
+2. `python -m ruff check` for touched files or full repo where appropriate,
+3. `python -m mypy --config-file mypy.ini` when typing-sensitive code changes occur,
+4. `make check` before final PR readiness.
+
+GitHub strategy:
+
+1. push the feature branch early,
+2. monitor `Remote Feature Lane` checks while implementation continues,
+3. inspect failing logs promptly,
+4. fix forward with small commits,
+5. do not claim CI is green unless GitHub reports green.
 
 ## Current Evidence
 
-The current implementation and validation pass includes:
+Current branch evidence includes:
 
-1. `make check` passing in `lotus-risk`, including lint, format, no-alias, mypy, OpenAPI quality, vocabulary inventory, and unit tests,
-2. live `risk/calculate` characterization passing for selected metrics and all VaR methods,
-3. live `historical-attribution` characterization passing for total risk and supported active-risk dimensions,
-4. live `rolling-metrics` characterization passing for selected rolling metrics, Sharpe, multi-window, time-series, and partial-window behavior,
-5. live concentration characterization passing,
-6. contract and OpenAPI example updates for trading-day counts,
-7. domain API documentation updates for risk calculate, rolling metrics, historical attribution, and VaR methodology.
+1. `make check` passed locally after the live validation pass,
+2. live `risk/calculate` characterization passed for selected metrics and all VaR methods,
+3. live `historical-attribution` characterization passed for total risk and supported active-risk dimensions,
+4. live `rolling-metrics` characterization passed for selected metrics, Sharpe, multi-window, time-series, and partial-window behavior,
+5. live concentration characterization passed,
+6. OpenAPI examples now reflect 64 trading-day observations,
+7. VaR methodology documentation now describes signed return thresholds,
+8. active-risk issuer limitation is documented as intentional.
 
-## API Contract Expectations
+This evidence proves the current analytics baseline. It does not yet close the future enterprise-readiness slices.
 
-The supported mode contract remains:
+## Acceptance Criteria for RFC Completion
 
-| Endpoint | Stateless | Stateful | Simulation | Notes |
-| --- | --- | --- | --- | --- |
-| `risk/calculate` | Supported | Supported | Unsupported | Historical realized risk metrics only. |
-| `drawdown` | Supported | Supported | Unsupported | Historical realized drawdown only. |
-| `concentration` | Supported | Supported | Supported | Simulation is methodologically valid for projected holdings/exposures. |
-| `rolling-metrics` | Supported | Supported | Unsupported | Historical rolling diagnostics only. |
-| `historical-attribution` | Supported | Supported | Unsupported | Historical attribution only; active issuer grouping intentionally unsupported statefully. |
+This RFC is complete only when:
 
-## Upstream Ownership Model
-
-The service ownership boundaries remain:
-
-1. `lotus-risk` owns risk analytics calculations and risk API contracts,
-2. `lotus-performance` owns portfolio and benchmark return series for performance-aligned analytics,
-3. `lotus-performance` exposes benchmark exposure context for supported active-risk dimensions as a derived, lineage-backed performance-aligned view,
-4. `lotus-core` owns portfolio, position, issuer, instrument, benchmark composition, and reference-data authority,
-5. `lotus-core` owns risk-free reference series sourcing,
-6. `lotus-gateway` owns experience composition and must not invent unsupported risk capability.
-
-## Acceptance Criteria for Enterprise Production Approval
-
-`lotus-risk` can be called enterprise-bank production-approved only when all of the following are true:
-
-1. all required future slices in this RFC are complete,
-2. CI and local repo-native gates pass,
-3. live validation matrix covers multiple portfolio archetypes,
-4. dependency failure behavior is deterministic and documented,
-5. observability proof exists for success, failure, and degraded dependency states,
-6. audit lineage is sufficient for model-review and operational investigation,
-7. downstream gateway and Workbench surfaces preserve supported/unsupported behavior truthfully,
-8. `ACTIVE_RISK + ISSUER` remains documented as unsupported unless a future approved issuer-exposure contract changes that state.
+1. all seven implementation slices are complete,
+2. the intentional `ACTIVE_RISK + ISSUER` limitation remains documented unless superseded by a future approved issuer-exposure contract,
+3. local repo-native checks pass,
+4. GitHub feature-lane and PR checks pass,
+5. live validation matrix evidence is current,
+6. docs, context, and skills/guidance assessment are complete,
+7. branch and PR hygiene are complete.
 
 ## Risks and Mitigations
 
 | Risk | Mitigation |
 | --- | --- |
-| Teams mistake canonical portfolio success for full enterprise readiness | This RFC defines readiness states and future slices. |
-| UI mislabels signed VaR as a positive loss amount | VaR methodology and gateway/product checks must preserve signed return-threshold semantics. |
-| Attribution residuals are hidden or misunderstood | API docs and UI must show `reconciled_sum` and `residual` together. |
-| Unsupported issuer active-risk is accidentally exposed | Keep request validation, OpenAPI docs, and UI affordances aligned to the explicit limitation. |
-| Dependency misconfiguration causes false failures | Add canonical URL and environment governance tests and docs. |
-| Operational incidents are hard to diagnose | Add metrics, logs, dependency-state reporting, and correlation propagation proof. |
-
-## Implementation Status
-
-Implemented in the current validation branch:
-
-1. trading-day stateful return filtering,
-2. live metric reconciliation expansion,
-3. live concentration simulation serialization fix,
-4. historical attribution exposure-to-return-date alignment,
-5. rolling multi-window and partial-window live characterization,
-6. OpenAPI example updates for 64 trading-day observations,
-7. methodology documentation for signed VaR output,
-8. domain documentation for supported active attribution dimensions and intentional issuer limitation.
-
-Not yet implemented:
-
-1. full dependency failure matrix,
-2. canonical URL enforcement across all environments,
-3. multi-portfolio live validation matrix,
-4. full audit lineage standardization,
-5. production observability proof,
-6. gateway and Workbench product-surface validation against this final posture.
+| Canonical portfolio validation is mistaken for full enterprise readiness | Keep readiness states and multi-portfolio slice explicit. |
+| Signed VaR is mislabeled in UI or reporting | Preserve signed-threshold methodology and validate gateway/Workbench labels. |
+| Attribution residuals are hidden | Require residual presentation in product-surface validation. |
+| Unsupported issuer active-risk is accidentally exposed | Preserve request rejection, docs, and UI/gateway checks. |
+| URL confusion causes false live-validation failures | Add canonical URL tests and docs. |
+| Future agents rediscover known risk-specific patterns | Final slice must assess context and skill guidance. |
+| CI failures are discovered late | Push early and monitor GitHub checks asynchronously. |
 
 ## Open Questions
 
-1. Which additional seeded portfolios should be canonical for the multi-portfolio live validation matrix?
-2. Should issuer active-risk attribution remain permanently out of scope, or should a future RFC define benchmark issuer exposure semantics?
-3. Should calculation lineage be persisted by `lotus-risk`, `lotus-gateway`, or downstream reporting workflows?
-4. What operational SLOs should apply to risk analytics latency by endpoint family?
+1. Which additional seeded portfolios should become canonical for the live validation matrix?
+2. Should issuer active-risk remain permanently unsupported, or should a future RFC define benchmark issuer exposure semantics?
+3. Which service should persist calculation lineage for downstream audit evidence: `lotus-risk`, `lotus-gateway`, or reporting workflows?
+4. What endpoint-level latency SLOs should apply to private-banking risk analytics?
+5. Should platform context define canonical direct service ports for all live characterization tests, or should that remain repository-local?
 
 ## Conclusion
 
-`lotus-risk` is credible for controlled private-banking risk analytics workflows and has strong evidence for the canonical portfolio path.
+`lotus-risk` is analytically credible for supported private-banking risk workflows and has strong canonical live-data evidence.
 
-It should be treated as:
+It is not yet enterprise-bank production-approved.
 
-1. analytically credible for supported endpoints,
-2. near controlled-workflow readiness,
-3. not yet fully enterprise-bank production-approved.
+The remaining path is clear: dependency resilience, canonical URL governance, multi-portfolio live validation, audit lineage, observability proof, gateway/product alignment, and final documentation/context/branch hygiene.
 
-The intentional `ACTIVE_RISK + ISSUER` limitation remains part of the contract until upstream benchmark issuer exposure semantics are available and explicitly approved.
-
-The next highest-value work is not another metric. It is enterprise hardening: dependency resilience, canonical URL governance, broader live validation, audit lineage, observability proof, and product-surface alignment.
+The `ACTIVE_RISK + ISSUER` limitation remains intentional and must stay documented until benchmark issuer exposure semantics are explicitly defined and approved.
