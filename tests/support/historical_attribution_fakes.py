@@ -11,13 +11,13 @@ def build_stateful_attribution_returns_client() -> RecordingLotusPerformanceClie
         response_payload=build_returns_series_response(
             portfolio_returns=[
                 ("2026-01-02", "0.0100"),
-                ("2026-01-03", "-0.0050"),
-                ("2026-01-04", "0.0040"),
+                ("2026-01-05", "-0.0050"),
+                ("2026-01-06", "0.0040"),
             ],
             benchmark_returns=[
                 ("2026-01-02", "0.0080"),
-                ("2026-01-03", "-0.0030"),
-                ("2026-01-04", "0.0030"),
+                ("2026-01-05", "-0.0030"),
+                ("2026-01-06", "0.0030"),
             ],
         ),
         benchmark_exposure_context_payload=build_benchmark_exposure_context_response(),
@@ -39,7 +39,7 @@ def build_benchmark_exposure_context_response(
                 "weight": "1.00",
             },
             {
-                "valuation_date": "2026-01-03",
+                "valuation_date": "2026-01-05",
                 "component_id": None,
                 "grouping_dimension": "ASSET_CLASS",
                 "group_key": "ASSET_CLASS_EQUITY",
@@ -47,7 +47,7 @@ def build_benchmark_exposure_context_response(
                 "weight": "1.00",
             },
             {
-                "valuation_date": "2026-01-04",
+                "valuation_date": "2026-01-06",
                 "component_id": None,
                 "grouping_dimension": "ASSET_CLASS",
                 "group_key": "ASSET_CLASS_EQUITY",
@@ -74,7 +74,7 @@ def build_benchmark_exposure_context_response(
                 "weight": "0.45",
             },
             {
-                "valuation_date": "2026-01-03",
+                "valuation_date": "2026-01-05",
                 "component_id": None,
                 "grouping_dimension": "SECTOR",
                 "group_key": "SECTOR_TECH",
@@ -82,7 +82,7 @@ def build_benchmark_exposure_context_response(
                 "weight": "0.56",
             },
             {
-                "valuation_date": "2026-01-03",
+                "valuation_date": "2026-01-05",
                 "component_id": None,
                 "grouping_dimension": "SECTOR",
                 "group_key": "SECTOR_HEALTH",
@@ -90,7 +90,7 @@ def build_benchmark_exposure_context_response(
                 "weight": "0.44",
             },
             {
-                "valuation_date": "2026-01-04",
+                "valuation_date": "2026-01-06",
                 "component_id": None,
                 "grouping_dimension": "SECTOR",
                 "group_key": "SECTOR_TECH",
@@ -98,7 +98,7 @@ def build_benchmark_exposure_context_response(
                 "weight": "0.54",
             },
             {
-                "valuation_date": "2026-01-04",
+                "valuation_date": "2026-01-06",
                 "component_id": None,
                 "grouping_dimension": "SECTOR",
                 "group_key": "SECTOR_HEALTH",
@@ -112,9 +112,9 @@ def build_benchmark_exposure_context_response(
         "contract_version": "v1",
         "portfolio_id": "DEMO_DPM_EUR_001",
         "benchmark_id": "BMK_GLOBAL_BALANCED_60_40",
-        "benchmark_version": "2026-01-04",
-        "as_of_date": "2026-01-04",
-        "window": {"start_date": "2026-01-02", "end_date": "2026-01-04"},
+        "benchmark_version": "2026-01-06",
+        "as_of_date": "2026-01-06",
+        "window": {"start_date": "2026-01-02", "end_date": "2026-01-06"},
         "frequency": "DAILY",
         "reporting_currency": None,
         "rows": rows,
@@ -124,7 +124,7 @@ def build_benchmark_exposure_context_response(
             "served_by": "lotus-performance",
             "calculation_run_id": "11111111-1111-1111-1111-111111111111",
             "contract_version": "v1",
-            "generated_at": "2026-01-04T00:00:00Z",
+            "generated_at": "2026-01-06T00:00:00Z",
             "retrieval_metadata": {"benchmark_market_series_chunk_count": 1},
         },
     }
@@ -146,13 +146,13 @@ def build_sector_position_timeseries_rows() -> list[dict[str, object]]:
         },
         {
             "security_id": "SEC_A",
-            "valuation_date": "2026-01-03",
+            "valuation_date": "2026-01-05",
             "dimensions": {"sector": "TECH", "asset_class": "EQUITY"},
             "ending_market_value_portfolio_currency": "65",
         },
         {
             "security_id": "SEC_B",
-            "valuation_date": "2026-01-03",
+            "valuation_date": "2026-01-05",
             "dimensions": {"sector": "HEALTH", "asset_class": "EQUITY"},
             "ending_market_value_portfolio_currency": "35",
         },

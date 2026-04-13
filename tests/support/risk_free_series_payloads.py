@@ -6,9 +6,9 @@ from collections.abc import Iterable
 def build_risk_free_series_response(
     *,
     currency: str = "USD",
-    as_of_date: str = "2026-01-04",
+    as_of_date: str = "2026-01-06",
     start_date: str = "2026-01-01",
-    end_date: str = "2026-01-04",
+    end_date: str = "2026-01-06",
     series_mode: str = "annualized_rate_series",
     points: Iterable[dict[str, object]] | None = None,
 ) -> dict[str, object]:

@@ -41,8 +41,8 @@ def _drawdown_payload() -> dict[str, object]:
             "periods": [{"type": "YTD", "name": "YTD"}],
             "returns": [
                 {"date": "2026-01-02", "value": -1.2},
-                {"date": "2026-01-03", "value": 0.8},
-                {"date": "2026-01-04", "value": -0.4},
+                {"date": "2026-01-05", "value": 0.8},
+                {"date": "2026-01-06", "value": -0.4},
                 {"date": "2026-01-05", "value": 1.1},
             ],
         },
@@ -57,20 +57,20 @@ def _rolling_payload() -> dict[str, object]:
             "periods": [{"type": "YTD", "name": "YTD"}],
             "returns": [
                 {"date": "2026-01-02", "value": 1.0},
-                {"date": "2026-01-03", "value": -2.0},
-                {"date": "2026-01-04", "value": 0.5},
+                {"date": "2026-01-05", "value": -2.0},
+                {"date": "2026-01-06", "value": 0.5},
                 {"date": "2026-01-05", "value": 1.2},
             ],
             "benchmark_returns": [
                 {"date": "2026-01-02", "value": 0.8},
-                {"date": "2026-01-03", "value": -1.5},
-                {"date": "2026-01-04", "value": 0.4},
+                {"date": "2026-01-05", "value": -1.5},
+                {"date": "2026-01-06", "value": 0.4},
                 {"date": "2026-01-05", "value": 1.0},
             ],
             "risk_free_returns": [
                 {"date": "2026-01-02", "value": 0.01},
-                {"date": "2026-01-03", "value": 0.01},
-                {"date": "2026-01-04", "value": 0.01},
+                {"date": "2026-01-05", "value": 0.01},
+                {"date": "2026-01-06", "value": 0.01},
                 {"date": "2026-01-05", "value": 0.01},
             ],
             "rolling_options": {
@@ -89,15 +89,15 @@ def _historical_attribution_payload() -> dict[str, object]:
             "periods": [{"type": "YTD", "name": "YTD"}],
             "returns": [
                 {"date": "2026-01-02", "value": 1.0},
-                {"date": "2026-01-03", "value": -0.4},
-                {"date": "2026-01-04", "value": 0.3},
+                {"date": "2026-01-05", "value": -0.4},
+                {"date": "2026-01-06", "value": 0.3},
                 {"date": "2026-01-05", "value": 0.6},
                 {"date": "2026-01-06", "value": -0.2},
             ],
             "benchmark_returns": [
                 {"date": "2026-01-02", "value": 0.8},
-                {"date": "2026-01-03", "value": -0.3},
-                {"date": "2026-01-04", "value": 0.2},
+                {"date": "2026-01-05", "value": -0.3},
+                {"date": "2026-01-06", "value": 0.2},
                 {"date": "2026-01-05", "value": 0.4},
                 {"date": "2026-01-06", "value": -0.1},
             ],
@@ -115,13 +115,13 @@ def _historical_attribution_payload() -> dict[str, object]:
                     "weight": 0.45,
                 },
                 {
-                    "date": "2026-01-03",
+                    "date": "2026-01-05",
                     "grouping_dimension": "SECTOR",
                     "group_key": "SECTOR_TECH",
                     "weight": 0.50,
                 },
                 {
-                    "date": "2026-01-03",
+                    "date": "2026-01-05",
                     "grouping_dimension": "SECTOR",
                     "group_key": "SECTOR_HEALTH",
                     "weight": 0.50,
@@ -141,13 +141,13 @@ def _historical_attribution_payload() -> dict[str, object]:
                     "weight": 0.52,
                 },
                 {
-                    "date": "2026-01-03",
+                    "date": "2026-01-05",
                     "grouping_dimension": "SECTOR",
                     "group_key": "SECTOR_TECH",
                     "weight": 0.47,
                 },
                 {
-                    "date": "2026-01-03",
+                    "date": "2026-01-05",
                     "grouping_dimension": "SECTOR",
                     "group_key": "SECTOR_HEALTH",
                     "weight": 0.53,
@@ -225,7 +225,7 @@ def test_e2e_risk_calculate_stateful_mode() -> None:
                 "input_mode": "stateful",
                 "stateful_input": {
                     "portfolio_id": "DEMO_DPM_EUR_001",
-                    "as_of_date": "2026-01-04",
+                    "as_of_date": "2026-01-06",
                     "periods": [{"type": "YTD", "name": "YTD"}],
                     "metrics": ["VOLATILITY"],
                 },
@@ -381,7 +381,7 @@ def test_e2e_rolling_metrics_stateful_mode() -> None:
                 "input_mode": "stateful",
                 "stateful_input": {
                     "portfolio_id": "DEMO_DPM_EUR_001",
-                    "as_of_date": "2026-01-04",
+                    "as_of_date": "2026-01-06",
                     "periods": [{"type": "YTD", "name": "YTD"}],
                     "rolling_options": {
                         "window_lengths": [2],
@@ -416,7 +416,7 @@ def test_e2e_drawdown_stateful_mode_with_benchmark() -> None:
                 "input_mode": "stateful",
                 "stateful_input": {
                     "portfolio_id": "DEMO_DPM_EUR_001",
-                    "as_of_date": "2026-01-04",
+                    "as_of_date": "2026-01-06",
                     "periods": [{"type": "YTD", "name": "YTD"}],
                     "benchmark_policy": {
                         "include_benchmark": True,
@@ -451,7 +451,7 @@ def test_e2e_historical_attribution_stateful_active_risk_mode() -> None:
                 "input_mode": "stateful",
                 "stateful_input": {
                     "portfolio_id": "DEMO_DPM_EUR_001",
-                    "as_of_date": "2026-01-04",
+                    "as_of_date": "2026-01-06",
                     "periods": [{"type": "YTD", "name": "YTD"}],
                     "attribution_options": {
                         "attribution_types": ["ACTIVE_RISK"],
@@ -480,7 +480,7 @@ def test_e2e_historical_attribution_stateful_issuer_is_rejected_at_boundary() ->
             "input_mode": "stateful",
             "stateful_input": {
                 "portfolio_id": "DEMO_DPM_EUR_001",
-                "as_of_date": "2026-01-04",
+                "as_of_date": "2026-01-06",
                 "periods": [{"type": "YTD", "name": "YTD"}],
                 "attribution_options": {
                     "attribution_types": ["ACTIVE_RISK"],

@@ -23,12 +23,12 @@ def _stateless_payload() -> dict[str, object]:
     return {
         "input_mode": "stateless",
         "stateless_input": {
-            "scope": {"as_of_date": "2026-01-04", "net_or_gross": "NET"},
+            "scope": {"as_of_date": "2026-01-06", "net_or_gross": "NET"},
             "periods": [{"type": "YTD", "name": "YTD"}],
             "returns": [
                 {"date": "2026-01-02", "value": 1.0},
-                {"date": "2026-01-03", "value": -2.0},
-                {"date": "2026-01-04", "value": 0.5},
+                {"date": "2026-01-05", "value": -2.0},
+                {"date": "2026-01-06", "value": 0.5},
             ],
         },
         "analysis_options": {"include_underwater_series": True},
@@ -66,7 +66,7 @@ def test_drawdown_endpoint_stateful_uses_lotus_performance() -> None:
                 "input_mode": "stateful",
                 "stateful_input": {
                     "portfolio_id": "DEMO_DPM_EUR_001",
-                    "as_of_date": "2026-01-04",
+                    "as_of_date": "2026-01-06",
                     "periods": [{"type": "YTD", "name": "YTD"}],
                     "benchmark_policy": {
                         "include_benchmark": True,
@@ -107,7 +107,7 @@ def test_drawdown_endpoint_rejects_simulation_mode_at_contract_boundary() -> Non
             "input_mode": "simulation",
             "simulation_input": {
                 "portfolio_id": "DEMO_DPM_EUR_001",
-                "as_of_date": "2026-01-04",
+                "as_of_date": "2026-01-06",
                 "periods": [{"type": "YTD"}],
             },
         },
@@ -130,7 +130,7 @@ def test_drawdown_endpoint_stateful_autowires_performance_client() -> None:
                 "input_mode": "stateful",
                 "stateful_input": {
                     "portfolio_id": "DEMO_DPM_EUR_001",
-                    "as_of_date": "2026-01-03",
+                    "as_of_date": "2026-01-05",
                     "periods": [{"type": "YTD"}],
                 },
             },

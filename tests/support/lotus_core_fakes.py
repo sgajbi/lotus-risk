@@ -121,11 +121,11 @@ class SimulationLotusCoreClient:
     ) -> dict[str, object]:
         return {
             "currency": request_payload.get("currency", "USD"),
-            "as_of_date": request_payload.get("as_of_date", "2026-01-04"),
+            "as_of_date": request_payload.get("as_of_date", "2026-01-06"),
             "series_mode": request_payload.get("series_mode", "annualized_rate_series"),
             "resolved_window": request_payload.get(
                 "window",
-                {"start_date": "2026-01-01", "end_date": "2026-01-04"},
+                {"start_date": "2026-01-01", "end_date": "2026-01-06"},
             ),
             "frequency": request_payload.get("frequency", "daily"),
             "request_fingerprint": "sim-core-risk-free",
@@ -136,12 +136,12 @@ class SimulationLotusCoreClient:
                     "value_convention": "annualized_rate",
                 },
                 {
-                    "series_date": "2026-01-03",
+                    "series_date": "2026-01-05",
                     "value": "0.0365",
                     "value_convention": "annualized_rate",
                 },
                 {
-                    "series_date": "2026-01-04",
+                    "series_date": "2026-01-06",
                     "value": "0.0365",
                     "value_convention": "annualized_rate",
                 },
@@ -169,14 +169,14 @@ class RecordingLotusCoreReferenceClient:
             "observed_start_date": None,
             "observed_end_date": None,
             "expected_start_date": "2026-01-01",
-            "expected_end_date": "2026-01-04",
+            "expected_end_date": "2026-01-06",
             "total_points": 0,
             "missing_dates_count": 4,
             "missing_dates_sample": [
                 "2026-01-01",
                 "2026-01-02",
-                "2026-01-03",
-                "2026-01-04",
+                "2026-01-05",
+                "2026-01-06",
             ],
             "quality_status_distribution": {},
         }

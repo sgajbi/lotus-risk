@@ -54,7 +54,7 @@ def _portfolio_only_payload() -> dict[str, object]:
         "series": {
             "portfolio_returns": [
                 {"date": "2026-01-02", "return_value": "0.0100"},
-                {"date": "2026-01-03", "return_value": "-0.0200"},
+                {"date": "2026-01-05", "return_value": "-0.0200"},
             ]
         }
     }
@@ -69,12 +69,12 @@ def _risk_free_payload() -> dict[str, object]:
                 "value_convention": "annualized_rate",
             },
             {
-                "series_date": "2026-01-03",
+                "series_date": "2026-01-05",
                 "value": "0.0365",
                 "value_convention": "annualized_rate",
             },
             {
-                "series_date": "2026-01-04",
+                "series_date": "2026-01-06",
                 "value": "0.0365",
                 "value_convention": "annualized_rate",
             },
@@ -103,13 +103,13 @@ def test_stateful_adapter_happy_path() -> None:
             "series": {
                 "portfolio_returns": [
                     {"date": "2026-01-02", "return_value": "0.0100"},
-                    {"date": "2026-01-03", "return_value": "-0.0200"},
-                    {"date": "2026-01-04", "return_value": "0.0050"},
+                    {"date": "2026-01-05", "return_value": "-0.0200"},
+                    {"date": "2026-01-06", "return_value": "0.0050"},
                 ],
                 "benchmark_returns": [
                     {"date": "2026-01-02", "return_value": "0.0080"},
-                    {"date": "2026-01-03", "return_value": "-0.0150"},
-                    {"date": "2026-01-04", "return_value": "0.0040"},
+                    {"date": "2026-01-05", "return_value": "-0.0150"},
+                    {"date": "2026-01-06", "return_value": "0.0040"},
                 ],
             }
         }
@@ -217,7 +217,7 @@ def test_stateful_adapter_rejects_invalid_return_value() -> None:
             "series": {
                 "portfolio_returns": [
                     {"date": "2026-01-02", "return_value": "not-a-number"},
-                    {"date": "2026-01-03", "return_value": "0.0100"},
+                    {"date": "2026-01-05", "return_value": "0.0100"},
                 ]
             }
         }
@@ -352,8 +352,8 @@ def test_stateful_adapter_sources_risk_free_after_returns_for_si_window() -> Non
             "series": {
                 "portfolio_returns": [
                     {"date": "2026-01-02", "return_value": "0.0100"},
-                    {"date": "2026-01-03", "return_value": "-0.0200"},
-                    {"date": "2026-01-04", "return_value": "0.0050"},
+                    {"date": "2026-01-05", "return_value": "-0.0200"},
+                    {"date": "2026-01-06", "return_value": "0.0050"},
                 ],
             }
         }
@@ -362,7 +362,7 @@ def test_stateful_adapter_sources_risk_free_after_returns_for_si_window() -> Non
     request = RollingStatefulInput.model_validate(
         {
             "portfolio_id": "DEMO_DPM_EUR_001",
-            "as_of_date": "2026-01-04",
+            "as_of_date": "2026-01-06",
             "reporting_currency": "USD",
             "periods": [{"type": "SI", "name": "SI"}],
             "rolling_options": {
@@ -386,6 +386,6 @@ def test_stateful_adapter_sources_risk_free_after_returns_for_si_window() -> Non
     risk_free_payload = cast(dict[str, Any], core_client.risk_free_calls[0]["request_payload"])
     assert risk_free_payload["window"] == {
         "start_date": "2026-01-02",
-        "end_date": "2026-01-04",
+        "end_date": "2026-01-06",
     }
     assert response.results["SI"].error is None

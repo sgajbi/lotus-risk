@@ -156,12 +156,12 @@ def test_rolling_metrics_endpoint_stateful_uses_lotus_performance() -> None:
                     "value_convention": "annualized_rate",
                 },
                 {
-                    "series_date": "2026-01-03",
+                    "series_date": "2026-01-05",
                     "value": "0.0365",
                     "value_convention": "annualized_rate",
                 },
                 {
-                    "series_date": "2026-01-04",
+                    "series_date": "2026-01-06",
                     "value": "0.0365",
                     "value_convention": "annualized_rate",
                 },
@@ -180,7 +180,7 @@ def test_rolling_metrics_endpoint_stateful_uses_lotus_performance() -> None:
                 "input_mode": "stateful",
                 "stateful_input": {
                     "portfolio_id": "DEMO_DPM_EUR_001",
-                    "as_of_date": "2026-01-04",
+                    "as_of_date": "2026-01-06",
                     "periods": [{"type": "YTD", "name": "YTD"}],
                     "rolling_options": {
                         "window_lengths": [2],
@@ -264,7 +264,7 @@ def test_rolling_metrics_endpoint_stateful_surfaces_missing_risk_free_after_curr
                 "input_mode": "stateful",
                 "stateful_input": {
                     "portfolio_id": "DEMO_DPM_EUR_001",
-                    "as_of_date": "2026-01-04",
+                    "as_of_date": "2026-01-06",
                     "periods": [{"type": "YTD", "name": "YTD"}],
                     "rolling_options": {
                         "window_lengths": [2],
@@ -311,12 +311,12 @@ def test_rolling_metrics_endpoint_stateful_uses_explicit_reporting_currency_for_
                     "value_convention": "annualized_rate",
                 },
                 {
-                    "series_date": "2026-01-03",
+                    "series_date": "2026-01-05",
                     "value": "0.0252",
                     "value_convention": "annualized_rate",
                 },
                 {
-                    "series_date": "2026-01-04",
+                    "series_date": "2026-01-06",
                     "value": "0.0252",
                     "value_convention": "annualized_rate",
                 },
@@ -336,7 +336,7 @@ def test_rolling_metrics_endpoint_stateful_uses_explicit_reporting_currency_for_
                 "input_mode": "stateful",
                 "stateful_input": {
                     "portfolio_id": "DEMO_DPM_EUR_001",
-                    "as_of_date": "2026-01-04",
+                    "as_of_date": "2026-01-06",
                     "reporting_currency": "CHF",
                     "periods": [{"type": "YTD", "name": "YTD"}],
                     "rolling_options": {
@@ -353,7 +353,7 @@ def test_rolling_metrics_endpoint_stateful_uses_explicit_reporting_currency_for_
     assert risk_free_payload["currency"] == "CHF"
     assert risk_free_payload["window"] == {
         "start_date": "2026-01-01",
-        "end_date": "2026-01-04",
+        "end_date": "2026-01-06",
     }
     performance_payload = cast(dict[str, Any], recorder.calls[0]["request_payload"])
     assert performance_payload["reporting_currency"] == "CHF"
@@ -375,7 +375,7 @@ def test_rolling_metrics_endpoint_stateful_rejects_missing_benchmark_returns_for
                 "input_mode": "stateful",
                 "stateful_input": {
                     "portfolio_id": "DEMO_DPM_EUR_001",
-                    "as_of_date": "2026-01-04",
+                    "as_of_date": "2026-01-06",
                     "periods": [{"type": "YTD", "name": "YTD"}],
                     "rolling_options": {
                         "window_lengths": [2],
@@ -409,7 +409,7 @@ def test_rolling_metrics_endpoint_stateful_autowires_performance_client() -> Non
                         "value_convention": "annualized_rate",
                     },
                     {
-                        "series_date": "2026-01-03",
+                        "series_date": "2026-01-05",
                         "value": "0.0365",
                         "value_convention": "annualized_rate",
                     },
@@ -426,7 +426,7 @@ def test_rolling_metrics_endpoint_stateful_autowires_performance_client() -> Non
                 "input_mode": "stateful",
                 "stateful_input": {
                     "portfolio_id": "DEMO_DPM_EUR_001",
-                    "as_of_date": "2026-01-04",
+                    "as_of_date": "2026-01-06",
                     "periods": [{"type": "YTD", "name": "YTD"}],
                     "rolling_options": {
                         "window_lengths": [2],

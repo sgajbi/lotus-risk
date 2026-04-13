@@ -33,6 +33,14 @@ def _annualized_volatility(returns: list[float]) -> float:
     return float(np.std(returns, ddof=1) * np.sqrt(ANNUALIZATION_FACTOR) * 100.0)
 
 
+def _business_day_returns(rows: list[tuple[str, float]]) -> list[tuple[str, float]]:
+    return [
+        (date_value, return_value)
+        for date_value, return_value in rows
+        if date.fromisoformat(date_value).weekday() < 5
+    ]
+
+
 def _beta(portfolio_returns: list[float], benchmark_returns: list[float]) -> float:
     covariance = np.cov(portfolio_returns, benchmark_returns, ddof=1)
     return float(covariance[0, 1] / covariance[1, 1])
@@ -82,10 +90,14 @@ def test_live_stateful_risk_calculate_reconciles_selected_metrics() -> None:
         risk_response.raise_for_status()
 
     series = upstream_body["series"]
-    portfolio_by_date = dict(extract_decimal_returns(series["portfolio_returns"]))
-    benchmark_by_date = dict(extract_decimal_returns(series["benchmark_returns"]))
+    upstream_portfolio_returns = extract_decimal_returns(series["portfolio_returns"])
+    upstream_benchmark_returns = extract_decimal_returns(series["benchmark_returns"])
+    portfolio_by_date = dict(_business_day_returns(upstream_portfolio_returns))
+    benchmark_by_date = dict(_business_day_returns(upstream_benchmark_returns))
     aligned_dates = sorted(set(portfolio_by_date) & set(benchmark_by_date))
     assert aligned_dates, "expected live upstream benchmark returns aligned with portfolio returns"
+    assert all(date.fromisoformat(date_value).weekday() < 5 for date_value in portfolio_by_date)
+    assert len(portfolio_by_date) <= len(upstream_portfolio_returns)
 
     portfolio_returns = [portfolio_by_date[date_value] for date_value in aligned_dates]
     benchmark_returns = [benchmark_by_date[date_value] for date_value in aligned_dates]

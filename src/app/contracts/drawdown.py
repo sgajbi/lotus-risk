@@ -694,8 +694,8 @@ class DrawdownResponse(BaseModel):
                         "YTD": {
                             "start_date": "2026-01-01",
                             "end_date": "2026-03-31",
-                            "portfolio_observation_count": 90,
-                            "benchmark_observation_count": 90,
+                            "portfolio_observation_count": 64,
+                            "benchmark_observation_count": 64,
                             "summary": {
                                 "max_drawdown": -0.084211,
                                 "max_drawdown_peak_date": "2026-01-11",
