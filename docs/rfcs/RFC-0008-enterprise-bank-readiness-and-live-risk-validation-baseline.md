@@ -495,7 +495,8 @@ Current branch evidence includes:
 6. OpenAPI examples now reflect 64 trading-day observations,
 7. VaR methodology documentation now describes signed return thresholds,
 8. active-risk issuer limitation is documented as intentional,
-9. Slice 1 now centralizes upstream error-detail extraction and documents deterministic failure categories for lotus-core and lotus-performance.
+9. Slice 1 now centralizes upstream error-detail extraction and documents deterministic failure categories for lotus-core and lotus-performance,
+10. Slice 2 now documents canonical local upstream URLs and tests live-characterization defaults against service port ownership.
 
 This evidence proves the current analytics baseline. It does not yet close the future enterprise-readiness slices.
 

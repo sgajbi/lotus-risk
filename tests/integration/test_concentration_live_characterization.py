@@ -20,7 +20,10 @@ pytestmark = pytest.mark.skipif(
 
 
 RISK_BASE_URL = os.getenv("LOTUS_RISK_BASE_URL", "http://localhost:8130")
-CORE_BASE_URL = os.getenv("LOTUS_CORE_QUERY_BASE_URL", "http://localhost:8202")
+CORE_BASE_URL = os.getenv(
+    "LOTUS_CORE_BASE_URL",
+    os.getenv("LOTUS_CORE_QUERY_BASE_URL", "http://localhost:8202"),
+)
 PORTFOLIO_ID = os.getenv("LOTUS_RISK_LIVE_PORTFOLIO_ID", "PB_SG_GLOBAL_BAL_001")
 AS_OF_DATE = os.getenv("LOTUS_RISK_LIVE_AS_OF_DATE", "2026-03-31")
 
