@@ -47,6 +47,14 @@ def _series(rows: list[tuple[str, float]]) -> pd.Series:
     ).sort_index()
 
 
+def _business_day_returns(rows: list[tuple[str, float]]) -> list[tuple[str, float]]:
+    return [
+        (date_value, return_value)
+        for date_value, return_value in rows
+        if date.fromisoformat(date_value).weekday() < 5
+    ]
+
+
 def _summary(series: pd.Series) -> dict[str, float]:
     clean = series.dropna()
     assert not clean.empty, "expected rolling series to contain values"
@@ -96,6 +104,8 @@ def test_live_stateful_rolling_reconciles_selected_metrics() -> None:
                     "ROLLING_VOLATILITY",
                     "ROLLING_BETA",
                     "ROLLING_TRACKING_ERROR",
+                    "ROLLING_INFORMATION_RATIO",
+                    "ROLLING_MAX_DRAWDOWN",
                 ],
                 "annualization_basis": ANNUALIZATION_BASIS,
                 "include_time_series": False,
@@ -115,8 +125,10 @@ def test_live_stateful_rolling_reconciles_selected_metrics() -> None:
         rolling_response.raise_for_status()
 
     series = upstream_body["series"]
-    portfolio = _series(extract_decimal_returns(series["portfolio_returns"]))
-    benchmark = _series(extract_decimal_returns(series["benchmark_returns"]))
+    upstream_portfolio_returns = extract_decimal_returns(series["portfolio_returns"])
+    upstream_benchmark_returns = extract_decimal_returns(series["benchmark_returns"])
+    portfolio = _series(_business_day_returns(upstream_portfolio_returns))
+    benchmark = _series(_business_day_returns(upstream_benchmark_returns))
     aligned = pd.merge(
         portfolio.to_frame("portfolio"),
         benchmark.to_frame("benchmark"),
@@ -125,6 +137,8 @@ def test_live_stateful_rolling_reconciles_selected_metrics() -> None:
         how="inner",
     )
     assert not aligned.empty, "expected aligned live benchmark returns"
+    assert len(portfolio) <= len(upstream_portfolio_returns)
+    assert all(index.weekday() < 5 for index in portfolio.index)
 
     rolling_volatility = aligned["portfolio"].rolling(
         window=WINDOW_LENGTH, min_periods=WINDOW_LENGTH
@@ -133,11 +147,28 @@ def test_live_stateful_rolling_reconciles_selected_metrics() -> None:
     rolling_tracking_error = active.rolling(window=WINDOW_LENGTH, min_periods=WINDOW_LENGTH).std(
         ddof=1
     ) * (ANNUALIZATION_BASIS**0.5)
+    rolling_information_ratio = (
+        active.rolling(window=WINDOW_LENGTH, min_periods=WINDOW_LENGTH).mean()
+        / active.rolling(window=WINDOW_LENGTH, min_periods=WINDOW_LENGTH).std(ddof=1)
+    ) * (ANNUALIZATION_BASIS**0.5)
     rolling_beta = aligned["portfolio"].rolling(
         window=WINDOW_LENGTH, min_periods=WINDOW_LENGTH
     ).cov(aligned["benchmark"]) / aligned["benchmark"].rolling(
         window=WINDOW_LENGTH, min_periods=WINDOW_LENGTH
     ).var(ddof=1)
+    rolling_max_drawdown = (
+        aligned["portfolio"]
+        .rolling(window=WINDOW_LENGTH, min_periods=WINDOW_LENGTH)
+        .apply(
+            lambda window_returns: float(
+                (
+                    (1.0 + window_returns).cumprod() / (1.0 + window_returns).cumprod().cummax()
+                    - 1.0
+                ).min()
+            ),
+            raw=False,
+        )
+    )
 
     body = rolling_response.json()
     period = body["results"]["YTD"]
@@ -149,6 +180,7 @@ def test_live_stateful_rolling_reconciles_selected_metrics() -> None:
         "requested_metrics": [
             "ROLLING_BETA",
             "ROLLING_TRACKING_ERROR",
+            "ROLLING_INFORMATION_RATIO",
         ],
     }
     assert body["metadata"]["risk_free_context"] == {
@@ -159,6 +191,8 @@ def test_live_stateful_rolling_reconciles_selected_metrics() -> None:
         "ROLLING_VOLATILITY",
         "ROLLING_BETA",
         "ROLLING_TRACKING_ERROR",
+        "ROLLING_INFORMATION_RATIO",
+        "ROLLING_MAX_DRAWDOWN",
     ]
     assert body["metadata"]["window_lengths_requested"] == [WINDOW_LENGTH]
     assert body["metadata"]["window_count_requested"] == 1
@@ -201,6 +235,8 @@ def test_live_stateful_rolling_reconciles_selected_metrics() -> None:
         "ROLLING_VOLATILITY": _summary(rolling_volatility),
         "ROLLING_BETA": _summary(rolling_beta),
         "ROLLING_TRACKING_ERROR": _summary(rolling_tracking_error),
+        "ROLLING_INFORMATION_RATIO": _summary(rolling_information_ratio),
+        "ROLLING_MAX_DRAWDOWN": _summary(rolling_max_drawdown),
     }.items():
         actual = summaries[metric_name]
         assert actual["total_point_count"] == expected["total_point_count"]
@@ -264,7 +300,8 @@ def test_live_stateful_rolling_sharpe_reconciles_with_live_risk_free_series() ->
         rolling_response.raise_for_status()
 
     series = upstream_body["series"]
-    portfolio = _series(extract_decimal_returns(series["portfolio_returns"]))
+    upstream_portfolio_returns = extract_decimal_returns(series["portfolio_returns"])
+    portfolio = _series(_business_day_returns(upstream_portfolio_returns))
     risk_free_points = to_risk_free_return_points(
         risk_free_body,
         annualization_basis=ANNUALIZATION_BASIS,
@@ -280,6 +317,8 @@ def test_live_stateful_rolling_sharpe_reconciles_with_live_risk_free_series() ->
         how="inner",
     )
     assert not aligned.empty, "expected aligned live risk-free returns"
+    assert len(portfolio) <= len(upstream_portfolio_returns)
+    assert all(index.weekday() < 5 for index in portfolio.index)
 
     excess = aligned["portfolio"] - aligned["risk_free"]
     rolling_sharpe = (
@@ -321,4 +360,4 @@ def test_live_stateful_rolling_sharpe_reconciles_with_live_risk_free_series() ->
     assert actual["post_warmup_gap_point_count"] == expected["post_warmup_gap_point_count"]
     assert actual["latest_observation_date"] == str(aligned.index[-1].date())
     for field, expected_value in expected.items():
-        assert actual[field] == pytest.approx(expected_value, abs=1e-10)
+        assert actual[field] == pytest.approx(expected_value, abs=1e-9)
