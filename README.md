@@ -29,6 +29,7 @@ Local Docker runtime notes:
 - For local Docker Compose runs against host-exposed services, `docker-compose.yml` explicitly points `LOTUS_CORE_BASE_URL` to `http://core-query.dev.lotus:8202` and `LOTUS_PERFORMANCE_BASE_URL` to `http://performance.dev.lotus:8002`, with `extra_hosts` mapping those canonical names back to the local host gateway.
 - For direct host-based live validation, use `http://localhost:8130` for `lotus-risk`, `http://localhost:8002` for lotus-performance analytics, and `http://localhost:8202` for lotus-core query.
 - See `docs/operations/canonical-local-upstream-urls.md` before overriding upstream URLs; pointing `LOTUS_PERFORMANCE_BASE_URL` at a lotus-core port will produce misleading `404` failures.
+- Live risk validation defaults to canonical portfolio `PB_SG_GLOBAL_BAL_001`; see `docs/operations/live-risk-validation-matrix.md` before claiming broader enterprise portfolio-archetype coverage.
 - Copy `.env.example` to `.env` only when you need to override those local defaults.
 - Stateful lotus-performance integration may complete asynchronously; local defaults use `LOTUS_PERFORMANCE_ASYNC_POLL_INTERVAL_SECONDS=1` and `LOTUS_PERFORMANCE_ASYNC_MAX_POLLS=60`.
 

@@ -8,6 +8,7 @@ from datetime import date
 import httpx
 import pytest
 
+from tests.support.live_portfolio_matrix import live_as_of_date, live_portfolio_id
 from tests.support.live_returns_series import extract_decimal_returns, fetch_live_returns_series
 
 
@@ -23,8 +24,8 @@ pytestmark = pytest.mark.skipif(
 
 RISK_BASE_URL = os.getenv("LOTUS_RISK_BASE_URL", "http://localhost:8130")
 PERFORMANCE_BASE_URL = os.getenv("LOTUS_PERFORMANCE_BASE_URL", "http://localhost:8002")
-PORTFOLIO_ID = os.getenv("LOTUS_RISK_LIVE_PORTFOLIO_ID", "PB_SG_GLOBAL_BAL_001")
-AS_OF_DATE = os.getenv("LOTUS_RISK_LIVE_AS_OF_DATE", "2026-03-31")
+PORTFOLIO_ID = live_portfolio_id()
+AS_OF_DATE = live_as_of_date()
 
 
 def _wealth_drawdown(return_series: Sequence[float]) -> list[float]:

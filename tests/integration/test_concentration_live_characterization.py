@@ -8,6 +8,8 @@ from typing import Any
 import httpx
 import pytest
 
+from tests.support.live_portfolio_matrix import live_as_of_date, live_portfolio_id
+
 
 def _live_enabled() -> bool:
     return os.getenv("LOTUS_RISK_RUN_LIVE_CONCENTRATION") == "1"
@@ -24,8 +26,8 @@ CORE_BASE_URL = os.getenv(
     "LOTUS_CORE_BASE_URL",
     os.getenv("LOTUS_CORE_QUERY_BASE_URL", "http://localhost:8202"),
 )
-PORTFOLIO_ID = os.getenv("LOTUS_RISK_LIVE_PORTFOLIO_ID", "PB_SG_GLOBAL_BAL_001")
-AS_OF_DATE = os.getenv("LOTUS_RISK_LIVE_AS_OF_DATE", "2026-03-31")
+PORTFOLIO_ID = live_portfolio_id()
+AS_OF_DATE = live_as_of_date()
 
 
 def _round(value: float) -> float:

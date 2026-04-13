@@ -61,6 +61,10 @@ This package documents the current `lotus-risk` API surface and evaluates it aga
 - Legacy endpoint `/analytics/workbench/risk-proxy` is removed from runtime surface.
 - The current service-wide readiness view is maintained in the endpoint matrix and reflects the
   current gold-standard status by endpoint and mode.
+- Live validation breadth is governed by `docs/operations/live-risk-validation-matrix.md`. The
+  default live baseline is canonical portfolio `PB_SG_GLOBAL_BAL_001`; additional enterprise
+  archetypes require real seeded portfolio IDs and endpoint evidence before they can be counted as
+  validated.
 
 See per-endpoint detail:
 

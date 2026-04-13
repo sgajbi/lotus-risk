@@ -52,6 +52,15 @@ Current handling is intentional and explicit:
   - supported stateful `SECTOR` active-risk works
   - upstream benchmark exposure context rejects `ISSUER`
 
+## Live Validation Breadth
+
+The default live validation baseline covers canonical portfolio `PB_SG_GLOBAL_BAL_001`, which is a
+global balanced private-banking portfolio.
+
+Enterprise portfolio-archetype coverage is governed by
+`docs/operations/live-risk-validation-matrix.md`. Additional archetypes must have real seeded
+portfolio IDs and endpoint-specific evidence before they are counted as validated.
+
 ## Related Detail Docs
 
 - [integration-capabilities.md](C:\Users\Sandeep\projects\lotus-risk\docs\domain-apis\integration-capabilities.md)
