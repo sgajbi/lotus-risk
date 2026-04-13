@@ -27,6 +27,8 @@ PERFORMANCE_BASE_URL = os.getenv("LOTUS_PERFORMANCE_BASE_URL", "http://localhost
 PORTFOLIO_ID = os.getenv("LOTUS_RISK_LIVE_PORTFOLIO_ID", "PB_SG_GLOBAL_BAL_001")
 AS_OF_DATE = os.getenv("LOTUS_RISK_LIVE_AS_OF_DATE", "2026-03-31")
 ANNUALIZATION_FACTOR = 252
+SORTINO_MAR_ANNUAL_RATE = 0.05
+VAR_CONFIDENCE = 0.95
 
 
 def _annualized_volatility(returns: list[float]) -> float:
@@ -58,6 +60,34 @@ def _information_ratio(portfolio_returns: list[float], benchmark_returns: list[f
     )
 
 
+def _annual_to_periodic(rate: float) -> float:
+    return float((1.0 + rate) ** (1.0 / ANNUALIZATION_FACTOR) - 1.0)
+
+
+def _sortino(
+    portfolio_returns: list[float], *, mar_annual_rate: float
+) -> tuple[float, int, float, float]:
+    periodic_mar = _annual_to_periodic(mar_annual_rate)
+    returns = np.array(portfolio_returns)
+    downside = returns - periodic_mar
+    downside = downside[downside < 0]
+    assert len(downside) > 0, "live Sortino characterization requires downside observations"
+    downside_deviation = float(np.sqrt(np.mean(downside**2)))
+    excess_return = float(np.mean(returns) - periodic_mar)
+    sortino = float((excess_return / downside_deviation) * np.sqrt(ANNUALIZATION_FACTOR))
+    return sortino, int(len(downside)), downside_deviation, excess_return
+
+
+def _historical_var(
+    portfolio_returns: list[float], *, confidence: float
+) -> tuple[float, float, int]:
+    percentage_point_returns = np.array(portfolio_returns) * 100.0
+    base_var = float(np.percentile(percentage_point_returns, (1.0 - confidence) * 100.0))
+    tail = percentage_point_returns[percentage_point_returns <= base_var]
+    expected_shortfall = float(np.mean(tail)) if len(tail) > 0 else base_var
+    return base_var, expected_shortfall, int(len(tail))
+
+
 def test_live_stateful_risk_calculate_reconciles_selected_metrics() -> None:
     returns_payload = build_stateful_returns_series_request(
         portfolio_id=PORTFOLIO_ID,
@@ -76,8 +106,24 @@ def test_live_stateful_risk_calculate_reconciles_selected_metrics() -> None:
             "portfolio_id": PORTFOLIO_ID,
             "as_of_date": AS_OF_DATE,
             "periods": [{"type": "YTD", "name": "YTD"}],
-            "metrics": ["VOLATILITY", "BETA", "TRACKING_ERROR", "INFORMATION_RATIO"],
-            "options": {"frequency": "DAILY"},
+            "metrics": [
+                "VOLATILITY",
+                "BETA",
+                "TRACKING_ERROR",
+                "INFORMATION_RATIO",
+                "SORTINO",
+                "VAR",
+            ],
+            "options": {
+                "frequency": "DAILY",
+                "mar_annual_rate": SORTINO_MAR_ANNUAL_RATE,
+                "var": {
+                    "method": "HISTORICAL",
+                    "confidence": VAR_CONFIDENCE,
+                    "horizon_days": 1,
+                    "include_expected_shortfall": True,
+                },
+            },
         },
     }
 
@@ -126,3 +172,31 @@ def test_live_stateful_risk_calculate_reconciles_selected_metrics() -> None:
     assert metrics["INFORMATION_RATIO"]["value"] == pytest.approx(
         _information_ratio(portfolio_returns, benchmark_returns), abs=1e-12
     )
+
+    sortino, downside_count, downside_deviation, excess_return = _sortino(
+        portfolio_returns,
+        mar_annual_rate=SORTINO_MAR_ANNUAL_RATE,
+    )
+    sortino_metric = metrics["SORTINO"]
+    assert sortino_metric["value"] == pytest.approx(sortino, abs=1e-12)
+    assert sortino_metric["details"]["periodic_mar"] == pytest.approx(
+        _annual_to_periodic(SORTINO_MAR_ANNUAL_RATE), abs=1e-15
+    )
+    assert sortino_metric["details"]["downside_observation_count"] == downside_count
+    assert sortino_metric["details"]["downside_deviation"] == pytest.approx(
+        downside_deviation, abs=1e-15
+    )
+    assert sortino_metric["details"]["excess_return"] == pytest.approx(excess_return, abs=1e-15)
+
+    historical_var, expected_shortfall, tail_count = _historical_var(
+        portfolio_returns, confidence=VAR_CONFIDENCE
+    )
+    var_metric = metrics["VAR"]
+    assert var_metric["value"] == pytest.approx(historical_var, abs=1e-12)
+    assert var_metric["details"]["method"] == "HISTORICAL"
+    assert var_metric["details"]["confidence"] == VAR_CONFIDENCE
+    assert var_metric["details"]["base_var"] == pytest.approx(historical_var, abs=1e-12)
+    assert var_metric["details"]["expected_shortfall"] == pytest.approx(
+        expected_shortfall, abs=1e-12
+    )
+    assert var_metric["details"]["tail_observation_count"] == tail_count
