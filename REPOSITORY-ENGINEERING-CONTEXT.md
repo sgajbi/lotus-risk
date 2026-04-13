@@ -30,7 +30,8 @@ Current repository posture:
 1. `lotus-risk` is the domain authority for risk analytics in the ecosystem,
 2. the service supports the current Workbench risk workspace through gateway-backed contracts,
 3. the CI contract is explicit and strong, with no-alias, vocabulary, OpenAPI, test-pyramid, security, coverage, and Docker enforcement,
-4. current work often involves balancing analytical correctness, contract quality, and front-office usability.
+4. RFC-0008 establishes the current enterprise-readiness baseline: supported risk analytics are credible for the canonical private-banking portfolio, while unrestricted enterprise-bank approval still requires downstream proof and broader seeded portfolio archetype coverage,
+5. current work often involves balancing analytical correctness, contract quality, and front-office usability.
 
 ## Architecture And Module Map
 
@@ -58,7 +59,14 @@ Boundary rules:
 1. risk analytics authority stays here,
 2. gateway and UI should not duplicate risk logic or narrative improperly,
 3. monetary-float governance applies only where money-bearing identifiers require it, not generic analytics terms,
-4. supportability and evidence posture should remain truthful and data-backed.
+4. supportability and evidence posture should remain truthful and data-backed,
+5. downstream consumers must preserve signed VaR semantics, attribution reconciliation fields, issuer active-risk gating, concentration-only simulation support, and audit lineage metadata as documented in `docs/domain-apis/risk-product-surface-alignment.md`.
+
+Canonical direct local validation ports:
+
+1. `lotus-risk`: `http://localhost:8130`
+2. `lotus-performance`: `http://localhost:8002`
+3. `lotus-core` query APIs: `http://localhost:8202`
 
 ## Repo-Native Commands
 
@@ -100,14 +108,17 @@ Most relevant current governance:
 2. `../lotus-platform/rfcs/RFC-0067-centralized-api-vocabulary-inventory-and-openapi-documentation-governance.md`
 3. `../lotus-platform/rfcs/RFC-0072-platform-wide-multi-lane-ci-validation-and-release-governance.md`
 4. `../lotus-platform/rfcs/RFC-0073-lotus-ecosystem-engineering-context-and-agent-guidance-system.md`
-5. `docs/standards/`
+5. `docs/rfcs/RFC-0008-enterprise-bank-readiness-and-live-risk-validation-baseline.md`
+6. `docs/standards/`
 
 ## Known Constraints And Implementation Notes
 
 1. this repo sits close to front-office-facing risk workflows, so analytical contract drift is visible quickly in the UI,
 2. over-broad governance rules can damage analytics work if they are not scoped carefully,
 3. risk evidence and supportability posture must remain data-backed, not decorative or speculative,
-4. when risk review flows change in Workbench or Gateway, this repo’s context should be checked for alignment.
+4. when risk review flows change in Workbench or Gateway, this repo’s context should be checked for alignment,
+5. live validation defaults to `PB_SG_GLOBAL_BAL_001`; do not claim broader enterprise portfolio-archetype coverage until `docs/operations/live-risk-validation-matrix.md` has real seeded portfolio IDs and evidence,
+6. stateful historical attribution `ACTIVE_RISK + ISSUER` is intentionally gated until benchmark issuer exposure semantics are approved.
 
 ## Context Maintenance Rule
 

@@ -1,6 +1,6 @@
 # RFC-0008: Enterprise Bank Readiness and Live Risk Validation Baseline
 
-- Status: Proposed
+- Status: Implemented on feature branch; unrestricted enterprise-bank production approval remains conditional
 - Date: 2026-04-13
 - Owners: lotus-risk
 - Requires Approval From: lotus-risk maintainers, lotus-platform maintainers
@@ -24,7 +24,7 @@
 10. historical risk attribution,
 11. rolling risk.
 
-This RFC defines the final enterprise-readiness program required before `lotus-risk` should be called enterprise-bank production-approved.
+This RFC defines the final enterprise-readiness program required before `lotus-risk` should be called enterprise-bank production-approved. The `lotus-risk`-owned implementation slices are now complete on the feature branch; unrestricted approval still depends on green merge governance, downstream product proof, and broader seeded portfolio archetype evidence.
 
 The central decision is conservative:
 
@@ -478,6 +478,26 @@ Acceptance criteria:
 4. GitHub checks are green or failures are fixed forward,
 5. final report lists validation commands, CI status, remaining limitations, and branch hygiene outcome.
 
+Implementation evidence:
+
+1. `REPOSITORY-ENGINEERING-CONTEXT.md` now records RFC-0008 posture, canonical direct local service ports, product-surface preservation rules, live validation breadth limits, and the intentional issuer active-risk gate.
+2. `docs/standards/enterprise-readiness.md` now reflects the RFC-0008 baseline, signed-threshold VaR semantics, attribution reconciliation expectations, observability posture, and product-surface constraints.
+3. `README.md` now links the product-surface alignment contract from the local runtime notes.
+4. This RFC now records the skills/guidance assessment below and the final implementation evidence.
+5. Branch hygiene is tracked through small commits and GitHub Remote Feature Lane monitoring; final PR/merge/delete/sync steps remain delivery workflow actions after this branch is accepted.
+
+## Skills and Guidance Assessment
+
+The final slice reviewed whether shared Lotus skills or platform context should change. The outcome is intentionally conservative because this branch is scoped to `lotus-risk` only.
+
+| Area | Assessment | Action |
+| --- | --- | --- |
+| `lotus-backend-delivery-governance` trading-day validation | Trading-day annualization is important for risk/performance analytics, but the durable rule is currently method-specific and already documented in `lotus-risk` methodology and tests. | No shared skill edit in this repo-only branch. Reassess centrally if the same issue recurs across `lotus-performance` or other analytics services. |
+| `lotus-methodology-doc-v3` signed-threshold guidance | Signed VaR and expected-shortfall presentation is a reusable methodology-doc concept. | Documented locally in `docs/methodologies/metrics/risk-var.md`, `risk-calculate.md`, and product-surface alignment. Recommend future central skill enhancement, but do not edit skill files from this repo branch. |
+| `lotus-qa-platform-validator` risk live-validation matrix pattern | The multi-portfolio validation matrix is useful beyond this RFC once additional seeded portfolios exist. | Documented locally in `docs/operations/live-risk-validation-matrix.md`. No central automation change until seeded archetype IDs are available. |
+| Central context canonical direct ports | Direct service ports are useful for risk live validation, but they are repository-local unless platform standardizes all direct live-characterization ports. | Added to `REPOSITORY-ENGINEERING-CONTEXT.md`; no central context update from this repo-only slice. |
+| Agent effectiveness | Future agents need risk-specific truth more than new generic guidance. | Updated repo-local context and product-surface contract; no skill removal needed. |
+
 ## Validation Strategy
 
 Use both local repo-native checks and GitHub asynchronous checks.
@@ -513,13 +533,15 @@ Current branch evidence includes:
 10. Slice 2 now documents canonical local upstream URLs and tests live-characterization defaults against service port ownership,
 11. Slice 3 now centralizes live portfolio identity and matrix parsing in `tests/support/live_portfolio_matrix.py`, documents the live risk validation matrix, and records the truthful current breadth: canonical global balanced is validated by default while other enterprise archetypes remain pending seeded portfolio IDs,
 12. Slice 4 now adds common audit-lineage metadata to analytics responses: `lineage_version`, deterministic `request_fingerprint`, `source_services`, and upstream request fingerprints for directly orchestrated upstream calls,
-13. Slice 5 now adds first-class Prometheus metrics for endpoint execution mode/outcome/duration and direct upstream dependency operation/outcome/failure-category/duration.
+13. Slice 5 now adds first-class Prometheus metrics for endpoint execution mode/outcome/duration and direct upstream dependency operation/outcome/failure-category/duration,
+14. Slice 6 now adds the risk-owned downstream product-surface contract and publishes signed VaR, attribution residual, issuer active-risk, and concentration-only simulation guidance through `/integration/capabilities`,
+15. Slice 7 now updates repository context, enterprise readiness docs, README links, and records the skills/guidance assessment.
 
-This evidence proves the current analytics baseline. It does not yet close the future enterprise-readiness slices.
+This evidence proves the current analytics baseline and completes the `lotus-risk`-owned RFC-0008 implementation slices. It does not by itself approve unrestricted enterprise-bank production rollout because downstream consumer proof, broader seeded portfolio validation, and merge governance remain required.
 
 ## Acceptance Criteria for RFC Completion
 
-This RFC is complete only when:
+This RFC is complete for the `lotus-risk`-owned feature-branch implementation when:
 
 1. all seven implementation slices are complete,
 2. the intentional `ACTIVE_RISK + ISSUER` limitation remains documented unless superseded by a future approved issuer-exposure contract,
@@ -528,6 +550,8 @@ This RFC is complete only when:
 5. live validation matrix evidence is current,
 6. docs, context, and skills/guidance assessment are complete,
 7. branch and PR hygiene are complete.
+
+The branch implementation now satisfies items 1, 2, 3, 5, and 6 locally. Items 4 and 7 are completed only after GitHub checks, PR review/merge, branch deletion, and main synchronization are done.
 
 ## Risks and Mitigations
 
@@ -553,8 +577,8 @@ This RFC is complete only when:
 
 `lotus-risk` is analytically credible for supported private-banking risk workflows and has strong canonical live-data evidence.
 
-It is not yet enterprise-bank production-approved.
+The RFC-0008 `lotus-risk`-owned implementation is complete on the feature branch, but the service is not yet unrestricted enterprise-bank production-approved.
 
-The remaining path is clear: dependency resilience, canonical URL governance, multi-portfolio live validation, audit lineage, observability proof, gateway/product alignment, and final documentation/context/branch hygiene.
+The remaining approval path is explicit: green GitHub merge governance, downstream gateway/Workbench proof against the product-surface contract, broader seeded live portfolio archetype evidence, and final branch hygiene.
 
 The `ACTIVE_RISK + ISSUER` limitation remains intentional and must stay documented until benchmark issuer exposure semantics are explicitly defined and approved.
