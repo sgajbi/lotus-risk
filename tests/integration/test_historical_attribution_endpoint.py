@@ -6,6 +6,7 @@ from tests.support.app_runtime import override_app_runtime
 from tests.support.historical_attribution_fakes import (
     RecordingHistoricalAttributionCoreClient,
     build_benchmark_exposure_context_response,
+    build_sector_position_timeseries_rows,
     build_stateful_attribution_returns_client,
 )
 
@@ -276,6 +277,55 @@ def test_historical_attribution_stateful_total_risk_happy_path() -> None:
             "correlation_id": "corr-attr-stateful",
         }
     ]
+
+
+def test_historical_attribution_stateful_total_risk_aligns_exposure_to_return_dates() -> None:
+    performance_client = build_stateful_attribution_returns_client()
+    core_rows = [
+        *build_sector_position_timeseries_rows(),
+        {
+            "security_id": "SEC_A",
+            "valuation_date": "2026-01-03",
+            "dimensions": {"sector": "TECH", "asset_class": "EQUITY"},
+            "ending_market_value_portfolio_currency": "70",
+        },
+        {
+            "security_id": "SEC_B",
+            "valuation_date": "2026-01-03",
+            "dimensions": {"sector": "HEALTH", "asset_class": "EQUITY"},
+            "ending_market_value_portfolio_currency": "30",
+        },
+    ]
+    core_client = RecordingHistoricalAttributionCoreClient(rows=core_rows)
+    with override_app_runtime(
+        lotus_performance_client=performance_client,
+        lotus_core_client=core_client,
+    ):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/historical-attribution",
+            headers={"X-Correlation-Id": "corr-attr-stateful"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-06",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "attribution_options": {
+                        "attribution_types": ["TOTAL_RISK"],
+                        "metrics": ["VOLATILITY"],
+                        "grouping_dimensions": ["SECTOR"],
+                    },
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    attribution_set = response.json()["results"]["YTD"]["attribution_sets"][0]
+    assert attribution_set["attribution_type"] == "TOTAL_RISK"
+    assert attribution_set["metric"] == "VOLATILITY"
+    assert attribution_set["contributors"]
+    assert attribution_set["quality_flags"] == []
     assert core_client.position_calls == [
         {
             "portfolio_id": "DEMO_DPM_EUR_001",
