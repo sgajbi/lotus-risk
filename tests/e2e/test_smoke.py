@@ -41,8 +41,8 @@ def _drawdown_payload() -> dict[str, object]:
             "periods": [{"type": "YTD", "name": "YTD"}],
             "returns": [
                 {"date": "2026-01-02", "value": -1.2},
-                {"date": "2026-01-03", "value": 0.8},
-                {"date": "2026-01-04", "value": -0.4},
+                {"date": "2026-01-05", "value": 0.8},
+                {"date": "2026-01-06", "value": -0.4},
                 {"date": "2026-01-05", "value": 1.1},
             ],
         },
@@ -57,20 +57,20 @@ def _rolling_payload() -> dict[str, object]:
             "periods": [{"type": "YTD", "name": "YTD"}],
             "returns": [
                 {"date": "2026-01-02", "value": 1.0},
-                {"date": "2026-01-03", "value": -2.0},
-                {"date": "2026-01-04", "value": 0.5},
+                {"date": "2026-01-05", "value": -2.0},
+                {"date": "2026-01-06", "value": 0.5},
                 {"date": "2026-01-05", "value": 1.2},
             ],
             "benchmark_returns": [
                 {"date": "2026-01-02", "value": 0.8},
-                {"date": "2026-01-03", "value": -1.5},
-                {"date": "2026-01-04", "value": 0.4},
+                {"date": "2026-01-05", "value": -1.5},
+                {"date": "2026-01-06", "value": 0.4},
                 {"date": "2026-01-05", "value": 1.0},
             ],
             "risk_free_returns": [
                 {"date": "2026-01-02", "value": 0.01},
-                {"date": "2026-01-03", "value": 0.01},
-                {"date": "2026-01-04", "value": 0.01},
+                {"date": "2026-01-05", "value": 0.01},
+                {"date": "2026-01-06", "value": 0.01},
                 {"date": "2026-01-05", "value": 0.01},
             ],
             "rolling_options": {
@@ -89,15 +89,15 @@ def _historical_attribution_payload() -> dict[str, object]:
             "periods": [{"type": "YTD", "name": "YTD"}],
             "returns": [
                 {"date": "2026-01-02", "value": 1.0},
-                {"date": "2026-01-03", "value": -0.4},
-                {"date": "2026-01-04", "value": 0.3},
+                {"date": "2026-01-05", "value": -0.4},
+                {"date": "2026-01-06", "value": 0.3},
                 {"date": "2026-01-05", "value": 0.6},
                 {"date": "2026-01-06", "value": -0.2},
             ],
             "benchmark_returns": [
                 {"date": "2026-01-02", "value": 0.8},
-                {"date": "2026-01-03", "value": -0.3},
-                {"date": "2026-01-04", "value": 0.2},
+                {"date": "2026-01-05", "value": -0.3},
+                {"date": "2026-01-06", "value": 0.2},
                 {"date": "2026-01-05", "value": 0.4},
                 {"date": "2026-01-06", "value": -0.1},
             ],
@@ -115,13 +115,13 @@ def _historical_attribution_payload() -> dict[str, object]:
                     "weight": 0.45,
                 },
                 {
-                    "date": "2026-01-03",
+                    "date": "2026-01-05",
                     "grouping_dimension": "SECTOR",
                     "group_key": "SECTOR_TECH",
                     "weight": 0.50,
                 },
                 {
-                    "date": "2026-01-03",
+                    "date": "2026-01-05",
                     "grouping_dimension": "SECTOR",
                     "group_key": "SECTOR_HEALTH",
                     "weight": 0.50,
@@ -141,13 +141,13 @@ def _historical_attribution_payload() -> dict[str, object]:
                     "weight": 0.52,
                 },
                 {
-                    "date": "2026-01-03",
+                    "date": "2026-01-05",
                     "grouping_dimension": "SECTOR",
                     "group_key": "SECTOR_TECH",
                     "weight": 0.47,
                 },
                 {
-                    "date": "2026-01-03",
+                    "date": "2026-01-05",
                     "grouping_dimension": "SECTOR",
                     "group_key": "SECTOR_HEALTH",
                     "weight": 0.53,
@@ -199,6 +199,43 @@ def test_integration_capabilities_endpoint_exposes_support_matrix() -> None:
     )
 
 
+def test_e2e_capabilities_expose_product_surface_safety_notes() -> None:
+    client = TestClient(app)
+    response = client.get("/integration/capabilities")
+    assert response.status_code == 200
+
+    workflow_by_key = {
+        workflow["workflow_key"]: workflow for workflow in response.json()["workflows"]
+    }
+
+    assert (
+        "VaR and expected shortfall are signed return-threshold metrics"
+        in workflow_by_key["risk_snapshot"]["notes"]
+    )
+    assert (
+        "attribution residual and reconciled_sum must be preserved with contributors"
+        in workflow_by_key["historical_risk_attribution"]["notes"]
+    )
+    assert (
+        "simulation is supported only for concentration risk"
+        in workflow_by_key["concentration_risk"]["notes"]
+    )
+
+
+def test_e2e_non_concentration_endpoints_reject_simulation_mode() -> None:
+    client = TestClient(app)
+
+    for endpoint in (
+        "/analytics/risk/calculate",
+        "/analytics/risk/drawdown",
+        "/analytics/risk/rolling-metrics",
+        "/analytics/risk/historical-attribution",
+    ):
+        response = client.post(endpoint, json={"input_mode": "simulation"})
+        assert response.status_code == 422, endpoint
+        assert response.json()["error"]["code"] == "INVALID_REQUEST"
+
+
 def test_e2e_risk_calculate_happy_path() -> None:
     client = TestClient(app)
     response = client.post("/analytics/risk/calculate", json=_risk_payload())
@@ -225,7 +262,7 @@ def test_e2e_risk_calculate_stateful_mode() -> None:
                 "input_mode": "stateful",
                 "stateful_input": {
                     "portfolio_id": "DEMO_DPM_EUR_001",
-                    "as_of_date": "2026-01-04",
+                    "as_of_date": "2026-01-06",
                     "periods": [{"type": "YTD", "name": "YTD"}],
                     "metrics": ["VOLATILITY"],
                 },
@@ -278,6 +315,24 @@ def test_e2e_historical_attribution_stateless_happy_path() -> None:
     body = response.json()
     assert body["input_mode"] == "stateless"
     assert "YTD" in body["results"]
+
+
+def test_e2e_historical_attribution_preserves_reconciliation_fields() -> None:
+    client = TestClient(app)
+    response = client.post(
+        "/analytics/risk/historical-attribution",
+        json=_historical_attribution_payload(),
+    )
+    assert response.status_code == 200
+
+    body = response.json()
+    attribution_sets = body["results"]["YTD"]["attribution_sets"]
+    assert attribution_sets
+    for attribution_set in attribution_sets:
+        assert "total_value" in attribution_set
+        assert "reconciled_sum" in attribution_set
+        assert "residual" in attribution_set
+        assert "contributors" in attribution_set
 
 
 def test_e2e_concentration_stateless_payload() -> None:
@@ -381,7 +436,7 @@ def test_e2e_rolling_metrics_stateful_mode() -> None:
                 "input_mode": "stateful",
                 "stateful_input": {
                     "portfolio_id": "DEMO_DPM_EUR_001",
-                    "as_of_date": "2026-01-04",
+                    "as_of_date": "2026-01-06",
                     "periods": [{"type": "YTD", "name": "YTD"}],
                     "rolling_options": {
                         "window_lengths": [2],
@@ -416,7 +471,7 @@ def test_e2e_drawdown_stateful_mode_with_benchmark() -> None:
                 "input_mode": "stateful",
                 "stateful_input": {
                     "portfolio_id": "DEMO_DPM_EUR_001",
-                    "as_of_date": "2026-01-04",
+                    "as_of_date": "2026-01-06",
                     "periods": [{"type": "YTD", "name": "YTD"}],
                     "benchmark_policy": {
                         "include_benchmark": True,
@@ -451,7 +506,7 @@ def test_e2e_historical_attribution_stateful_active_risk_mode() -> None:
                 "input_mode": "stateful",
                 "stateful_input": {
                     "portfolio_id": "DEMO_DPM_EUR_001",
-                    "as_of_date": "2026-01-04",
+                    "as_of_date": "2026-01-06",
                     "periods": [{"type": "YTD", "name": "YTD"}],
                     "attribution_options": {
                         "attribution_types": ["ACTIVE_RISK"],
@@ -480,7 +535,7 @@ def test_e2e_historical_attribution_stateful_issuer_is_rejected_at_boundary() ->
             "input_mode": "stateful",
             "stateful_input": {
                 "portfolio_id": "DEMO_DPM_EUR_001",
-                "as_of_date": "2026-01-04",
+                "as_of_date": "2026-01-06",
                 "periods": [{"type": "YTD", "name": "YTD"}],
                 "attribution_options": {
                     "attribution_types": ["ACTIVE_RISK"],

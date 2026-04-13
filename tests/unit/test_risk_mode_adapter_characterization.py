@@ -71,6 +71,12 @@ def test_calculate_risk_stateful_characterization() -> None:
     metrics = response.results["YTD"].metrics
     assert metrics["VOLATILITY"].value is not None
     assert metrics["VAR"].value is not None
+    assert response.metadata.source_services == ["lotus-risk", "lotus-performance"]
+    assert response.metadata.request_fingerprint is not None
+    assert response.metadata.request_fingerprint.startswith("sha256:")
+    assert list(response.metadata.upstream_request_fingerprints) == [
+        "lotus-performance:/integration/returns/series"
+    ]
 
 
 def test_calculate_risk_stateful_requires_series_payload() -> None:

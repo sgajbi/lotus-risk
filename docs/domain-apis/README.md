@@ -42,8 +42,11 @@ This package documents the current `lotus-risk` API surface and evaluates it aga
 ## Current Dependency Summary
 
 - Upstream dependencies (for live ecosystem usage):
-  - Data sourcing expected from `lotus-core` integration contracts for stateful/simulation patterns.
-  - Optional derived returns path through `lotus-performance` (already used by `lotus-report`) for risk-ready daily return series.
+  - `lotus-core` provides portfolio snapshots, simulation sessions, instrument enrichment,
+    position analytics history, issuer/instrument authority, and risk-free reference series.
+  - `lotus-performance` provides portfolio returns, benchmark returns, and supported
+    benchmark exposure context for performance-aligned risk attribution.
+  - Upstream failures are mapped to deterministic Lotus error codes and structured categories.
 - Downstream consumers:
   - `lotus-gateway`
   - `lotus-report`
@@ -58,6 +61,10 @@ This package documents the current `lotus-risk` API surface and evaluates it aga
 - Legacy endpoint `/analytics/workbench/risk-proxy` is removed from runtime surface.
 - The current service-wide readiness view is maintained in the endpoint matrix and reflects the
   current gold-standard status by endpoint and mode.
+- Live validation breadth is governed by `docs/operations/live-risk-validation-matrix.md`. The
+  default live baseline is canonical portfolio `PB_SG_GLOBAL_BAL_001`; additional enterprise
+  archetypes require real seeded portfolio IDs and endpoint evidence before they can be counted as
+  validated.
 
 See per-endpoint detail:
 
@@ -69,4 +76,8 @@ See per-endpoint detail:
 - `docs/domain-apis/risk-concentration.md`
 - `docs/domain-apis/risk-rolling-metrics.md`
 - `docs/domain-apis/risk-historical-attribution.md`
+- `docs/domain-apis/risk-upstream-failure-behavior.md`
+- `docs/domain-apis/risk-audit-lineage.md`
+- `docs/domain-apis/risk-observability.md`
+- `docs/domain-apis/risk-product-surface-alignment.md`
 - `docs/domain-apis/lotus-core-requirements-for-issuer-concentration.md`

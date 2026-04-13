@@ -5,6 +5,8 @@ from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.contracts.audit import AuditMetadataFields
+
 
 class ConcentrationInputMode(str, Enum):
     STATELESS = "stateless"
@@ -639,7 +641,7 @@ class ConcentrationValuationContext(BaseModel):
     )
 
 
-class ConcentrationMetadata(BaseModel):
+class ConcentrationMetadata(AuditMetadataFields):
     as_of_date: date | None = Field(
         default=None,
         description="Business date used for baseline/proposed concentration inputs.",

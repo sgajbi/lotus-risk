@@ -13,6 +13,7 @@ from app.contracts.attribution import (
     HistoricalAttributionStatelessInput,
 )
 from app.contracts.risk import ReturnPoint, RiskRequestScope
+from app.services.audit_lineage import ordered_source_services, upstream_request_fingerprint
 from app.services.attribution_engine import calculate_historical_attribution
 from app.services.benchmark_exposure_history import fetch_benchmark_exposure_history
 from app.services.stateful_returns_request import build_stateful_returns_series_request
@@ -296,8 +297,9 @@ async def calculate_historical_attribution_stateful(
 
     requires_active = _requires_active_attribution(stateful)
 
+    returns_request = _build_stateful_returns_request(stateful)
     returns_response = await performance_client.get_returns_series(
-        request_payload=_build_stateful_returns_request(stateful),
+        request_payload=returns_request,
         correlation_id=correlation_id,
     )
     series, portfolio_returns = extract_required_portfolio_returns(returns_response)
@@ -383,7 +385,17 @@ async def calculate_historical_attribution_stateful(
         benchmark_exposure_history=benchmark_exposure_history,
         attribution_options=options,
     )
-    return calculate_historical_attribution(
+    response = calculate_historical_attribution(
         stateless_input,
         input_mode=AttributionInputMode.STATEFUL,
     )
+    response.metadata.source_services = ordered_source_services(
+        "lotus-performance",
+        "lotus-core",
+    )
+    response.metadata.upstream_request_fingerprints = upstream_request_fingerprint(
+        service="lotus-performance",
+        operation="/integration/returns/series",
+        payload=returns_request,
+    )
+    return response

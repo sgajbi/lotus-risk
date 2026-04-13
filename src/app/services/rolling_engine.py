@@ -24,6 +24,7 @@ from app.contracts.rolling import (
     RollingWindowResult,
 )
 from app.contracts.risk import ReturnPoint, RiskRequestPeriod
+from app.services.audit_lineage import fingerprint_model
 from app.services.risk_engine import _resolve_period
 
 
@@ -347,6 +348,7 @@ def calculate_rolling_metrics(
             scope=request.scope,
             results={},
             metadata=RollingMetadata(
+                request_fingerprint=fingerprint_model(request),
                 annualization_basis=request.rolling_options.annualization_basis,
                 requested_metrics=[str(metric) for metric in request.rolling_options.metrics],
                 window_lengths_requested=list(request.rolling_options.window_lengths),
@@ -523,6 +525,7 @@ def calculate_rolling_metrics(
         scope=request.scope,
         results=results,
         metadata=RollingMetadata(
+            request_fingerprint=fingerprint_model(request),
             annualization_basis=options.annualization_basis,
             requested_metrics=requested_metrics,
             window_lengths_requested=list(options.window_lengths),

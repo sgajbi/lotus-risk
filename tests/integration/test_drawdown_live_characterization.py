@@ -3,10 +3,12 @@ from __future__ import annotations
 import math
 import os
 from collections.abc import Sequence
+from datetime import date
 
 import httpx
 import pytest
 
+from tests.support.live_portfolio_matrix import live_as_of_date, live_portfolio_id
 from tests.support.live_returns_series import extract_decimal_returns, fetch_live_returns_series
 
 
@@ -22,8 +24,8 @@ pytestmark = pytest.mark.skipif(
 
 RISK_BASE_URL = os.getenv("LOTUS_RISK_BASE_URL", "http://localhost:8130")
 PERFORMANCE_BASE_URL = os.getenv("LOTUS_PERFORMANCE_BASE_URL", "http://localhost:8002")
-PORTFOLIO_ID = os.getenv("LOTUS_RISK_LIVE_PORTFOLIO_ID", "PB_SG_GLOBAL_BAL_001")
-AS_OF_DATE = os.getenv("LOTUS_RISK_LIVE_AS_OF_DATE", "2026-03-31")
+PORTFOLIO_ID = live_portfolio_id()
+AS_OF_DATE = live_as_of_date()
 
 
 def _wealth_drawdown(return_series: Sequence[float]) -> list[float]:
@@ -49,6 +51,14 @@ def _ulcer_index(drawdowns: Sequence[float]) -> float:
 
 def _time_under_water(drawdowns: Sequence[float]) -> int:
     return sum(1 for value in drawdowns if value < 0.0)
+
+
+def _business_day_returns(rows: list[tuple[str, float]]) -> list[tuple[str, float]]:
+    return [
+        (date_value, return_value)
+        for date_value, return_value in rows
+        if date.fromisoformat(date_value).weekday() < 5
+    ]
 
 
 def test_live_stateful_drawdown_reconciles_with_upstream_returns() -> None:
@@ -105,10 +115,14 @@ def test_live_stateful_drawdown_reconciles_with_upstream_returns() -> None:
     drawdown_body = drawdown_response.json()
 
     series = upstream_body["series"]
-    portfolio_returns = extract_decimal_returns(series["portfolio_returns"])
-    benchmark_returns = extract_decimal_returns(series["benchmark_returns"])
+    upstream_portfolio_returns = extract_decimal_returns(series["portfolio_returns"])
+    upstream_benchmark_returns = extract_decimal_returns(series["benchmark_returns"])
+    portfolio_returns = _business_day_returns(upstream_portfolio_returns)
+    benchmark_returns = _business_day_returns(upstream_benchmark_returns)
     assert portfolio_returns, "expected live upstream portfolio returns"
     assert benchmark_returns, "expected live upstream benchmark returns"
+    assert len(portfolio_returns) <= len(upstream_portfolio_returns)
+    assert all(date.fromisoformat(date_value).weekday() < 5 for date_value, _ in portfolio_returns)
 
     portfolio_drawdowns = _wealth_drawdown([value for _, value in portfolio_returns])
     benchmark_by_date = {date_value: value for date_value, value in benchmark_returns}

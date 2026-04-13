@@ -83,7 +83,21 @@ async def test_calculate_concentration_stateless_uses_projected_values_when_prov
     assert response["issuer_concentration"]["coverage_ratio_proposed"] == 1.0
     assert response["issuer_concentration"]["uncovered_position_count_current"] == 0
     assert response["issuer_concentration"]["uncovered_position_count_proposed"] == 0
-    assert response["metadata"] == {
+    assert response["metadata"]["lineage_version"] == "risk_audit_lineage.v1"
+    assert response["metadata"]["request_fingerprint"].startswith("sha256:")
+    assert response["metadata"]["source_services"] == ["lotus-risk"]
+    assert response["metadata"]["upstream_request_fingerprints"] == {}
+    assert {
+        key: value
+        for key, value in response["metadata"].items()
+        if key
+        not in {
+            "lineage_version",
+            "request_fingerprint",
+            "source_services",
+            "upstream_request_fingerprints",
+        }
+    } == {
         "as_of_date": None,
         "portfolio_id": None,
         "simulation_session_id": None,

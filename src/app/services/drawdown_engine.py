@@ -24,6 +24,7 @@ from app.contracts.drawdown import (
 )
 from app.contracts.risk import RiskRequestPeriod
 from app.contracts.risk import ReturnPoint
+from app.services.audit_lineage import fingerprint_model
 from app.services.risk_engine import _resolve_period
 
 
@@ -193,11 +194,13 @@ def _period_name(period: RiskRequestPeriod) -> str:
 
 def _build_metadata(
     *,
+    request: DrawdownStatelessInput,
     analysis_options: DrawdownAnalysisOptions,
     include_benchmark: bool | None,
     missing_benchmark_policy: Literal["IGNORE", "REQUIRE"] | None,
 ) -> DrawdownMetadata:
     return DrawdownMetadata(
+        request_fingerprint=fingerprint_model(request),
         include_underwater_series=analysis_options.include_underwater_series,
         include_episode_list=analysis_options.include_episode_list,
         top_n_episodes=analysis_options.top_n_episodes,
@@ -225,6 +228,7 @@ def calculate_drawdown(
             scope=request.scope,
             results={},
             metadata=_build_metadata(
+                request=request,
                 analysis_options=analysis_options,
                 include_benchmark=include_benchmark,
                 missing_benchmark_policy=missing_benchmark_policy,
@@ -363,6 +367,7 @@ def calculate_drawdown(
         scope=request.scope,
         results=results,
         metadata=_build_metadata(
+            request=request,
             analysis_options=analysis_options,
             include_benchmark=include_benchmark,
             missing_benchmark_policy=missing_benchmark_policy,

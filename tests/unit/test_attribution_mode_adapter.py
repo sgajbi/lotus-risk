@@ -154,7 +154,7 @@ def _stateful_input(
     return HistoricalAttributionStatefulInput.model_validate(
         {
             "portfolio_id": "DEMO_DPM_EUR_001",
-            "as_of_date": "2026-01-04",
+            "as_of_date": "2026-01-06",
             "periods": [{"type": "YTD", "name": "YTD"}],
             "attribution_options": {
                 "attribution_types": attribution_types,
@@ -182,13 +182,23 @@ def test_stateful_attribution_total_risk_happy_path() -> None:
     assert perf.payload["window"] == {
         "mode": "EXPLICIT",
         "from_date": "2026-01-01",
-        "to_date": "2026-01-04",
+        "to_date": "2026-01-06",
     }
     assert len(core.position_payloads) == 1
     first_payload = core.position_payloads[0]["request_payload"]
     assert first_payload["dimensions"] == ["sector"]
     assert response.input_mode.value == "stateful"
     assert response.results["YTD"].error is None
+    assert response.metadata.source_services == [
+        "lotus-risk",
+        "lotus-performance",
+        "lotus-core",
+    ]
+    assert response.metadata.request_fingerprint is not None
+    assert response.metadata.request_fingerprint.startswith("sha256:")
+    assert list(response.metadata.upstream_request_fingerprints) == [
+        "lotus-performance:/integration/returns/series"
+    ]
 
 
 def test_stateful_attribution_asset_class_and_reporting_currency() -> None:
@@ -260,8 +270,8 @@ def test_stateful_attribution_active_risk_sources_performance_benchmark_exposure
     exposure_payload = perf.benchmark_exposure_context_calls[0]["request_payload"]
     assert exposure_payload == {
         "portfolio_id": "DEMO_DPM_EUR_001",
-        "as_of_date": "2026-01-04",
-        "window": {"start_date": "2026-01-02", "end_date": "2026-01-04"},
+        "as_of_date": "2026-01-06",
+        "window": {"start_date": "2026-01-02", "end_date": "2026-01-06"},
         "frequency": "DAILY",
         "grouping_dimensions": ["SECTOR"],
         "page": {"page_size": 1000, "page_token": None},
@@ -332,10 +342,10 @@ def test_stateful_attribution_rejects_benchmark_exposure_date_misalignment() -> 
             assert isinstance(rows, list)
             return {
                 **payload,
-                "rows": [row for row in rows if row.get("valuation_date") != "2026-01-04"],
+                "rows": [row for row in rows if row.get("valuation_date") != "2026-01-06"],
             }
 
-    with pytest.raises(ValueError, match="missing rows for benchmark return dates: 2026-01-04"):
+    with pytest.raises(ValueError, match="missing rows for benchmark return dates: 2026-01-06"):
         asyncio.run(
             calculate_historical_attribution_stateful(
                 _stateful_input(

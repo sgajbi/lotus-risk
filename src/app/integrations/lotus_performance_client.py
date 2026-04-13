@@ -6,9 +6,12 @@ from typing import Any
 
 import httpx
 
+from app.observability import observation_start, record_upstream_request
 from app.upstream_errors import (
+    UpstreamServiceError,
     classify_upstream_http_error,
     classify_upstream_transport_error,
+    extract_upstream_error_detail,
     invalid_upstream_payload,
     missing_upstream_data,
 )
@@ -51,6 +54,7 @@ class LotusPerformanceClient:
 
         path = "/integration/returns/series"
         url = f"{self._base_url}{path}"
+        started_at = observation_start()
         try:
             async with httpx.AsyncClient(timeout=self._timeout) as client:
                 response = await client.post(url, json=request_payload, headers=headers)
@@ -59,30 +63,53 @@ class LotusPerformanceClient:
                         response,
                         invalid_message="lotus-performance returned invalid async accepted payload",
                     )
-                    return await self._poll_returns_series_result(
+                    payload = await self._poll_returns_series_result(
                         client=client,
                         accepted_payload=accepted_payload,
                         headers=headers,
                     )
+                    record_upstream_request(
+                        dependency="lotus-performance",
+                        operation=path,
+                        outcome="success",
+                        category="ok",
+                        started_at=started_at,
+                    )
+                    return payload
                 response.raise_for_status()
-                return self._ensure_dict_payload(
+                payload = self._ensure_dict_payload(
                     response,
                     invalid_message="lotus-performance returned invalid JSON payload",
                 )
+                record_upstream_request(
+                    dependency="lotus-performance",
+                    operation=path,
+                    outcome="success",
+                    category="ok",
+                    started_at=started_at,
+                )
+                return payload
+        except UpstreamServiceError as exc:
+            self._record_upstream_failure(path, started_at=started_at, exc=exc)
+            raise
         except httpx.HTTPStatusError as exc:
-            detail = self._extract_error_detail(exc.response)
-            raise classify_upstream_http_error(
+            detail = extract_upstream_error_detail(exc.response)
+            error = classify_upstream_http_error(
                 service="lotus-performance",
                 operation=path,
                 response=exc.response,
                 detail=detail,
-            ) from exc
+            )
+            self._record_upstream_failure(path, started_at=started_at, exc=error)
+            raise error from exc
         except httpx.HTTPError as exc:
-            raise classify_upstream_transport_error(
+            error = classify_upstream_transport_error(
                 service="lotus-performance",
                 operation=path,
                 exc=exc,
-            ) from exc
+            )
+            self._record_upstream_failure(path, started_at=started_at, exc=error)
+            raise error from exc
 
     async def get_benchmark_exposure_context(
         self,
@@ -96,28 +123,60 @@ class LotusPerformanceClient:
 
         path = "/integration/benchmarks/exposure-context"
         url = f"{self._base_url}{path}"
+        started_at = observation_start()
         try:
             async with httpx.AsyncClient(timeout=self._timeout) as client:
                 response = await client.post(url, json=request_payload, headers=headers)
                 response.raise_for_status()
-                return self._ensure_dict_payload(
+                payload = self._ensure_dict_payload(
                     response,
                     invalid_message="lotus-performance returned invalid benchmark exposure context payload",
                 )
+                record_upstream_request(
+                    dependency="lotus-performance",
+                    operation=path,
+                    outcome="success",
+                    category="ok",
+                    started_at=started_at,
+                )
+                return payload
+        except UpstreamServiceError as exc:
+            self._record_upstream_failure(path, started_at=started_at, exc=exc)
+            raise
         except httpx.HTTPStatusError as exc:
-            detail = self._extract_error_detail(exc.response)
-            raise classify_upstream_http_error(
+            detail = extract_upstream_error_detail(exc.response)
+            error = classify_upstream_http_error(
                 service="lotus-performance",
                 operation=path,
                 response=exc.response,
                 detail=detail,
-            ) from exc
+            )
+            self._record_upstream_failure(path, started_at=started_at, exc=error)
+            raise error from exc
         except httpx.HTTPError as exc:
-            raise classify_upstream_transport_error(
+            error = classify_upstream_transport_error(
                 service="lotus-performance",
                 operation=path,
                 exc=exc,
-            ) from exc
+            )
+            self._record_upstream_failure(path, started_at=started_at, exc=error)
+            raise error from exc
+
+    @staticmethod
+    def _record_upstream_failure(
+        operation: str,
+        *,
+        started_at: float,
+        exc: UpstreamServiceError,
+    ) -> None:
+        category = exc.details.get("category")
+        record_upstream_request(
+            dependency="lotus-performance",
+            operation=operation,
+            outcome="failure",
+            category=str(category or exc.code),
+            started_at=started_at,
+        )
 
     async def _poll_returns_series_result(
         self,
@@ -216,24 +275,3 @@ class LotusPerformanceClient:
                 message=invalid_message,
             )
         return payload
-
-    @staticmethod
-    def _extract_error_detail(response: httpx.Response) -> str:
-        try:
-            payload = response.json()
-        except ValueError:
-            return response.text or "unknown error"
-        if isinstance(payload, dict):
-            detail = payload.get("detail")
-            if isinstance(detail, str):
-                return detail
-            if isinstance(detail, dict):
-                message = detail.get("message")
-                if isinstance(message, str):
-                    return message
-            error = payload.get("error")
-            if isinstance(error, dict):
-                message = error.get("message")
-                if isinstance(message, str):
-                    return message
-        return str(payload)

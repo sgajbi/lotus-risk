@@ -6,6 +6,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.contracts.audit import AuditMetadataFields
 from app.contracts.risk import ReturnPoint, RiskRequestPeriod, RiskRequestScope
 
 
@@ -472,7 +473,7 @@ class HistoricalAttributionPeriodResult(BaseModel):
     )
 
 
-class HistoricalAttributionMetadata(BaseModel):
+class HistoricalAttributionMetadata(AuditMetadataFields):
     contract_version: str = Field(
         default="v1",
         description="Historical attribution contract version.",

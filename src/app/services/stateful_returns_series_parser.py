@@ -8,6 +8,10 @@ from app.contracts.risk import ReturnPoint
 from app.upstream_errors import invalid_upstream_payload, missing_upstream_data
 
 
+def is_trading_day(value: date) -> bool:
+    return value.weekday() < 5
+
+
 def decimal_return_to_percentage_points(value: Any) -> float:
     try:
         decimal_value = Decimal(str(value))
@@ -30,9 +34,12 @@ def to_return_points(series: Any) -> list[ReturnPoint]:
         raw_date = row.get("date")
         if not isinstance(raw_date, str):
             continue
+        parsed_date = date.fromisoformat(raw_date)
+        if not is_trading_day(parsed_date):
+            continue
         result.append(
             ReturnPoint(
-                date=date.fromisoformat(raw_date),
+                date=parsed_date,
                 value=decimal_return_to_percentage_points(row.get("return_value")),
             )
         )

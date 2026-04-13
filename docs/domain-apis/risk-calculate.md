@@ -58,8 +58,8 @@
 |---|---|---|---|
 | Portfolio baseline snapshot (`portfolioId`, holdings, valuation context) | lotus-core (`/integration/portfolios/{id}/core-snapshot`) | Exists | Already used by other services. |
 | Raw valuation/performance input points | lotus-core (`/integration/portfolios/{id}/performance-input`) | Exists | Provides valuation points and metadata. |
-| Daily return series normalized for risk engine | lotus-performance (`/integration/returns/series` with `input_mode=stateful`) | Exists | Implemented stateful path in lotus-risk; decimal returns converted to percentage-point risk engine input. |
-| Benchmark return series | lotus-performance / market data integration | Needs enhancement | no direct lotus-risk-managed benchmark source contract today. |
+| Daily return series normalized for risk engine | lotus-performance (`/integration/returns/series` with `input_mode=stateful`) | Exists | Implemented stateful path in lotus-risk; upstream decimal returns are filtered to trading days and converted to percentage-point risk engine input. |
+| Benchmark return series | lotus-performance (`/integration/returns/series` with `include_benchmark=true`) | Exists | Used by stateful beta, tracking error, information ratio, and benchmark-relative drawdown paths; aligned by trading date inside lotus-risk. |
 ## Expected Output Structure
 
 - `scope` (echoed normalized request scope)
@@ -94,4 +94,10 @@
 
 1. Benchmark/risk-free sourcing remains upstream-dependent on lotus-performance + lotus-core reference-data availability; stateful benchmark metrics degrade deterministically when benchmark series is absent, and this is now surfaced in `benchmark_context.reason`. Risk-free application for Sharpe is surfaced separately in `metadata.risk_free_context`.
 2. Standardize response metadata additions (for example `correlationId`, `contractVersion`, `asOfDate`) if this endpoint must fully match cross-platform response envelope conventions.
+
+## Live Validation Notes
+
+- Canonical live YTD validation for `PB_SG_GLOBAL_BAL_001` uses `64` trading-day observations after filtering the `90` calendar observations returned by lotus-performance.
+- Live validation reconciles volatility, Sharpe, Sortino, beta, tracking error, information ratio, and all VaR methods (`HISTORICAL`, `GAUSSIAN`, `CORNISH_FISHER`) including square-root-of-time horizon scaling.
+- VaR is reported as a signed return-threshold in percentage points. Positive VaR can occur for a strongly positive empirical return sample; consumers should label it as a return threshold rather than an always-positive loss amount.
 

@@ -18,7 +18,8 @@
 ## Unit Conventions
 - Return inputs are percentage points (pp): `1.0` means `+1%`.
 - Engine converts to decimal when needed: `r_decimal = r_pp / 100`.
-- Output unit follows metric contract (ratio, annualized decimal, drawdown decimal, or HHI scale).
+- VaR and expected shortfall outputs are signed return thresholds in percentage points.
+- Negative values indicate loss thresholds. Positive values can occur when the empirical or parametric lower tail remains positive for the selected sample.
 
 ## Variable Dictionary
 - `r_t_pp`: return observation in percentage points (post-transform if log mode is used).
@@ -83,6 +84,10 @@
 - `results[period].metrics.VAR.value`
 - `results[period].metrics.VAR.details.expected_shortfall` (when enabled)
 - `results[period].metrics.VAR.details.error`
+
+Consumer guidance:
+- Display VaR as a signed return-threshold unless a downstream UI explicitly transforms it into a positive loss convention.
+- Do not relabel positive VaR as a loss; explain that the selected period's lower-tail return threshold is positive.
 
 ## Worked Example
 Assume method `HISTORICAL`, confidence `0.95`, horizon `h=4`, ES enabled.

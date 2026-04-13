@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-04-08T03:44:33.025560+00:00",
+  "generatedAt": "2026-04-13T12:26:30.735203+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.alignment_policy",
@@ -628,6 +628,20 @@
       ]
     },
     {
+      "semanticId": "lotus.lineage_version",
+      "canonicalTerm": "lineage_version",
+      "preferredName": "lineage_version",
+      "description": "Audit lineage metadata schema version.",
+      "example": "risk_audit_lineage.v1",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
       "semanticId": "lotus.live",
       "canonicalTerm": "live",
       "preferredName": "live",
@@ -838,6 +852,20 @@
       "preferredName": "reporting_currency",
       "description": "Optional reporting currency for normalized outputs.",
       "example": "USD",
+      "type": "object",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "object"
+      ]
+    },
+    {
+      "semanticId": "lotus.request_fingerprint",
+      "canonicalTerm": "request_fingerprint",
+      "preferredName": "request_fingerprint",
+      "description": "Deterministic SHA-256 fingerprint of the normalized calculation request used by lotus-risk. Stateful flows fingerprint the calculation input after upstream sourcing.",
+      "example": "sha256:6f36c1f0f3f0f08c6f36c1f0f3f0f08c6f36c1f0f3f0f08c6f36c1f0f3f0f08c",
       "type": "object",
       "locations": [
         "body"
@@ -1118,6 +1146,23 @@
       ],
       "observedTypes": [
         "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.source_services",
+      "canonicalTerm": "source_services",
+      "preferredName": "source_services",
+      "description": "Services whose data or calculations contributed to this response.",
+      "example": [
+        "lotus-risk",
+        "lotus-performance"
+      ],
+      "type": "array",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "array"
       ]
     },
     {
@@ -1564,6 +1609,22 @@
       ],
       "observedTypes": [
         "integer"
+      ]
+    },
+    {
+      "semanticId": "lotus.upstream_request_fingerprints",
+      "canonicalTerm": "upstream_request_fingerprints",
+      "preferredName": "upstream_request_fingerprints",
+      "description": "Deterministic request fingerprints for upstream calls directly orchestrated by lotus-risk, keyed by service and operation.",
+      "example": {
+        "lotus-performance:/integration/returns/series": "sha256:8d7411c13a0a25a18d7411c13a0a25a18d7411c13a0a25a18d7411c13a0a25a1"
+      },
+      "type": "object",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "object"
       ]
     },
     {
@@ -2280,6 +2341,38 @@
             "attributeRef": "#/attributeCatalog/lotus.metadata"
           },
           {
+            "name": "metadata.lineage_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.lineage_version",
+            "attributeRef": "#/attributeCatalog/lotus.lineage_version"
+          },
+          {
+            "name": "metadata.request_fingerprint",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.request_fingerprint",
+            "attributeRef": "#/attributeCatalog/lotus.request_fingerprint"
+          },
+          {
+            "name": "metadata.source_services",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_services",
+            "attributeRef": "#/attributeCatalog/lotus.source_services"
+          },
+          {
+            "name": "metadata.upstream_request_fingerprints",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.upstream_request_fingerprints",
+            "attributeRef": "#/attributeCatalog/lotus.upstream_request_fingerprints"
+          },
+          {
             "name": "metadata.contract_version",
             "location": "body",
             "required": false,
@@ -2982,6 +3075,38 @@
             "attributeRef": "#/attributeCatalog/lotus.metadata"
           },
           {
+            "name": "metadata.lineage_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.lineage_version",
+            "attributeRef": "#/attributeCatalog/lotus.lineage_version"
+          },
+          {
+            "name": "metadata.request_fingerprint",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.request_fingerprint",
+            "attributeRef": "#/attributeCatalog/lotus.request_fingerprint"
+          },
+          {
+            "name": "metadata.source_services",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_services",
+            "attributeRef": "#/attributeCatalog/lotus.source_services"
+          },
+          {
+            "name": "metadata.upstream_request_fingerprints",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.upstream_request_fingerprints",
+            "attributeRef": "#/attributeCatalog/lotus.upstream_request_fingerprints"
+          },
+          {
             "name": "metadata.contract_version",
             "location": "body",
             "required": false,
@@ -3163,6 +3288,38 @@
             "type": "RollingMetadata",
             "semanticId": "lotus.metadata",
             "attributeRef": "#/attributeCatalog/lotus.metadata"
+          },
+          {
+            "name": "metadata.lineage_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.lineage_version",
+            "attributeRef": "#/attributeCatalog/lotus.lineage_version"
+          },
+          {
+            "name": "metadata.request_fingerprint",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.request_fingerprint",
+            "attributeRef": "#/attributeCatalog/lotus.request_fingerprint"
+          },
+          {
+            "name": "metadata.source_services",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_services",
+            "attributeRef": "#/attributeCatalog/lotus.source_services"
+          },
+          {
+            "name": "metadata.upstream_request_fingerprints",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.upstream_request_fingerprints",
+            "attributeRef": "#/attributeCatalog/lotus.upstream_request_fingerprints"
           },
           {
             "name": "metadata.contract_version",
@@ -3370,6 +3527,38 @@
             "type": "RiskResponseMetadata",
             "semanticId": "lotus.metadata",
             "attributeRef": "#/attributeCatalog/lotus.metadata"
+          },
+          {
+            "name": "metadata.lineage_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.lineage_version",
+            "attributeRef": "#/attributeCatalog/lotus.lineage_version"
+          },
+          {
+            "name": "metadata.request_fingerprint",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.request_fingerprint",
+            "attributeRef": "#/attributeCatalog/lotus.request_fingerprint"
+          },
+          {
+            "name": "metadata.source_services",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_services",
+            "attributeRef": "#/attributeCatalog/lotus.source_services"
+          },
+          {
+            "name": "metadata.upstream_request_fingerprints",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.upstream_request_fingerprints",
+            "attributeRef": "#/attributeCatalog/lotus.upstream_request_fingerprints"
           },
           {
             "name": "metadata.contract_version",

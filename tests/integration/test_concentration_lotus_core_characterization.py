@@ -212,7 +212,12 @@ def test_simulation_api_characterizes_session_creation_and_snapshot_contract() -
                     "as_of_date": "2026-02-27",
                     "session_ttl_hours": 24,
                     "simulation_changes": [
-                        {"security_id": "SEC_A", "transaction_type": "BUY", "quantity": 10}
+                        {
+                            "security_id": "SEC_A",
+                            "transaction_type": "BUY",
+                            "quantity": 10,
+                            "effective_date": "2026-02-27",
+                        }
                     ],
                 },
             },
@@ -229,6 +234,14 @@ def test_simulation_api_characterizes_session_creation_and_snapshot_contract() -
     assert len(core_client.change_calls) == 1
     assert core_client.change_calls[0]["session_id"] == "SIM_9000"
     assert core_client.change_calls[0]["correlation_id"] == "corr-sim"
+    assert core_client.change_calls[0]["changes"] == [
+        {
+            "security_id": "SEC_A",
+            "transaction_type": "BUY",
+            "quantity": 10.0,
+            "effective_date": "2026-02-27",
+        }
+    ]
     snapshot_payload = core_client.snapshot_calls[0]["request_payload"]
     assert snapshot_payload["snapshot_mode"] == "SIMULATION"
     assert snapshot_payload["simulation"] == {"session_id": "SIM_9000", "expected_version": 7}

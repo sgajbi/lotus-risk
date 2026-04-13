@@ -20,6 +20,7 @@ from app.contracts.attribution import (
     HistoricalAttributionStatelessInput,
 )
 from app.contracts.risk import ReturnPoint, RiskRequestPeriod
+from app.services.audit_lineage import fingerprint_model
 from app.services.risk_engine import _resolve_period
 
 
@@ -173,7 +174,8 @@ def _build_attribution_set(
 
     if attribution_type == "TOTAL_RISK":
         metric_series = returns_series
-        group_matrix = exposure_weights.mul(metric_series, axis=0)
+        aligned_weights = exposure_weights.reindex(index=metric_series.index, fill_value=0.0)
+        group_matrix = aligned_weights.mul(metric_series, axis=0)
         total_value = float(metric_series.std(ddof=1) * sqrt(annualization_basis))
     else:
         aligned = pd.merge(
@@ -264,6 +266,7 @@ def calculate_historical_attribution(
             scope=request.scope,
             results={},
             metadata=HistoricalAttributionMetadata(
+                request_fingerprint=fingerprint_model(request),
                 covariance_method=request.attribution_options.covariance_method,
                 annualization_basis=request.attribution_options.annualization_basis,
                 requested_attribution_types=list(request.attribution_options.attribution_types),
@@ -306,6 +309,9 @@ def calculate_historical_attribution(
             continue
 
         period_sets: list[AttributionSetResult] = []
+        requires_benchmark_attribution = (
+            "ACTIVE_RISK" in options.attribution_types or "TRACKING_ERROR" in options.metrics
+        )
         for grouping_dimension in options.grouping_dimensions:
             weights, labels, flags = _pivot_exposure(
                 exposure_df,
@@ -313,14 +319,17 @@ def calculate_historical_attribution(
                 end=end,
                 grouping_dimension=grouping_dimension,
             )
-            benchmark_weights, benchmark_labels, benchmark_flags = _pivot_exposure(
-                benchmark_exposure_df,
-                start=start,
-                end=end,
-                grouping_dimension=grouping_dimension,
-            )
-            labels = {**labels, **benchmark_labels}
-            flags = [*flags, *benchmark_flags]
+            if requires_benchmark_attribution:
+                benchmark_weights, benchmark_labels, benchmark_flags = _pivot_exposure(
+                    benchmark_exposure_df,
+                    start=start,
+                    end=end,
+                    grouping_dimension=grouping_dimension,
+                )
+                labels = {**labels, **benchmark_labels}
+                flags = [*flags, *benchmark_flags]
+            else:
+                benchmark_weights = pd.DataFrame()
 
             for attribution_type in options.attribution_types:
                 for metric in options.metrics:
@@ -351,6 +360,7 @@ def calculate_historical_attribution(
         scope=request.scope,
         results=results,
         metadata=HistoricalAttributionMetadata(
+            request_fingerprint=fingerprint_model(request),
             covariance_method=options.covariance_method,
             annualization_basis=options.annualization_basis,
             requested_attribution_types=list(options.attribution_types),

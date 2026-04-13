@@ -4,9 +4,17 @@ import os
 from datetime import date
 
 import httpx
+import numpy as np
 import pytest
 
-from tests.support.live_returns_series import fetch_live_benchmark_exposure_context
+from app.contracts.risk import RiskRequestPeriod
+from app.services.stateful_returns_request import build_stateful_returns_series_request
+from tests.support.live_portfolio_matrix import live_as_of_date, live_portfolio_id
+from tests.support.live_returns_series import (
+    extract_decimal_returns,
+    fetch_live_benchmark_exposure_context,
+    fetch_live_returns_series,
+)
 
 
 def _live_enabled() -> bool:
@@ -21,8 +29,62 @@ pytestmark = pytest.mark.skipif(
 
 RISK_BASE_URL = os.getenv("LOTUS_RISK_BASE_URL", "http://localhost:8130")
 PERFORMANCE_BASE_URL = os.getenv("LOTUS_PERFORMANCE_BASE_URL", "http://localhost:8002")
-PORTFOLIO_ID = os.getenv("LOTUS_RISK_LIVE_PORTFOLIO_ID", "PB_SG_GLOBAL_BAL_001")
-AS_OF_DATE = date.fromisoformat(os.getenv("LOTUS_RISK_LIVE_AS_OF_DATE", "2026-03-31"))
+PORTFOLIO_ID = live_portfolio_id()
+AS_OF_DATE = date.fromisoformat(live_as_of_date())
+ANNUALIZATION_BASIS = 252
+
+
+def _business_day_returns(rows: list[tuple[str, float]]) -> list[tuple[str, float]]:
+    return [
+        (date_value, return_value)
+        for date_value, return_value in rows
+        if date.fromisoformat(date_value).weekday() < 5
+    ]
+
+
+def _returns_request(*, include_benchmark: bool) -> dict[str, object]:
+    return build_stateful_returns_series_request(
+        portfolio_id=PORTFOLIO_ID,
+        as_of_date=AS_OF_DATE,
+        periods=[RiskRequestPeriod(type="YTD", name="YTD")],
+        frequency="DAILY",
+        metric_basis="NET",
+        reporting_currency=None,
+        include_benchmark=include_benchmark,
+        include_risk_free=False,
+        missing_data_policy="ALLOW_PARTIAL",
+    )
+
+
+def _live_portfolio_and_benchmark_returns() -> tuple[list[float], list[float]]:
+    returns_body = fetch_live_returns_series(
+        base_url=PERFORMANCE_BASE_URL,
+        request_payload=_returns_request(include_benchmark=True),
+    )
+    series = returns_body["series"]
+    portfolio_by_date = dict(
+        _business_day_returns(extract_decimal_returns(series["portfolio_returns"]))
+    )
+    benchmark_by_date = dict(
+        _business_day_returns(extract_decimal_returns(series["benchmark_returns"]))
+    )
+    aligned_dates = sorted(set(portfolio_by_date) & set(benchmark_by_date))
+    assert aligned_dates, "expected live benchmark returns aligned with portfolio returns"
+    return (
+        [portfolio_by_date[date_value] for date_value in aligned_dates],
+        [benchmark_by_date[date_value] for date_value in aligned_dates],
+    )
+
+
+def _annualized_volatility(returns: list[float]) -> float:
+    return float(np.std(returns, ddof=1) * np.sqrt(ANNUALIZATION_BASIS))
+
+
+def _annualized_tracking_error(
+    portfolio_returns: list[float], benchmark_returns: list[float]
+) -> float:
+    active_returns = np.array(portfolio_returns) - np.array(benchmark_returns)
+    return float(np.std(active_returns, ddof=1) * np.sqrt(ANNUALIZATION_BASIS))
 
 
 def _benchmark_exposure_request(*, grouping_dimensions: list[str]) -> dict[str, object]:
@@ -50,6 +112,22 @@ def _stateful_active_risk_payload(*, grouping_dimensions: list[str]) -> dict[str
             "attribution_options": {
                 "attribution_types": ["ACTIVE_RISK"],
                 "metrics": ["TRACKING_ERROR"],
+                "grouping_dimensions": grouping_dimensions,
+            },
+        },
+    }
+
+
+def _stateful_total_risk_payload(*, grouping_dimensions: list[str]) -> dict[str, object]:
+    return {
+        "input_mode": "stateful",
+        "stateful_input": {
+            "portfolio_id": PORTFOLIO_ID,
+            "as_of_date": AS_OF_DATE.isoformat(),
+            "periods": [{"type": "YTD", "name": "YTD"}],
+            "attribution_options": {
+                "attribution_types": ["TOTAL_RISK"],
+                "metrics": ["VOLATILITY"],
                 "grouping_dimensions": grouping_dimensions,
             },
         },
@@ -114,9 +192,14 @@ def test_live_stateful_historical_attribution_supports_sector_active_risk() -> N
     attribution_sets = period["attribution_sets"]
     assert attribution_sets, "expected live attribution set"
     attribution_set = attribution_sets[0]
+    portfolio_returns, benchmark_returns = _live_portfolio_and_benchmark_returns()
     assert attribution_set["attribution_type"] == "ACTIVE_RISK"
     assert attribution_set["metric"] == "TRACKING_ERROR"
     assert attribution_set["grouping_dimension"] == "SECTOR"
+    assert attribution_set["total_value"] == pytest.approx(
+        _annualized_tracking_error(portfolio_returns, benchmark_returns),
+        abs=1e-12,
+    )
     assert attribution_set["contributors"], "expected live contributors for supported SECTOR path"
     contributor_keys = {contributor["group_key"] for contributor in attribution_set["contributors"]}
     assert all(key.startswith("SECTOR_") for key in contributor_keys)
@@ -126,6 +209,85 @@ def test_live_stateful_historical_attribution_supports_sector_active_risk() -> N
             attribution_set["total_value"] - attribution_set["reconciled_sum"],
             abs=1e-12,
         )
+
+
+def test_live_stateful_historical_attribution_supports_sector_total_risk() -> None:
+    portfolio_returns, _ = _live_portfolio_and_benchmark_returns()
+
+    with httpx.Client(timeout=30.0) as client:
+        response = client.post(
+            f"{RISK_BASE_URL}/analytics/risk/historical-attribution",
+            json=_stateful_total_risk_payload(grouping_dimensions=["SECTOR"]),
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["input_mode"] == "stateful"
+    assert body["metadata"]["requested_attribution_types"] == ["TOTAL_RISK"]
+    assert body["metadata"]["requested_metrics"] == ["VOLATILITY"]
+    assert body["metadata"]["requested_grouping_dimensions"] == ["SECTOR"]
+
+    attribution_set = body["results"]["YTD"]["attribution_sets"][0]
+    assert attribution_set["attribution_type"] == "TOTAL_RISK"
+    assert attribution_set["metric"] == "VOLATILITY"
+    assert attribution_set["grouping_dimension"] == "SECTOR"
+    assert attribution_set["quality_flags"] == []
+    assert attribution_set["contributors"], "expected live total-risk contributors"
+    assert attribution_set["total_value"] == pytest.approx(
+        _annualized_volatility(portfolio_returns),
+        abs=1e-12,
+    )
+    assert attribution_set["reconciled_sum"] == pytest.approx(
+        sum(
+            contributor["component_contribution"] for contributor in attribution_set["contributors"]
+        ),
+        abs=1e-12,
+    )
+    assert attribution_set["residual"] == pytest.approx(
+        attribution_set["total_value"] - attribution_set["reconciled_sum"],
+        abs=1e-12,
+    )
+
+
+@pytest.mark.parametrize("grouping_dimension", ["POSITION", "ASSET_CLASS"])
+def test_live_stateful_historical_attribution_supports_other_active_risk_groupings(
+    grouping_dimension: str,
+) -> None:
+    supported = fetch_live_benchmark_exposure_context(
+        base_url=PERFORMANCE_BASE_URL,
+        request_payload=_benchmark_exposure_request(grouping_dimensions=[grouping_dimension]),
+    )
+    assert supported["rows"], f"expected live {grouping_dimension} benchmark exposure rows"
+    assert {row["grouping_dimension"] for row in supported["rows"]} == {grouping_dimension}
+    portfolio_returns, benchmark_returns = _live_portfolio_and_benchmark_returns()
+
+    with httpx.Client(timeout=30.0) as client:
+        response = client.post(
+            f"{RISK_BASE_URL}/analytics/risk/historical-attribution",
+            json=_stateful_active_risk_payload(grouping_dimensions=[grouping_dimension]),
+        )
+
+    assert response.status_code == 200
+    attribution_set = response.json()["results"]["YTD"]["attribution_sets"][0]
+    assert attribution_set["attribution_type"] == "ACTIVE_RISK"
+    assert attribution_set["metric"] == "TRACKING_ERROR"
+    assert attribution_set["grouping_dimension"] == grouping_dimension
+    assert attribution_set["quality_flags"] == []
+    assert attribution_set["contributors"], f"expected {grouping_dimension} contributors"
+    assert attribution_set["total_value"] == pytest.approx(
+        _annualized_tracking_error(portfolio_returns, benchmark_returns),
+        abs=1e-12,
+    )
+    assert attribution_set["reconciled_sum"] == pytest.approx(
+        sum(
+            contributor["component_contribution"] for contributor in attribution_set["contributors"]
+        ),
+        abs=1e-12,
+    )
+    assert attribution_set["residual"] == pytest.approx(
+        attribution_set["total_value"] - attribution_set["reconciled_sum"],
+        abs=1e-12,
+    )
 
 
 def test_live_stateful_historical_attribution_rejects_issuer_at_request_boundary() -> None:

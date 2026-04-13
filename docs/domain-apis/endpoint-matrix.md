@@ -52,6 +52,40 @@ Current handling is intentional and explicit:
   - supported stateful `SECTOR` active-risk works
   - upstream benchmark exposure context rejects `ISSUER`
 
+## Live Validation Breadth
+
+The default live validation baseline covers canonical portfolio `PB_SG_GLOBAL_BAL_001`, which is a
+global balanced private-banking portfolio.
+
+Enterprise portfolio-archetype coverage is governed by
+`docs/operations/live-risk-validation-matrix.md`. Additional archetypes must have real seeded
+portfolio IDs and endpoint-specific evidence before they are counted as validated.
+
+## Audit Lineage
+
+All analytics endpoint metadata now includes `lineage_version`, `request_fingerprint`,
+`source_services`, and `upstream_request_fingerprints`. Endpoint-specific metadata remains
+responsible for methodology version, observation counts, alignment policy, and coverage diagnostics.
+
+See `docs/domain-apis/risk-audit-lineage.md`.
+
+## Observability
+
+Risk analytics endpoint execution metrics are labeled by endpoint, input mode, and outcome.
+Direct upstream dependency metrics are labeled by dependency, operation, outcome, and deterministic
+failure category.
+
+See `docs/domain-apis/risk-observability.md`.
+
+## Product-Surface Alignment
+
+Downstream gateway, Workbench, reporting, and AI consumers must preserve signed VaR semantics,
+historical attribution reconciliation fields, issuer active-risk gating, concentration-only
+simulation support, and audit metadata. These rules are part of the risk contract because otherwise
+correct calculations can become misleading at the product surface.
+
+See `docs/domain-apis/risk-product-surface-alignment.md`.
+
 ## Related Detail Docs
 
 - [integration-capabilities.md](C:\Users\Sandeep\projects\lotus-risk\docs\domain-apis\integration-capabilities.md)
@@ -60,3 +94,4 @@ Current handling is intentional and explicit:
 - [risk-rolling-metrics.md](C:\Users\Sandeep\projects\lotus-risk\docs\domain-apis\risk-rolling-metrics.md)
 - [risk-historical-attribution.md](C:\Users\Sandeep\projects\lotus-risk\docs\domain-apis\risk-historical-attribution.md)
 - [risk-concentration.md](C:\Users\Sandeep\projects\lotus-risk\docs\domain-apis\risk-concentration.md)
+- [risk-product-surface-alignment.md](C:\Users\Sandeep\projects\lotus-risk\docs\domain-apis\risk-product-surface-alignment.md)

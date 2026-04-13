@@ -6,12 +6,13 @@ from typing import Any
 
 import httpx
 import pytest
+from prometheus_client import generate_latest
 
 from app.integrations.lotus_core_client import (
     DEFAULT_LOTUS_CORE_BASE_URL,
     LotusCoreClient,
 )
-from app.upstream_errors import UpstreamServiceError
+from app.upstream_errors import UpstreamServiceError, extract_upstream_error_detail
 
 
 class _FakeAsyncClient:
@@ -83,6 +84,10 @@ async def test_client_builds_headers_and_payload_for_session_creation(
     assert _FakeAsyncClient.last_request["json"]["ttl_hours"] == 24
     assert _FakeAsyncClient.last_request["json"]["created_by"] == "risk-agent"
     assert _FakeAsyncClient.last_request["headers"]["X-Correlation-Id"] == "corr-123"
+    metrics = generate_latest().decode("utf-8")
+    assert 'lotus_risk_upstream_requests_total{category="ok"' in metrics
+    assert 'dependency="lotus-core"' in metrics
+    assert 'operation="/simulation-sessions"' in metrics
 
 
 @pytest.mark.asyncio
@@ -212,10 +217,10 @@ def test_extract_error_detail_variants() -> None:
         text="plain text",
         request=httpx.Request("POST", "http://x"),
     )
-    assert LotusCoreClient._extract_error_detail(response_plain) == "plain text"
+    assert extract_upstream_error_detail(response_plain) == "plain text"
 
     response_dict = _ok_response({"detail": {"message": "nested message"}})
-    assert LotusCoreClient._extract_error_detail(response_dict) == "nested message"
+    assert extract_upstream_error_detail(response_dict) == "nested message"
 
 
 def test_client_defaults_to_canonical_core_service_identity(

@@ -6,6 +6,7 @@ from tests.support.app_runtime import override_app_runtime
 from tests.support.historical_attribution_fakes import (
     RecordingHistoricalAttributionCoreClient,
     build_benchmark_exposure_context_response,
+    build_sector_position_timeseries_rows,
     build_stateful_attribution_returns_client,
 )
 
@@ -18,15 +19,15 @@ def _stateless_attribution_payload() -> dict[str, object]:
             "periods": [{"type": "YTD", "name": "YTD"}],
             "returns": [
                 {"date": "2026-01-02", "value": 1.0},
-                {"date": "2026-01-03", "value": -0.4},
-                {"date": "2026-01-04", "value": 0.3},
+                {"date": "2026-01-05", "value": -0.4},
+                {"date": "2026-01-06", "value": 0.3},
                 {"date": "2026-01-05", "value": 0.6},
                 {"date": "2026-01-06", "value": -0.2},
             ],
             "benchmark_returns": [
                 {"date": "2026-01-02", "value": 0.8},
-                {"date": "2026-01-03", "value": -0.3},
-                {"date": "2026-01-04", "value": 0.2},
+                {"date": "2026-01-05", "value": -0.3},
+                {"date": "2026-01-06", "value": 0.2},
                 {"date": "2026-01-05", "value": 0.4},
                 {"date": "2026-01-06", "value": -0.1},
             ],
@@ -46,28 +47,28 @@ def _stateless_attribution_payload() -> dict[str, object]:
                     "weight": 0.45,
                 },
                 {
-                    "date": "2026-01-03",
+                    "date": "2026-01-05",
                     "grouping_dimension": "SECTOR",
                     "group_key": "SECTOR_TECH",
                     "group_label": "Technology",
                     "weight": 0.50,
                 },
                 {
-                    "date": "2026-01-03",
+                    "date": "2026-01-05",
                     "grouping_dimension": "SECTOR",
                     "group_key": "SECTOR_HEALTH",
                     "group_label": "Healthcare",
                     "weight": 0.50,
                 },
                 {
-                    "date": "2026-01-04",
+                    "date": "2026-01-06",
                     "grouping_dimension": "SECTOR",
                     "group_key": "SECTOR_TECH",
                     "group_label": "Technology",
                     "weight": 0.52,
                 },
                 {
-                    "date": "2026-01-04",
+                    "date": "2026-01-06",
                     "grouping_dimension": "SECTOR",
                     "group_key": "SECTOR_HEALTH",
                     "group_label": "Healthcare",
@@ -118,28 +119,28 @@ def _stateless_attribution_payload() -> dict[str, object]:
                     "weight": 0.52,
                 },
                 {
-                    "date": "2026-01-03",
+                    "date": "2026-01-05",
                     "grouping_dimension": "SECTOR",
                     "group_key": "SECTOR_TECH",
                     "group_label": "Technology",
                     "weight": 0.47,
                 },
                 {
-                    "date": "2026-01-03",
+                    "date": "2026-01-05",
                     "grouping_dimension": "SECTOR",
                     "group_key": "SECTOR_HEALTH",
                     "group_label": "Healthcare",
                     "weight": 0.53,
                 },
                 {
-                    "date": "2026-01-04",
+                    "date": "2026-01-06",
                     "grouping_dimension": "SECTOR",
                     "group_key": "SECTOR_TECH",
                     "group_label": "Technology",
                     "weight": 0.49,
                 },
                 {
-                    "date": "2026-01-04",
+                    "date": "2026-01-06",
                     "grouping_dimension": "SECTOR",
                     "group_key": "SECTOR_HEALTH",
                     "group_label": "Healthcare",
@@ -229,7 +230,7 @@ def test_historical_attribution_stateful_total_risk_happy_path() -> None:
                 "input_mode": "stateful",
                 "stateful_input": {
                     "portfolio_id": "DEMO_DPM_EUR_001",
-                    "as_of_date": "2026-01-04",
+                    "as_of_date": "2026-01-06",
                     "periods": [{"type": "YTD", "name": "YTD"}],
                     "attribution_options": {
                         "attribution_types": ["TOTAL_RISK"],
@@ -251,14 +252,14 @@ def test_historical_attribution_stateful_total_risk_happy_path() -> None:
         {
             "request_payload": {
                 "portfolio_id": "DEMO_DPM_EUR_001",
-                "as_of_date": "2026-01-04",
+                "as_of_date": "2026-01-06",
                 "input_mode": "stateful",
                 "stateful_input": {},
                 "metric_basis": "NET",
                 "window": {
                     "mode": "EXPLICIT",
                     "from_date": "2026-01-01",
-                    "to_date": "2026-01-04",
+                    "to_date": "2026-01-06",
                 },
                 "frequency": "DAILY",
                 "reporting_currency": None,
@@ -276,14 +277,63 @@ def test_historical_attribution_stateful_total_risk_happy_path() -> None:
             "correlation_id": "corr-attr-stateful",
         }
     ]
+
+
+def test_historical_attribution_stateful_total_risk_aligns_exposure_to_return_dates() -> None:
+    performance_client = build_stateful_attribution_returns_client()
+    core_rows: list[dict[str, object]] = [
+        *build_sector_position_timeseries_rows(),
+        {
+            "security_id": "SEC_A",
+            "valuation_date": "2026-01-03",
+            "dimensions": {"sector": "TECH", "asset_class": "EQUITY"},
+            "ending_market_value_portfolio_currency": "70",
+        },
+        {
+            "security_id": "SEC_B",
+            "valuation_date": "2026-01-03",
+            "dimensions": {"sector": "HEALTH", "asset_class": "EQUITY"},
+            "ending_market_value_portfolio_currency": "30",
+        },
+    ]
+    core_client = RecordingHistoricalAttributionCoreClient(rows=core_rows)
+    with override_app_runtime(
+        lotus_performance_client=performance_client,
+        lotus_core_client=core_client,
+    ):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/historical-attribution",
+            headers={"X-Correlation-Id": "corr-attr-stateful"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-06",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "attribution_options": {
+                        "attribution_types": ["TOTAL_RISK"],
+                        "metrics": ["VOLATILITY"],
+                        "grouping_dimensions": ["SECTOR"],
+                    },
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    attribution_set = response.json()["results"]["YTD"]["attribution_sets"][0]
+    assert attribution_set["attribution_type"] == "TOTAL_RISK"
+    assert attribution_set["metric"] == "VOLATILITY"
+    assert attribution_set["contributors"]
+    assert attribution_set["quality_flags"] == []
     assert core_client.position_calls == [
         {
             "portfolio_id": "DEMO_DPM_EUR_001",
             "request_payload": {
-                "as_of_date": "2026-01-04",
+                "as_of_date": "2026-01-06",
                 "window": {
                     "start_date": "2026-01-02",
-                    "end_date": "2026-01-04",
+                    "end_date": "2026-01-06",
                 },
                 "frequency": "daily",
                 "dimensions": ["sector"],
@@ -312,7 +362,7 @@ def test_historical_attribution_stateful_active_risk_uses_performance_benchmark_
                 "input_mode": "stateful",
                 "stateful_input": {
                     "portfolio_id": "DEMO_DPM_EUR_001",
-                    "as_of_date": "2026-01-04",
+                    "as_of_date": "2026-01-06",
                     "periods": [{"type": "YTD", "name": "YTD"}],
                     "attribution_options": {
                         "attribution_types": ["ACTIVE_RISK"],
@@ -338,8 +388,8 @@ def test_historical_attribution_stateful_active_risk_uses_performance_benchmark_
         {
             "request_payload": {
                 "portfolio_id": "DEMO_DPM_EUR_001",
-                "as_of_date": "2026-01-04",
-                "window": {"start_date": "2026-01-02", "end_date": "2026-01-04"},
+                "as_of_date": "2026-01-06",
+                "window": {"start_date": "2026-01-02", "end_date": "2026-01-06"},
                 "frequency": "DAILY",
                 "grouping_dimensions": ["SECTOR"],
                 "page": {"page_size": 1000, "page_token": None},
@@ -369,7 +419,7 @@ def test_historical_attribution_stateful_active_risk_asset_class_contract() -> N
                 "input_mode": "stateful",
                 "stateful_input": {
                     "portfolio_id": "DEMO_DPM_EUR_001",
-                    "as_of_date": "2026-01-04",
+                    "as_of_date": "2026-01-06",
                     "periods": [{"type": "YTD", "name": "YTD"}],
                     "attribution_options": {
                         "attribution_types": ["ACTIVE_RISK"],
@@ -406,7 +456,7 @@ def test_historical_attribution_stateful_active_risk_issuer_is_explicitly_gated(
                 "input_mode": "stateful",
                 "stateful_input": {
                     "portfolio_id": "DEMO_DPM_EUR_001",
-                    "as_of_date": "2026-01-04",
+                    "as_of_date": "2026-01-06",
                     "periods": [{"type": "YTD", "name": "YTD"}],
                     "attribution_options": {
                         "attribution_types": ["ACTIVE_RISK"],
@@ -431,7 +481,7 @@ def test_historical_attribution_stateful_active_risk_rejects_missing_benchmark_r
         "series": {
             "portfolio_returns": [
                 {"date": "2026-01-02", "return_value": "0.0100"},
-                {"date": "2026-01-03", "return_value": "-0.0050"},
+                {"date": "2026-01-05", "return_value": "-0.0050"},
             ]
         }
     }
@@ -449,7 +499,7 @@ def test_historical_attribution_stateful_active_risk_rejects_missing_benchmark_r
                 "input_mode": "stateful",
                 "stateful_input": {
                     "portfolio_id": "DEMO_DPM_EUR_001",
-                    "as_of_date": "2026-01-04",
+                    "as_of_date": "2026-01-06",
                     "periods": [{"type": "YTD", "name": "YTD"}],
                     "attribution_options": {
                         "attribution_types": ["ACTIVE_RISK"],
@@ -487,7 +537,7 @@ def test_historical_attribution_stateful_active_risk_rejects_bad_benchmark_conte
                 "input_mode": "stateful",
                 "stateful_input": {
                     "portfolio_id": "DEMO_DPM_EUR_001",
-                    "as_of_date": "2026-01-04",
+                    "as_of_date": "2026-01-06",
                     "periods": [{"type": "YTD", "name": "YTD"}],
                     "attribution_options": {
                         "attribution_types": ["ACTIVE_RISK"],
@@ -569,7 +619,7 @@ def test_historical_attribution_stateful_active_risk_maps_benchmark_context_500_
                 "input_mode": "stateful",
                 "stateful_input": {
                     "portfolio_id": "DEMO_DPM_EUR_001",
-                    "as_of_date": "2026-01-04",
+                    "as_of_date": "2026-01-06",
                     "periods": [{"type": "YTD", "name": "YTD"}],
                     "attribution_options": {
                         "attribution_types": ["ACTIVE_RISK"],
