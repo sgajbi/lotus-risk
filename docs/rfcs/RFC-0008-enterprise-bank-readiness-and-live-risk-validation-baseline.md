@@ -55,7 +55,7 @@ This RFC exists to prevent scope drift and define the remaining work as an expli
 
 `lotus-risk` can now produce credible risk analytics for the canonical portfolio, but enterprise-like banks need stronger guarantees than one canonical happy path.
 
-Current gaps are:
+At RFC creation, the material gaps were:
 
 1. upstream failure behavior is not fully proven under timeout, retry, unavailable, malformed, and partial-data conditions,
 2. service URLs and environment variables are still easy to misconfigure, as shown by port confusion between lotus-core and lotus-performance during live validation,
@@ -64,6 +64,13 @@ Current gaps are:
 5. observability has not been proven end-to-end for success, failure, and degraded states,
 6. downstream gateway and Workbench surfaces still need explicit validation against signed VaR, attribution residual, and unsupported-mode semantics,
 7. reusable agent guidance should be reviewed so future work starts from the current truth rather than rediscovering it.
+
+Current branch reality:
+
+1. the `lotus-risk`-owned implementation work for these gaps is complete on the feature branch,
+2. unrestricted enterprise-bank production approval remains conditional on PR merge governance,
+3. gateway and Workbench consumer-side proof must be supplied in their owning repositories,
+4. broader live matrix coverage still requires real seeded portfolio IDs for the pending archetypes.
 
 ## Goals
 
@@ -264,12 +271,12 @@ Required behavior:
 | Concentration simulation | Implemented | Simulation payload serializes `effective_date` as JSON string | Preserve. |
 | Active-risk supported dimensions | Implemented for `POSITION`, `SECTOR`, `ASSET_CLASS` | Live attribution tests | Preserve. |
 | Active-risk issuer limitation | Intentional limitation | Request boundary rejection and docs | Keep until issuer benchmark exposure contract exists. |
-| Dependency resilience | Partially implemented | Existing upstream clients classify some errors | Needs failure matrix. |
-| Canonical URL governance | Partial | Defaults exist, but misconfiguration is still easy | Needs environment governance slice. |
-| Audit lineage | Partial | Current metadata exists but is not uniform enough | Needs lineage slice. |
-| Observability | Partial | Health/ops surfaces exist, full signal proof pending | Needs observability slice. |
-| Product-surface alignment | Not complete in this repo | Requires gateway/workbench validation | Needs cross-repo validation slice. |
-| Documentation and agent context | Partial | RFC and docs updated, context/skills review pending | Final slice required. |
+| Dependency resilience | Implemented for risk-owned upstream calls | `src/app/upstream_errors.py`, lotus-core/performance client tests, `docs/domain-apis/risk-upstream-failure-behavior.md` | Preserve deterministic failure categories. |
+| Canonical URL governance | Implemented for risk-owned defaults and live validation docs | `tests/unit/test_canonical_url_governance.py`, `docs/operations/canonical-local-upstream-urls.md` | Preserve canonical direct ports and Docker overrides. |
+| Audit lineage | Implemented across analytics metadata contracts | `src/app/contracts/audit.py`, `src/app/services/audit_lineage.py`, `tests/unit/test_audit_lineage.py`, endpoint adapter tests | Preserve deterministic request and upstream fingerprints. |
+| Observability | Implemented for endpoint and upstream dependency signals | `src/app/observability.py`, `tests/integration/test_observability.py`, `docs/domain-apis/risk-observability.md` | Preserve metrics labels for mode, outcome, dependency, operation, category, and duration. |
+| Product-surface alignment | Implemented as risk-owned contract; downstream proof remains external | `docs/domain-apis/risk-product-surface-alignment.md`, `/integration/capabilities`, `tests/unit/test_product_surface_alignment_contract.py` | Gateway and Workbench must validate against this contract in their own repos. |
+| Documentation and agent context | Implemented for repository-local truth | `REPOSITORY-ENGINEERING-CONTEXT.md`, `docs/standards/enterprise-readiness.md`, `README.md`, skills/guidance assessment in this RFC | Reassess central skills/context only if the pattern becomes platform-wide. |
 
 ## Implementation Slices
 
