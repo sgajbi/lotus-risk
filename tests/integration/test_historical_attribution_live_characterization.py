@@ -248,6 +248,47 @@ def test_live_stateful_historical_attribution_supports_sector_total_risk() -> No
     )
 
 
+@pytest.mark.parametrize("grouping_dimension", ["POSITION", "ASSET_CLASS"])
+def test_live_stateful_historical_attribution_supports_other_active_risk_groupings(
+    grouping_dimension: str,
+) -> None:
+    supported = fetch_live_benchmark_exposure_context(
+        base_url=PERFORMANCE_BASE_URL,
+        request_payload=_benchmark_exposure_request(grouping_dimensions=[grouping_dimension]),
+    )
+    assert supported["rows"], f"expected live {grouping_dimension} benchmark exposure rows"
+    assert {row["grouping_dimension"] for row in supported["rows"]} == {grouping_dimension}
+    portfolio_returns, benchmark_returns = _live_portfolio_and_benchmark_returns()
+
+    with httpx.Client(timeout=30.0) as client:
+        response = client.post(
+            f"{RISK_BASE_URL}/analytics/risk/historical-attribution",
+            json=_stateful_active_risk_payload(grouping_dimensions=[grouping_dimension]),
+        )
+
+    assert response.status_code == 200
+    attribution_set = response.json()["results"]["YTD"]["attribution_sets"][0]
+    assert attribution_set["attribution_type"] == "ACTIVE_RISK"
+    assert attribution_set["metric"] == "TRACKING_ERROR"
+    assert attribution_set["grouping_dimension"] == grouping_dimension
+    assert attribution_set["quality_flags"] == []
+    assert attribution_set["contributors"], f"expected {grouping_dimension} contributors"
+    assert attribution_set["total_value"] == pytest.approx(
+        _annualized_tracking_error(portfolio_returns, benchmark_returns),
+        abs=1e-12,
+    )
+    assert attribution_set["reconciled_sum"] == pytest.approx(
+        sum(
+            contributor["component_contribution"] for contributor in attribution_set["contributors"]
+        ),
+        abs=1e-12,
+    )
+    assert attribution_set["residual"] == pytest.approx(
+        attribution_set["total_value"] - attribution_set["reconciled_sum"],
+        abs=1e-12,
+    )
+
+
 def test_live_stateful_historical_attribution_rejects_issuer_at_request_boundary() -> None:
     with httpx.Client(timeout=30.0) as client:
         response = client.post(

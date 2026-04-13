@@ -112,6 +112,11 @@ OpenAPI now includes a canonical supported stateful `ACTIVE_RISK` + `SECTOR` exa
 clients can see the intended decomposition shape, reconciliation fields, and support metadata
 without reverse-engineering runtime responses.
 
+For active-risk attribution, `total_value` is the annualized active-return tracking error.
+Contributor rows are covariance-based explainability components. `reconciled_sum` and `residual`
+must be shown together because live portfolios can have a material residual when the selected
+grouping does not fully explain active-risk dynamics.
+
 ## Governance Alignment
 
 - Bounded context: aligned (`lotus-risk` computes attribution; no portfolio construction ownership shift).
@@ -141,7 +146,8 @@ without reverse-engineering runtime responses.
 ## Live Validation Note
 
 - live platform characterization currently confirms:
-  - lotus-risk stateful `ACTIVE_RISK` works live for supported grouping dimensions such as `SECTOR`
-  - lotus-performance benchmark exposure context works for supported stateful dimensions such as `SECTOR`
+  - lotus-risk stateful `TOTAL_RISK` works live for `SECTOR` after aligning exposure history to trading-day return observations
+  - lotus-risk stateful `ACTIVE_RISK` works live for supported grouping dimensions `POSITION`, `SECTOR`, and `ASSET_CLASS`
+  - lotus-performance benchmark exposure context works for supported stateful dimensions `POSITION`, `SECTOR`, and `ASSET_CLASS`
   - lotus-performance benchmark exposure context rejects `grouping_dimensions=["ISSUER"]`
   - lotus-risk rejects stateful `ACTIVE_RISK` + `ISSUER` at request validation with HTTP `422`

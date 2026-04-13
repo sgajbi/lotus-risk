@@ -281,17 +281,17 @@ class RollingMetricSummary(BaseModel):
     total_point_count: int = Field(
         default=0,
         description="Total rolling observation slots evaluated for this metric/window, including null warm-up periods.",
-        json_schema_extra={"example": 90},
+        json_schema_extra={"example": 64},
     )
     computed_point_count: int = Field(
         default=0,
         description="Number of rolling observations that produced non-null values for this metric/window.",
-        json_schema_extra={"example": 70},
+        json_schema_extra={"example": 44},
     )
     coverage_ratio: float = Field(
         default=0.0,
         description="Computed-point coverage ratio for this metric/window (`computed_point_count / total_point_count`).",
-        json_schema_extra={"example": 0.777778},
+        json_schema_extra={"example": 0.6875},
     )
     min_observations_required: int = Field(
         default=0,
@@ -383,7 +383,7 @@ class RollingMetricSeriesContext(BaseModel):
     emitted_point_count: int = Field(
         default=0,
         description="Number of time-series points emitted for this window.",
-        json_schema_extra={"example": 90},
+        json_schema_extra={"example": 64},
     )
     reason: Literal["INCLUDED", "OMITTED_BY_REQUEST", "NO_METRIC_SERIES"] = Field(
         description="Deterministic reason for time-series inclusion behavior in this window.",
@@ -401,9 +401,9 @@ class RollingWindowResult(BaseModel):
         json_schema_extra={
             "example": {
                 "ROLLING_VOLATILITY": {
-                    "total_point_count": 90,
-                    "computed_point_count": 70,
-                    "coverage_ratio": 0.777778,
+                    "total_point_count": 64,
+                    "computed_point_count": 44,
+                    "coverage_ratio": 0.6875,
                     "min_observations_required": 21,
                     "warmup_point_count": 20,
                     "non_computed_point_count": 20,
@@ -441,7 +441,7 @@ class RollingWindowResult(BaseModel):
             "example": {
                 "requested": True,
                 "included": True,
-                "emitted_point_count": 90,
+                "emitted_point_count": 64,
                 "reason": "INCLUDED",
             }
         },
@@ -766,9 +766,9 @@ class RollingResponse(BaseModel):
                     "YTD": {
                         "start_date": "2026-01-01",
                         "end_date": "2026-03-31",
-                        "series_count": 90,
-                        "benchmark_series_count": 90,
-                        "aligned_benchmark_series_count": 90,
+                        "series_count": 64,
+                        "benchmark_series_count": 64,
+                        "aligned_benchmark_series_count": 64,
                         "window_lengths_requested": [21],
                         "window_count_requested": 1,
                         "window_lengths_emitted": [21],
@@ -792,9 +792,9 @@ class RollingResponse(BaseModel):
                                 "window_length": 21,
                                 "metric_summaries": {
                                     "ROLLING_VOLATILITY": {
-                                        "total_point_count": 90,
-                                        "computed_point_count": 70,
-                                        "coverage_ratio": 0.777778,
+                                        "total_point_count": 64,
+                                        "computed_point_count": 44,
+                                        "coverage_ratio": 0.6875,
                                         "min_observations_required": 21,
                                         "warmup_point_count": 20,
                                         "non_computed_point_count": 20,
@@ -809,9 +809,9 @@ class RollingResponse(BaseModel):
                                         "p95": 0.15541828,
                                     },
                                     "ROLLING_BETA": {
-                                        "total_point_count": 90,
-                                        "computed_point_count": 70,
-                                        "coverage_ratio": 0.777778,
+                                        "total_point_count": 64,
+                                        "computed_point_count": 44,
+                                        "coverage_ratio": 0.6875,
                                         "min_observations_required": 21,
                                         "warmup_point_count": 20,
                                         "non_computed_point_count": 20,
@@ -826,9 +826,9 @@ class RollingResponse(BaseModel):
                                         "p95": 0.31680427,
                                     },
                                     "ROLLING_TRACKING_ERROR": {
-                                        "total_point_count": 90,
-                                        "computed_point_count": 70,
-                                        "coverage_ratio": 0.777778,
+                                        "total_point_count": 64,
+                                        "computed_point_count": 44,
+                                        "coverage_ratio": 0.6875,
                                         "min_observations_required": 21,
                                         "warmup_point_count": 20,
                                         "non_computed_point_count": 20,

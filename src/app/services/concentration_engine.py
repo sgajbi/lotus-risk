@@ -691,7 +691,10 @@ async def _resolve_simulation(
     assert session_id is not None
 
     if simulation.simulation_changes:
-        payload = [change.model_dump(exclude_none=True) for change in simulation.simulation_changes]
+        payload = [
+            change.model_dump(mode="json", exclude_none=True)
+            for change in simulation.simulation_changes
+        ]
         changes_response = await core_client.add_simulation_changes(
             session_id=session_id,
             changes=payload,

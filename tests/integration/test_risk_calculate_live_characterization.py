@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
 from datetime import date
+from statistics import NormalDist
+from typing import cast
 
 import httpx
 import numpy as np
+import pandas as pd
 import pytest
 
 from app.contracts.risk import RiskRequestPeriod
@@ -86,6 +90,38 @@ def _historical_var(
     tail = percentage_point_returns[percentage_point_returns <= base_var]
     expected_shortfall = float(np.mean(tail)) if len(tail) > 0 else base_var
     return base_var, expected_shortfall, int(len(tail))
+
+
+def _gaussian_var(
+    portfolio_returns: list[float], *, confidence: float, horizon_days: int
+) -> tuple[float, float, float, int]:
+    percentage_point_returns = pd.Series(np.array(portfolio_returns) * 100.0, dtype="float64")
+    z_score = NormalDist().inv_cdf(1.0 - confidence)
+    base_var = float(
+        percentage_point_returns.mean() + percentage_point_returns.std(ddof=1) * z_score
+    )
+    tail = percentage_point_returns[percentage_point_returns <= base_var]
+    base_expected_shortfall = float(tail.mean()) if not tail.empty else base_var
+    scale = float(np.sqrt(horizon_days))
+    return base_var * scale, base_var, base_expected_shortfall * scale, int(tail.count())
+
+
+def _cornish_fisher_var(
+    portfolio_returns: list[float], *, confidence: float, horizon_days: int
+) -> tuple[float, float, float, int]:
+    percentage_point_returns = pd.Series(np.array(portfolio_returns) * 100.0, dtype="float64")
+    z_score = NormalDist().inv_cdf(1.0 - confidence)
+    skew = float(cast(float, percentage_point_returns.skew()))
+    kurtosis = float(cast(float, percentage_point_returns.kurt()))
+    z_cf = z_score
+    z_cf += ((z_score**2) - 1.0) * skew / 6.0
+    z_cf += ((z_score**3) - 3.0 * z_score) * kurtosis / 24.0
+    z_cf -= ((2.0 * z_score**3) - 5.0 * z_score) * (skew**2) / 36.0
+    base_var = float(percentage_point_returns.mean() + percentage_point_returns.std(ddof=1) * z_cf)
+    tail = percentage_point_returns[percentage_point_returns <= base_var]
+    base_expected_shortfall = float(tail.mean()) if not tail.empty else base_var
+    scale = float(np.sqrt(horizon_days))
+    return base_var * scale, base_var, base_expected_shortfall * scale, int(tail.count())
 
 
 def test_live_stateful_risk_calculate_reconciles_selected_metrics() -> None:
@@ -200,3 +236,78 @@ def test_live_stateful_risk_calculate_reconciles_selected_metrics() -> None:
         expected_shortfall, abs=1e-12
     )
     assert var_metric["details"]["tail_observation_count"] == tail_count
+
+
+@pytest.mark.parametrize(
+    ("method", "horizon_days", "reference"),
+    [
+        ("GAUSSIAN", 5, _gaussian_var),
+        ("CORNISH_FISHER", 10, _cornish_fisher_var),
+    ],
+)
+def test_live_stateful_risk_calculate_reconciles_parametric_var_methods(
+    method: str,
+    horizon_days: int,
+    reference: Callable[..., tuple[float, float, float, int]],
+) -> None:
+    returns_payload = build_stateful_returns_series_request(
+        portfolio_id=PORTFOLIO_ID,
+        as_of_date=date.fromisoformat(AS_OF_DATE),
+        periods=[RiskRequestPeriod(type="YTD", name="YTD")],
+        frequency="DAILY",
+        metric_basis="NET",
+        reporting_currency=None,
+        include_benchmark=False,
+        include_risk_free=False,
+        missing_data_policy="FAIL_FAST",
+    )
+    risk_payload = {
+        "input_mode": "stateful",
+        "stateful_input": {
+            "portfolio_id": PORTFOLIO_ID,
+            "as_of_date": AS_OF_DATE,
+            "periods": [{"type": "YTD", "name": "YTD"}],
+            "metrics": ["VAR"],
+            "options": {
+                "frequency": "DAILY",
+                "var": {
+                    "method": method,
+                    "confidence": VAR_CONFIDENCE,
+                    "horizon_days": horizon_days,
+                    "include_expected_shortfall": True,
+                },
+            },
+        },
+    }
+
+    upstream_body = fetch_live_returns_series(
+        base_url=PERFORMANCE_BASE_URL,
+        request_payload=returns_payload,
+    )
+    with httpx.Client(timeout=30.0) as client:
+        risk_response = client.post(f"{RISK_BASE_URL}/analytics/risk/calculate", json=risk_payload)
+        risk_response.raise_for_status()
+
+    portfolio_returns = [
+        value
+        for _, value in _business_day_returns(
+            extract_decimal_returns(upstream_body["series"]["portfolio_returns"])
+        )
+    ]
+    value, base_var, expected_shortfall, tail_count = reference(
+        portfolio_returns,
+        confidence=VAR_CONFIDENCE,
+        horizon_days=horizon_days,
+    )
+    metric = risk_response.json()["results"]["YTD"]["metrics"]["VAR"]
+
+    assert metric["value"] == pytest.approx(value, abs=1e-12)
+    assert metric["details"]["method"] == method
+    assert metric["details"]["confidence"] == VAR_CONFIDENCE
+    assert metric["details"]["horizon_days"] == horizon_days
+    assert metric["details"]["horizon_scale_factor"] == pytest.approx(
+        np.sqrt(horizon_days), abs=1e-15
+    )
+    assert metric["details"]["base_var"] == pytest.approx(base_var, abs=1e-12)
+    assert metric["details"]["expected_shortfall"] == pytest.approx(expected_shortfall, abs=1e-12)
+    assert metric["details"]["tail_observation_count"] == tail_count

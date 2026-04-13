@@ -52,6 +52,7 @@ Provide windowed historical risk diagnostics for PB/WM portfolios with instituti
   - portfolio returns series
   - benchmark reference series
   - alignment/lineage metadata
+  - upstream daily returns are filtered to trading days before rolling calculations
 
 - lotus-core:
   - risk-free reference series
@@ -124,3 +125,10 @@ Provide windowed historical risk diagnostics for PB/WM portfolios with instituti
    - `risk_free_observed_end_date`
    - `risk_free_missing_dates_sample`
    - `risk_free_coverage_request_fingerprint`
+
+## Live Validation Notes
+
+- Canonical live YTD validation for `PB_SG_GLOBAL_BAL_001` uses `64` trading-day portfolio return observations, not the `90` calendar observations present in the upstream response.
+- For a `21` observation strict window, each rolling metric emits `44` computed values and `20` warm-up observations.
+- Live validation reconciles all v1 metrics: rolling volatility, Sharpe, beta, tracking error, information ratio, and max drawdown.
+- Multiple window lengths, `include_time_series=true`, and `min_observations_policy=ALLOW_PARTIAL` are validated live for the canonical portfolio.

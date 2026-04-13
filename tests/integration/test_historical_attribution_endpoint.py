@@ -281,7 +281,7 @@ def test_historical_attribution_stateful_total_risk_happy_path() -> None:
 
 def test_historical_attribution_stateful_total_risk_aligns_exposure_to_return_dates() -> None:
     performance_client = build_stateful_attribution_returns_client()
-    core_rows = [
+    core_rows: list[dict[str, object]] = [
         *build_sector_position_timeseries_rows(),
         {
             "security_id": "SEC_A",

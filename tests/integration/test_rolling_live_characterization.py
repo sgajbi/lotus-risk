@@ -361,3 +361,57 @@ def test_live_stateful_rolling_sharpe_reconciles_with_live_risk_free_series() ->
     assert actual["latest_observation_date"] == str(aligned.index[-1].date())
     for field, expected_value in expected.items():
         assert actual[field] == pytest.approx(expected_value, abs=1e-9)
+
+
+def test_live_stateful_rolling_emits_time_series_for_multiple_partial_windows() -> None:
+    rolling_payload = {
+        "input_mode": "stateful",
+        "stateful_input": {
+            "portfolio_id": PORTFOLIO_ID,
+            "as_of_date": AS_OF_DATE,
+            "periods": [{"type": "YTD", "name": "YTD"}],
+            "rolling_options": {
+                "window_lengths": [5, WINDOW_LENGTH],
+                "metrics": ["ROLLING_VOLATILITY", "ROLLING_MAX_DRAWDOWN"],
+                "annualization_basis": ANNUALIZATION_BASIS,
+                "min_observations_policy": "ALLOW_PARTIAL",
+                "include_time_series": True,
+            },
+        },
+    }
+
+    with httpx.Client(timeout=30.0) as client:
+        response = client.post(
+            f"{RISK_BASE_URL}/analytics/risk/rolling-metrics",
+            json=rolling_payload,
+        )
+        response.raise_for_status()
+
+    body = response.json()
+    period = body["results"]["YTD"]
+    assert body["metadata"]["include_time_series"] is True
+    assert body["metadata"]["min_observations_policy"] == "ALLOW_PARTIAL"
+    assert body["metadata"]["window_lengths_requested"] == [5, WINDOW_LENGTH]
+    assert period["series_count"] == 64
+    assert period["window_lengths_emitted"] == [5, WINDOW_LENGTH]
+    assert period["window_count_emitted"] == 2
+    assert period["quality_flags"] == []
+
+    for window in period["window_results"]:
+        assert window["metric_series_context"] == {
+            "requested": True,
+            "included": True,
+            "emitted_point_count": period["series_count"],
+            "reason": "INCLUDED",
+        }
+        assert len(window["metric_series"]) == period["series_count"]
+        assert window["metric_series"][0]["metric_values"] == {
+            "ROLLING_VOLATILITY": None,
+            "ROLLING_MAX_DRAWDOWN": None,
+        }
+        for metric_name, summary in window["metric_summaries"].items():
+            assert metric_name in {"ROLLING_VOLATILITY", "ROLLING_MAX_DRAWDOWN"}
+            assert summary["min_observations_required"] == 2
+            assert summary["warmup_point_count"] == 1
+            assert summary["computed_point_count"] == period["series_count"] - 1
+            assert summary["coverage_ratio"] == pytest.approx(63 / 64, abs=1e-12)

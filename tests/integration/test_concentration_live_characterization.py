@@ -75,7 +75,7 @@ def _instrument_name_by_security(enrichment: Sequence[dict[str, Any]]) -> dict[s
     }
 
 
-def _top_position(positions: Sequence[dict[str, Any]]) -> tuple[str | None, float]:
+def _top_position(positions: Sequence[dict[str, Any]]) -> tuple[str, float]:
     usable = [position for position in positions if _position_value(position) > 0]
     assert usable, "expected at least one usable position in live snapshot"
     denominator = sum(_position_value(position) for position in usable)
@@ -83,7 +83,9 @@ def _top_position(positions: Sequence[dict[str, Any]]) -> tuple[str | None, floa
         usable,
         key=lambda position: (_position_value(position), position.get("security_id") or ""),
     )
-    return top.get("security_id"), _round(_position_value(top) / denominator)
+    security_id = top.get("security_id")
+    assert isinstance(security_id, str), "expected top live position to carry security_id"
+    return security_id, _round(_position_value(top) / denominator)
 
 
 def _top_issuer(

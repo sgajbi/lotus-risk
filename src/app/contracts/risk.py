@@ -669,7 +669,7 @@ class RiskResponse(BaseModel):
                             "BETA": {
                                 "value": -0.08222479,
                                 "details": {
-                                    "aligned_observation_count": 90,
+                                    "aligned_observation_count": 64,
                                     "portfolio_mean_return": 0.0010093159,
                                     "benchmark_mean_return": 0.0004210968,
                                     "covariance": -0.0002246556,
@@ -679,7 +679,7 @@ class RiskResponse(BaseModel):
                             "TRACKING_ERROR": {
                                 "value": 9.79331573,
                                 "details": {
-                                    "aligned_observation_count": 90,
+                                    "aligned_observation_count": 64,
                                     "annualization_factor": 252,
                                     "portfolio_mean_return": 0.0010093159,
                                     "benchmark_mean_return": 0.0004210968,
@@ -691,7 +691,7 @@ class RiskResponse(BaseModel):
                             "INFORMATION_RATIO": {
                                 "value": 1.5135958,
                                 "details": {
-                                    "aligned_observation_count": 90,
+                                    "aligned_observation_count": 64,
                                     "annualization_factor": 252,
                                     "portfolio_mean_return": 0.0010093159,
                                     "benchmark_mean_return": 0.0004210968,
