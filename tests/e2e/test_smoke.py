@@ -199,6 +199,43 @@ def test_integration_capabilities_endpoint_exposes_support_matrix() -> None:
     )
 
 
+def test_e2e_capabilities_expose_product_surface_safety_notes() -> None:
+    client = TestClient(app)
+    response = client.get("/integration/capabilities")
+    assert response.status_code == 200
+
+    workflow_by_key = {
+        workflow["workflow_key"]: workflow for workflow in response.json()["workflows"]
+    }
+
+    assert (
+        "VaR and expected shortfall are signed return-threshold metrics"
+        in workflow_by_key["risk_snapshot"]["notes"]
+    )
+    assert (
+        "attribution residual and reconciled_sum must be preserved with contributors"
+        in workflow_by_key["historical_risk_attribution"]["notes"]
+    )
+    assert (
+        "simulation is supported only for concentration risk"
+        in workflow_by_key["concentration_risk"]["notes"]
+    )
+
+
+def test_e2e_non_concentration_endpoints_reject_simulation_mode() -> None:
+    client = TestClient(app)
+
+    for endpoint in (
+        "/analytics/risk/calculate",
+        "/analytics/risk/drawdown",
+        "/analytics/risk/rolling-metrics",
+        "/analytics/risk/historical-attribution",
+    ):
+        response = client.post(endpoint, json={"input_mode": "simulation"})
+        assert response.status_code == 422, endpoint
+        assert response.json()["error"]["code"] == "INVALID_REQUEST"
+
+
 def test_e2e_risk_calculate_happy_path() -> None:
     client = TestClient(app)
     response = client.post("/analytics/risk/calculate", json=_risk_payload())
@@ -278,6 +315,24 @@ def test_e2e_historical_attribution_stateless_happy_path() -> None:
     body = response.json()
     assert body["input_mode"] == "stateless"
     assert "YTD" in body["results"]
+
+
+def test_e2e_historical_attribution_preserves_reconciliation_fields() -> None:
+    client = TestClient(app)
+    response = client.post(
+        "/analytics/risk/historical-attribution",
+        json=_historical_attribution_payload(),
+    )
+    assert response.status_code == 200
+
+    body = response.json()
+    attribution_sets = body["results"]["YTD"]["attribution_sets"]
+    assert attribution_sets
+    for attribution_set in attribution_sets:
+        assert "total_value" in attribution_set
+        assert "reconciled_sum" in attribution_set
+        assert "residual" in attribution_set
+        assert "contributors" in attribution_set
 
 
 def test_e2e_concentration_stateless_payload() -> None:
