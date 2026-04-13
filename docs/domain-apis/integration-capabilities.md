@@ -56,6 +56,10 @@ This allows consumers to discover that:
 - concentration supports simulation
 - risk/calculate, drawdown, rolling, and historical attribution do not
 - historical attribution remains `partial` because stateful active-risk `ISSUER` is gated
+- risk snapshot VaR and expected shortfall are signed return-threshold metrics
+- historical attribution residual and `reconciled_sum` must be preserved with contributors
+- downstream product surfaces must derive simulation and issuer active-risk affordances from this
+  payload, not from broad service-level support for the word `simulation`
 
 ## Upstream/Downstream Dependency Notes
 
@@ -69,6 +73,8 @@ This allows consumers to discover that:
 - Strengths:
   - typed contract exists and is integration-tested.
   - vocabulary is centralized in constants to reduce drift.
+  - workflow-level mode support is explicit enough for gateway and Workbench surfaces to avoid
+    unsupported simulation and issuer active-risk affordances.
 - Gaps:
   - endpoint does not currently accept/reflect `consumerSystem` and `tenantId` query context as many peer services do.
   - policy diagnostics richness is minimal compared to gateway-normalized expectations.

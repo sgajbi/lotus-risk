@@ -77,6 +77,15 @@ failure category.
 
 See `docs/domain-apis/risk-observability.md`.
 
+## Product-Surface Alignment
+
+Downstream gateway, Workbench, reporting, and AI consumers must preserve signed VaR semantics,
+historical attribution reconciliation fields, issuer active-risk gating, concentration-only
+simulation support, and audit metadata. These rules are part of the risk contract because otherwise
+correct calculations can become misleading at the product surface.
+
+See `docs/domain-apis/risk-product-surface-alignment.md`.
+
 ## Related Detail Docs
 
 - [integration-capabilities.md](C:\Users\Sandeep\projects\lotus-risk\docs\domain-apis\integration-capabilities.md)
@@ -85,3 +94,4 @@ See `docs/domain-apis/risk-observability.md`.
 - [risk-rolling-metrics.md](C:\Users\Sandeep\projects\lotus-risk\docs\domain-apis\risk-rolling-metrics.md)
 - [risk-historical-attribution.md](C:\Users\Sandeep\projects\lotus-risk\docs\domain-apis\risk-historical-attribution.md)
 - [risk-concentration.md](C:\Users\Sandeep\projects\lotus-risk\docs\domain-apis\risk-concentration.md)
+- [risk-product-surface-alignment.md](C:\Users\Sandeep\projects\lotus-risk\docs\domain-apis\risk-product-surface-alignment.md)

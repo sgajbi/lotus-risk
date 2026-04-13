@@ -515,6 +515,7 @@ async def integration_capabilities() -> IntegrationCapabilitiesResponse:
                 notes=[
                     "simulation is intentionally unsupported",
                     "benchmark-dependent metrics require benchmark returns",
+                    "VaR and expected shortfall are signed return-threshold metrics",
                 ],
             ),
             CapabilityWorkflow(
@@ -523,7 +524,7 @@ async def integration_capabilities() -> IntegrationCapabilitiesResponse:
                 supported_input_modes=["stateless", "stateful", "simulation"],
                 support_status="full",
                 notes=[
-                    "simulation is supported for concentration",
+                    "simulation is supported only for concentration risk",
                     "issuer concentration includes coverage diagnostics",
                 ],
             ),
@@ -553,6 +554,7 @@ async def integration_capabilities() -> IntegrationCapabilitiesResponse:
                     "simulation is intentionally unsupported",
                     "stateful active-risk supports POSITION, SECTOR, and ASSET_CLASS",
                     "stateful active-risk ISSUER remains gated",
+                    "attribution residual and reconciled_sum must be preserved with contributors",
                 ],
             ),
         ],

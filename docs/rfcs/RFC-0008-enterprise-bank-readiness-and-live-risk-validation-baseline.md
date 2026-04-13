@@ -428,6 +428,20 @@ Acceptance criteria:
 4. concentration is the only simulation-enabled risk flow in the current contract,
 5. gateway and Workbench validation evidence is linked from the final implementation evidence.
 
+Implementation evidence:
+
+1. `docs/domain-apis/risk-product-surface-alignment.md` now defines the risk-owned downstream
+   contract for signed VaR, expected shortfall, attribution residuals, issuer active-risk gating,
+   concentration-only simulation, and audit metadata preservation.
+2. `docs/domain-apis/integration-capabilities.md` and
+   `docs/domain-apis/endpoint-matrix.md` link the downstream alignment contract and clarify that
+   consumer affordances must be derived from workflow-level capabilities.
+3. `tests/unit/test_product_surface_alignment_contract.py` verifies the capability payload and docs
+   do not drift from the downstream alignment requirements.
+4. Because this implementation slice is intentionally limited to `lotus-risk`, gateway and
+   Workbench consumer-side proof remains a downstream validation activity that must reference the
+   risk-owned contract before enterprise production approval.
+
 ### Slice 7: Documentation, Agent Context, Skills Guidance, and Branch Hygiene
 
 Objective:
