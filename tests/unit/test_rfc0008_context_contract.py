@@ -12,7 +12,7 @@ def test_rfc0008_records_final_slice_and_guidance_assessment() -> None:
         / "RFC-0008-enterprise-bank-readiness-and-live-risk-validation-baseline.md"
     ).read_text(encoding="utf-8")
 
-    assert "Status: Implemented on feature branch" in rfc
+    assert "Status: Done for lotus-risk scope" in rfc
     assert "## Skills and Guidance Assessment" in rfc
     assert "Slice 7 now updates repository context" in rfc
     assert "unrestricted enterprise-bank production approval remains conditional" in rfc

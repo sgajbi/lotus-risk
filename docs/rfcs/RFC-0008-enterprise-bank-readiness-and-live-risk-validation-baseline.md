@@ -1,6 +1,6 @@
 # RFC-0008: Enterprise Bank Readiness and Live Risk Validation Baseline
 
-- Status: Implemented on feature branch; unrestricted enterprise-bank production approval remains conditional
+- Status: Done for lotus-risk scope; unrestricted enterprise-bank production approval remains conditional
 - Date: 2026-04-13
 - Owners: lotus-risk
 - Requires Approval From: lotus-risk maintainers, lotus-platform maintainers
@@ -24,7 +24,7 @@
 10. historical risk attribution,
 11. rolling risk.
 
-This RFC defines the final enterprise-readiness program required before `lotus-risk` should be called enterprise-bank production-approved. The `lotus-risk`-owned implementation slices are now complete on the feature branch; unrestricted approval still depends on green merge governance, downstream product proof, and broader seeded portfolio archetype evidence.
+This RFC defines the final enterprise-readiness program required before `lotus-risk` should be called enterprise-bank production-approved. The `lotus-risk`-owned implementation slices are done; unrestricted approval still depends on green merge governance, downstream product proof, and broader seeded portfolio archetype evidence.
 
 The central decision is conservative:
 
@@ -67,7 +67,7 @@ At RFC creation, the material gaps were:
 
 Current branch reality:
 
-1. the `lotus-risk`-owned implementation work for these gaps is complete on the feature branch,
+1. the `lotus-risk`-owned implementation work for these gaps is done,
 2. unrestricted enterprise-bank production approval remains conditional on PR merge governance,
 3. gateway and Workbench consumer-side proof must be supplied in their owning repositories,
 4. broader live matrix coverage still requires real seeded portfolio IDs for the pending archetypes.
@@ -548,7 +548,7 @@ This evidence proves the current analytics baseline and completes the `lotus-ris
 
 ## Acceptance Criteria for RFC Completion
 
-This RFC is complete for the `lotus-risk`-owned feature-branch implementation when:
+This RFC is done for the `lotus-risk`-owned implementation when:
 
 1. all seven implementation slices are complete,
 2. the intentional `ACTIVE_RISK + ISSUER` limitation remains documented unless superseded by a future approved issuer-exposure contract,
@@ -558,7 +558,7 @@ This RFC is complete for the `lotus-risk`-owned feature-branch implementation wh
 6. docs, context, and skills/guidance assessment are complete,
 7. branch and PR hygiene are complete.
 
-The branch implementation now satisfies items 1, 2, 3, 5, and 6 locally. Items 4 and 7 are completed only after GitHub checks, PR review/merge, branch deletion, and main synchronization are done.
+The implementation now satisfies items 1, 2, 3, 5, and 6 locally. Items 4 and 7 are completed only after GitHub checks, PR review/merge, branch deletion, and main synchronization are done.
 
 ## Risks and Mitigations
 
@@ -584,7 +584,7 @@ The branch implementation now satisfies items 1, 2, 3, 5, and 6 locally. Items 4
 
 `lotus-risk` is analytically credible for supported private-banking risk workflows and has strong canonical live-data evidence.
 
-The RFC-0008 `lotus-risk`-owned implementation is complete on the feature branch, but the service is not yet unrestricted enterprise-bank production-approved.
+The RFC-0008 `lotus-risk`-owned implementation is done, but the service is not yet unrestricted enterprise-bank production-approved.
 
 The remaining approval path is explicit: green GitHub merge governance, downstream gateway/Workbench proof against the product-surface contract, broader seeded live portfolio archetype evidence, and final branch hygiene.
 
