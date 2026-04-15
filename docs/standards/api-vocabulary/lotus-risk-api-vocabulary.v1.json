@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-04-13T12:26:30.735203+00:00",
+  "generatedAt": "2026-04-15T14:09:49.407822+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.alignment_policy",
@@ -101,7 +101,7 @@
       "canonicalTerm": "base_url",
       "preferredName": "base_url",
       "description": "Canonical base URL configured for the dependency.",
-      "example": "http://core-query.dev.lotus",
+      "example": "http://core-control.dev.lotus",
       "type": "string",
       "locations": [
         "body"
@@ -125,6 +125,22 @@
       "observedTypes": [
         "RollingRequestDependencyContext",
         "BenchmarkRequestContext"
+      ]
+    },
+    {
+      "semanticId": "lotus.benchmark_policy",
+      "canonicalTerm": "benchmark_policy",
+      "preferredName": "benchmark_policy",
+      "description": "Canonical benchmark policy used by lotus-risk APIs.",
+      "example": {
+        "key": "value"
+      },
+      "type": "BenchmarkDrawdownPolicy",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "BenchmarkDrawdownPolicy"
       ]
     },
     {
@@ -453,13 +469,14 @@
       "semanticId": "lotus.include_benchmark",
       "canonicalTerm": "include_benchmark",
       "preferredName": "include_benchmark",
-      "description": "Whether benchmark-relative drawdown was requested.",
-      "example": true,
-      "type": "object",
+      "description": "Whether benchmark-relative drawdown should be computed.",
+      "example": false,
+      "type": "boolean",
       "locations": [
         "body"
       ],
       "observedTypes": [
+        "boolean",
         "object"
       ]
     },
@@ -735,13 +752,14 @@
       "semanticId": "lotus.missing_benchmark_policy",
       "canonicalTerm": "missing_benchmark_policy",
       "preferredName": "missing_benchmark_policy",
-      "description": "Behavior requested when benchmark series is unavailable.",
+      "description": "Behavior when benchmark drawdown is requested but benchmark series is unavailable.",
       "example": "IGNORE",
-      "type": "object",
+      "type": "string",
       "locations": [
         "body"
       ],
       "observedTypes": [
+        "string",
         "object"
       ]
     },
@@ -2949,6 +2967,30 @@
             "type": "object",
             "semanticId": "lotus.stateful_input",
             "attributeRef": "#/attributeCatalog/lotus.stateful_input"
+          },
+          {
+            "name": "benchmark_policy",
+            "location": "body",
+            "required": false,
+            "type": "BenchmarkDrawdownPolicy",
+            "semanticId": "lotus.benchmark_policy",
+            "attributeRef": "#/attributeCatalog/lotus.benchmark_policy"
+          },
+          {
+            "name": "benchmark_policy.include_benchmark",
+            "location": "body",
+            "required": false,
+            "type": "boolean",
+            "semanticId": "lotus.include_benchmark",
+            "attributeRef": "#/attributeCatalog/lotus.include_benchmark"
+          },
+          {
+            "name": "benchmark_policy.missing_benchmark_policy",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.missing_benchmark_policy",
+            "attributeRef": "#/attributeCatalog/lotus.missing_benchmark_policy"
           },
           {
             "name": "analysis_options",

@@ -47,7 +47,8 @@ def test_drawdown_endpoint_stateless_contract() -> None:
     assert body["results"]["YTD"]["underwater_series"] is not None
     assert body["metadata"]["include_underwater_series"] is True
     assert body["metadata"]["include_episode_list"] is True
-    assert body["metadata"]["include_benchmark"] is None
+    assert body["metadata"]["include_benchmark"] is False
+    assert body["metadata"]["missing_benchmark_policy"] == "IGNORE"
 
 
 def test_drawdown_endpoint_stateful_uses_lotus_performance() -> None:
@@ -97,6 +98,51 @@ def test_drawdown_endpoint_stateful_uses_lotus_performance() -> None:
     assert body["results"]["YTD"]["relative_to_benchmark_context"]["applied"] is True
     assert body["results"]["YTD"]["relative_to_benchmark_context"]["reason"] == "APPLIED"
     assert body["results"]["YTD"]["relative_to_benchmark"]["time_under_water_days"] >= 0
+
+
+def test_drawdown_endpoint_marks_benchmark_unavailable_when_requested_without_series() -> None:
+    client = TestClient(app)
+    payload = _stateless_payload()
+    payload["stateless_input"]["benchmark_returns"] = []  # type: ignore[index]
+    payload["benchmark_policy"] = {
+        "include_benchmark": True,
+        "missing_benchmark_policy": "REQUIRE",
+    }
+    response = client.post("/analytics/risk/drawdown", json=payload)
+    assert response.status_code == 200
+    period = response.json()["results"]["YTD"]
+    assert period["benchmark_observation_count"] == 0
+    assert period["relative_to_benchmark"] is None
+    assert period["relative_to_benchmark_context"] == {
+        "requested": True,
+        "applied": False,
+        "reason": "BENCHMARK_UNAVAILABLE",
+        "aligned_observation_count": 0,
+    }
+
+
+def test_drawdown_endpoint_marks_no_aligned_benchmark_observations() -> None:
+    client = TestClient(app)
+    payload = _stateless_payload()
+    payload["stateless_input"]["benchmark_returns"] = [  # type: ignore[index]
+        {"date": "2025-12-29", "value": 0.5},
+        {"date": "2025-12-30", "value": -0.1},
+    ]
+    payload["benchmark_policy"] = {
+        "include_benchmark": True,
+        "missing_benchmark_policy": "REQUIRE",
+    }
+    response = client.post("/analytics/risk/drawdown", json=payload)
+    assert response.status_code == 200
+    period = response.json()["results"]["YTD"]
+    assert period["benchmark_observation_count"] == 0
+    assert period["relative_to_benchmark"] is None
+    assert period["relative_to_benchmark_context"] == {
+        "requested": True,
+        "applied": False,
+        "reason": "NO_ALIGNED_OBSERVATIONS",
+        "aligned_observation_count": 0,
+    }
 
 
 def test_drawdown_endpoint_rejects_simulation_mode_at_contract_boundary() -> None:

@@ -201,6 +201,16 @@ class DrawdownAnalyticsRequest(BaseModel):
             }
         },
     )
+    benchmark_policy: BenchmarkDrawdownPolicy = Field(
+        default_factory=BenchmarkDrawdownPolicy,
+        description=(
+            "Benchmark-relative drawdown policy for stateless requests. "
+            "Stateful requests must use `stateful_input.benchmark_policy`."
+        ),
+        json_schema_extra={
+            "example": {"include_benchmark": True, "missing_benchmark_policy": "REQUIRE"}
+        },
+    )
     analysis_options: DrawdownAnalysisOptions = Field(
         default_factory=DrawdownAnalysisOptions,
         description="Drawdown analytics option flags and thresholds.",
@@ -222,6 +232,10 @@ class DrawdownAnalyticsRequest(BaseModel):
             "examples": [
                 {
                     "input_mode": "stateless",
+                    "benchmark_policy": {
+                        "include_benchmark": True,
+                        "missing_benchmark_policy": "REQUIRE",
+                    },
                     "stateless_input": {
                         "scope": {
                             "as_of_date": "2026-03-31",
@@ -280,6 +294,14 @@ class DrawdownAnalyticsRequest(BaseModel):
             raise ValueError("stateless_input is required when input_mode=stateless")
         if self.input_mode == DrawdownInputMode.STATEFUL and self.stateful_input is None:
             raise ValueError("stateful_input is required when input_mode=stateful")
+        if (
+            self.input_mode == DrawdownInputMode.STATEFUL
+            and self.benchmark_policy.include_benchmark
+        ):
+            raise ValueError(
+                "benchmark_policy is only supported for stateless drawdown requests; "
+                "use stateful_input.benchmark_policy for input_mode=stateful"
+            )
         return self
 
 

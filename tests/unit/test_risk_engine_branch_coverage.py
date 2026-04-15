@@ -211,11 +211,17 @@ def test_risk_metrics_return_domain_errors_for_insufficient_data() -> None:
     response = risk_engine.calculate_risk(RiskCalculationRequest.model_validate(payload))
     metrics = response.results["YTD"].metrics
     metric_names = cast(list[str], payload["metrics"])
+    benchmark_aligned_metrics = {"BETA", "TRACKING_ERROR", "INFORMATION_RATIO"}
     for metric_name in metric_names:
         metric = metrics[metric_name]
         assert metric.value is None
         assert metric.details is not None
-        assert metric.details["error"] == "Insufficient data"
+        expected_error = (
+            "Insufficient aligned observations"
+            if metric_name in benchmark_aligned_metrics
+            else "Insufficient data"
+        )
+        assert metric.details["error"] == expected_error
 
 
 def test_beta_and_information_ratio_guard_clauses() -> None:

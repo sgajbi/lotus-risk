@@ -11,6 +11,11 @@ def test_health_endpoints() -> None:
     assert client.get("/health/live").status_code == 200
     assert client.get("/health/ready").status_code == 200
     assert client.get("/ops").status_code == 200
+    metrics_response = client.get("/metrics")
+    assert metrics_response.status_code == 200
+    assert metrics_response.headers["content-type"].startswith("text/plain")
+    assert "# HELP" in metrics_response.text
+    assert 'http_requests_total{handler="/ops",method="GET",status="2xx"}' in metrics_response.text
 
 
 def test_correlation_header_propagation() -> None:
@@ -60,6 +65,10 @@ def test_integration_capabilities_contract() -> None:
     assert workflow_by_key["historical_risk_attribution"]["support_status"] == "partial"
     assert (
         "stateful active-risk ISSUER remains gated"
+        in workflow_by_key["historical_risk_attribution"]["notes"]
+    )
+    assert (
+        "historical-attribution response metadata is the authoritative active-risk support contract"
         in workflow_by_key["historical_risk_attribution"]["notes"]
     )
 
@@ -216,6 +225,26 @@ def test_health_ready_fails_when_dependency_is_unavailable() -> None:
     assert ops.json()["checks"]["ready"] is False
 
 
+def test_health_ready_returns_draining_when_service_is_draining() -> None:
+    app.state.is_draining = True
+    try:
+        client = TestClient(app)
+        readiness = client.get("/health/ready")
+        ops = client.get("/ops")
+    finally:
+        app.state.is_draining = False
+
+    assert readiness.status_code == 503
+    readiness_body = readiness.json()
+    assert readiness_body["status"] == "draining"
+    assert all(dependency["status"] == "ok" for dependency in readiness_body["dependencies"])
+    assert ops.status_code == 200
+    ops_body = ops.json()
+    assert ops_body["status"] == "degraded"
+    assert ops_body["checks"]["ready"] is False
+    assert ops_body["checks"]["draining"] is True
+
+
 def test_health_ready_and_ops_surface_structured_data_gap_metadata() -> None:
     with override_app_runtime(
         dependency_statuses={
@@ -329,6 +358,85 @@ def test_openapi_exposes_historical_attribution_support_metadata() -> None:
     assert "benchmark issuer exposure semantics unavailable" in serialized_spec
 
 
+def test_openapi_exposes_ops_dependency_diagnostics_schema() -> None:
+    client = TestClient(app)
+    spec = client.get("/openapi.json").json()
+    ops_get = spec["paths"]["/ops"]["get"]
+    schema_ref = ops_get["responses"]["200"]["content"]["application/json"]["schema"]["$ref"]
+    assert schema_ref.endswith("/OpsResponse")
+    ops_schema = spec["components"]["schemas"]["OpsResponse"]
+    dependency_schema = spec["components"]["schemas"]["DependencyStatus"]
+    assert ops_schema["properties"]["input_modes"]["description"] == (
+        "Execution modes exposed by this service."
+    )
+    assert ops_schema["properties"]["input_modes"]["example"] == [
+        "stateless",
+        "stateful",
+        "simulation",
+    ]
+    assert dependency_schema["properties"]["base_url"]["description"] == (
+        "Canonical base URL configured for the dependency."
+    )
+    assert dependency_schema["properties"]["issue_code"]["example"] == "RISK_FREE_SERIES_EMPTY"
+
+
+def test_openapi_exposes_metadata_contract_schema() -> None:
+    client = TestClient(app)
+    spec = client.get("/openapi.json").json()
+    metadata_get = spec["paths"]["/metadata"]["get"]
+    schema_ref = metadata_get["responses"]["200"]["content"]["application/json"]["schema"]["$ref"]
+    assert schema_ref.endswith("/MetadataResponse")
+    metadata_schema = spec["components"]["schemas"]["MetadataResponse"]
+    assert metadata_schema["properties"]["service"]["example"] == "lotus-risk"
+    assert metadata_schema["properties"]["version"]["description"] == "Service version string."
+    assert metadata_schema["properties"]["rounding_policy_version"]["description"] == (
+        "Rounding policy revision used by risk outputs."
+    )
+    assert metadata_schema["properties"]["rounding_policy_version"]["example"] == "v1"
+
+
+def test_openapi_exposes_readiness_dependency_schema() -> None:
+    client = TestClient(app)
+    spec = client.get("/openapi.json").json()
+    readiness_get = spec["paths"]["/health/ready"]["get"]
+    schema_ref = readiness_get["responses"]["200"]["content"]["application/json"]["schema"]["$ref"]
+    assert schema_ref.endswith("/ReadinessResponse")
+    readiness_schema = spec["components"]["schemas"]["ReadinessResponse"]
+    dependency_schema = spec["components"]["schemas"]["DependencyStatus"]
+    assert readiness_schema["properties"]["status"]["description"] == "Readiness state."
+    assert readiness_schema["properties"]["status"]["example"] == "ready"
+    assert readiness_schema["properties"]["dependencies"]["description"] == (
+        "Dependency runtime states used to determine readiness."
+    )
+    assert dependency_schema["properties"]["category"]["example"] == "data_gap"
+
+
+def test_openapi_exposes_metrics_text_contract() -> None:
+    client = TestClient(app)
+    spec = client.get("/openapi.json").json()
+    metrics_get = spec["paths"]["/metrics"]["get"]
+    response_200 = metrics_get["responses"]["200"]
+    assert response_200["description"] == "Prometheus text metrics payload."
+    assert "text/plain" in response_200["content"]
+
+
+def test_openapi_exposes_health_and_liveness_contracts() -> None:
+    client = TestClient(app)
+    spec = client.get("/openapi.json").json()
+    health_get = spec["paths"]["/health"]["get"]
+    liveness_get = spec["paths"]["/health/live"]["get"]
+    health_ref = health_get["responses"]["200"]["content"]["application/json"]["schema"]["$ref"]
+    liveness_ref = liveness_get["responses"]["200"]["content"]["application/json"]["schema"]["$ref"]
+    assert health_ref.endswith("/HealthResponse")
+    assert liveness_ref.endswith("/LivenessResponse")
+    health_schema = spec["components"]["schemas"]["HealthResponse"]
+    liveness_schema = spec["components"]["schemas"]["LivenessResponse"]
+    assert health_schema["properties"]["status"]["example"] == "ok"
+    assert health_schema["properties"]["service"]["description"] == "Service identifier."
+    assert liveness_schema["properties"]["status"]["description"] == ("Liveness status indicator.")
+    assert liveness_schema["properties"]["status"]["example"] == "live"
+
+
 def test_historical_attribution_openapi_examples_and_description_reflect_stateful_gate() -> None:
     client = TestClient(app)
     spec = client.get("/openapi.json").json()
@@ -387,11 +495,15 @@ def test_drawdown_openapi_examples_are_present_and_canonical() -> None:
     response_schema = spec["components"]["schemas"]["DrawdownResponse"]
 
     assert drawdown_schema["properties"]["input_mode"]["example"] == "stateful"
+    assert drawdown_schema["properties"]["benchmark_policy"]["example"]["include_benchmark"] is True
     assert (
         drawdown_schema["properties"]["stateful_input"]["example"]["benchmark_policy"][
             "include_benchmark"
         ]
         is True
+    )
+    assert drawdown_schema["examples"][0]["benchmark_policy"]["missing_benchmark_policy"] == (
+        "REQUIRE"
     )
     assert drawdown_schema["properties"]["analysis_options"]["example"]["top_n_episodes"] == 5
     assert response_schema["properties"]["metadata"]["example"]["missing_benchmark_policy"] in {

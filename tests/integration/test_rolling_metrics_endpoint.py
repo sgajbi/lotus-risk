@@ -395,6 +395,81 @@ def test_rolling_metrics_endpoint_stateful_rejects_missing_benchmark_returns_for
     assert request_payload["series_selection"]["include_benchmark"] is True
 
 
+def test_rolling_metrics_endpoint_stateless_rejects_missing_benchmark_series() -> None:
+    client = TestClient(app)
+    payload = _stateless_payload()
+    stateless = payload["stateless_input"]
+    assert isinstance(stateless, dict)
+    stateless["benchmark_returns"] = []
+    stateless["rolling_options"] = {
+        "window_lengths": [3],
+        "metrics": ["ROLLING_BETA"],
+        "include_time_series": False,
+    }
+    response = client.post("/analytics/risk/rolling-metrics", json=payload)
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "INVALID_REQUEST"
+
+
+def test_rolling_metrics_endpoint_stateless_rejects_missing_risk_free_series() -> None:
+    client = TestClient(app)
+    payload = _stateless_payload()
+    stateless = payload["stateless_input"]
+    assert isinstance(stateless, dict)
+    stateless["risk_free_returns"] = []
+    stateless["rolling_options"] = {
+        "window_lengths": [3],
+        "metrics": ["ROLLING_SHARPE"],
+        "include_time_series": False,
+    }
+    response = client.post("/analytics/risk/rolling-metrics", json=payload)
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "INVALID_REQUEST"
+
+
+def test_rolling_metrics_endpoint_stateless_marks_no_aligned_dependency_observations() -> None:
+    client = TestClient(app)
+    payload = _stateless_payload()
+    stateless = payload["stateless_input"]
+    assert isinstance(stateless, dict)
+    stateless["benchmark_returns"] = [
+        {"date": "2026-01-06", "value": 0.8},
+        {"date": "2026-01-07", "value": -1.5},
+    ]
+    stateless["risk_free_returns"] = [
+        {"date": "2026-01-06", "value": 0.01},
+        {"date": "2026-01-07", "value": 0.01},
+    ]
+    stateless["rolling_options"] = {
+        "window_lengths": [3],
+        "metrics": ["ROLLING_SHARPE", "ROLLING_BETA"],
+        "include_time_series": False,
+    }
+    response = client.post("/analytics/risk/rolling-metrics", json=payload)
+    assert response.status_code == 200
+    period = response.json()["results"]["YTD"]
+    assert period["benchmark_series_count"] == 2
+    assert period["aligned_benchmark_series_count"] == 0
+    assert period["risk_free_series_count"] == 2
+    assert period["aligned_risk_free_series_count"] == 0
+    assert period["benchmark_context"] == {
+        "requested": True,
+        "available": True,
+        "aligned": False,
+        "reason": "NO_ALIGNED_OBSERVATIONS",
+    }
+    assert period["risk_free_context"] == {
+        "requested": True,
+        "available": True,
+        "aligned": False,
+        "reason": "NO_ALIGNED_OBSERVATIONS",
+    }
+    assert period["quality_flags"] == [
+        "metric:ROLLING_BETA:alignment_empty",
+        "metric:ROLLING_SHARPE:alignment_empty",
+    ]
+
+
 def test_rolling_metrics_endpoint_stateful_autowires_performance_client() -> None:
     with override_app_runtime(
         lotus_performance_client=None,

@@ -54,6 +54,10 @@ def test_product_surface_contract_keeps_issuer_active_risk_gated() -> None:
     assert "stateful active-risk supports POSITION, SECTOR, and ASSET_CLASS" in attribution["notes"]
     assert "stateful active-risk ISSUER remains gated" in attribution["notes"]
     assert (
+        "historical-attribution response metadata is the authoritative active-risk support contract"
+        in attribution["notes"]
+    )
+    assert (
         "attribution residual and reconciled_sum must be preserved with contributors"
         in attribution["notes"]
     )
@@ -95,5 +99,6 @@ def test_endpoint_docs_link_product_surface_alignment_contract() -> None:
     assert "risk-product-surface-alignment.md" in readme
     assert "risk-product-surface-alignment.md" in endpoint_matrix
     assert "derive simulation and issuer active-risk affordances" in capabilities
+    assert "authoritative active-risk support contract" in capabilities
     assert "signed return-threshold metrics" in capabilities
     assert "residual and `reconciled_sum` must be preserved" in capabilities

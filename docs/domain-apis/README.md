@@ -37,7 +37,7 @@ This package documents the current `lotus-risk` API surface and evaluates it aga
 - `POST /analytics/risk/drawdown`
 - `POST /analytics/risk/concentration`
 - `POST /analytics/risk/rolling-metrics`
-- `POST /analytics/risk/historical-attribution` (RFC-0006 Slice A stateless implemented)
+- `POST /analytics/risk/historical-attribution` (stateless plus approved stateful scope implemented; stateful `ACTIVE_RISK + ISSUER` remains intentionally gated)
 
 ## Current Dependency Summary
 
@@ -58,7 +58,6 @@ This package documents the current `lotus-risk` API surface and evaluates it aga
 - Concentration API supports stateless, stateful, and simulation modes.
 - Legacy concentration payload aliases are removed; canonical envelope is required.
 - `/ops` endpoint is implemented with typed diagnostics contract.
-- Legacy endpoint `/analytics/workbench/risk-proxy` is removed from runtime surface.
 - The current service-wide readiness view is maintained in the endpoint matrix and reflects the
   current gold-standard status by endpoint and mode.
 - Live validation breadth is governed by `docs/operations/live-risk-validation-matrix.md`. The
@@ -81,3 +80,4 @@ See per-endpoint detail:
 - `docs/domain-apis/risk-observability.md`
 - `docs/domain-apis/risk-product-surface-alignment.md`
 - `docs/domain-apis/lotus-core-requirements-for-issuer-concentration.md`
+- `docs/domain-apis/RFC-0082-upstream-contract-family-map.md`

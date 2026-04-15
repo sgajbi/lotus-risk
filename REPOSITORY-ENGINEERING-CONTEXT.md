@@ -31,7 +31,8 @@ Current repository posture:
 2. the service supports the current Workbench risk workspace through gateway-backed contracts,
 3. the CI contract is explicit and strong, with no-alias, vocabulary, OpenAPI, test-pyramid, security, coverage, and Docker enforcement,
 4. RFC-0008 establishes the current enterprise-readiness baseline: supported risk analytics are credible for the canonical private-banking portfolio, while unrestricted enterprise-bank approval still requires downstream proof and broader seeded portfolio archetype coverage,
-5. current work often involves balancing analytical correctness, contract quality, and front-office usability.
+5. current work often involves balancing analytical correctness, contract quality, and front-office usability,
+6. upstream use of `lotus-core` and `lotus-performance` is now documented under the RFC-0082 upstream contract-family map.
 
 ## Architecture And Module Map
 
@@ -60,7 +61,8 @@ Boundary rules:
 2. gateway and UI should not duplicate risk logic or narrative improperly,
 3. monetary-float governance applies only where money-bearing identifiers require it, not generic analytics terms,
 4. supportability and evidence posture should remain truthful and data-backed,
-5. downstream consumers must preserve signed VaR semantics, attribution reconciliation fields, issuer active-risk gating, concentration-only simulation support, and audit lineage metadata as documented in `docs/domain-apis/risk-product-surface-alignment.md`.
+5. downstream consumers must preserve signed VaR semantics, attribution reconciliation fields, issuer active-risk gating, concentration-only simulation support, and audit lineage metadata as documented in `docs/domain-apis/risk-product-surface-alignment.md`,
+6. `lotus-core` must be consumed as a governed source-data, analytics-input, snapshot/simulation, and support-metadata authority, while `lotus-performance` remains the authority for performance return and benchmark exposure context inputs.
 
 Canonical direct local validation ports:
 
@@ -108,8 +110,10 @@ Most relevant current governance:
 2. `../lotus-platform/rfcs/RFC-0067-centralized-api-vocabulary-inventory-and-openapi-documentation-governance.md`
 3. `../lotus-platform/rfcs/RFC-0072-platform-wide-multi-lane-ci-validation-and-release-governance.md`
 4. `../lotus-platform/rfcs/RFC-0073-lotus-ecosystem-engineering-context-and-agent-guidance-system.md`
-5. `docs/rfcs/RFC-0008-enterprise-bank-readiness-and-live-risk-validation-baseline.md`
-6. `docs/standards/`
+5. `../lotus-platform/rfcs/RFC-0082-lotus-core-domain-authority-and-analytics-serving-boundary-hardening.md`
+6. `docs/domain-apis/RFC-0082-upstream-contract-family-map.md`
+7. `docs/rfcs/RFC-0008-enterprise-bank-readiness-and-live-risk-validation-baseline.md`
+8. `docs/standards/`
 
 ## Known Constraints And Implementation Notes
 
@@ -118,7 +122,8 @@ Most relevant current governance:
 3. risk evidence and supportability posture must remain data-backed, not decorative or speculative,
 4. when risk review flows change in Workbench or Gateway, this repo’s context should be checked for alignment,
 5. live validation defaults to `PB_SG_GLOBAL_BAL_001`; do not claim broader enterprise portfolio-archetype coverage until `docs/operations/live-risk-validation-matrix.md` has real seeded portfolio IDs and evidence,
-6. stateful historical attribution `ACTIVE_RISK + ISSUER` is intentionally gated until benchmark issuer exposure semantics are approved.
+6. stateful historical attribution `ACTIVE_RISK + ISSUER` is intentionally gated until benchmark issuer exposure semantics are approved,
+7. transport optimization across upstream services should start with contract and retrieval-shape evidence before any gRPC proposal.
 
 ## Context Maintenance Rule
 
@@ -128,7 +133,8 @@ Update this document when:
 2. repo-native commands or CI lane expectations change,
 3. upstream integration posture changes materially,
 4. supportability, evidence, or decomposition model assumptions change,
-5. current product-facing usage or rollout posture changes.
+5. current product-facing usage or rollout posture changes,
+6. RFC-0082 upstream contract-family classification or consumer conformance posture changes.
 
 ## Cross-Links
 

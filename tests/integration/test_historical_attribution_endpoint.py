@@ -1,3 +1,4 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -433,6 +434,22 @@ def test_historical_attribution_stateful_active_risk_asset_class_contract() -> N
     assert response.status_code == 200
     attribution_set = response.json()["results"]["YTD"]["attribution_sets"][0]
     assert attribution_set["attribution_type"] == "ACTIVE_RISK"
+    assert attribution_set["metric"] == "TRACKING_ERROR"
+    assert attribution_set["grouping_dimension"] == "ASSET_CLASS"
+    assert attribution_set["total_value"] is not None
+    assert attribution_set["reconciled_sum"] == pytest.approx(
+        sum(
+            contributor["component_contribution"]
+            for contributor in attribution_set["contributors"]
+            if contributor["component_contribution"] is not None
+        ),
+        abs=1e-12,
+    )
+    assert attribution_set["residual"] == pytest.approx(
+        attribution_set["total_value"] - attribution_set["reconciled_sum"],
+        abs=1e-12,
+    )
+    assert attribution_set["quality_flags"] == []
     assert attribution_set["contributors"]
     assert core_client.position_calls[0]["request_payload"]["dimensions"] == ["asset_class"]
     exposure_payload = performance_client.benchmark_exposure_context_calls[0]["request_payload"]
@@ -473,6 +490,43 @@ def test_historical_attribution_stateful_active_risk_issuer_is_explicitly_gated(
     assert body["message"] == "Request validation failed"
     assert any("grouping_dimension=ISSUER" in detail["msg"] for detail in body["details"])
     assert body["correlation_id"] == "corr-attr-active-issuer"
+
+
+def test_historical_attribution_stateful_custom_grouping_is_explicitly_gated() -> None:
+    performance_client = build_stateful_attribution_returns_client()
+    core_client = RecordingHistoricalAttributionCoreClient()
+
+    with override_app_runtime(
+        lotus_performance_client=performance_client,
+        lotus_core_client=core_client,
+    ):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/historical-attribution",
+            headers={"X-Correlation-Id": "corr-attr-custom"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-06",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "attribution_options": {
+                        "attribution_types": ["TOTAL_RISK"],
+                        "metrics": ["VOLATILITY"],
+                        "grouping_dimensions": ["CUSTOM"],
+                    },
+                },
+            },
+        )
+
+    assert response.status_code == 422
+    body = response.json()["error"]
+    assert body["code"] == "INVALID_REQUEST"
+    assert body["message"] == "Request validation failed"
+    assert any("grouping_dimension=CUSTOM" in detail["msg"] for detail in body["details"])
+    assert body["correlation_id"] == "corr-attr-custom"
+    assert performance_client.calls == []
+    assert core_client.position_calls == []
 
 
 def test_historical_attribution_stateful_active_risk_rejects_missing_benchmark_returns() -> None:

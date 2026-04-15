@@ -124,6 +124,21 @@ grouping does not fully explain active-risk dynamics.
 - Explainability: reconciliation and residual controls are required outputs.
 - Testing: contract + characterization + integration characterization + e2e smoke.
 
+## Downstream Consumers
+
+- `lotus-gateway` workbench risk attribution surface consumes this endpoint for front-office
+  attribution detail.
+- Gateway consumers must preserve:
+  - `reconciled_sum`
+  - `residual`
+  - `quality_flags`
+  - the stateful active-risk support metadata in `metadata`
+- The `metadata.stateful_active_risk_supported_grouping_dimensions`,
+  `metadata.stateful_active_risk_gated_grouping_dimensions`, and
+  `metadata.stateful_active_risk_gate_reason` fields are the authoritative support contract.
+  Downstream applications should not maintain a divergent local support matrix for active-risk
+  grouping dimensions.
+
 ## Key Decisions Pending
 
 1. Default covariance estimator and optional EWMA support.

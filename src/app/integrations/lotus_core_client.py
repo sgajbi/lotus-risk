@@ -14,7 +14,7 @@ from app.upstream_errors import (
     invalid_upstream_payload,
 )
 
-DEFAULT_LOTUS_CORE_BASE_URL = "http://core-query.dev.lotus"
+DEFAULT_LOTUS_CORE_BASE_URL = "http://core-control.dev.lotus"
 
 
 class LotusCoreClient:

@@ -82,6 +82,9 @@
       - `details?: object`
         - deterministic error object on metric-level failure (`details.error`)
         - metric-specific detail payload (for example drawdown peak/trough/recovery context, Volatility/Sharpe/Sortino observation plus periodic/annualized numerator context, benchmark metric aligned-sample plus periodic/annualized active-return context, VaR method/confidence/tail depth/base expected shortfall plus explicit square-root-of-time horizon scaling context)
+        - benchmark-dependent metrics return `details.error = "Insufficient aligned observations"`
+          when benchmark history exists for the requested window but fewer than two aligned return
+          observations remain after date alignment
 
 ## Alignment Assessment
 
@@ -93,6 +96,8 @@
 ## Gaps and Decisions Required
 
 1. Benchmark/risk-free sourcing remains upstream-dependent on lotus-performance + lotus-core reference-data availability; stateful benchmark metrics degrade deterministically when benchmark series is absent, and this is now surfaced in `benchmark_context.reason`. Risk-free application for Sharpe is surfaced separately in `metadata.risk_free_context`.
+   Downstream gateway summary wording cleanup is tracked in `sgajbi/lotus-gateway#114` so
+   supportability copy stays aligned with the domain contract.
 2. Standardize response metadata additions (for example `correlationId`, `contractVersion`, `asOfDate`) if this endpoint must fully match cross-platform response envelope conventions.
 
 ## Live Validation Notes

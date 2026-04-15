@@ -20,6 +20,8 @@
 - Status: implemented
 - Behavior:
   - caller provides full return series and period config
+  - caller may request benchmark-relative drawdown with top-level `benchmark_policy` when
+    benchmark return history is supplied
   - lotus-risk computes drawdown analytics directly
 
 ### Stateful
@@ -40,6 +42,9 @@
 ## Request Shape (Canonical)
 
 - `input_mode: "stateless" | "stateful"`
+- `benchmark_policy`
+  - top-level for stateless requests
+  - nested under `stateful_input.benchmark_policy` for stateful requests
 - `analysis_options`
   - `include_underwater_series`
   - `include_episode_list`

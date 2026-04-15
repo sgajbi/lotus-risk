@@ -554,6 +554,7 @@ async def integration_capabilities() -> IntegrationCapabilitiesResponse:
                     "simulation is intentionally unsupported",
                     "stateful active-risk supports POSITION, SECTOR, and ASSET_CLASS",
                     "stateful active-risk ISSUER remains gated",
+                    "historical-attribution response metadata is the authoritative active-risk support contract",
                     "attribution residual and reconciled_sum must be preserved with contributors",
                 ],
             ),
@@ -694,6 +695,8 @@ async def analytics_risk_drawdown(
                 stateless_input,
                 input_mode=DrawdownInputMode.STATELESS,
                 analysis_options=request_payload.analysis_options,
+                include_benchmark=request_payload.benchmark_policy.include_benchmark,
+                missing_benchmark_policy=request_payload.benchmark_policy.missing_benchmark_policy,
             ),
         )
 

@@ -45,6 +45,12 @@ Provide windowed historical risk diagnostics for PB/WM portfolios with instituti
 - `rolling_beta`: portfolio returns + benchmark returns
 - `rolling_tracking_error`: portfolio returns + benchmark returns
 - `rolling_information_ratio`: portfolio returns + benchmark returns
+- stateless requests fail validation with `422 INVALID_REQUEST` if benchmark-dependent metrics are
+  requested without `benchmark_returns`, or `ROLLING_SHARPE` is requested without
+  `risk_free_returns`
+- when dependency series are supplied but do not align with portfolio dates inside the requested
+  period, the endpoint still returns `200` and surfaces `NO_ALIGNED_OBSERVATIONS` in the period
+  dependency contexts together with metric quality flags
 
 ## Upstream Data Sources (Stateful)
 

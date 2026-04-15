@@ -230,4 +230,5 @@ def test_client_defaults_to_canonical_core_service_identity(
 
     client = LotusCoreClient()
 
+    assert DEFAULT_LOTUS_CORE_BASE_URL == "http://core-control.dev.lotus"
     assert client._base_url == DEFAULT_LOTUS_CORE_BASE_URL
