@@ -496,20 +496,24 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
                 )
                 portfolio_series = aligned["portfolio"]
                 benchmark_series = aligned["benchmark"]
+                aligned_count = int(len(aligned))
 
-                for metric_name in benchmark_metrics:
-                    with RISK_METRIC_DURATION_SECONDS.labels(metric_name=metric_name).time():
-                        try:
-                            _require_data(portfolio_series)
-                            value, details = _calculate_benchmark_metric(
-                                metric_name, portfolio_series, benchmark_series, annual_factor
-                            )
-                            metric_map[metric_name] = RiskValue(
-                                value=value,
-                                details=details,
-                            )
-                        except ValueError as exc:
-                            metric_map[metric_name] = _metric_error(str(exc))
+                if aligned_count < 2:
+                    for metric_name in benchmark_metrics:
+                        metric_map[metric_name] = _metric_error("Insufficient aligned observations")
+                else:
+                    for metric_name in benchmark_metrics:
+                        with RISK_METRIC_DURATION_SECONDS.labels(metric_name=metric_name).time():
+                            try:
+                                value, details = _calculate_benchmark_metric(
+                                    metric_name, portfolio_series, benchmark_series, annual_factor
+                                )
+                                metric_map[metric_name] = RiskValue(
+                                    value=value,
+                                    details=details,
+                                )
+                            except ValueError as exc:
+                                metric_map[metric_name] = _metric_error(str(exc))
 
         if "VAR" in request.metrics:
             with RISK_METRIC_DURATION_SECONDS.labels(metric_name="VAR").time():

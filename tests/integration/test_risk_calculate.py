@@ -185,6 +185,40 @@ def test_risk_calculate_sortino_exposes_downside_context() -> None:
     assert details["downside_deviation"] > 0
 
 
+def test_risk_calculate_sharpe_exposes_zero_volatility_error_contract() -> None:
+    client = TestClient(app)
+    payload = _request_payload()
+    stateless_input = payload["stateless_input"]
+    assert isinstance(stateless_input, dict)
+    stateless_input["metrics"] = ["SHARPE"]
+    stateless_input["returns"] = [
+        {"date": "2025-01-02", "value": 0.5},
+        {"date": "2025-01-03", "value": 0.5},
+    ]
+    response = client.post("/analytics/risk/calculate", json=payload)
+    assert response.status_code == 200
+    sharpe = response.json()["results"]["Explicit"]["metrics"]["SHARPE"]
+    assert sharpe["value"] is None
+    assert sharpe["details"] == {"error": "Zero volatility"}
+
+
+def test_risk_calculate_sortino_exposes_no_downside_error_contract() -> None:
+    client = TestClient(app)
+    payload = _request_payload()
+    stateless_input = payload["stateless_input"]
+    assert isinstance(stateless_input, dict)
+    stateless_input["metrics"] = ["SORTINO"]
+    stateless_input["returns"] = [
+        {"date": "2025-01-02", "value": 1.0},
+        {"date": "2025-01-03", "value": 2.0},
+    ]
+    response = client.post("/analytics/risk/calculate", json=payload)
+    assert response.status_code == 200
+    sortino = response.json()["results"]["Explicit"]["metrics"]["SORTINO"]
+    assert sortino["value"] is None
+    assert sortino["details"] == {"error": "No downside observations"}
+
+
 def test_risk_calculate_endpoint_rejects_invalid_explicit_period() -> None:
     client = TestClient(app)
     payload = _request_payload()
@@ -227,6 +261,39 @@ def test_risk_calculate_benchmark_requirement_behavior() -> None:
     }
     assert metrics["BETA"]["value"] is None
     assert "Benchmark returns required" in metrics["BETA"]["details"]["error"]
+
+
+def test_risk_calculate_benchmark_context_marks_no_aligned_observations() -> None:
+    client = TestClient(app)
+    payload = _request_payload()
+    stateless_input = payload["stateless_input"]
+    assert isinstance(stateless_input, dict)
+    stateless_input["metrics"] = ["BETA", "TRACKING_ERROR", "INFORMATION_RATIO"]
+    stateless_input["benchmark_returns"] = [
+        {"date": "2024-12-20", "value": 0.5},
+        {"date": "2024-12-23", "value": 1.2},
+    ]
+    response = client.post("/analytics/risk/calculate", json=payload)
+    assert response.status_code == 200
+    body = response.json()
+    period = body["results"]["Explicit"]
+    assert period["benchmark_observation_count"] == 0
+    assert period["aligned_benchmark_observation_count"] == 0
+    assert period["benchmark_context"] == {
+        "requested": True,
+        "available": True,
+        "aligned": False,
+        "reason": "NO_ALIGNED_OBSERVATIONS",
+        "requested_metric_count": 3,
+        "requested_metrics": ["BETA", "TRACKING_ERROR", "INFORMATION_RATIO"],
+    }
+    metrics = period["metrics"]
+    assert metrics["BETA"]["value"] is None
+    assert metrics["BETA"]["details"] == {"error": "Insufficient aligned observations"}
+    assert metrics["TRACKING_ERROR"]["value"] is None
+    assert metrics["TRACKING_ERROR"]["details"] == {"error": "Insufficient aligned observations"}
+    assert metrics["INFORMATION_RATIO"]["value"] is None
+    assert metrics["INFORMATION_RATIO"]["details"] == {"error": "Insufficient aligned observations"}
 
 
 def test_risk_calculate_stateful_mode_uses_lotus_performance_returns_series() -> None:
