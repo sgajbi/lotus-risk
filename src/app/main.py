@@ -554,6 +554,7 @@ async def integration_capabilities() -> IntegrationCapabilitiesResponse:
                     "simulation is intentionally unsupported",
                     "stateful active-risk supports POSITION, SECTOR, and ASSET_CLASS",
                     "stateful active-risk ISSUER remains gated",
+                    "historical-attribution response metadata is the authoritative active-risk support contract",
                     "attribution residual and reconciled_sum must be preserved with contributors",
                 ],
             ),

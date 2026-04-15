@@ -67,6 +67,10 @@ def test_integration_capabilities_contract() -> None:
         "stateful active-risk ISSUER remains gated"
         in workflow_by_key["historical_risk_attribution"]["notes"]
     )
+    assert (
+        "historical-attribution response metadata is the authoritative active-risk support contract"
+        in workflow_by_key["historical_risk_attribution"]["notes"]
+    )
 
 
 def _concentration_payload() -> dict[str, object]:

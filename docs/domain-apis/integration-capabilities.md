@@ -55,10 +55,15 @@ This allows consumers to discover that:
 - concentration supports simulation
 - risk/calculate, drawdown, rolling, and historical attribution do not
 - historical attribution remains `partial` because stateful active-risk `ISSUER` is gated
+- historical-attribution response metadata is the authoritative active-risk support contract
 - risk snapshot VaR and expected shortfall are signed return-threshold metrics
 - historical attribution residual and `reconciled_sum` must be preserved with contributors
 - downstream product surfaces must derive simulation and issuer active-risk affordances from this
   payload, not from broad service-level support for the word `simulation`
+- downstream consumers must also treat
+  `metadata.stateful_active_risk_supported_grouping_dimensions`,
+  `metadata.stateful_active_risk_gated_grouping_dimensions`, and
+  `metadata.stateful_active_risk_gate_reason` as authoritative when historical attribution is used
 
 ## Upstream/Downstream Dependency Notes
 
