@@ -11,6 +11,11 @@ def test_health_endpoints() -> None:
     assert client.get("/health/live").status_code == 200
     assert client.get("/health/ready").status_code == 200
     assert client.get("/ops").status_code == 200
+    metrics_response = client.get("/metrics")
+    assert metrics_response.status_code == 200
+    assert metrics_response.headers["content-type"].startswith("text/plain")
+    assert "# HELP" in metrics_response.text
+    assert 'http_requests_total{handler="/ops",method="GET",status="2xx"}' in metrics_response.text
 
 
 def test_correlation_header_propagation() -> None:
@@ -400,6 +405,15 @@ def test_openapi_exposes_readiness_dependency_schema() -> None:
         "Dependency runtime states used to determine readiness."
     )
     assert dependency_schema["properties"]["category"]["example"] == "data_gap"
+
+
+def test_openapi_exposes_metrics_text_contract() -> None:
+    client = TestClient(app)
+    spec = client.get("/openapi.json").json()
+    metrics_get = spec["paths"]["/metrics"]["get"]
+    response_200 = metrics_get["responses"]["200"]
+    assert response_200["description"] == "Prometheus text metrics payload."
+    assert "text/plain" in response_200["content"]
 
 
 def test_historical_attribution_openapi_examples_and_description_reflect_stateful_gate() -> None:
