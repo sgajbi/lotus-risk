@@ -16,26 +16,25 @@
 
 ## Current Required Inputs
 
-- none (query params are not currently required by this service for capability shaping).
+- none.
 
 ## Input Source and Availability
 
 | Input | Source App | Availability | Notes |
 |---|---|---|---|
-| `consumerSystem` query context (optional for policy shaping) | caller (`lotus-gateway` or peer service) | Needs enhancement | currently ignored/not modeled in lotus-risk endpoint signature. |
-| `tenantId` query context (optional for policy shaping) | caller (`lotus-gateway` or peer service) | Needs enhancement | currently ignored/not modeled in lotus-risk endpoint signature. |
 | capability feature/workflow definitions | lotus-risk internal constants/contracts | Exists | typed constants and response model implemented. |
 
 ## Current Output Contract
 
-- `sourceService: "lotus-risk"`
-- `policyVersion: "risk.v1"`
-- `supportedInputModes: ["stateless", "stateful", "simulation"]`
+- `source_service: "lotus-risk"`
+- `policy_version: "risk.v1"`
+- `supported_input_modes: ["stateless", "stateful", "simulation"]`
 - `features`:
   - `risk.analytics.risk_analytics`
   - `risk.analytics.drawdown`
   - `risk.analytics.concentration`
   - `risk.analytics.rolling_metrics`
+  - `risk.analytics.historical_attribution`
   - `risk.analytics.metrics`
 - `workflows`:
   - `risk_snapshot`
@@ -65,6 +64,8 @@ This allows consumers to discover that:
 
 - Downstream consumers:
   - `lotus-gateway` capability aggregation (`/api/v1/platform/capabilities`).
+  - downstream cleanup for undeclared risk capability query params is tracked in
+    `sgajbi/lotus-gateway#113`.
 - Upstream dependencies:
   - none at runtime (static contract payload today).
 
@@ -76,10 +77,12 @@ This allows consumers to discover that:
   - workflow-level mode support is explicit enough for gateway and Workbench surfaces to avoid
     unsupported simulation and issuer active-risk affordances.
 - Gaps:
-  - endpoint does not currently accept/reflect `consumerSystem` and `tenantId` query context as many peer services do.
+  - endpoint remains globally published and does not expose consumer- or tenant-shaped query controls.
+  - some downstream callers still send advisory query params for cross-service parity; that drift should
+    be fixed downstream rather than modeled here because lotus-risk enforces no-alias contract governance.
   - policy diagnostics richness is minimal compared to gateway-normalized expectations.
 
 ## Decisions Required
 
-1. Should `lotus-risk /integration/capabilities` accept `consumerSystem` and `tenantId` for parity with other Lotus services?
+1. Should risk capability responses remain globally published until a real consumer-specific rule exists, or should a future shaped contract be introduced with canonical snake_case parameters?
 2. Should risk capability responses include richer policy diagnostics metadata (version provenance, strict mode) consistent with broader policy-governed contract patterns?
