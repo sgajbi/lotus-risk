@@ -416,6 +416,23 @@ def test_openapi_exposes_metrics_text_contract() -> None:
     assert "text/plain" in response_200["content"]
 
 
+def test_openapi_exposes_health_and_liveness_contracts() -> None:
+    client = TestClient(app)
+    spec = client.get("/openapi.json").json()
+    health_get = spec["paths"]["/health"]["get"]
+    liveness_get = spec["paths"]["/health/live"]["get"]
+    health_ref = health_get["responses"]["200"]["content"]["application/json"]["schema"]["$ref"]
+    liveness_ref = liveness_get["responses"]["200"]["content"]["application/json"]["schema"]["$ref"]
+    assert health_ref.endswith("/HealthResponse")
+    assert liveness_ref.endswith("/LivenessResponse")
+    health_schema = spec["components"]["schemas"]["HealthResponse"]
+    liveness_schema = spec["components"]["schemas"]["LivenessResponse"]
+    assert health_schema["properties"]["status"]["example"] == "ok"
+    assert health_schema["properties"]["service"]["description"] == "Service identifier."
+    assert liveness_schema["properties"]["status"]["description"] == ("Liveness status indicator.")
+    assert liveness_schema["properties"]["status"]["example"] == "live"
+
+
 def test_historical_attribution_openapi_examples_and_description_reflect_stateful_gate() -> None:
     client = TestClient(app)
     spec = client.get("/openapi.json").json()
