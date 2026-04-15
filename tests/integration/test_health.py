@@ -216,6 +216,26 @@ def test_health_ready_fails_when_dependency_is_unavailable() -> None:
     assert ops.json()["checks"]["ready"] is False
 
 
+def test_health_ready_returns_draining_when_service_is_draining() -> None:
+    app.state.is_draining = True
+    try:
+        client = TestClient(app)
+        readiness = client.get("/health/ready")
+        ops = client.get("/ops")
+    finally:
+        app.state.is_draining = False
+
+    assert readiness.status_code == 503
+    readiness_body = readiness.json()
+    assert readiness_body["status"] == "draining"
+    assert all(dependency["status"] == "ok" for dependency in readiness_body["dependencies"])
+    assert ops.status_code == 200
+    ops_body = ops.json()
+    assert ops_body["status"] == "degraded"
+    assert ops_body["checks"]["ready"] is False
+    assert ops_body["checks"]["draining"] is True
+
+
 def test_health_ready_and_ops_surface_structured_data_gap_metadata() -> None:
     with override_app_runtime(
         dependency_statuses={
@@ -364,6 +384,22 @@ def test_openapi_exposes_metadata_contract_schema() -> None:
         "Rounding policy revision used by risk outputs."
     )
     assert metadata_schema["properties"]["rounding_policy_version"]["example"] == "v1"
+
+
+def test_openapi_exposes_readiness_dependency_schema() -> None:
+    client = TestClient(app)
+    spec = client.get("/openapi.json").json()
+    readiness_get = spec["paths"]["/health/ready"]["get"]
+    schema_ref = readiness_get["responses"]["200"]["content"]["application/json"]["schema"]["$ref"]
+    assert schema_ref.endswith("/ReadinessResponse")
+    readiness_schema = spec["components"]["schemas"]["ReadinessResponse"]
+    dependency_schema = spec["components"]["schemas"]["DependencyStatus"]
+    assert readiness_schema["properties"]["status"]["description"] == "Readiness state."
+    assert readiness_schema["properties"]["status"]["example"] == "ready"
+    assert readiness_schema["properties"]["dependencies"]["description"] == (
+        "Dependency runtime states used to determine readiness."
+    )
+    assert dependency_schema["properties"]["category"]["example"] == "data_gap"
 
 
 def test_historical_attribution_openapi_examples_and_description_reflect_stateful_gate() -> None:
