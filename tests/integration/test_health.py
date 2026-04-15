@@ -329,6 +329,28 @@ def test_openapi_exposes_historical_attribution_support_metadata() -> None:
     assert "benchmark issuer exposure semantics unavailable" in serialized_spec
 
 
+def test_openapi_exposes_ops_dependency_diagnostics_schema() -> None:
+    client = TestClient(app)
+    spec = client.get("/openapi.json").json()
+    ops_get = spec["paths"]["/ops"]["get"]
+    schema_ref = ops_get["responses"]["200"]["content"]["application/json"]["schema"]["$ref"]
+    assert schema_ref.endswith("/OpsResponse")
+    ops_schema = spec["components"]["schemas"]["OpsResponse"]
+    dependency_schema = spec["components"]["schemas"]["DependencyStatus"]
+    assert ops_schema["properties"]["input_modes"]["description"] == (
+        "Execution modes exposed by this service."
+    )
+    assert ops_schema["properties"]["input_modes"]["example"] == [
+        "stateless",
+        "stateful",
+        "simulation",
+    ]
+    assert dependency_schema["properties"]["base_url"]["description"] == (
+        "Canonical base URL configured for the dependency."
+    )
+    assert dependency_schema["properties"]["issue_code"]["example"] == "RISK_FREE_SERIES_EMPTY"
+
+
 def test_historical_attribution_openapi_examples_and_description_reflect_stateful_gate() -> None:
     client = TestClient(app)
     spec = client.get("/openapi.json").json()

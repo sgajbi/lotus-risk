@@ -61,7 +61,7 @@
 - Output:
   - `service`
   - `version`
-  - `roundingPolicyVersion`
+  - `rounding_policy_version`
 - Alignment:
   - aligned with template-generated lotus-platform baseline.
 
@@ -97,10 +97,10 @@
   - `checks.live`
   - `checks.ready`
   - `checks.draining`
-  - `inputModes`
-  - `dependencies[]` with `service`, canonical `baseUrl`, runtime `status`, optional operator `detail`, and optional structured metadata:
+  - `input_modes`
+  - `dependencies[]` with `service`, canonical `base_url`, runtime `status`, optional operator `detail`, and optional structured metadata:
     - `category` such as `transport`, `timeout`, or `data_gap`
-    - `issueCode` such as `UPSTREAM_HIGH_LATENCY` or `RISK_FREE_SERIES_EMPTY`
+    - `issue_code` such as `UPSTREAM_HIGH_LATENCY` or `RISK_FREE_SERIES_EMPTY`
 
 ## Error Semantics
 
