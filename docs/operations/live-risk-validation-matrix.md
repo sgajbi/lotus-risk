@@ -9,7 +9,7 @@ The default live characterization suite validates one canonical portfolio:
 
 | Archetype | Portfolio ID | As Of Date | Status | Notes |
 | --- | --- | --- | --- | --- |
-| `global_balanced` | `PB_SG_GLOBAL_BAL_001` | `2026-03-31` | validated | Canonical private-banking portfolio used for the current live analytics baseline. |
+| `global_balanced` | `PB_SG_GLOBAL_BAL_001` | `2026-03-31` | validated | Canonical private-banking portfolio used for the current live analytics baseline. Rolling-metrics live proof includes stateful `ROLLING_SHARPE` plus adjacent rolling volatility, beta, tracking error, information ratio, max drawdown, and multi-window time-series emission. |
 
 This is strong canonical evidence, but it is not a complete enterprise portfolio universe.
 Additional archetypes must be backed by real seeded portfolio IDs before they can be counted as
