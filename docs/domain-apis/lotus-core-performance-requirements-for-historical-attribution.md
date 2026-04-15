@@ -22,6 +22,12 @@ This is aligned with RFC-0006 and RFC-0067 governance.
 - security classification dimensions
 - benchmark assignment, benchmark composition, and benchmark classification metadata
 
+Downstream interpretation rule:
+
+- benchmark and index classification labels are source-owned by `lotus-core`; if a classification
+  label is absent, downstream services should preserve that absence as a governed coverage gap
+  rather than synthesize local fallback taxonomy.
+
 3. `lotus-risk` only computes risk attribution. It must not reconstruct master data that belongs to `lotus-core` or return series that belongs to `lotus-performance`.
 
 ## Required Upstream Contracts
