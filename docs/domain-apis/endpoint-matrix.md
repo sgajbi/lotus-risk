@@ -7,7 +7,6 @@ Status meanings:
 - `full`: implemented, documented, and validated to the current production standard
 - `partial`: implemented for an approved subset, with an explicit remaining gap
 - `operational`: non-domain endpoint; available and working
-- `removed`: intentionally absent from the runtime surface
 
 ## Endpoint Readiness
 
@@ -25,7 +24,6 @@ Status meanings:
 | `POST /analytics/risk/rolling-metrics` | Domain analytics | rolling historical risk diagnostics | `stateless`, `stateful` | full | lotus-performance for portfolio/benchmark returns; lotus-core for risk-free series and reporting-currency resolution | simulation is intentionally unsupported; broader enterprise archetype coverage still requires additional seeded live portfolios beyond the canonical baseline |
 | `POST /analytics/risk/historical-attribution` | Domain analytics | historical risk and active-risk attribution decomposition | `stateless`, `stateful` | partial | stateless caller-supplied returns/exposures; stateful sourcing uses lotus-performance for portfolio/benchmark returns and benchmark exposure context, and lotus-core for portfolio exposure history and instrument enrichment | stateful `ACTIVE_RISK` supports `POSITION`, `SECTOR`, and `ASSET_CLASS`; `ISSUER` remains gated by benchmark issuer exposure semantics; simulation is intentionally unsupported |
 | `POST /analytics/risk/concentration` | Domain analytics | concentration analytics and HHI metrics | `stateless`, `stateful`, `simulation` | full | lotus-core snapshot and simulation session contracts | none |
-| `POST /analytics/workbench/risk-proxy` | Legacy compatibility | removed endpoint | none | removed | none | intentionally removed from runtime and OpenAPI |
 
 ## Mode Support Detail
 

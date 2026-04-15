@@ -58,7 +58,6 @@ This package documents the current `lotus-risk` API surface and evaluates it aga
 - Concentration API supports stateless, stateful, and simulation modes.
 - Legacy concentration payload aliases are removed; canonical envelope is required.
 - `/ops` endpoint is implemented with typed diagnostics contract.
-- Legacy endpoint `/analytics/workbench/risk-proxy` is removed from runtime surface.
 - The current service-wide readiness view is maintained in the endpoint matrix and reflects the
   current gold-standard status by endpoint and mode.
 - Live validation breadth is governed by `docs/operations/live-risk-validation-matrix.md`. The
