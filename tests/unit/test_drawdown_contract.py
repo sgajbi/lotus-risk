@@ -63,6 +63,35 @@ def test_drawdown_contract_accepts_stateful_payload() -> None:
     assert request.analysis_options.top_n_episodes == 3
 
 
+def test_drawdown_contract_accepts_stateless_benchmark_policy() -> None:
+    payload = _stateless_payload()
+    payload["benchmark_policy"] = {
+        "include_benchmark": True,
+        "missing_benchmark_policy": "REQUIRE",
+    }
+    request = DrawdownAnalyticsRequest.model_validate(payload)
+    assert request.benchmark_policy.include_benchmark is True
+    assert request.benchmark_policy.missing_benchmark_policy == "REQUIRE"
+
+
+def test_drawdown_contract_rejects_top_level_benchmark_policy_for_stateful_mode() -> None:
+    with pytest.raises(ValueError, match="benchmark_policy is only supported for stateless"):
+        DrawdownAnalyticsRequest.model_validate(
+            {
+                "input_mode": "stateful",
+                "benchmark_policy": {
+                    "include_benchmark": True,
+                    "missing_benchmark_policy": "REQUIRE",
+                },
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-02-28",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                },
+            }
+        )
+
+
 def test_drawdown_contract_rejects_invalid_cdar_alpha() -> None:
     payload = _stateless_payload()
     payload["analysis_options"] = {"cdar_alpha": 0.92}

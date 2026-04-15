@@ -694,6 +694,8 @@ async def analytics_risk_drawdown(
                 stateless_input,
                 input_mode=DrawdownInputMode.STATELESS,
                 analysis_options=request_payload.analysis_options,
+                include_benchmark=request_payload.benchmark_policy.include_benchmark,
+                missing_benchmark_policy=request_payload.benchmark_policy.missing_benchmark_policy,
             ),
         )
 
