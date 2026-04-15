@@ -76,6 +76,17 @@ stateful mode is requested.
 6. signed VaR semantics, attribution reconciliation fields, issuer active-risk gating, concentration-only simulation support, and audit lineage metadata remain preserved for downstream consumers;
 7. watchlist routes from `lotus-core` require explicit RFC-0082 review before their semantics are expanded.
 
+Route-specific downstream interpretations that must stay truthful:
+
+1. `POST /integration/reference/risk-free-series` returning an empty `points` list means the core
+   route is reachable but usable source data is absent for the requested currency/window; this must
+   remain a data-availability failure or explicit degradation path, not a silent Sharpe fallback to
+   zero risk-free assumptions;
+2. `POST /integration/indices/catalog` classification labels are source-owned. If canonical
+   benchmark component rows carry governed broad-market sector labels such as
+   `broad_market_equity` or `broad_market_fixed_income`, `lotus-risk` should consume those labels
+   as published and should not infer replacements when labels are absent.
+
 ## Existing Conformance Evidence
 
 Current test and implementation evidence:
