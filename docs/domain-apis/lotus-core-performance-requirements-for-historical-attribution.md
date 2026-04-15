@@ -268,7 +268,7 @@ Minimum response contract:
 
 Required behavior:
 
-1. Records may omit unknown securities, but response shape must remain valid.
+1. Response order must follow request order. Unknown securities must remain present with null enrichment fields rather than being omitted.
 2. `issuer_id` and `issuer_name` must be deterministic for a given `security_id`.
 3. Correlation ID must be propagated end-to-end.
 
