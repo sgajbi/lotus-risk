@@ -351,6 +351,21 @@ def test_openapi_exposes_ops_dependency_diagnostics_schema() -> None:
     assert dependency_schema["properties"]["issue_code"]["example"] == "RISK_FREE_SERIES_EMPTY"
 
 
+def test_openapi_exposes_metadata_contract_schema() -> None:
+    client = TestClient(app)
+    spec = client.get("/openapi.json").json()
+    metadata_get = spec["paths"]["/metadata"]["get"]
+    schema_ref = metadata_get["responses"]["200"]["content"]["application/json"]["schema"]["$ref"]
+    assert schema_ref.endswith("/MetadataResponse")
+    metadata_schema = spec["components"]["schemas"]["MetadataResponse"]
+    assert metadata_schema["properties"]["service"]["example"] == "lotus-risk"
+    assert metadata_schema["properties"]["version"]["description"] == "Service version string."
+    assert metadata_schema["properties"]["rounding_policy_version"]["description"] == (
+        "Rounding policy revision used by risk outputs."
+    )
+    assert metadata_schema["properties"]["rounding_policy_version"]["example"] == "v1"
+
+
 def test_historical_attribution_openapi_examples_and_description_reflect_stateful_gate() -> None:
     client = TestClient(app)
     spec = client.get("/openapi.json").json()
