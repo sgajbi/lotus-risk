@@ -101,7 +101,7 @@
       "canonicalTerm": "base_url",
       "preferredName": "base_url",
       "description": "Canonical base URL configured for the dependency.",
-      "example": "http://core-query.dev.lotus",
+      "example": "http://core-control.dev.lotus",
       "type": "string",
       "locations": [
         "body"

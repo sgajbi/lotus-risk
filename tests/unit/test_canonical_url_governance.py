@@ -44,8 +44,8 @@ def test_local_runtime_docs_name_canonical_upstream_ports() -> None:
 
     for text in (readme, env_example, operations_doc):
         assert "http://performance.dev.lotus:8002" in text
-        assert "http://core-query.dev.lotus:8202" in text
+        assert "http://core-control.dev.lotus:8202" in text
 
     assert "localhost:8201" in operations_doc
-    assert "lotus-core query" in operations_doc
+    assert "lotus-core query control-plane" in operations_doc
     assert "lotus-performance analytics" in operations_doc

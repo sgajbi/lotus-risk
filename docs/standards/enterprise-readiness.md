@@ -28,7 +28,7 @@
 
 - Service readiness is enforced with health checks, retry/timeout patterns, and runbook coverage for migration operations.
 - Endpoint execution and direct upstream dependency calls expose Prometheus metrics for mode, outcome, failure category, operation, and duration.
-- Stateful upstream calls must use canonical direct local validation ports: lotus-risk `8130`, lotus-performance `8002`, and lotus-core query `8202`.
+- Stateful upstream calls must use canonical direct local validation ports: lotus-risk `8130`, lotus-performance `8002`, and the lotus-core query control-plane `8202`.
 
 ## Product-Surface Baseline
 

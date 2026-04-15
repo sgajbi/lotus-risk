@@ -24,6 +24,10 @@ Current transport posture remains REST/OpenAPI through `LOTUS_CORE_BASE_URL` and
 `LOTUS_PERFORMANCE_BASE_URL`. There is no current gRPC contract between `lotus-risk`, `lotus-core`,
 or `lotus-performance`.
 
+`LOTUS_CORE_BASE_URL` must resolve to the `lotus-core` query control-plane service. The routes below
+are `/integration/*`, `/simulation-sessions*`, and reference contracts owned by
+`query_control_plane_service`; they are not served by the raw `query_service` read plane.
+
 ## Upstream Client Surfaces
 
 Implementation entrypoints:

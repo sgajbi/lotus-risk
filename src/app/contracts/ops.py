@@ -10,7 +10,7 @@ class DependencyStatus(BaseModel):
     )
     base_url: str = Field(
         description="Canonical base URL configured for the dependency.",
-        json_schema_extra={"example": "http://core-query.dev.lotus"},
+        json_schema_extra={"example": "http://core-control.dev.lotus"},
     )
     status: str = Field(
         description="Dependency runtime state.",
@@ -75,7 +75,7 @@ class OpsResponse(BaseModel):
             "example": [
                 {
                     "service": "lotus-core",
-                    "base_url": "http://core-query.dev.lotus",
+                    "base_url": "http://core-control.dev.lotus",
                     "status": "ok",
                     "detail": "configured",
                 }
