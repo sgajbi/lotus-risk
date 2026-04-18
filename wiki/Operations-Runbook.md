@@ -71,6 +71,13 @@ Use:
 4. `docs/operations/canonical-local-upstream-urls.md`
 5. `docs/operations/live-risk-validation-matrix.md`
 
+When the question is "should this workflow be offered at all?" also check:
+
+1. `/integration/capabilities`
+
+That endpoint is not only for gateway discovery. It is also a fast operator check for whether a
+mode or workflow is intentionally unsupported versus operationally failing.
+
 ## Detailed Runbook Sources
 
 - `docs/runbooks/service-operations.md`

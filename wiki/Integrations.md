@@ -35,7 +35,8 @@ This matters because:
 1. concentration supports simulation,
 2. the other risk workflows do not,
 3. historical attribution is intentionally `partial`,
-4. workflow notes carry real supportability meaning.
+4. workflow notes carry real supportability meaning,
+5. one remaining functional gap inside the approved analytics surface is stateful `ACTIVE_RISK + ISSUER`.
 
 ## Downstream Preservation Rules
 
@@ -67,7 +68,8 @@ Use `lotus-risk` directly or through gateway with these rules:
 1. preserve input-mode truth,
 2. do not offer unsupported workflow modes,
 3. treat partial historical attribution support as a real product limit,
-4. preserve audit and lineage metadata whenever responses are stored or passed onward.
+4. preserve audit and lineage metadata whenever responses are stored or passed onward,
+5. do not rewrite signed VaR into an always-positive loss figure unless the presentation layer explicitly records that sign-convention conversion.
 
 ## Integration Sources
 

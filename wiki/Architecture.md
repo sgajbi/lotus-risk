@@ -31,6 +31,12 @@ This is the cross-service support contract. It publishes:
 2. workflow support levels,
 3. notes about partial or intentionally unsupported behavior.
 
+It is also the place downstream teams should discover that:
+
+1. simulation support is workflow-specific rather than service-wide,
+2. historical attribution is intentionally `partial`,
+3. product surfaces must respect the declared support notes rather than infer capability from one successful call.
+
 ### Risk analytics surface
 
 1. `/analytics/risk/calculate`
@@ -74,6 +80,9 @@ Stateful execution depends on governed upstream contracts:
 
 1. `lotus-performance` for returns and benchmark context,
 2. `lotus-core` for snapshots, simulation inputs, enrichment, and risk-free series.
+
+Those dependencies are not interchangeable. Misrouting one upstream URL can make a healthy local
+service look analytically broken.
 
 ## Product-Surface Contract
 
