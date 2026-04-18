@@ -112,6 +112,11 @@ docker compose up --build
 
 API docs are available at `http://localhost:8130/docs`.
 
+Canonical direct local upstream URLs for live characterization and operator checks:
+
+- `lotus-performance` analytics: `http://performance.dev.lotus:8002`
+- `lotus-core` query control-plane: `http://core-control.dev.lotus:8202`
+
 ## Common Commands
 
 - `make install` - install development dependencies
