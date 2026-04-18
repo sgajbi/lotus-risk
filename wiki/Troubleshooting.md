@@ -56,6 +56,12 @@ Symptoms:
 
 This is usually a downstream contract-preservation issue, not a `lotus-risk` calculation issue.
 
+Check:
+
+1. `/integration/capabilities`
+2. `docs/domain-apis/risk-product-surface-alignment.md`
+3. the consumer-side mapping or view-model layer
+
 ## A Local Gate Fails but the Code Change Looks Small
 
 In `lotus-risk`, small changes can still trigger large governance gates.
@@ -68,6 +74,9 @@ Check which category failed:
 4. test-pyramid gate,
 5. security audit,
 6. coverage or Docker build.
+
+In this repo, those failures often mean the change weakened a contract boundary rather than just a
+style rule.
 
 ## Read Next
 

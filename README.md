@@ -160,7 +160,8 @@ Important integration truths:
 1. `GET /integration/capabilities` is the source of truth for workflow support and mode support,
 2. concentration is the only supported simulation workflow,
 3. historical attribution support is intentionally `partial`,
-4. signed VaR semantics, attribution reconciliation fields, issuer gating, concentration-only simulation support, and audit lineage metadata must be preserved downstream.
+4. signed VaR semantics, attribution reconciliation fields, issuer gating, concentration-only simulation support, and audit lineage metadata must be preserved downstream,
+5. downstream consumers should derive affordances from the capability response and endpoint matrix rather than infer support from one successful endpoint call.
 
 The main integration references are:
 

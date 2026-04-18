@@ -29,6 +29,11 @@ That is why this repo cares so much about:
 4. issuer active-risk gating,
 5. lineage and upstream fingerprint metadata.
 
+One practical consequence follows from that:
+
+1. the capability publication surface is part of the product contract,
+2. downstream teams should treat it as authoritative for affordances and support state.
+
 ## Primary Workflows
 
 The current domain workflows are:
@@ -73,6 +78,12 @@ That gap is intentionally exposed rather than hidden:
 2. `/integration/capabilities` marks historical attribution as `partial`,
 3. docs describe the gate,
 4. live evidence covers the supported stateful groupings.
+
+That is the pattern this repo should keep following:
+
+1. expose unsupported behavior explicitly,
+2. do not hide it behind generic service-level language,
+3. make downstream misuse harder than downstream correctness.
 
 ## Read Next
 

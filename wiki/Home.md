@@ -32,6 +32,11 @@ The most important current limits are:
 3. live validation defaults to canonical portfolio `PB_SG_GLOBAL_BAL_001`,
 4. broader enterprise claims require more seeded archetypes and evidence.
 
+The most important operating rule for downstream teams is:
+
+1. use `/integration/capabilities` and the endpoint matrix as the support contract,
+2. do not infer workflow support from one successful endpoint response.
+
 ## What lotus-risk Owns
 
 `lotus-risk` owns:
