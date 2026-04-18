@@ -1,0 +1,71 @@
+# Development Workflow
+
+## Working Model
+
+Use a small, truthful backend loop:
+
+1. read the affected contract and endpoint surface first,
+2. make the smallest clean change,
+3. run the smallest repo-native gate that proves it,
+4. update docs when runtime, mode support, or supportability truth changes,
+5. move to the PR-grade gate when contracts, upstream behavior, or evidence posture are affected.
+
+## Common Commands
+
+- `make install`
+- `make check`
+- `make ci`
+- `make test-unit`
+- `make test-integration`
+- `make test-e2e`
+- `make migration-apply`
+- `make docker-build`
+
+## When to Use Which Gate
+
+Use `make check` for:
+
+1. focused contract and router changes,
+2. engine-level implementation work,
+3. documentation changes that mention commands or support posture,
+4. mode-support or endpoint-shape changes that do not yet need the full PR-grade pass.
+
+Use `make ci` when the change affects:
+
+1. OpenAPI or vocabulary posture,
+2. upstream integration behavior,
+3. risk-product-surface alignment,
+4. test-pyramid distribution,
+5. Docker/runtime parity expectations.
+
+## Code-First Reading Order
+
+For product and integration work, start from:
+
+1. `src/app/main.py`
+2. `src/app/contracts/`
+3. `src/app/services/`
+4. `src/app/integrations/`
+
+Then confirm with:
+
+1. `docs/domain-apis/endpoint-matrix.md`
+2. `docs/domain-apis/risk-product-surface-alignment.md`
+3. `docs/operations/development-workflow-and-ci-strategy.md`
+
+## Docs-With-Code Rule
+
+Update docs in the same slice when:
+
+1. endpoint support changes,
+2. mode support changes,
+3. upstream dependency posture changes,
+4. supportability claims change,
+5. local runtime commands change,
+6. downstream product-surface requirements change.
+
+## Read Next
+
+1. use [Validation and CI](./Validation-and-CI.md) for the gate details,
+2. use [RFC Index](./RFC-Index.md) when work maps to a local RFC family,
+3. use [Integrations](./Integrations.md) when downstream contract semantics are involved.

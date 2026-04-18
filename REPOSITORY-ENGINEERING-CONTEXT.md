@@ -46,6 +46,8 @@ Primary areas:
    local standards and contract guidance.
 4. `tests/`
    unit, integration, and e2e validation.
+5. `wiki/`
+   canonical local source pages for repository wiki and onboarding navigation.
 
 ## Runtime And Integration Boundaries
 
@@ -123,7 +125,8 @@ Most relevant current governance:
 4. when risk review flows change in Workbench or Gateway, this repo’s context should be checked for alignment,
 5. live validation defaults to `PB_SG_GLOBAL_BAL_001`; do not claim broader enterprise portfolio-archetype coverage until `docs/operations/live-risk-validation-matrix.md` has real seeded portfolio IDs and evidence,
 6. stateful historical attribution `ACTIVE_RISK + ISSUER` is intentionally gated until benchmark issuer exposure semantics are approved,
-7. transport optimization across upstream services should start with contract and retrieval-shape evidence before any gRPC proposal.
+7. transport optimization across upstream services should start with contract and retrieval-shape evidence before any gRPC proposal,
+8. `wiki/` inside the repository is the authored documentation source if a GitHub wiki is published later.
 
 ## Context Maintenance Rule
 
@@ -134,7 +137,8 @@ Update this document when:
 3. upstream integration posture changes materially,
 4. supportability, evidence, or decomposition model assumptions change,
 5. current product-facing usage or rollout posture changes,
-6. RFC-0082 upstream contract-family classification or consumer conformance posture changes.
+6. RFC-0082 upstream contract-family classification or consumer conformance posture changes,
+7. wiki ownership or publication workflow changes.
 
 ## Cross-Links
 
