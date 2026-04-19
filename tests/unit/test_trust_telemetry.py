@@ -114,7 +114,9 @@ def test_build_declared_product_trust_telemetry_snapshot_uses_repo_native_catalo
     )
 
     assert snapshot.service == "lotus-risk"
-    assert snapshot.declaration_source == "contracts/domain-data-products/lotus-risk-products.v1.json"
+    assert (
+        snapshot.declaration_source == "contracts/domain-data-products/lotus-risk-products.v1.json"
+    )
     assert snapshot.declaration_fingerprint.startswith("sha256:")
     assert (
         snapshot.consumer_declaration_source
@@ -135,6 +137,19 @@ def test_build_declared_product_trust_telemetry_snapshot_uses_repo_native_catalo
     assert snapshot.declared_dependencies[2].runtime_status == "degraded"
     assert snapshot.declared_dependencies[2].runtime_category == "data_gap"
     assert snapshot.declared_dependencies[2].runtime_issue_code == "RISK_FREE_SERIES_STALE"
+    assert snapshot.summary.declared_product_count == 5
+    assert snapshot.summary.declared_dependency_count == 6
+    assert snapshot.summary.degraded_dependency_count == 4
+    assert snapshot.summary.unavailable_dependency_count == 0
+    assert snapshot.summary.missing_runtime_service_count == 0
+    assert snapshot.summary.degraded_dependency_products == [
+        "PortfolioStateSnapshot",
+        "PositionTimeseriesInput",
+        "InstrumentReferenceBundle",
+        "RiskFreeSeriesWindow",
+    ]
+    assert snapshot.summary.unavailable_dependency_products == []
+    assert snapshot.summary.missing_runtime_services == []
     assert [product.product_name for product in snapshot.products] == [
         "RiskMetricsReport",
         "DrawdownAnalyticsReport",

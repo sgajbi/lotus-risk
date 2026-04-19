@@ -107,7 +107,9 @@ class ProductTrustTelemetrySeed(BaseModel):
     request_fingerprint: str | None = Field(
         default=None,
         description="Current product request fingerprint when response lineage is available.",
-        json_schema_extra={"example": "sha256:6f36c1f0f3f0f08c6f36c1f0f3f0f08c6f36c1f0f3f0f08c6f36c1f0f3f0f08c"},
+        json_schema_extra={
+            "example": "sha256:6f36c1f0f3f0f08c6f36c1f0f3f0f08c6f36c1f0f3f0f08c6f36c1f0f3f0f08c"
+        },
     )
     source_services: list[str] = Field(
         default_factory=list,
@@ -128,6 +130,17 @@ class ProductTrustTelemetrySeed(BaseModel):
     dependency_signals: list[DependencyTelemetrySignal] = Field(
         default_factory=list,
         description="Dependency runtime evidence used as raw trust telemetry input.",
+        json_schema_extra={
+            "example": [
+                {
+                    "service": "lotus-performance",
+                    "status": "degraded",
+                    "detail": "high_latency",
+                    "category": "transport",
+                    "issue_code": "UPSTREAM_HIGH_LATENCY",
+                }
+            ]
+        },
     )
 
 
@@ -184,6 +197,44 @@ class DeclaredConsumerDependencyTelemetry(BaseModel):
     )
 
 
+class TrustTelemetryReviewSummary(BaseModel):
+    declared_product_count: int = Field(
+        description="Number of repo-native declared producer products included in the snapshot.",
+        json_schema_extra={"example": 5},
+    )
+    declared_dependency_count: int = Field(
+        description="Number of repo-native declared upstream dependencies included in the snapshot.",
+        json_schema_extra={"example": 6},
+    )
+    degraded_dependency_count: int = Field(
+        description="Count of declared upstream dependencies whose producer runtime status is degraded.",
+        json_schema_extra={"example": 1},
+    )
+    unavailable_dependency_count: int = Field(
+        description="Count of declared upstream dependencies whose producer runtime status is unavailable.",
+        json_schema_extra={"example": 0},
+    )
+    missing_runtime_service_count: int = Field(
+        description="Count of declared upstream dependencies whose producer service has no current runtime view.",
+        json_schema_extra={"example": 0},
+    )
+    degraded_dependency_products: list[str] = Field(
+        default_factory=list,
+        description="Declared upstream product names currently backed by degraded producer services.",
+        json_schema_extra={"example": ["ReturnsSeriesBundle"]},
+    )
+    unavailable_dependency_products: list[str] = Field(
+        default_factory=list,
+        description="Declared upstream product names currently backed by unavailable producer services.",
+        json_schema_extra={"example": []},
+    )
+    missing_runtime_services: list[str] = Field(
+        default_factory=list,
+        description="Declared upstream producer services that currently have no runtime view.",
+        json_schema_extra={"example": []},
+    )
+
+
 class DeclaredProductTrustTelemetrySnapshot(BaseModel):
     service: str = Field(
         description="Service identifier publishing the local trust telemetry snapshot.",
@@ -191,9 +242,7 @@ class DeclaredProductTrustTelemetrySnapshot(BaseModel):
     )
     declaration_source: str = Field(
         description="Repo-native producer declaration file used to resolve the declared products.",
-        json_schema_extra={
-            "example": "contracts/domain-data-products/lotus-risk-products.v1.json"
-        },
+        json_schema_extra={"example": "contracts/domain-data-products/lotus-risk-products.v1.json"},
     )
     declaration_fingerprint: str = Field(
         description="Deterministic fingerprint of the repo-native producer declaration payload.",
@@ -215,9 +264,87 @@ class DeclaredProductTrustTelemetrySnapshot(BaseModel):
     )
     declared_dependencies: list[DeclaredConsumerDependencyTelemetry] = Field(
         description="Current repo-native declared upstream dependencies required by lotus-risk.",
+        json_schema_extra={
+            "example": [
+                {
+                    "product_name": "ReturnsSeriesBundle",
+                    "producer_repository": "lotus-performance",
+                    "required_product_version": "v1",
+                    "consumption_mode": "api_read",
+                    "failure_posture": "fail_closed",
+                    "validation_lanes": ["feature", "pr-merge"],
+                    "required_trust_metadata": [
+                        "generated_at",
+                        "as_of_date",
+                        "correlation_id",
+                    ],
+                    "runtime_status": "degraded",
+                    "runtime_detail": "high_latency",
+                    "runtime_category": "transport",
+                    "runtime_issue_code": "UPSTREAM_HIGH_LATENCY",
+                }
+            ]
+        },
+    )
+    summary: TrustTelemetryReviewSummary = Field(
+        description="Operator-facing rollup of declaration counts and current runtime dependency posture.",
+        json_schema_extra={
+            "example": {
+                "declared_product_count": 5,
+                "declared_dependency_count": 6,
+                "degraded_dependency_count": 2,
+                "unavailable_dependency_count": 0,
+                "missing_runtime_service_count": 0,
+                "degraded_dependency_products": [
+                    "ReturnsSeriesBundle",
+                    "BenchmarkExposureContext",
+                ],
+                "unavailable_dependency_products": [],
+                "missing_runtime_services": [],
+            }
+        },
     )
     products: list[ProductTrustTelemetrySeed] = Field(
         description="Current raw telemetry seeds for each repo-native declared product.",
+        json_schema_extra={
+            "example": [
+                {
+                    "product_name": "RiskMetricsReport",
+                    "product_version": "v1",
+                    "authoritative_domain": "risk_analytics",
+                    "product_family": "analytics_output",
+                    "approved_consumers": ["lotus-gateway"],
+                    "required_trust_metadata": [
+                        "product_name",
+                        "product_version",
+                        "as_of_date",
+                        "lineage_version",
+                        "request_fingerprint",
+                    ],
+                    "lifecycle_status": "active",
+                    "current_routes": ["/analytics/risk/calculate"],
+                    "emitted_at": "2026-04-19T00:00:00Z",
+                    "readiness_status": "degraded",
+                    "ops_status": "degraded",
+                    "draining": False,
+                    "lineage_version": "risk_audit_lineage.v1",
+                    "request_fingerprint": "sha256:6f36c1f0f3f0f08c6f36c1f0f3f0f08c6f36c1f0f3f0f08c6f36c1f0f3f0f08c",
+                    "source_services": ["lotus-risk", "lotus-performance"],
+                    "upstream_request_fingerprints": {
+                        "lotus-performance:/integration/returns/series": "sha256:8d7411c13a0a25a18d7411c13a0a25a18d7411c13a0a25a18d7411c13a0a25a1"
+                    },
+                    "dependency_signals": [
+                        {
+                            "service": "lotus-performance",
+                            "status": "degraded",
+                            "detail": "high_latency",
+                            "category": "transport",
+                            "issue_code": "UPSTREAM_HIGH_LATENCY",
+                        }
+                    ],
+                }
+            ]
+        },
     )
 
 
@@ -278,6 +405,55 @@ def build_declared_product_trust_telemetry_snapshot(
 ) -> DeclaredProductTrustTelemetrySnapshot:
     _readiness_status_code, _readiness_status, dependencies = resolve_readiness_status(app)
     dependency_index = {dependency.service: dependency for dependency in dependencies}
+    declared_dependencies = [
+        DeclaredConsumerDependencyTelemetry(
+            product_name=dependency["product_name"],
+            producer_repository=dependency["producer_repository"],
+            required_product_version=dependency["required_product_version"],
+            consumption_mode=dependency["consumption_mode"],
+            failure_posture=dependency["failure_posture"],
+            validation_lanes=list(dependency.get("validation_lanes", [])),
+            required_trust_metadata=list(dependency.get("required_trust_metadata", [])),
+            runtime_status=dependency_index[dependency["producer_repository"]].status
+            if dependency["producer_repository"] in dependency_index
+            else None,
+            runtime_detail=dependency_index[dependency["producer_repository"]].detail
+            if dependency["producer_repository"] in dependency_index
+            else None,
+            runtime_category=dependency_index[dependency["producer_repository"]].category
+            if dependency["producer_repository"] in dependency_index
+            else None,
+            runtime_issue_code=dependency_index[dependency["producer_repository"]].issue_code
+            if dependency["producer_repository"] in dependency_index
+            else None,
+        )
+        for dependency in list_declared_dependencies()
+    ]
+    products = [
+        build_product_trust_telemetry_seed(
+            app=app,
+            product_name=product["product_name"],
+            product_version=product["product_version"],
+        )
+        for product in list_declared_products()
+    ]
+    degraded_dependency_products = [
+        dependency.product_name
+        for dependency in declared_dependencies
+        if dependency.runtime_status == "degraded"
+    ]
+    unavailable_dependency_products = [
+        dependency.product_name
+        for dependency in declared_dependencies
+        if dependency.runtime_status == "unavailable"
+    ]
+    missing_runtime_services = sorted(
+        {
+            dependency.producer_repository
+            for dependency in declared_dependencies
+            if dependency.runtime_status is None
+        }
+    )
 
     return DeclaredProductTrustTelemetrySnapshot(
         service=service_name,
@@ -285,36 +461,16 @@ def build_declared_product_trust_telemetry_snapshot(
         declaration_fingerprint=get_local_producer_declaration_fingerprint(),
         consumer_declaration_source=REPO_RELATIVE_CONSUMER_DECLARATION_PATH.as_posix(),
         consumer_declaration_fingerprint=get_local_consumer_declaration_fingerprint(),
-        declared_dependencies=[
-            DeclaredConsumerDependencyTelemetry(
-                product_name=dependency["product_name"],
-                producer_repository=dependency["producer_repository"],
-                required_product_version=dependency["required_product_version"],
-                consumption_mode=dependency["consumption_mode"],
-                failure_posture=dependency["failure_posture"],
-                validation_lanes=list(dependency.get("validation_lanes", [])),
-                required_trust_metadata=list(dependency.get("required_trust_metadata", [])),
-                runtime_status=dependency_index[dependency["producer_repository"]].status
-                if dependency["producer_repository"] in dependency_index
-                else None,
-                runtime_detail=dependency_index[dependency["producer_repository"]].detail
-                if dependency["producer_repository"] in dependency_index
-                else None,
-                runtime_category=dependency_index[dependency["producer_repository"]].category
-                if dependency["producer_repository"] in dependency_index
-                else None,
-                runtime_issue_code=dependency_index[dependency["producer_repository"]].issue_code
-                if dependency["producer_repository"] in dependency_index
-                else None,
-            )
-            for dependency in list_declared_dependencies()
-        ],
-        products=[
-            build_product_trust_telemetry_seed(
-                app=app,
-                product_name=product["product_name"],
-                product_version=product["product_version"],
-            )
-            for product in list_declared_products()
-        ],
+        declared_dependencies=declared_dependencies,
+        summary=TrustTelemetryReviewSummary(
+            declared_product_count=len(products),
+            declared_dependency_count=len(declared_dependencies),
+            degraded_dependency_count=len(degraded_dependency_products),
+            unavailable_dependency_count=len(unavailable_dependency_products),
+            missing_runtime_service_count=len(missing_runtime_services),
+            degraded_dependency_products=degraded_dependency_products,
+            unavailable_dependency_products=unavailable_dependency_products,
+            missing_runtime_services=missing_runtime_services,
+        ),
+        products=products,
     )

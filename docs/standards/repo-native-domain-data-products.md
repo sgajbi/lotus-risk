@@ -89,6 +89,11 @@ producer service. That keeps the operator snapshot useful for review because dec
 posture and live producer-health posture can be compared in one place without implying any platform
 certification semantics.
 
+The snapshot now also carries an operator review summary with declared product and dependency counts,
+degraded and unavailable dependency counts, and the affected declared dependency product names. That
+keeps review fast without changing the underlying raw declaration-backed evidence carried in the
+same snapshot.
+
 ## Current Open Decisions
 
 1. whether platform aggregation should discover repo-native files directly from this path or through

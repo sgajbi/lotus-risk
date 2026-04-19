@@ -4,7 +4,7 @@ import hashlib
 import json
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -20,12 +20,18 @@ REPO_RELATIVE_CONSUMER_DECLARATION_PATH = LOCAL_CONSUMER_DECLARATION_PATH.relati
 
 @lru_cache(maxsize=1)
 def load_local_producer_declaration() -> dict[str, Any]:
-    return json.loads(LOCAL_PRODUCER_DECLARATION_PATH.read_text(encoding="utf-8"))
+    return cast(
+        dict[str, Any],
+        json.loads(LOCAL_PRODUCER_DECLARATION_PATH.read_text(encoding="utf-8")),
+    )
 
 
 @lru_cache(maxsize=1)
 def load_local_consumer_declaration() -> dict[str, Any]:
-    return json.loads(LOCAL_CONSUMER_DECLARATION_PATH.read_text(encoding="utf-8"))
+    return cast(
+        dict[str, Any],
+        json.loads(LOCAL_CONSUMER_DECLARATION_PATH.read_text(encoding="utf-8")),
+    )
 
 
 def list_declared_products() -> list[dict[str, Any]]:

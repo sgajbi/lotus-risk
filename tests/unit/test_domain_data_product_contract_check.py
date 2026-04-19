@@ -2,17 +2,20 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any, cast
 
 from scripts.domain_data_product_contract_check import validate_repo_native_contracts
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 LOCAL_DECLARATIONS_DIR = REPO_ROOT / "contracts" / "domain-data-products"
-PLATFORM_DECLARATIONS_DIR = REPO_ROOT.parent / "lotus-platform" / "platform-contracts" / "domain-data-products"
+PLATFORM_DECLARATIONS_DIR = (
+    REPO_ROOT.parent / "lotus-platform" / "platform-contracts" / "domain-data-products"
+)
 
 
-def _load_json(path: Path) -> dict:
-    return json.loads(path.read_text(encoding="utf-8"))
+def _load_json(path: Path) -> dict[str, Any]:
+    return cast(dict[str, Any], json.loads(path.read_text(encoding="utf-8")))
 
 
 def test_repo_native_domain_data_product_gate_passes() -> None:

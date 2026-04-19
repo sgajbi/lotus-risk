@@ -188,7 +188,9 @@ def test_metadata_and_ops_contract_shape() -> None:
         == "contracts/domain-data-products/lotus-risk-consumers.v1.json"
     )
     assert trust_telemetry_body["consumer_declaration_fingerprint"].startswith("sha256:")
-    assert [dependency["product_name"] for dependency in trust_telemetry_body["declared_dependencies"]] == [
+    assert [
+        dependency["product_name"] for dependency in trust_telemetry_body["declared_dependencies"]
+    ] == [
         "ReturnsSeriesBundle",
         "BenchmarkExposureContext",
         "PortfolioStateSnapshot",
@@ -201,6 +203,11 @@ def test_metadata_and_ops_contract_shape() -> None:
         == "lotus-performance"
     )
     assert trust_telemetry_body["declared_dependencies"][0]["runtime_status"] == "ok"
+    assert trust_telemetry_body["summary"]["declared_product_count"] == 5
+    assert trust_telemetry_body["summary"]["declared_dependency_count"] == 6
+    assert trust_telemetry_body["summary"]["degraded_dependency_count"] == 0
+    assert trust_telemetry_body["summary"]["unavailable_dependency_count"] == 0
+    assert trust_telemetry_body["summary"]["missing_runtime_service_count"] == 0
     assert [product["product_name"] for product in trust_telemetry_body["products"]] == [
         "RiskMetricsReport",
         "DrawdownAnalyticsReport",
@@ -209,8 +216,7 @@ def test_metadata_and_ops_contract_shape() -> None:
         "ConcentrationRiskReport",
     ]
     assert all(
-        product["lifecycle_status"] == "active"
-        for product in trust_telemetry_body["products"]
+        product["lifecycle_status"] == "active" for product in trust_telemetry_body["products"]
     )
     assert trust_telemetry_body["products"][0]["authoritative_domain"] == "risk_analytics"
     assert trust_telemetry_body["products"][0]["product_family"] == "analytics_output"
@@ -266,6 +272,14 @@ def test_health_ready_and_ops_surface_dependency_degradation() -> None:
     assert performance_dependency["runtime_status"] == "degraded"
     assert performance_dependency["runtime_category"] == "transport"
     assert performance_dependency["runtime_issue_code"] == "UPSTREAM_HIGH_LATENCY"
+    summary = trust_telemetry.json()["summary"]
+    assert summary["degraded_dependency_count"] == 2
+    assert summary["unavailable_dependency_count"] == 0
+    assert summary["missing_runtime_service_count"] == 0
+    assert summary["degraded_dependency_products"] == [
+        "ReturnsSeriesBundle",
+        "BenchmarkExposureContext",
+    ]
 
 
 def test_health_ready_fails_when_dependency_is_unavailable() -> None:
@@ -462,9 +476,15 @@ def test_openapi_exposes_local_trust_telemetry_snapshot_schema() -> None:
         == "contracts/domain-data-products/lotus-risk-consumers.v1.json"
     )
     assert "declared_dependencies" in snapshot_schema["properties"]
+    assert "summary" in snapshot_schema["properties"]
     dependency_schema = spec["components"]["schemas"]["DeclaredConsumerDependencyTelemetry"]
+    summary_schema = spec["components"]["schemas"]["TrustTelemetryReviewSummary"]
     assert dependency_schema["properties"]["runtime_status"]["example"] == "degraded"
-    assert dependency_schema["properties"]["runtime_issue_code"]["example"] == "UPSTREAM_HIGH_LATENCY"
+    assert (
+        dependency_schema["properties"]["runtime_issue_code"]["example"] == "UPSTREAM_HIGH_LATENCY"
+    )
+    assert summary_schema["properties"]["declared_product_count"]["example"] == 5
+    assert summary_schema["properties"]["declared_dependency_count"]["example"] == 6
     assert (
         seed_schema["properties"]["readiness_status"]["description"]
         == "Current service readiness posture used as raw input for future certification."

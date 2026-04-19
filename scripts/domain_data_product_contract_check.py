@@ -5,6 +5,7 @@ import json
 import sys
 from pathlib import Path
 from types import ModuleType
+from typing import Any, cast
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -26,7 +27,9 @@ SUPPLEMENTAL_PLATFORM_PRODUCERS = (
 
 
 def _load_platform_validator() -> ModuleType:
-    spec = importlib.util.spec_from_file_location("lotus_platform_domain_data_products_validator", PLATFORM_VALIDATOR_PATH)
+    spec = importlib.util.spec_from_file_location(
+        "lotus_platform_domain_data_products_validator", PLATFORM_VALIDATOR_PATH
+    )
     if spec is None or spec.loader is None:
         raise RuntimeError(f"Unable to load platform validator from {PLATFORM_VALIDATOR_PATH}")
     module = importlib.util.module_from_spec(spec)
@@ -34,15 +37,18 @@ def _load_platform_validator() -> ModuleType:
     return module
 
 
-def _load_json(path: Path) -> dict:
-    return json.loads(path.read_text(encoding="utf-8"))
+def _load_json(path: Path) -> dict[str, Any]:
+    return cast(dict[str, Any], json.loads(path.read_text(encoding="utf-8")))
 
 
 def _append_issue(issues: list[str], path: Path, message: str) -> None:
     issues.append(f"{path}: {message}")
 
 
-def _load_registry_keys(semantics_payload: dict, trust_payload: dict) -> dict[str, set[str]]:
+def _load_registry_keys(
+    semantics_payload: dict[str, Any],
+    trust_payload: dict[str, Any],
+) -> dict[str, set[str]]:
     return {
         "identifier_keys": {
             entry.get("key", "")
@@ -56,12 +62,16 @@ def _load_registry_keys(semantics_payload: dict, trust_payload: dict) -> dict[st
         },
         "freshness_classes": {
             entry.get("key", "")
-            for entry in semantics_payload.get("trust_vocabularies", {}).get("freshness_classes", [])
+            for entry in semantics_payload.get("trust_vocabularies", {}).get(
+                "freshness_classes", []
+            )
             if isinstance(entry, dict)
         },
         "completeness_statuses": {
             entry.get("key", "")
-            for entry in semantics_payload.get("trust_vocabularies", {}).get("completeness_statuses", [])
+            for entry in semantics_payload.get("trust_vocabularies", {}).get(
+                "completeness_statuses", []
+            )
             if isinstance(entry, dict)
         },
         "trust_metadata_keys": {
@@ -119,10 +129,16 @@ def validate_repo_native_contracts() -> list[str]:
         )
     )
 
-    producer_payloads: list[tuple[Path, dict]] = [(LOCAL_PRODUCER_PATH, local_producer_payload)]
+    producer_payloads: list[tuple[Path, dict[str, Any]]] = [
+        (LOCAL_PRODUCER_PATH, local_producer_payload)
+    ]
     for supplemental_path in SUPPLEMENTAL_PLATFORM_PRODUCERS:
         producer_payloads.append((supplemental_path, _load_json(supplemental_path)))
-    issues.extend(validator.validate_cross_references(producer_payloads, [(LOCAL_CONSUMER_PATH, local_consumer_payload)]))
+    issues.extend(
+        validator.validate_cross_references(
+            producer_payloads, [(LOCAL_CONSUMER_PATH, local_consumer_payload)]
+        )
+    )
 
     for mirror_kind, local_path, platform_path in TRANSITIONAL_PLATFORM_MIRRORS:
         local_payload = _load_json(local_path)
