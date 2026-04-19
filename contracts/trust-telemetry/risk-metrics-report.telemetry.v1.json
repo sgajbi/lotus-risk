@@ -1,0 +1,62 @@
+{
+  "contract_id": "lotus-domain-product-trust-telemetry-snapshot",
+  "contract_version": "1.0.0",
+  "governed_by_rfcs": [
+    "RFC-0087"
+  ],
+  "emitted_at_utc": "2026-04-19T00:00:00Z",
+  "product_id": "lotus-risk:RiskMetricsReport:v1",
+  "producer_repository": "lotus-risk",
+  "product_name": "RiskMetricsReport",
+  "product_version": "v1",
+  "source_repository": "lotus-risk",
+  "freshness": {
+    "freshness_class": "daily",
+    "freshness_state": "current",
+    "evaluated_at_utc": "2026-04-19T00:00:00Z",
+    "observed_at_utc": "2026-04-19T00:00:00Z",
+    "age_seconds": 0,
+    "max_allowed_age_seconds": 86400
+  },
+  "completeness_status": "complete",
+  "reconciliation_status": "reconciled",
+  "data_quality_status": "quality_passed",
+  "lineage": {
+    "lineage_materialized": true,
+    "lineage_bundle_id": "lineage:lotus-risk:risk-metrics-report:2026-04-19",
+    "evidence_access_class": "customer_consumable",
+    "evidence_uris": [
+      "lotus-risk://evidence/risk-metrics/PB_SG_GLOBAL_BAL_001/2026-04-19"
+    ]
+  },
+  "blocking": {
+    "blocked": false
+  },
+  "observed_trust_metadata": {
+    "product_name": "RiskMetricsReport",
+    "product_version": "v1",
+    "as_of_date": "2026-04-19",
+    "lineage_version": "risk_audit_lineage.v1",
+    "request_fingerprint": "sha256:risk-metrics-request-demo",
+    "source_services": [
+      "lotus-risk",
+      "lotus-performance",
+      "lotus-core"
+    ],
+    "upstream_request_fingerprints": {
+      "lotus-performance:/integration/returns/series": "sha256:returns-series-demo",
+      "lotus-core:/query/portfolio-state": "sha256:portfolio-state-demo"
+    },
+    "benchmark_context": "MSCI_ACWI_PRIVATE_BANKING_DEMO",
+    "risk_free_context": "SGD_OVERNIGHT_DEMO"
+  },
+  "evidence": {
+    "correlation_id": "rfc-0087-lotus-risk-risk-metrics",
+    "validation_lanes": [
+      "feature",
+      "pr-merge"
+    ],
+    "source_event_id": "source-event:lotus-risk:risk-metrics:2026-04-19",
+    "source_artifact_uri": "lotus-risk://contracts/trust-telemetry/risk-metrics-report.telemetry.v1.json"
+  }
+}

@@ -33,7 +33,10 @@ Current repository posture:
 4. RFC-0008 establishes the current enterprise-readiness baseline: supported risk analytics are credible for the canonical private-banking portfolio, while unrestricted enterprise-bank approval still requires downstream proof and broader seeded portfolio archetype coverage,
 5. current work often involves balancing analytical correctness, contract quality, and front-office usability,
 6. upstream use of `lotus-core` and `lotus-performance` is now documented under the RFC-0082 upstream contract-family map,
-7. repo-native RFC-0086 product and consumer declarations now live under `contracts/domain-data-products/` with a local `make domain-data-product-gate` validation path.
+7. repo-native RFC-0086 product and consumer declarations now live under `contracts/domain-data-products/` with a local `make domain-data-product-gate` validation path,
+8. RFC-0087 trust telemetry proof for `RiskMetricsReport` now lives under
+   `contracts/trust-telemetry/` and is validated by `tests/unit/test_trust_telemetry.py` against
+   the platform trust telemetry validator when `lotus-platform` is available.
 
 ## Architecture And Module Map
 
@@ -42,7 +45,8 @@ Primary areas:
 1. `src/`
    risk application and analytics implementation.
 2. `contracts/`
-   repo-native domain product declarations and related machine-readable contract files.
+   repo-native domain product declarations, trust telemetry fixtures, and related machine-readable
+   contract files.
 3. `scripts/`
    OpenAPI, vocabulary, dependency-health, and test-pyramid governance.
 4. `docs/standards/`
