@@ -200,6 +200,7 @@ def test_metadata_and_ops_contract_shape() -> None:
         trust_telemetry_body["declared_dependencies"][0]["producer_repository"]
         == "lotus-performance"
     )
+    assert trust_telemetry_body["declared_dependencies"][0]["runtime_status"] == "ok"
     assert [product["product_name"] for product in trust_telemetry_body["products"]] == [
         "RiskMetricsReport",
         "DrawdownAnalyticsReport",
@@ -257,6 +258,14 @@ def test_health_ready_and_ops_surface_dependency_degradation() -> None:
     assert performance_signal["status"] == "degraded"
     assert performance_signal["category"] == "transport"
     assert performance_signal["issue_code"] == "UPSTREAM_HIGH_LATENCY"
+    performance_dependency = next(
+        dependency
+        for dependency in trust_telemetry.json()["declared_dependencies"]
+        if dependency["producer_repository"] == "lotus-performance"
+    )
+    assert performance_dependency["runtime_status"] == "degraded"
+    assert performance_dependency["runtime_category"] == "transport"
+    assert performance_dependency["runtime_issue_code"] == "UPSTREAM_HIGH_LATENCY"
 
 
 def test_health_ready_fails_when_dependency_is_unavailable() -> None:
@@ -453,6 +462,9 @@ def test_openapi_exposes_local_trust_telemetry_snapshot_schema() -> None:
         == "contracts/domain-data-products/lotus-risk-consumers.v1.json"
     )
     assert "declared_dependencies" in snapshot_schema["properties"]
+    dependency_schema = spec["components"]["schemas"]["DeclaredConsumerDependencyTelemetry"]
+    assert dependency_schema["properties"]["runtime_status"]["example"] == "degraded"
+    assert dependency_schema["properties"]["runtime_issue_code"]["example"] == "UPSTREAM_HIGH_LATENCY"
     assert (
         seed_schema["properties"]["readiness_status"]["description"]
         == "Current service readiness posture used as raw input for future certification."

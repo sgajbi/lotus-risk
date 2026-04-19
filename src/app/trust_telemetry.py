@@ -162,6 +162,26 @@ class DeclaredConsumerDependencyTelemetry(BaseModel):
         description="Trust metadata required from the upstream product declaration.",
         json_schema_extra={"example": ["generated_at", "as_of_date", "correlation_id"]},
     )
+    runtime_status: str | None = Field(
+        default=None,
+        description="Current runtime status observed for the declared upstream producer service.",
+        json_schema_extra={"example": "degraded"},
+    )
+    runtime_detail: str | None = Field(
+        default=None,
+        description="Current runtime detail observed for the declared upstream producer service.",
+        json_schema_extra={"example": "high_latency"},
+    )
+    runtime_category: str | None = Field(
+        default=None,
+        description="Current structured runtime issue category for the declared upstream producer service.",
+        json_schema_extra={"example": "transport"},
+    )
+    runtime_issue_code: str | None = Field(
+        default=None,
+        description="Current machine-readable runtime issue code for the declared upstream producer service.",
+        json_schema_extra={"example": "UPSTREAM_HIGH_LATENCY"},
+    )
 
 
 class DeclaredProductTrustTelemetrySnapshot(BaseModel):
@@ -256,6 +276,9 @@ def build_declared_product_trust_telemetry_snapshot(
     app: FastAPI,
     service_name: str,
 ) -> DeclaredProductTrustTelemetrySnapshot:
+    _readiness_status_code, _readiness_status, dependencies = resolve_readiness_status(app)
+    dependency_index = {dependency.service: dependency for dependency in dependencies}
+
     return DeclaredProductTrustTelemetrySnapshot(
         service=service_name,
         declaration_source=REPO_RELATIVE_PRODUCER_DECLARATION_PATH.as_posix(),
@@ -271,6 +294,18 @@ def build_declared_product_trust_telemetry_snapshot(
                 failure_posture=dependency["failure_posture"],
                 validation_lanes=list(dependency.get("validation_lanes", [])),
                 required_trust_metadata=list(dependency.get("required_trust_metadata", [])),
+                runtime_status=dependency_index[dependency["producer_repository"]].status
+                if dependency["producer_repository"] in dependency_index
+                else None,
+                runtime_detail=dependency_index[dependency["producer_repository"]].detail
+                if dependency["producer_repository"] in dependency_index
+                else None,
+                runtime_category=dependency_index[dependency["producer_repository"]].category
+                if dependency["producer_repository"] in dependency_index
+                else None,
+                runtime_issue_code=dependency_index[dependency["producer_repository"]].issue_code
+                if dependency["producer_repository"] in dependency_index
+                else None,
             )
             for dependency in list_declared_dependencies()
         ],
