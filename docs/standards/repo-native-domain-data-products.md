@@ -36,8 +36,14 @@ The platform files:
 1. `lotus-platform/platform-contracts/domain-data-products/lotus-risk-products.v1.json`
 2. `lotus-platform/platform-contracts/domain-data-products/lotus-risk-consumers.v1.json`
 
-remain transitional copies for this rollout wave. They are not the intended long-term ownership
-path.
+remain explicit transitional mirrors for this rollout wave.
+
+Ownership status is therefore:
+
+1. `lotus-risk` owns the repo-native files in `contracts/domain-data-products/`,
+2. `lotus-platform` holds mirror copies only until federation aggregation no longer depends on
+   them,
+3. the mirror state is temporary and must not be treated as long-term declaration ownership.
 
 ## RFC-0087 Preparation Seam
 

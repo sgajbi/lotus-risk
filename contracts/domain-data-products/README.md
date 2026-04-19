@@ -23,5 +23,7 @@ Validation posture:
 Migration posture:
 
 1. the repo-native files in this directory are the intended owning-repo path,
-2. the matching `lotus-platform` declaration files are transitional mirrors for the current rollout
-   wave and should be removed once platform aggregation no longer depends on them.
+2. the matching `lotus-platform` declaration files are explicit transitional mirrors for the
+   current rollout wave,
+3. mirror ownership is temporary only; the platform copies should be removed once platform
+   aggregation no longer depends on them.
