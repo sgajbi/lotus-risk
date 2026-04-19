@@ -84,6 +84,11 @@ fingerprint, and declared upstream dependency set. That lets reviewers inspect p
 consumer dependency truth, and raw runtime dependency posture in one place while RFC-0087 is still
 at the preparation stage.
 
+Each declared upstream dependency now also carries the current runtime status observed for its
+producer service. That keeps the operator snapshot useful for review because declared dependency
+posture and live producer-health posture can be compared in one place without implying any platform
+certification semantics.
+
 ## Current Open Decisions
 
 1. whether platform aggregation should discover repo-native files directly from this path or through
