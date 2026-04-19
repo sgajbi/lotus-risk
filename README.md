@@ -186,6 +186,7 @@ Key operator-facing endpoints:
 - `/health/ready`
 - `/metadata`
 - `/ops`
+- `/ops/trust-telemetry`
 - `/metrics`
 
 Runtime dependencies that matter:
