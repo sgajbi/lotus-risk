@@ -8,8 +8,12 @@ from pydantic import BaseModel, Field
 
 from app.contracts.audit import AuditMetadataFields
 from app.domain_data_products import (
+    REPO_RELATIVE_CONSUMER_DECLARATION_PATH,
     REPO_RELATIVE_PRODUCER_DECLARATION_PATH,
     get_declared_product,
+    get_local_consumer_declaration_fingerprint,
+    get_local_producer_declaration_fingerprint,
+    list_declared_dependencies,
     list_declared_products,
 )
 from app.ops_runtime import resolve_ops_status, resolve_readiness_status
@@ -52,9 +56,32 @@ class ProductTrustTelemetrySeed(BaseModel):
         description="Governed product version emitted by lotus-risk.",
         json_schema_extra={"example": "v1"},
     )
+    authoritative_domain: str = Field(
+        description="Authoritative domain declared for the product.",
+        json_schema_extra={"example": "risk_analytics"},
+    )
+    product_family: str = Field(
+        description="Declared product family used to classify the product for governance.",
+        json_schema_extra={"example": "analytics_output"},
+    )
+    approved_consumers: list[str] = Field(
+        default_factory=list,
+        description="Consumers explicitly approved in the repo-native producer declaration.",
+        json_schema_extra={"example": ["lotus-gateway"]},
+    )
+    required_trust_metadata: list[str] = Field(
+        default_factory=list,
+        description="Trust metadata fields the repo-native declaration requires for the product.",
+        json_schema_extra={"example": ["product_name", "product_version", "as_of_date"]},
+    )
     lifecycle_status: TelemetryLifecycleStatus = Field(
         description="Repo-owned lifecycle status mirrored from the governed product declaration.",
         json_schema_extra={"example": "active"},
+    )
+    current_routes: list[str] = Field(
+        default_factory=list,
+        description="Current API routes declared as publishing or serving this product.",
+        json_schema_extra={"example": ["/analytics/risk/calculate"]},
     )
     emitted_at: str = Field(
         description="UTC timestamp when lotus-risk assembled the local trust telemetry seed.",
@@ -104,6 +131,39 @@ class ProductTrustTelemetrySeed(BaseModel):
     )
 
 
+class DeclaredConsumerDependencyTelemetry(BaseModel):
+    product_name: str = Field(
+        description="Governed upstream product required by lotus-risk.",
+        json_schema_extra={"example": "ReturnsSeriesBundle"},
+    )
+    producer_repository: str = Field(
+        description="Owning repository for the required upstream product.",
+        json_schema_extra={"example": "lotus-performance"},
+    )
+    required_product_version: str = Field(
+        description="Governed upstream product version required by lotus-risk.",
+        json_schema_extra={"example": "v1"},
+    )
+    consumption_mode: str = Field(
+        description="Declared consumption mode for the upstream dependency.",
+        json_schema_extra={"example": "api_read"},
+    )
+    failure_posture: str = Field(
+        description="Declared failure posture when the upstream dependency is unavailable or weak.",
+        json_schema_extra={"example": "fail_closed"},
+    )
+    validation_lanes: list[str] = Field(
+        default_factory=list,
+        description="Validation lanes in which this dependency is expected to be checked.",
+        json_schema_extra={"example": ["feature", "pr-merge"]},
+    )
+    required_trust_metadata: list[str] = Field(
+        default_factory=list,
+        description="Trust metadata required from the upstream product declaration.",
+        json_schema_extra={"example": ["generated_at", "as_of_date", "correlation_id"]},
+    )
+
+
 class DeclaredProductTrustTelemetrySnapshot(BaseModel):
     service: str = Field(
         description="Service identifier publishing the local trust telemetry snapshot.",
@@ -114,6 +174,27 @@ class DeclaredProductTrustTelemetrySnapshot(BaseModel):
         json_schema_extra={
             "example": "contracts/domain-data-products/lotus-risk-products.v1.json"
         },
+    )
+    declaration_fingerprint: str = Field(
+        description="Deterministic fingerprint of the repo-native producer declaration payload.",
+        json_schema_extra={
+            "example": "sha256:6f36c1f0f3f0f08c6f36c1f0f3f0f08c6f36c1f0f3f0f08c6f36c1f0f3f0f08c"
+        },
+    )
+    consumer_declaration_source: str = Field(
+        description="Repo-native consumer declaration file used to resolve declared upstream dependencies.",
+        json_schema_extra={
+            "example": "contracts/domain-data-products/lotus-risk-consumers.v1.json"
+        },
+    )
+    consumer_declaration_fingerprint: str = Field(
+        description="Deterministic fingerprint of the repo-native consumer declaration payload.",
+        json_schema_extra={
+            "example": "sha256:8d7411c13a0a25a18d7411c13a0a25a18d7411c13a0a25a18d7411c13a0a25a1"
+        },
+    )
+    declared_dependencies: list[DeclaredConsumerDependencyTelemetry] = Field(
+        description="Current repo-native declared upstream dependencies required by lotus-risk.",
     )
     products: list[ProductTrustTelemetrySeed] = Field(
         description="Current raw telemetry seeds for each repo-native declared product.",
@@ -141,7 +222,12 @@ def build_product_trust_telemetry_seed(
     return ProductTrustTelemetrySeed(
         product_name=product_name,
         product_version=product_version,
+        authoritative_domain=declared_product["authoritative_domain"],
+        product_family=declared_product["product_family"],
+        approved_consumers=list(declared_product.get("approved_consumers", [])),
+        required_trust_metadata=list(declared_product.get("required_trust_metadata", [])),
         lifecycle_status=declared_product["lifecycle_status"],
+        current_routes=list(declared_product.get("current_routes", [])),
         emitted_at=_utc_now(),
         readiness_status=readiness_status,
         ops_status=ops_status,
@@ -173,6 +259,21 @@ def build_declared_product_trust_telemetry_snapshot(
     return DeclaredProductTrustTelemetrySnapshot(
         service=service_name,
         declaration_source=REPO_RELATIVE_PRODUCER_DECLARATION_PATH.as_posix(),
+        declaration_fingerprint=get_local_producer_declaration_fingerprint(),
+        consumer_declaration_source=REPO_RELATIVE_CONSUMER_DECLARATION_PATH.as_posix(),
+        consumer_declaration_fingerprint=get_local_consumer_declaration_fingerprint(),
+        declared_dependencies=[
+            DeclaredConsumerDependencyTelemetry(
+                product_name=dependency["product_name"],
+                producer_repository=dependency["producer_repository"],
+                required_product_version=dependency["required_product_version"],
+                consumption_mode=dependency["consumption_mode"],
+                failure_posture=dependency["failure_posture"],
+                validation_lanes=list(dependency.get("validation_lanes", [])),
+                required_trust_metadata=list(dependency.get("required_trust_metadata", [])),
+            )
+            for dependency in list_declared_dependencies()
+        ],
         products=[
             build_product_trust_telemetry_seed(
                 app=app,

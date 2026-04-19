@@ -182,6 +182,24 @@ def test_metadata_and_ops_contract_shape() -> None:
         trust_telemetry_body["declaration_source"]
         == "contracts/domain-data-products/lotus-risk-products.v1.json"
     )
+    assert trust_telemetry_body["declaration_fingerprint"].startswith("sha256:")
+    assert (
+        trust_telemetry_body["consumer_declaration_source"]
+        == "contracts/domain-data-products/lotus-risk-consumers.v1.json"
+    )
+    assert trust_telemetry_body["consumer_declaration_fingerprint"].startswith("sha256:")
+    assert [dependency["product_name"] for dependency in trust_telemetry_body["declared_dependencies"]] == [
+        "ReturnsSeriesBundle",
+        "BenchmarkExposureContext",
+        "PortfolioStateSnapshot",
+        "PositionTimeseriesInput",
+        "InstrumentReferenceBundle",
+        "RiskFreeSeriesWindow",
+    ]
+    assert (
+        trust_telemetry_body["declared_dependencies"][0]["producer_repository"]
+        == "lotus-performance"
+    )
     assert [product["product_name"] for product in trust_telemetry_body["products"]] == [
         "RiskMetricsReport",
         "DrawdownAnalyticsReport",
@@ -193,6 +211,11 @@ def test_metadata_and_ops_contract_shape() -> None:
         product["lifecycle_status"] == "active"
         for product in trust_telemetry_body["products"]
     )
+    assert trust_telemetry_body["products"][0]["authoritative_domain"] == "risk_analytics"
+    assert trust_telemetry_body["products"][0]["product_family"] == "analytics_output"
+    assert trust_telemetry_body["products"][0]["approved_consumers"] == ["lotus-gateway"]
+    assert "request_fingerprint" in trust_telemetry_body["products"][0]["required_trust_metadata"]
+    assert trust_telemetry_body["products"][0]["current_routes"] == ["/analytics/risk/calculate"]
 
 
 def test_health_ready_and_ops_surface_dependency_degradation() -> None:
@@ -424,10 +447,19 @@ def test_openapi_exposes_local_trust_telemetry_snapshot_schema() -> None:
         snapshot_schema["properties"]["declaration_source"]["example"]
         == "contracts/domain-data-products/lotus-risk-products.v1.json"
     )
+    assert "declaration_fingerprint" in snapshot_schema["properties"]
+    assert (
+        snapshot_schema["properties"]["consumer_declaration_source"]["example"]
+        == "contracts/domain-data-products/lotus-risk-consumers.v1.json"
+    )
+    assert "declared_dependencies" in snapshot_schema["properties"]
     assert (
         seed_schema["properties"]["readiness_status"]["description"]
         == "Current service readiness posture used as raw input for future certification."
     )
+    assert seed_schema["properties"]["product_family"]["example"] == "analytics_output"
+    assert seed_schema["properties"]["approved_consumers"]["example"] == ["lotus-gateway"]
+    assert seed_schema["properties"]["current_routes"]["example"] == ["/analytics/risk/calculate"]
 
 
 def test_openapi_exposes_metadata_contract_schema() -> None:

@@ -37,7 +37,12 @@ def test_build_product_trust_telemetry_seed_uses_runtime_and_lineage_inputs() ->
 
     assert seed.product_name == "RiskMetricsReport"
     assert seed.product_version == "v1"
+    assert seed.authoritative_domain == "risk_analytics"
+    assert seed.product_family == "analytics_output"
+    assert seed.approved_consumers == ["lotus-gateway"]
+    assert "request_fingerprint" in seed.required_trust_metadata
     assert seed.lifecycle_status == "active"
+    assert seed.current_routes == ["/analytics/risk/calculate"]
     assert seed.readiness_status == "degraded"
     assert seed.ops_status == "degraded"
     assert seed.draining is False
@@ -110,6 +115,22 @@ def test_build_declared_product_trust_telemetry_snapshot_uses_repo_native_catalo
 
     assert snapshot.service == "lotus-risk"
     assert snapshot.declaration_source == "contracts/domain-data-products/lotus-risk-products.v1.json"
+    assert snapshot.declaration_fingerprint.startswith("sha256:")
+    assert (
+        snapshot.consumer_declaration_source
+        == "contracts/domain-data-products/lotus-risk-consumers.v1.json"
+    )
+    assert snapshot.consumer_declaration_fingerprint.startswith("sha256:")
+    assert [dependency.product_name for dependency in snapshot.declared_dependencies] == [
+        "ReturnsSeriesBundle",
+        "BenchmarkExposureContext",
+        "PortfolioStateSnapshot",
+        "PositionTimeseriesInput",
+        "InstrumentReferenceBundle",
+        "RiskFreeSeriesWindow",
+    ]
+    assert snapshot.declared_dependencies[0].producer_repository == "lotus-performance"
+    assert "correlation_id" in snapshot.declared_dependencies[0].required_trust_metadata
     assert [product.product_name for product in snapshot.products] == [
         "RiskMetricsReport",
         "DrawdownAnalyticsReport",
@@ -118,4 +139,7 @@ def test_build_declared_product_trust_telemetry_snapshot_uses_repo_native_catalo
         "ConcentrationRiskReport",
     ]
     assert all(product.lifecycle_status == "active" for product in snapshot.products)
+    assert snapshot.products[0].product_family == "analytics_output"
+    assert snapshot.products[0].approved_consumers == ["lotus-gateway"]
+    assert snapshot.products[0].current_routes == ["/analytics/risk/calculate"]
     assert snapshot.products[0].dependency_signals[0].issue_code == "RISK_FREE_SERIES_STALE"

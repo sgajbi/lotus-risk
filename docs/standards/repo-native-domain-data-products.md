@@ -69,6 +69,21 @@ repo-local raw telemetry snapshot that returns repo-owned seeds for operator rev
 not be treated as a platform-certified trust artifact until RFC-0087 introduces certified trust
 artifacts.
 
+Each raw seed now carries the declaration-derived `authoritative_domain`, `product_family`, and
+`current_routes` fields in addition to runtime and lineage evidence so operator review can connect
+the raw trust posture back to the governing repo-native declaration without cross-referencing the
+JSON files manually.
+
+The snapshot itself now carries a deterministic declaration fingerprint, and each product seed
+includes the declaration-governed `approved_consumers` and `required_trust_metadata` fields. That
+lets operator review compare observed runtime posture against the declaration-backed trust contract
+without introducing a platform certification plane inside this repo.
+
+The same operator snapshot now also carries the repo-native consumer declaration source,
+fingerprint, and declared upstream dependency set. That lets reviewers inspect producer truth,
+consumer dependency truth, and raw runtime dependency posture in one place while RFC-0087 is still
+at the preparation stage.
+
 ## Current Open Decisions
 
 1. whether platform aggregation should discover repo-native files directly from this path or through
