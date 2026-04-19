@@ -59,9 +59,10 @@ That is the narrowest additive path into RFC-0087 because it reuses current doma
 and lineage evidence instead of inventing a second trust status layer inside the request handlers or
 moving product truth into `lotus-gateway`.
 
-The current in-repo preparation seam is `src/app/trust_telemetry.py`, which assembles a
-repo-local telemetry seed from those existing sources without introducing platform certification
-rules or a new publication contract yet.
+The current in-repo preparation seam is `src/app/trust_telemetry.py`, backed by
+`src/app/domain_data_products.py`, which assembles a repo-local telemetry seed from those existing
+sources and resolves product lifecycle from the repo-native declaration catalog without introducing
+platform certification rules or a new publication contract yet.
 
 ## Current Open Decisions
 

@@ -72,3 +72,18 @@ def test_build_product_trust_telemetry_seed_preserves_draining_and_missing_linea
     assert seed.request_fingerprint is None
     assert seed.source_services == []
     assert seed.upstream_request_fingerprints == {}
+
+
+def test_build_product_trust_telemetry_seed_rejects_undeclared_products() -> None:
+    app = FastAPI()
+
+    try:
+        build_product_trust_telemetry_seed(
+            app=app,
+            product_name="UncataloguedRiskReport",
+            product_version="v1",
+        )
+    except ValueError as exc:
+        assert "Unknown lotus-risk declared product" in str(exc)
+    else:
+        raise AssertionError("expected undeclared product telemetry seed build to fail")

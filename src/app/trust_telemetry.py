@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel, Field
 
 from app.contracts.audit import AuditMetadataFields
+from app.domain_data_products import get_declared_product
 from app.ops_runtime import resolve_ops_status, resolve_readiness_status
 
 TelemetryLifecycleStatus = Literal["active", "deprecated", "retired"]
@@ -108,16 +109,19 @@ def build_product_trust_telemetry_seed(
     app: FastAPI,
     product_name: str,
     product_version: str,
-    lifecycle_status: TelemetryLifecycleStatus = "active",
     metadata: AuditMetadataFields | None = None,
 ) -> ProductTrustTelemetrySeed:
+    declared_product = get_declared_product(
+        product_name=product_name,
+        product_version=product_version,
+    )
     _readiness_status_code, readiness_status, dependencies = resolve_readiness_status(app)
     ops_status, _ = resolve_ops_status(app)
 
     return ProductTrustTelemetrySeed(
         product_name=product_name,
         product_version=product_version,
-        lifecycle_status=lifecycle_status,
+        lifecycle_status=declared_product["lifecycle_status"],
         emitted_at=_utc_now(),
         readiness_status=readiness_status,
         ops_status=ops_status,
