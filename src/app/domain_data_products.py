@@ -10,6 +10,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 LOCAL_PRODUCER_DECLARATION_PATH = (
     REPO_ROOT / "contracts" / "domain-data-products" / "lotus-risk-products.v1.json"
 )
+REPO_RELATIVE_PRODUCER_DECLARATION_PATH = LOCAL_PRODUCER_DECLARATION_PATH.relative_to(REPO_ROOT)
 
 
 @lru_cache(maxsize=1)

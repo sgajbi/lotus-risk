@@ -53,6 +53,10 @@ from app.services.rolling_engine import calculate_rolling_metrics
 from app.services.rolling_mode_adapter import calculate_rolling_metrics_stateful
 from app.services.risk_engine import calculate_risk
 from app.services.risk_mode_adapter import calculate_risk_stateful
+from app.trust_telemetry import (
+    DeclaredProductTrustTelemetrySnapshot,
+    build_declared_product_trust_telemetry_snapshot,
+)
 from app.upstream_errors import UpstreamServiceError
 
 SERVICE_NAME = "lotus-risk"
@@ -489,6 +493,25 @@ async def ops() -> OpsResponse:
             )
             for dependency in dependencies
         ],
+    )
+
+
+@app.get(
+    "/ops/trust-telemetry",
+    response_model=DeclaredProductTrustTelemetrySnapshot,
+    summary="Local trust telemetry snapshot",
+    description=(
+        "Returns the current repo-owned raw trust telemetry seeds for each repo-native declared "
+        "lotus-risk product. This is an operator-facing preparation seam for RFC-0087 and is not "
+        "a platform-certified trust contract."
+    ),
+    tags=["operational"],
+    responses=STANDARD_ERROR_RESPONSES,
+)
+async def ops_trust_telemetry() -> DeclaredProductTrustTelemetrySnapshot:
+    return build_declared_product_trust_telemetry_snapshot(
+        app=app,
+        service_name=SERVICE_NAME,
     )
 
 

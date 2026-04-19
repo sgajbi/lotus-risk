@@ -7,7 +7,11 @@ from fastapi import FastAPI
 from pydantic import BaseModel, Field
 
 from app.contracts.audit import AuditMetadataFields
-from app.domain_data_products import get_declared_product
+from app.domain_data_products import (
+    REPO_RELATIVE_PRODUCER_DECLARATION_PATH,
+    get_declared_product,
+    list_declared_products,
+)
 from app.ops_runtime import resolve_ops_status, resolve_readiness_status
 
 TelemetryLifecycleStatus = Literal["active", "deprecated", "retired"]
@@ -100,6 +104,22 @@ class ProductTrustTelemetrySeed(BaseModel):
     )
 
 
+class DeclaredProductTrustTelemetrySnapshot(BaseModel):
+    service: str = Field(
+        description="Service identifier publishing the local trust telemetry snapshot.",
+        json_schema_extra={"example": "lotus-risk"},
+    )
+    declaration_source: str = Field(
+        description="Repo-native producer declaration file used to resolve the declared products.",
+        json_schema_extra={
+            "example": "contracts/domain-data-products/lotus-risk-products.v1.json"
+        },
+    )
+    products: list[ProductTrustTelemetrySeed] = Field(
+        description="Current raw telemetry seeds for each repo-native declared product.",
+    )
+
+
 def _utc_now() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
@@ -141,5 +161,24 @@ def build_product_trust_telemetry_seed(
                 issue_code=dependency.issue_code,
             )
             for dependency in dependencies
+        ],
+    )
+
+
+def build_declared_product_trust_telemetry_snapshot(
+    *,
+    app: FastAPI,
+    service_name: str,
+) -> DeclaredProductTrustTelemetrySnapshot:
+    return DeclaredProductTrustTelemetrySnapshot(
+        service=service_name,
+        declaration_source=REPO_RELATIVE_PRODUCER_DECLARATION_PATH.as_posix(),
+        products=[
+            build_product_trust_telemetry_seed(
+                app=app,
+                product_name=product["product_name"],
+                product_version=product["product_version"],
+            )
+            for product in list_declared_products()
         ],
     )

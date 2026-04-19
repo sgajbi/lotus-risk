@@ -3,7 +3,10 @@ from __future__ import annotations
 from fastapi import FastAPI
 
 from app.contracts.audit import AuditMetadataFields
-from app.trust_telemetry import build_product_trust_telemetry_seed
+from app.trust_telemetry import (
+    build_declared_product_trust_telemetry_snapshot,
+    build_product_trust_telemetry_seed,
+)
 
 
 def test_build_product_trust_telemetry_seed_uses_runtime_and_lineage_inputs() -> None:
@@ -87,3 +90,32 @@ def test_build_product_trust_telemetry_seed_rejects_undeclared_products() -> Non
         assert "Unknown lotus-risk declared product" in str(exc)
     else:
         raise AssertionError("expected undeclared product telemetry seed build to fail")
+
+
+def test_build_declared_product_trust_telemetry_snapshot_uses_repo_native_catalog() -> None:
+    app = FastAPI()
+    app.state.dependency_statuses = {
+        "lotus-core": {
+            "status": "degraded",
+            "detail": "risk-free source stale",
+            "category": "data_gap",
+            "issue_code": "RISK_FREE_SERIES_STALE",
+        }
+    }
+
+    snapshot = build_declared_product_trust_telemetry_snapshot(
+        app=app,
+        service_name="lotus-risk",
+    )
+
+    assert snapshot.service == "lotus-risk"
+    assert snapshot.declaration_source == "contracts/domain-data-products/lotus-risk-products.v1.json"
+    assert [product.product_name for product in snapshot.products] == [
+        "RiskMetricsReport",
+        "DrawdownAnalyticsReport",
+        "RollingRiskMetricsReport",
+        "HistoricalRiskAttributionReport",
+        "ConcentrationRiskReport",
+    ]
+    assert all(product.lifecycle_status == "active" for product in snapshot.products)
+    assert snapshot.products[0].dependency_signals[0].issue_code == "RISK_FREE_SERIES_STALE"

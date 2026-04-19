@@ -64,6 +64,10 @@ The current in-repo preparation seam is `src/app/trust_telemetry.py`, backed by
 sources and resolves product lifecycle from the repo-native declaration catalog without introducing
 platform certification rules or a new publication contract yet.
 
+The current raw exposure path is `GET /ops/trust-telemetry`, which returns a repo-owned snapshot of
+those seeds for operator review only. It remains a preparation seam until RFC-0087 introduces
+certified trust artifacts.
+
 ## Current Open Decisions
 
 1. whether platform aggregation should discover repo-native files directly from this path or through
