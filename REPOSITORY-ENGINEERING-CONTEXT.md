@@ -32,7 +32,8 @@ Current repository posture:
 3. the CI contract is explicit and strong, with no-alias, vocabulary, OpenAPI, test-pyramid, security, coverage, and Docker enforcement,
 4. RFC-0008 establishes the current enterprise-readiness baseline: supported risk analytics are credible for the canonical private-banking portfolio, while unrestricted enterprise-bank approval still requires downstream proof and broader seeded portfolio archetype coverage,
 5. current work often involves balancing analytical correctness, contract quality, and front-office usability,
-6. upstream use of `lotus-core` and `lotus-performance` is now documented under the RFC-0082 upstream contract-family map.
+6. upstream use of `lotus-core` and `lotus-performance` is now documented under the RFC-0082 upstream contract-family map,
+7. repo-native RFC-0086 product and consumer declarations now live under `contracts/domain-data-products/` with a local `make domain-data-product-gate` validation path.
 
 ## Architecture And Module Map
 
@@ -40,13 +41,15 @@ Primary areas:
 
 1. `src/`
    risk application and analytics implementation.
-2. `scripts/`
+2. `contracts/`
+   repo-native domain product declarations and related machine-readable contract files.
+3. `scripts/`
    OpenAPI, vocabulary, dependency-health, and test-pyramid governance.
-3. `docs/standards/`
+4. `docs/standards/`
    local standards and contract guidance.
-4. `tests/`
+5. `tests/`
    unit, integration, and e2e validation.
-5. `wiki/`
+6. `wiki/`
    canonical local source pages for repository wiki and onboarding navigation.
 
 ## Runtime And Integration Boundaries
@@ -88,6 +91,8 @@ Use these commands as the primary local contract:
    `make test-integration`
 6. run e2e tests
    `make test-e2e`
+7. validate repo-native domain product declarations
+   `make domain-data-product-gate`
 
 ## Validation And CI Expectations
 
@@ -103,6 +108,7 @@ Important validation expectations:
 2. security audit and migration smoke are required,
 3. split test suites plus coverage and Docker build are part of the merge gate,
 4. risk correctness and evidence posture must remain aligned with the product and gateway contract.
+5. repo-native domain product declarations must stay aligned with RFC-0084 trust registries and any transitional platform mirrors until aggregation fully federates.
 
 ## Standards And RFCs That Govern This Repository
 
@@ -126,7 +132,8 @@ Most relevant current governance:
 5. live validation defaults to `PB_SG_GLOBAL_BAL_001`; do not claim broader enterprise portfolio-archetype coverage until `docs/operations/live-risk-validation-matrix.md` has real seeded portfolio IDs and evidence,
 6. stateful historical attribution `ACTIVE_RISK + ISSUER` is intentionally gated until benchmark issuer exposure semantics are approved,
 7. transport optimization across upstream services should start with contract and retrieval-shape evidence before any gRPC proposal,
-8. `wiki/` inside the repository is the authored documentation source if a GitHub wiki is published later.
+8. `wiki/` inside the repository is the authored documentation source if a GitHub wiki is published later,
+9. RFC-0087 preparation should reuse repo-owned readiness, observability, and lineage signals before introducing any new trust publication surface.
 
 ## Context Maintenance Rule
 
@@ -138,7 +145,8 @@ Update this document when:
 4. supportability, evidence, or decomposition model assumptions change,
 5. current product-facing usage or rollout posture changes,
 6. RFC-0082 upstream contract-family classification or consumer conformance posture changes,
-7. wiki ownership or publication workflow changes.
+7. wiki ownership or publication workflow changes,
+8. repo-native declaration locations, validation commands, or transitional mirror posture change.
 
 ## Cross-Links
 

@@ -14,6 +14,7 @@ The repo-native commands are designed to map to those lanes directly.
 
 - `make check` - fast local gate
 - `make ci` - PR-grade local gate
+- `make domain-data-product-gate` - repo-native domain product declaration validation
 - `make test-unit` - unit suite
 - `make test-integration` - integration suite
 - `make test-e2e` - e2e suite
@@ -29,7 +30,8 @@ The repo-native commands are designed to map to those lanes directly.
 3. typecheck,
 4. OpenAPI quality,
 5. API vocabulary validation,
-6. unit-focused default test execution.
+6. repo-native domain product declaration validation,
+7. unit-focused default test execution.
 
 ## What `make ci` Adds
 
