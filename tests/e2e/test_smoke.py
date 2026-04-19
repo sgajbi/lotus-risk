@@ -199,6 +199,31 @@ def test_integration_capabilities_endpoint_exposes_support_matrix() -> None:
     )
 
 
+def test_e2e_ops_trust_telemetry_exposes_declared_products_and_summary() -> None:
+    client = TestClient(app)
+    response = client.get("/ops/trust-telemetry")
+    assert response.status_code == 200
+
+    body = response.json()
+    assert body["service"] == "lotus-risk"
+    assert (
+        body["declaration_source"] == "contracts/domain-data-products/lotus-risk-products.v1.json"
+    )
+    assert (
+        body["consumer_declaration_source"]
+        == "contracts/domain-data-products/lotus-risk-consumers.v1.json"
+    )
+    assert body["summary"]["declared_product_count"] == 5
+    assert body["summary"]["declared_dependency_count"] == 6
+    assert [product["product_name"] for product in body["products"]] == [
+        "RiskMetricsReport",
+        "DrawdownAnalyticsReport",
+        "RollingRiskMetricsReport",
+        "HistoricalRiskAttributionReport",
+        "ConcentrationRiskReport",
+    ]
+
+
 def test_e2e_capabilities_expose_product_surface_safety_notes() -> None:
     client = TestClient(app)
     response = client.get("/integration/capabilities")

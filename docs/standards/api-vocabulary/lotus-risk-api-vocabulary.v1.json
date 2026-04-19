@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-04-15T14:09:49.407822+00:00",
+  "generatedAt": "2026-04-19T05:13:25.970324+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.alignment_policy",
@@ -83,11 +83,41 @@
       ]
     },
     {
+      "semanticId": "lotus.approved_consumers",
+      "canonicalTerm": "approved_consumers",
+      "preferredName": "approved_consumers",
+      "description": "Consumers explicitly approved in the repo-native producer declaration.",
+      "example": [
+        "lotus-gateway"
+      ],
+      "type": "array",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "array"
+      ]
+    },
+    {
       "semanticId": "lotus.as_of_date",
       "canonicalTerm": "as_of_date",
       "preferredName": "as_of_date",
       "description": "As-of date used for risk metric evaluation.",
       "example": "2025-03-31",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.authoritative_domain",
+      "canonicalTerm": "authoritative_domain",
+      "preferredName": "authoritative_domain",
+      "description": "Authoritative domain declared for the product.",
+      "example": "risk_analytics",
       "type": "string",
       "locations": [
         "body"
@@ -185,6 +215,48 @@
       ],
       "observedTypes": [
         "OpsChecks"
+      ]
+    },
+    {
+      "semanticId": "lotus.consumer_declaration_fingerprint",
+      "canonicalTerm": "consumer_declaration_fingerprint",
+      "preferredName": "consumer_declaration_fingerprint",
+      "description": "Deterministic fingerprint of the repo-native consumer declaration payload.",
+      "example": "sha256:8d7411c13a0a25a18d7411c13a0a25a18d7411c13a0a25a18d7411c13a0a25a1",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.consumer_declaration_source",
+      "canonicalTerm": "consumer_declaration_source",
+      "preferredName": "consumer_declaration_source",
+      "description": "Repo-native consumer declaration file used to resolve declared upstream dependencies.",
+      "example": "contracts/domain-data-products/lotus-risk-consumers.v1.json",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.consumption_mode",
+      "canonicalTerm": "consumption_mode",
+      "preferredName": "consumption_mode",
+      "description": "Declared consumption mode for the upstream dependency.",
+      "example": "api_read",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
       ]
     },
     {
@@ -286,6 +358,143 @@
       ]
     },
     {
+      "semanticId": "lotus.current_routes",
+      "canonicalTerm": "current_routes",
+      "preferredName": "current_routes",
+      "description": "Current API routes declared as publishing or serving this product.",
+      "example": [
+        "/analytics/risk/calculate"
+      ],
+      "type": "array",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "array"
+      ]
+    },
+    {
+      "semanticId": "lotus.declaration_fingerprint",
+      "canonicalTerm": "declaration_fingerprint",
+      "preferredName": "declaration_fingerprint",
+      "description": "Deterministic fingerprint of the repo-native producer declaration payload.",
+      "example": "sha256:6f36c1f0f3f0f08c6f36c1f0f3f0f08c6f36c1f0f3f0f08c6f36c1f0f3f0f08c",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.declaration_source",
+      "canonicalTerm": "declaration_source",
+      "preferredName": "declaration_source",
+      "description": "Repo-native producer declaration file used to resolve the declared products.",
+      "example": "contracts/domain-data-products/lotus-risk-products.v1.json",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.declared_dependencies",
+      "canonicalTerm": "declared_dependencies",
+      "preferredName": "declared_dependencies",
+      "description": "Current repo-native declared upstream dependencies required by lotus-risk.",
+      "example": [
+        {
+          "consumption_mode": "api_read",
+          "failure_posture": "fail_closed",
+          "producer_repository": "lotus-performance",
+          "product_name": "ReturnsSeriesBundle",
+          "required_product_version": "v1",
+          "required_trust_metadata": [
+            "generated_at",
+            "as_of_date",
+            "correlation_id"
+          ],
+          "runtime_category": "transport",
+          "runtime_detail": "high_latency",
+          "runtime_issue_code": "UPSTREAM_HIGH_LATENCY",
+          "runtime_status": "degraded",
+          "validation_lanes": [
+            "feature",
+            "pr-merge"
+          ]
+        }
+      ],
+      "type": "array",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "array"
+      ]
+    },
+    {
+      "semanticId": "lotus.declared_dependency_count",
+      "canonicalTerm": "declared_dependency_count",
+      "preferredName": "declared_dependency_count",
+      "description": "Number of repo-native declared upstream dependencies included in the snapshot.",
+      "example": 6,
+      "type": "integer",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "integer"
+      ]
+    },
+    {
+      "semanticId": "lotus.declared_product_count",
+      "canonicalTerm": "declared_product_count",
+      "preferredName": "declared_product_count",
+      "description": "Number of repo-native declared producer products included in the snapshot.",
+      "example": 5,
+      "type": "integer",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "integer"
+      ]
+    },
+    {
+      "semanticId": "lotus.degraded_dependency_count",
+      "canonicalTerm": "degraded_dependency_count",
+      "preferredName": "degraded_dependency_count",
+      "description": "Count of declared upstream dependencies whose producer runtime status is degraded.",
+      "example": 1,
+      "type": "integer",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "integer"
+      ]
+    },
+    {
+      "semanticId": "lotus.degraded_dependency_products",
+      "canonicalTerm": "degraded_dependency_products",
+      "preferredName": "degraded_dependency_products",
+      "description": "Declared upstream product names currently backed by degraded producer services.",
+      "example": [
+        "ReturnsSeriesBundle"
+      ],
+      "type": "array",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "array"
+      ]
+    },
+    {
       "semanticId": "lotus.dependencies",
       "canonicalTerm": "dependencies",
       "preferredName": "dependencies",
@@ -296,6 +505,28 @@
           "detail": "configured",
           "service": "lotus-performance",
           "status": "ok"
+        }
+      ],
+      "type": "array",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "array"
+      ]
+    },
+    {
+      "semanticId": "lotus.dependency_signals",
+      "canonicalTerm": "dependency_signals",
+      "preferredName": "dependency_signals",
+      "description": "Dependency runtime evidence used as raw trust telemetry input.",
+      "example": [
+        {
+          "category": "transport",
+          "detail": "high_latency",
+          "issue_code": "UPSTREAM_HIGH_LATENCY",
+          "service": "lotus-performance",
+          "status": "degraded"
         }
       ],
       "type": "array",
@@ -349,6 +580,20 @@
       ]
     },
     {
+      "semanticId": "lotus.emitted_at",
+      "canonicalTerm": "emitted_at",
+      "preferredName": "emitted_at",
+      "description": "UTC timestamp when lotus-risk assembled the local trust telemetry seed.",
+      "example": "2026-04-19T00:00:00Z",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
       "semanticId": "lotus.enabled",
       "canonicalTerm": "enabled",
       "preferredName": "enabled",
@@ -388,6 +633,20 @@
       ],
       "observedTypes": [
         "EnrichmentPolicy"
+      ]
+    },
+    {
+      "semanticId": "lotus.failure_posture",
+      "canonicalTerm": "failure_posture",
+      "preferredName": "failure_posture",
+      "description": "Declared failure posture when the upstream dependency is unavailable or weak.",
+      "example": "fail_closed",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
       ]
     },
     {
@@ -645,16 +904,31 @@
       ]
     },
     {
-      "semanticId": "lotus.lineage_version",
-      "canonicalTerm": "lineage_version",
-      "preferredName": "lineage_version",
-      "description": "Audit lineage metadata schema version.",
-      "example": "risk_audit_lineage.v1",
+      "semanticId": "lotus.lifecycle_status",
+      "canonicalTerm": "lifecycle_status",
+      "preferredName": "lifecycle_status",
+      "description": "Repo-owned lifecycle status mirrored from the governed product declaration.",
+      "example": "active",
       "type": "string",
       "locations": [
         "body"
       ],
       "observedTypes": [
+        "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.lineage_version",
+      "canonicalTerm": "lineage_version",
+      "preferredName": "lineage_version",
+      "description": "Audit lineage schema version carried by the product response when available.",
+      "example": "risk_audit_lineage.v1",
+      "type": "object",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "object",
         "string"
       ]
     },
@@ -764,6 +1038,34 @@
       ]
     },
     {
+      "semanticId": "lotus.missing_runtime_service_count",
+      "canonicalTerm": "missing_runtime_service_count",
+      "preferredName": "missing_runtime_service_count",
+      "description": "Count of declared upstream dependencies whose producer service has no current runtime view.",
+      "example": 0,
+      "type": "integer",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "integer"
+      ]
+    },
+    {
+      "semanticId": "lotus.missing_runtime_services",
+      "canonicalTerm": "missing_runtime_services",
+      "preferredName": "missing_runtime_services",
+      "description": "Declared upstream producer services that currently have no runtime view.",
+      "example": [],
+      "type": "array",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "array"
+      ]
+    },
+    {
       "semanticId": "lotus.net_or_gross",
       "canonicalTerm": "net_or_gross",
       "preferredName": "net_or_gross",
@@ -809,6 +1111,20 @@
       ]
     },
     {
+      "semanticId": "lotus.ops_status",
+      "canonicalTerm": "ops_status",
+      "preferredName": "ops_status",
+      "description": "Current service operations posture used as raw input for future certification.",
+      "example": "ok",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
       "semanticId": "lotus.periodic_rate",
       "canonicalTerm": "periodic_rate",
       "preferredName": "periodic_rate",
@@ -828,6 +1144,133 @@
       "preferredName": "policy_version",
       "description": "Capabilities policy version used by this service.",
       "example": "risk.v1",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.producer_repository",
+      "canonicalTerm": "producer_repository",
+      "preferredName": "producer_repository",
+      "description": "Owning repository for the required upstream product.",
+      "example": "lotus-performance",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.product_family",
+      "canonicalTerm": "product_family",
+      "preferredName": "product_family",
+      "description": "Declared product family used to classify the product for governance.",
+      "example": "analytics_output",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.product_name",
+      "canonicalTerm": "product_name",
+      "preferredName": "product_name",
+      "description": "Governed upstream product required by lotus-risk.",
+      "example": "ReturnsSeriesBundle",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.product_version",
+      "canonicalTerm": "product_version",
+      "preferredName": "product_version",
+      "description": "Governed product version emitted by lotus-risk.",
+      "example": "v1",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.products",
+      "canonicalTerm": "products",
+      "preferredName": "products",
+      "description": "Current raw telemetry seeds for each repo-native declared product.",
+      "example": [
+        {
+          "approved_consumers": [
+            "lotus-gateway"
+          ],
+          "authoritative_domain": "risk_analytics",
+          "current_routes": [
+            "/analytics/risk/calculate"
+          ],
+          "dependency_signals": [
+            {
+              "category": "transport",
+              "detail": "high_latency",
+              "issue_code": "UPSTREAM_HIGH_LATENCY",
+              "service": "lotus-performance",
+              "status": "degraded"
+            }
+          ],
+          "draining": false,
+          "emitted_at": "2026-04-19T00:00:00Z",
+          "lifecycle_status": "active",
+          "lineage_version": "risk_audit_lineage.v1",
+          "ops_status": "degraded",
+          "product_family": "analytics_output",
+          "product_name": "RiskMetricsReport",
+          "product_version": "v1",
+          "readiness_status": "degraded",
+          "request_fingerprint": "sha256:6f36c1f0f3f0f08c6f36c1f0f3f0f08c6f36c1f0f3f0f08c6f36c1f0f3f0f08c",
+          "required_trust_metadata": [
+            "product_name",
+            "product_version",
+            "as_of_date",
+            "lineage_version",
+            "request_fingerprint"
+          ],
+          "source_services": [
+            "lotus-risk",
+            "lotus-performance"
+          ],
+          "upstream_request_fingerprints": {
+            "lotus-performance:/integration/returns/series": "sha256:8d7411c13a0a25a18d7411c13a0a25a18d7411c13a0a25a18d7411c13a0a25a1"
+          }
+        }
+      ],
+      "type": "array",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "array"
+      ]
+    },
+    {
+      "semanticId": "lotus.readiness_status",
+      "canonicalTerm": "readiness_status",
+      "preferredName": "readiness_status",
+      "description": "Current service readiness posture used as raw input for future certification.",
+      "example": "ready",
       "type": "string",
       "locations": [
         "body"
@@ -882,7 +1325,7 @@
       "semanticId": "lotus.request_fingerprint",
       "canonicalTerm": "request_fingerprint",
       "preferredName": "request_fingerprint",
-      "description": "Deterministic SHA-256 fingerprint of the normalized calculation request used by lotus-risk. Stateful flows fingerprint the calculation input after upstream sourcing.",
+      "description": "Current product request fingerprint when response lineage is available.",
       "example": "sha256:6f36c1f0f3f0f08c6f36c1f0f3f0f08c6f36c1f0f3f0f08c6f36c1f0f3f0f08c",
       "type": "object",
       "locations": [
@@ -948,6 +1391,38 @@
       "example": [
         "VOLATILITY",
         "TRACKING_ERROR"
+      ],
+      "type": "array",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "array"
+      ]
+    },
+    {
+      "semanticId": "lotus.required_product_version",
+      "canonicalTerm": "required_product_version",
+      "preferredName": "required_product_version",
+      "description": "Governed upstream product version required by lotus-risk.",
+      "example": "v1",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.required_trust_metadata",
+      "canonicalTerm": "required_trust_metadata",
+      "preferredName": "required_trust_metadata",
+      "description": "Trust metadata required from the upstream product declaration.",
+      "example": [
+        "generated_at",
+        "as_of_date",
+        "correlation_id"
       ],
       "type": "array",
       "locations": [
@@ -1050,6 +1525,62 @@
       ],
       "observedTypes": [
         "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.runtime_category",
+      "canonicalTerm": "runtime_category",
+      "preferredName": "runtime_category",
+      "description": "Current structured runtime issue category for the declared upstream producer service.",
+      "example": "transport",
+      "type": "object",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "object"
+      ]
+    },
+    {
+      "semanticId": "lotus.runtime_detail",
+      "canonicalTerm": "runtime_detail",
+      "preferredName": "runtime_detail",
+      "description": "Current runtime detail observed for the declared upstream producer service.",
+      "example": "high_latency",
+      "type": "object",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "object"
+      ]
+    },
+    {
+      "semanticId": "lotus.runtime_issue_code",
+      "canonicalTerm": "runtime_issue_code",
+      "preferredName": "runtime_issue_code",
+      "description": "Current machine-readable runtime issue code for the declared upstream producer service.",
+      "example": "UPSTREAM_HIGH_LATENCY",
+      "type": "object",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "object"
+      ]
+    },
+    {
+      "semanticId": "lotus.runtime_status",
+      "canonicalTerm": "runtime_status",
+      "preferredName": "runtime_status",
+      "description": "Current runtime status observed for the declared upstream producer service.",
+      "example": "degraded",
+      "type": "object",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "object"
       ]
     },
     {
@@ -1170,7 +1701,7 @@
       "semanticId": "lotus.source_services",
       "canonicalTerm": "source_services",
       "preferredName": "source_services",
-      "description": "Services whose data or calculations contributed to this response.",
+      "description": "Ordered source-service lineage already published by lotus-risk.",
       "example": [
         "lotus-risk",
         "lotus-performance"
@@ -1321,6 +1852,22 @@
       ],
       "observedTypes": [
         "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.summary",
+      "canonicalTerm": "summary",
+      "preferredName": "summary",
+      "description": "Canonical summary used by lotus-risk APIs.",
+      "example": {
+        "key": "value"
+      },
+      "type": "TrustTelemetryReviewSummary",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "TrustTelemetryReviewSummary"
       ]
     },
     {
@@ -1602,6 +2149,34 @@
       ]
     },
     {
+      "semanticId": "lotus.unavailable_dependency_count",
+      "canonicalTerm": "unavailable_dependency_count",
+      "preferredName": "unavailable_dependency_count",
+      "description": "Count of declared upstream dependencies whose producer runtime status is unavailable.",
+      "example": 0,
+      "type": "integer",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "integer"
+      ]
+    },
+    {
+      "semanticId": "lotus.unavailable_dependency_products",
+      "canonicalTerm": "unavailable_dependency_products",
+      "preferredName": "unavailable_dependency_products",
+      "description": "Declared upstream product names currently backed by unavailable producer services.",
+      "example": [],
+      "type": "array",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "array"
+      ]
+    },
+    {
       "semanticId": "lotus.uncovered_position_count_current",
       "canonicalTerm": "uncovered_position_count_current",
       "preferredName": "uncovered_position_count_current",
@@ -1633,7 +2208,7 @@
       "semanticId": "lotus.upstream_request_fingerprints",
       "canonicalTerm": "upstream_request_fingerprints",
       "preferredName": "upstream_request_fingerprints",
-      "description": "Deterministic request fingerprints for upstream calls directly orchestrated by lotus-risk, keyed by service and operation.",
+      "description": "Upstream request fingerprints already published by lotus-risk.",
       "example": {
         "lotus-performance:/integration/returns/series": "sha256:8d7411c13a0a25a18d7411c13a0a25a18d7411c13a0a25a18d7411c13a0a25a1"
       },
@@ -1657,6 +2232,23 @@
       ],
       "observedTypes": [
         "boolean"
+      ]
+    },
+    {
+      "semanticId": "lotus.validation_lanes",
+      "canonicalTerm": "validation_lanes",
+      "preferredName": "validation_lanes",
+      "description": "Validation lanes in which this dependency is expected to be checked.",
+      "example": [
+        "feature",
+        "pr-merge"
+      ],
+      "type": "array",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "array"
       ]
     },
     {
@@ -2118,6 +2710,412 @@
           },
           {
             "name": "dependencies[].issue_code",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.issue_code",
+            "attributeRef": "#/attributeCatalog/lotus.issue_code"
+          }
+        ]
+      }
+    },
+    {
+      "domain": "operational",
+      "method": "GET",
+      "path": "/ops/trust-telemetry",
+      "operationId": "ops_trust_telemetry_ops_trust_telemetry_get",
+      "summary": "Local trust telemetry snapshot",
+      "request": {
+        "fields": []
+      },
+      "response": {
+        "fields": [
+          {
+            "name": "service",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.service",
+            "attributeRef": "#/attributeCatalog/lotus.service"
+          },
+          {
+            "name": "declaration_source",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.declaration_source",
+            "attributeRef": "#/attributeCatalog/lotus.declaration_source"
+          },
+          {
+            "name": "declaration_fingerprint",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.declaration_fingerprint",
+            "attributeRef": "#/attributeCatalog/lotus.declaration_fingerprint"
+          },
+          {
+            "name": "consumer_declaration_source",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.consumer_declaration_source",
+            "attributeRef": "#/attributeCatalog/lotus.consumer_declaration_source"
+          },
+          {
+            "name": "consumer_declaration_fingerprint",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.consumer_declaration_fingerprint",
+            "attributeRef": "#/attributeCatalog/lotus.consumer_declaration_fingerprint"
+          },
+          {
+            "name": "declared_dependencies",
+            "location": "body",
+            "required": true,
+            "type": "array",
+            "semanticId": "lotus.declared_dependencies",
+            "attributeRef": "#/attributeCatalog/lotus.declared_dependencies"
+          },
+          {
+            "name": "declared_dependencies[].product_name",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.product_name",
+            "attributeRef": "#/attributeCatalog/lotus.product_name"
+          },
+          {
+            "name": "declared_dependencies[].producer_repository",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.producer_repository",
+            "attributeRef": "#/attributeCatalog/lotus.producer_repository"
+          },
+          {
+            "name": "declared_dependencies[].required_product_version",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.required_product_version",
+            "attributeRef": "#/attributeCatalog/lotus.required_product_version"
+          },
+          {
+            "name": "declared_dependencies[].consumption_mode",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.consumption_mode",
+            "attributeRef": "#/attributeCatalog/lotus.consumption_mode"
+          },
+          {
+            "name": "declared_dependencies[].failure_posture",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.failure_posture",
+            "attributeRef": "#/attributeCatalog/lotus.failure_posture"
+          },
+          {
+            "name": "declared_dependencies[].validation_lanes",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.validation_lanes",
+            "attributeRef": "#/attributeCatalog/lotus.validation_lanes"
+          },
+          {
+            "name": "declared_dependencies[].required_trust_metadata",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.required_trust_metadata",
+            "attributeRef": "#/attributeCatalog/lotus.required_trust_metadata"
+          },
+          {
+            "name": "declared_dependencies[].runtime_status",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.runtime_status",
+            "attributeRef": "#/attributeCatalog/lotus.runtime_status"
+          },
+          {
+            "name": "declared_dependencies[].runtime_detail",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.runtime_detail",
+            "attributeRef": "#/attributeCatalog/lotus.runtime_detail"
+          },
+          {
+            "name": "declared_dependencies[].runtime_category",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.runtime_category",
+            "attributeRef": "#/attributeCatalog/lotus.runtime_category"
+          },
+          {
+            "name": "declared_dependencies[].runtime_issue_code",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.runtime_issue_code",
+            "attributeRef": "#/attributeCatalog/lotus.runtime_issue_code"
+          },
+          {
+            "name": "summary",
+            "location": "body",
+            "required": true,
+            "type": "TrustTelemetryReviewSummary",
+            "semanticId": "lotus.summary",
+            "attributeRef": "#/attributeCatalog/lotus.summary"
+          },
+          {
+            "name": "summary.declared_product_count",
+            "location": "body",
+            "required": true,
+            "type": "integer",
+            "semanticId": "lotus.declared_product_count",
+            "attributeRef": "#/attributeCatalog/lotus.declared_product_count"
+          },
+          {
+            "name": "summary.declared_dependency_count",
+            "location": "body",
+            "required": true,
+            "type": "integer",
+            "semanticId": "lotus.declared_dependency_count",
+            "attributeRef": "#/attributeCatalog/lotus.declared_dependency_count"
+          },
+          {
+            "name": "summary.degraded_dependency_count",
+            "location": "body",
+            "required": true,
+            "type": "integer",
+            "semanticId": "lotus.degraded_dependency_count",
+            "attributeRef": "#/attributeCatalog/lotus.degraded_dependency_count"
+          },
+          {
+            "name": "summary.unavailable_dependency_count",
+            "location": "body",
+            "required": true,
+            "type": "integer",
+            "semanticId": "lotus.unavailable_dependency_count",
+            "attributeRef": "#/attributeCatalog/lotus.unavailable_dependency_count"
+          },
+          {
+            "name": "summary.missing_runtime_service_count",
+            "location": "body",
+            "required": true,
+            "type": "integer",
+            "semanticId": "lotus.missing_runtime_service_count",
+            "attributeRef": "#/attributeCatalog/lotus.missing_runtime_service_count"
+          },
+          {
+            "name": "summary.degraded_dependency_products",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.degraded_dependency_products",
+            "attributeRef": "#/attributeCatalog/lotus.degraded_dependency_products"
+          },
+          {
+            "name": "summary.unavailable_dependency_products",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.unavailable_dependency_products",
+            "attributeRef": "#/attributeCatalog/lotus.unavailable_dependency_products"
+          },
+          {
+            "name": "summary.missing_runtime_services",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.missing_runtime_services",
+            "attributeRef": "#/attributeCatalog/lotus.missing_runtime_services"
+          },
+          {
+            "name": "products",
+            "location": "body",
+            "required": true,
+            "type": "array",
+            "semanticId": "lotus.products",
+            "attributeRef": "#/attributeCatalog/lotus.products"
+          },
+          {
+            "name": "products[].product_name",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.product_name",
+            "attributeRef": "#/attributeCatalog/lotus.product_name"
+          },
+          {
+            "name": "products[].product_version",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.product_version",
+            "attributeRef": "#/attributeCatalog/lotus.product_version"
+          },
+          {
+            "name": "products[].authoritative_domain",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.authoritative_domain",
+            "attributeRef": "#/attributeCatalog/lotus.authoritative_domain"
+          },
+          {
+            "name": "products[].product_family",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.product_family",
+            "attributeRef": "#/attributeCatalog/lotus.product_family"
+          },
+          {
+            "name": "products[].approved_consumers",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.approved_consumers",
+            "attributeRef": "#/attributeCatalog/lotus.approved_consumers"
+          },
+          {
+            "name": "products[].required_trust_metadata",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.required_trust_metadata",
+            "attributeRef": "#/attributeCatalog/lotus.required_trust_metadata"
+          },
+          {
+            "name": "products[].lifecycle_status",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.lifecycle_status",
+            "attributeRef": "#/attributeCatalog/lotus.lifecycle_status"
+          },
+          {
+            "name": "products[].current_routes",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.current_routes",
+            "attributeRef": "#/attributeCatalog/lotus.current_routes"
+          },
+          {
+            "name": "products[].emitted_at",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.emitted_at",
+            "attributeRef": "#/attributeCatalog/lotus.emitted_at"
+          },
+          {
+            "name": "products[].readiness_status",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.readiness_status",
+            "attributeRef": "#/attributeCatalog/lotus.readiness_status"
+          },
+          {
+            "name": "products[].ops_status",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.ops_status",
+            "attributeRef": "#/attributeCatalog/lotus.ops_status"
+          },
+          {
+            "name": "products[].draining",
+            "location": "body",
+            "required": true,
+            "type": "boolean",
+            "semanticId": "lotus.draining",
+            "attributeRef": "#/attributeCatalog/lotus.draining"
+          },
+          {
+            "name": "products[].lineage_version",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.lineage_version",
+            "attributeRef": "#/attributeCatalog/lotus.lineage_version"
+          },
+          {
+            "name": "products[].request_fingerprint",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.request_fingerprint",
+            "attributeRef": "#/attributeCatalog/lotus.request_fingerprint"
+          },
+          {
+            "name": "products[].source_services",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_services",
+            "attributeRef": "#/attributeCatalog/lotus.source_services"
+          },
+          {
+            "name": "products[].upstream_request_fingerprints",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.upstream_request_fingerprints",
+            "attributeRef": "#/attributeCatalog/lotus.upstream_request_fingerprints"
+          },
+          {
+            "name": "products[].dependency_signals",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.dependency_signals",
+            "attributeRef": "#/attributeCatalog/lotus.dependency_signals"
+          },
+          {
+            "name": "products[].dependency_signals[].service",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.service",
+            "attributeRef": "#/attributeCatalog/lotus.service"
+          },
+          {
+            "name": "products[].dependency_signals[].status",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.status",
+            "attributeRef": "#/attributeCatalog/lotus.status"
+          },
+          {
+            "name": "products[].dependency_signals[].detail",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.detail",
+            "attributeRef": "#/attributeCatalog/lotus.detail"
+          },
+          {
+            "name": "products[].dependency_signals[].category",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.category",
+            "attributeRef": "#/attributeCatalog/lotus.category"
+          },
+          {
+            "name": "products[].dependency_signals[].issue_code",
             "location": "body",
             "required": false,
             "type": "object",

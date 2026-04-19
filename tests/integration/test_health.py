@@ -11,6 +11,7 @@ def test_health_endpoints() -> None:
     assert client.get("/health/live").status_code == 200
     assert client.get("/health/ready").status_code == 200
     assert client.get("/ops").status_code == 200
+    assert client.get("/ops/trust-telemetry").status_code == 200
     metrics_response = client.get("/metrics")
     assert metrics_response.status_code == 200
     assert metrics_response.headers["content-type"].startswith("text/plain")
@@ -146,6 +147,7 @@ def test_openapi_hides_legacy_proxy_and_exposes_concentration() -> None:
     assert "/analytics/risk/drawdown" in spec["paths"]
     assert "/analytics/risk/rolling-metrics" in spec["paths"]
     assert "/ops" in spec["paths"]
+    assert "/ops/trust-telemetry" in spec["paths"]
     assert "/analytics/workbench/risk-proxy" not in spec["paths"]
 
 
@@ -153,10 +155,13 @@ def test_metadata_and_ops_contract_shape() -> None:
     client = TestClient(app)
     metadata = client.get("/metadata")
     ops = client.get("/ops")
+    trust_telemetry = client.get("/ops/trust-telemetry")
     assert metadata.status_code == 200
     assert ops.status_code == 200
+    assert trust_telemetry.status_code == 200
     metadata_body = metadata.json()
     ops_body = ops.json()
+    trust_telemetry_body = trust_telemetry.json()
     assert metadata_body["service"] == "lotus-risk"
     assert metadata_body["version"] == "0.1.0"
     assert "rounding_policy_version" in metadata_body
@@ -172,6 +177,52 @@ def test_metadata_and_ops_contract_shape() -> None:
     assert all(dependency["status"] == "ok" for dependency in ops_body["dependencies"])
     assert all(dependency["category"] is None for dependency in ops_body["dependencies"])
     assert all(dependency["issue_code"] is None for dependency in ops_body["dependencies"])
+    assert trust_telemetry_body["service"] == "lotus-risk"
+    assert (
+        trust_telemetry_body["declaration_source"]
+        == "contracts/domain-data-products/lotus-risk-products.v1.json"
+    )
+    assert trust_telemetry_body["declaration_fingerprint"].startswith("sha256:")
+    assert (
+        trust_telemetry_body["consumer_declaration_source"]
+        == "contracts/domain-data-products/lotus-risk-consumers.v1.json"
+    )
+    assert trust_telemetry_body["consumer_declaration_fingerprint"].startswith("sha256:")
+    assert [
+        dependency["product_name"] for dependency in trust_telemetry_body["declared_dependencies"]
+    ] == [
+        "ReturnsSeriesBundle",
+        "BenchmarkExposureContext",
+        "PortfolioStateSnapshot",
+        "PositionTimeseriesInput",
+        "InstrumentReferenceBundle",
+        "RiskFreeSeriesWindow",
+    ]
+    assert (
+        trust_telemetry_body["declared_dependencies"][0]["producer_repository"]
+        == "lotus-performance"
+    )
+    assert trust_telemetry_body["declared_dependencies"][0]["runtime_status"] == "ok"
+    assert trust_telemetry_body["summary"]["declared_product_count"] == 5
+    assert trust_telemetry_body["summary"]["declared_dependency_count"] == 6
+    assert trust_telemetry_body["summary"]["degraded_dependency_count"] == 0
+    assert trust_telemetry_body["summary"]["unavailable_dependency_count"] == 0
+    assert trust_telemetry_body["summary"]["missing_runtime_service_count"] == 0
+    assert [product["product_name"] for product in trust_telemetry_body["products"]] == [
+        "RiskMetricsReport",
+        "DrawdownAnalyticsReport",
+        "RollingRiskMetricsReport",
+        "HistoricalRiskAttributionReport",
+        "ConcentrationRiskReport",
+    ]
+    assert all(
+        product["lifecycle_status"] == "active" for product in trust_telemetry_body["products"]
+    )
+    assert trust_telemetry_body["products"][0]["authoritative_domain"] == "risk_analytics"
+    assert trust_telemetry_body["products"][0]["product_family"] == "analytics_output"
+    assert trust_telemetry_body["products"][0]["approved_consumers"] == ["lotus-gateway"]
+    assert "request_fingerprint" in trust_telemetry_body["products"][0]["required_trust_metadata"]
+    assert trust_telemetry_body["products"][0]["current_routes"] == ["/analytics/risk/calculate"]
 
 
 def test_health_ready_and_ops_surface_dependency_degradation() -> None:
@@ -188,6 +239,7 @@ def test_health_ready_and_ops_surface_dependency_degradation() -> None:
         client = TestClient(app)
         readiness = client.get("/health/ready")
         ops = client.get("/ops")
+        trust_telemetry = client.get("/ops/trust-telemetry")
 
     assert readiness.status_code == 200
     assert readiness.json()["status"] == "degraded"
@@ -203,6 +255,31 @@ def test_health_ready_and_ops_surface_dependency_degradation() -> None:
     assert performance_dependency["detail"] == "high_latency"
     assert performance_dependency["category"] == "transport"
     assert performance_dependency["issue_code"] == "UPSTREAM_HIGH_LATENCY"
+    trust_product = trust_telemetry.json()["products"][0]
+    performance_signal = next(
+        signal
+        for signal in trust_product["dependency_signals"]
+        if signal["service"] == "lotus-performance"
+    )
+    assert performance_signal["status"] == "degraded"
+    assert performance_signal["category"] == "transport"
+    assert performance_signal["issue_code"] == "UPSTREAM_HIGH_LATENCY"
+    performance_dependency = next(
+        dependency
+        for dependency in trust_telemetry.json()["declared_dependencies"]
+        if dependency["producer_repository"] == "lotus-performance"
+    )
+    assert performance_dependency["runtime_status"] == "degraded"
+    assert performance_dependency["runtime_category"] == "transport"
+    assert performance_dependency["runtime_issue_code"] == "UPSTREAM_HIGH_LATENCY"
+    summary = trust_telemetry.json()["summary"]
+    assert summary["degraded_dependency_count"] == 2
+    assert summary["unavailable_dependency_count"] == 0
+    assert summary["missing_runtime_service_count"] == 0
+    assert summary["degraded_dependency_products"] == [
+        "ReturnsSeriesBundle",
+        "BenchmarkExposureContext",
+    ]
 
 
 def test_health_ready_fails_when_dependency_is_unavailable() -> None:
@@ -378,6 +455,43 @@ def test_openapi_exposes_ops_dependency_diagnostics_schema() -> None:
         "Canonical base URL configured for the dependency."
     )
     assert dependency_schema["properties"]["issue_code"]["example"] == "RISK_FREE_SERIES_EMPTY"
+
+
+def test_openapi_exposes_local_trust_telemetry_snapshot_schema() -> None:
+    client = TestClient(app)
+    spec = client.get("/openapi.json").json()
+    trust_get = spec["paths"]["/ops/trust-telemetry"]["get"]
+    schema_ref = trust_get["responses"]["200"]["content"]["application/json"]["schema"]["$ref"]
+    assert schema_ref.endswith("/DeclaredProductTrustTelemetrySnapshot")
+    snapshot_schema = spec["components"]["schemas"]["DeclaredProductTrustTelemetrySnapshot"]
+    seed_schema = spec["components"]["schemas"]["ProductTrustTelemetrySeed"]
+    assert snapshot_schema["properties"]["service"]["example"] == "lotus-risk"
+    assert (
+        snapshot_schema["properties"]["declaration_source"]["example"]
+        == "contracts/domain-data-products/lotus-risk-products.v1.json"
+    )
+    assert "declaration_fingerprint" in snapshot_schema["properties"]
+    assert (
+        snapshot_schema["properties"]["consumer_declaration_source"]["example"]
+        == "contracts/domain-data-products/lotus-risk-consumers.v1.json"
+    )
+    assert "declared_dependencies" in snapshot_schema["properties"]
+    assert "summary" in snapshot_schema["properties"]
+    dependency_schema = spec["components"]["schemas"]["DeclaredConsumerDependencyTelemetry"]
+    summary_schema = spec["components"]["schemas"]["TrustTelemetryReviewSummary"]
+    assert dependency_schema["properties"]["runtime_status"]["example"] == "degraded"
+    assert (
+        dependency_schema["properties"]["runtime_issue_code"]["example"] == "UPSTREAM_HIGH_LATENCY"
+    )
+    assert summary_schema["properties"]["declared_product_count"]["example"] == 5
+    assert summary_schema["properties"]["declared_dependency_count"]["example"] == 6
+    assert (
+        seed_schema["properties"]["readiness_status"]["description"]
+        == "Current service readiness posture used as raw input for future certification."
+    )
+    assert seed_schema["properties"]["product_family"]["example"] == "analytics_output"
+    assert seed_schema["properties"]["approved_consumers"]["example"] == ["lotus-gateway"]
+    assert seed_schema["properties"]["current_routes"]["example"] == ["/analytics/risk/calculate"]
 
 
 def test_openapi_exposes_metadata_contract_schema() -> None:

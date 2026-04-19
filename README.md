@@ -140,6 +140,7 @@ Repo-native validation mapping:
 
 - fast local gate: `make check`
 - PR-grade gate: `make ci`
+- repo-native domain product gate: `make domain-data-product-gate`
 - split suites: `make test-unit`, `make test-integration`, `make test-e2e`
 
 The enforced gates currently include:
@@ -149,11 +150,12 @@ The enforced gates currently include:
 3. typecheck,
 4. OpenAPI quality,
 5. API vocabulary validation,
-6. migration smoke,
-7. test-pyramid validation,
-8. security audit,
-9. coverage-backed testing,
-10. Docker build validation.
+6. repo-native domain product declaration validation,
+7. migration smoke,
+8. test-pyramid validation,
+9. security audit,
+10. coverage-backed testing,
+11. Docker build validation.
 
 ## Integration Contract
 
@@ -184,6 +186,7 @@ Key operator-facing endpoints:
 - `/health/ready`
 - `/metadata`
 - `/ops`
+- `/ops/trust-telemetry`
 - `/metrics`
 
 Runtime dependencies that matter:
