@@ -4,7 +4,12 @@ import json
 from pathlib import Path
 from typing import Any, cast
 
-from scripts.domain_data_product_contract_check import validate_repo_native_contracts
+import pytest
+
+from scripts.domain_data_product_contract_check import (
+    platform_validation_dependencies_available,
+    validate_repo_native_contracts,
+)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -19,10 +24,14 @@ def _load_json(path: Path) -> dict[str, Any]:
 
 
 def test_repo_native_domain_data_product_gate_passes() -> None:
+    if not platform_validation_dependencies_available():
+        pytest.skip("lotus-platform validator checkout is not available in this environment")
     assert validate_repo_native_contracts() == []
 
 
 def test_repo_native_declarations_match_transitional_platform_mirrors() -> None:
+    if not platform_validation_dependencies_available():
+        pytest.skip("lotus-platform validator checkout is not available in this environment")
     assert _load_json(LOCAL_DECLARATIONS_DIR / "lotus-risk-products.v1.json") == _load_json(
         PLATFORM_DECLARATIONS_DIR / "lotus-risk-products.v1.json"
     )

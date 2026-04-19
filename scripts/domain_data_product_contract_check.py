@@ -26,6 +26,18 @@ SUPPLEMENTAL_PLATFORM_PRODUCERS = (
 )
 
 
+def platform_validation_dependencies_available() -> bool:
+    required_paths = (
+        PLATFORM_VALIDATOR_PATH,
+        PLATFORM_DECLARATIONS_DIR / "lotus-risk-products.v1.json",
+        PLATFORM_DECLARATIONS_DIR / "lotus-risk-consumers.v1.json",
+        PLATFORM_VOCABULARY_DIR / "domain-data-product-semantics.v1.json",
+        PLATFORM_VOCABULARY_DIR / "domain-data-product-trust-metadata.v1.json",
+        *SUPPLEMENTAL_PLATFORM_PRODUCERS,
+    )
+    return all(path.exists() for path in required_paths)
+
+
 def _load_platform_validator() -> ModuleType:
     spec = importlib.util.spec_from_file_location(
         "lotus_platform_domain_data_products_validator", PLATFORM_VALIDATOR_PATH
