@@ -1,4 +1,4 @@
-.PHONY: install install-ci verify-dependencies lint monetary-float-guard no-alias-gate typecheck openapi-gate api-vocabulary-gate migration-smoke migration-apply test test-unit test-integration test-e2e test-pyramid-gate test-coverage coverage-gate security-audit check ci docker-build clean
+.PHONY: install install-ci verify-dependencies lint monetary-float-guard no-alias-gate typecheck openapi-gate api-vocabulary-gate domain-data-product-gate migration-smoke migration-apply test test-unit test-integration test-e2e test-pyramid-gate test-coverage coverage-gate security-audit check ci docker-build clean
 
 install:
 	python -m pip install --upgrade pip
@@ -29,6 +29,9 @@ openapi-gate:
 
 api-vocabulary-gate:
 	python scripts/api_vocabulary_inventory.py --validate-only
+
+domain-data-product-gate:
+	python scripts/domain_data_product_contract_check.py
 
 migration-smoke:
 	python scripts/migration_contract_check.py --mode no-schema
@@ -61,9 +64,9 @@ test-coverage:
 security-audit:
 	python scripts/dependency_health_check.py --skip-outdated
 
-check: lint no-alias-gate typecheck openapi-gate api-vocabulary-gate test
+check: lint no-alias-gate typecheck openapi-gate api-vocabulary-gate domain-data-product-gate test
 
-ci: lint no-alias-gate typecheck openapi-gate api-vocabulary-gate migration-smoke test-pyramid-gate security-audit test-unit test-integration test-e2e test-coverage docker-build
+ci: lint no-alias-gate typecheck openapi-gate api-vocabulary-gate domain-data-product-gate migration-smoke test-pyramid-gate security-audit test-unit test-integration test-e2e test-coverage docker-build
 
 docker-build:
 	docker build -t backend-service:ci-test .

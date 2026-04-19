@@ -1,0 +1,293 @@
+{
+  "contract_id": "domain-data-products",
+  "contract_version": "1.0.0",
+  "governed_by_rfc": "RFC-0084",
+  "producer_repository": "lotus-risk",
+  "authoritative_domain": "risk_analytics",
+  "products": [
+    {
+      "product_name": "RiskMetricsReport",
+      "product_version": "v1",
+      "owner_repository": "lotus-risk",
+      "product_family": "analytics_output",
+      "authoritative_domain": "risk_analytics",
+      "lifecycle_status": "active",
+      "request_scope": {
+        "scope_level": "portfolio",
+        "supports_bulk": false
+      },
+      "temporal_scope": {
+        "primary_time_field": "as_of_date",
+        "freshness_basis": "as_of_date",
+        "supports_restatement": true
+      },
+      "required_trust_metadata": [
+        "product_name",
+        "product_version",
+        "as_of_date",
+        "lineage_version",
+        "request_fingerprint",
+        "source_services",
+        "upstream_request_fingerprints",
+        "benchmark_context",
+        "risk_free_context"
+      ],
+      "current_routes": [
+        "/analytics/risk/calculate"
+      ],
+      "freshness_policy": {
+        "freshness_class": "daily",
+        "max_allowed_age_description": "Risk metrics must reflect the requested as-of date and the resolved upstream return series used for the calculation."
+      },
+      "completeness_policy": {
+        "default_status": "complete",
+        "partial_allowed": false
+      },
+      "lineage_policy": {
+        "lineage_required": true,
+        "evidence_bundle_required": false,
+        "evidence_access_class_ref": "customer_consumable"
+      },
+      "security_profile_ref": "business_consumer_access:client_confidential:retain_for_client_record:audit_read_and_export",
+      "approved_consumers": [
+        "lotus-gateway"
+      ],
+      "deprecation_policy": {
+        "state": "not_deprecated",
+        "successor_product": null
+      },
+      "identifier_refs": [
+        "portfolio_id"
+      ],
+      "temporal_semantics_ref": "as_of_date"
+    },
+    {
+      "product_name": "DrawdownAnalyticsReport",
+      "product_version": "v1",
+      "owner_repository": "lotus-risk",
+      "product_family": "analytics_output",
+      "authoritative_domain": "risk_analytics",
+      "lifecycle_status": "active",
+      "request_scope": {
+        "scope_level": "portfolio",
+        "supports_bulk": false
+      },
+      "temporal_scope": {
+        "primary_time_field": "as_of_date",
+        "freshness_basis": "as_of_date",
+        "supports_restatement": true
+      },
+      "required_trust_metadata": [
+        "product_name",
+        "product_version",
+        "as_of_date",
+        "lineage_version",
+        "request_fingerprint",
+        "source_services",
+        "upstream_request_fingerprints",
+        "benchmark_context"
+      ],
+      "current_routes": [
+        "/analytics/risk/drawdown"
+      ],
+      "freshness_policy": {
+        "freshness_class": "daily",
+        "max_allowed_age_description": "Drawdown analytics must remain tied to the resolved return path and benchmark policy used for the requested as-of date."
+      },
+      "completeness_policy": {
+        "default_status": "complete",
+        "partial_allowed": false
+      },
+      "lineage_policy": {
+        "lineage_required": true,
+        "evidence_bundle_required": false,
+        "evidence_access_class_ref": "customer_consumable"
+      },
+      "security_profile_ref": "business_consumer_access:client_confidential:retain_for_client_record:audit_read_and_export",
+      "approved_consumers": [
+        "lotus-gateway"
+      ],
+      "deprecation_policy": {
+        "state": "not_deprecated",
+        "successor_product": null
+      },
+      "identifier_refs": [
+        "portfolio_id"
+      ],
+      "temporal_semantics_ref": "as_of_date"
+    },
+    {
+      "product_name": "RollingRiskMetricsReport",
+      "product_version": "v1",
+      "owner_repository": "lotus-risk",
+      "product_family": "analytics_output",
+      "authoritative_domain": "risk_analytics",
+      "lifecycle_status": "active",
+      "request_scope": {
+        "scope_level": "portfolio",
+        "supports_bulk": false
+      },
+      "temporal_scope": {
+        "primary_time_field": "as_of_date",
+        "freshness_basis": "as_of_date",
+        "supports_restatement": true
+      },
+      "required_trust_metadata": [
+        "product_name",
+        "product_version",
+        "as_of_date",
+        "lineage_version",
+        "request_fingerprint",
+        "source_services",
+        "upstream_request_fingerprints",
+        "benchmark_context",
+        "risk_free_context"
+      ],
+      "current_routes": [
+        "/analytics/risk/rolling-metrics"
+      ],
+      "freshness_policy": {
+        "freshness_class": "daily",
+        "max_allowed_age_description": "Rolling risk metrics must stay aligned to the requested return window and explicit risk-free treatment."
+      },
+      "completeness_policy": {
+        "default_status": "complete",
+        "partial_allowed": true
+      },
+      "lineage_policy": {
+        "lineage_required": true,
+        "evidence_bundle_required": false,
+        "evidence_access_class_ref": "customer_consumable"
+      },
+      "security_profile_ref": "business_consumer_access:client_confidential:retain_for_client_record:audit_read_and_export",
+      "approved_consumers": [
+        "lotus-gateway"
+      ],
+      "deprecation_policy": {
+        "state": "not_deprecated",
+        "successor_product": null
+      },
+      "identifier_refs": [
+        "portfolio_id"
+      ],
+      "temporal_semantics_ref": "as_of_date"
+    },
+    {
+      "product_name": "HistoricalRiskAttributionReport",
+      "product_version": "v1",
+      "owner_repository": "lotus-risk",
+      "product_family": "analytics_output",
+      "authoritative_domain": "risk_analytics",
+      "lifecycle_status": "active",
+      "request_scope": {
+        "scope_level": "portfolio",
+        "supports_bulk": false
+      },
+      "temporal_scope": {
+        "primary_time_field": "as_of_date",
+        "freshness_basis": "as_of_date",
+        "supports_restatement": true
+      },
+      "required_trust_metadata": [
+        "product_name",
+        "product_version",
+        "as_of_date",
+        "lineage_version",
+        "request_fingerprint",
+        "source_services",
+        "upstream_request_fingerprints",
+        "benchmark_context"
+      ],
+      "current_routes": [
+        "/analytics/risk/historical-attribution"
+      ],
+      "freshness_policy": {
+        "freshness_class": "daily",
+        "max_allowed_age_description": "Historical attribution must stay aligned to the requested as-of date, upstream return series, exposure history, and benchmark context."
+      },
+      "completeness_policy": {
+        "default_status": "partial",
+        "partial_allowed": true
+      },
+      "lineage_policy": {
+        "lineage_required": true,
+        "evidence_bundle_required": false,
+        "evidence_access_class_ref": "customer_consumable"
+      },
+      "security_profile_ref": "business_consumer_access:client_confidential:retain_for_client_record:audit_read_and_export",
+      "approved_consumers": [
+        "lotus-gateway"
+      ],
+      "deprecation_policy": {
+        "state": "not_deprecated",
+        "successor_product": null
+      },
+      "identifier_refs": [
+        "portfolio_id",
+        "benchmark_id",
+        "position_id",
+        "instrument_id"
+      ],
+      "temporal_semantics_ref": "as_of_date"
+    },
+    {
+      "product_name": "ConcentrationRiskReport",
+      "product_version": "v1",
+      "owner_repository": "lotus-risk",
+      "product_family": "analytics_output",
+      "authoritative_domain": "risk_analytics",
+      "lifecycle_status": "active",
+      "request_scope": {
+        "scope_level": "portfolio",
+        "supports_bulk": false
+      },
+      "temporal_scope": {
+        "primary_time_field": "as_of_date",
+        "freshness_basis": "as_of_date",
+        "supports_restatement": true
+      },
+      "required_trust_metadata": [
+        "product_name",
+        "product_version",
+        "as_of_date",
+        "lineage_version",
+        "request_fingerprint",
+        "source_services",
+        "upstream_request_fingerprints",
+        "coverage_ratio",
+        "coverage_status"
+      ],
+      "current_routes": [
+        "/analytics/risk/concentration"
+      ],
+      "freshness_policy": {
+        "freshness_class": "daily",
+        "max_allowed_age_description": "Concentration analytics must reflect the resolved current or simulated portfolio state for the requested as-of date."
+      },
+      "completeness_policy": {
+        "default_status": "complete",
+        "partial_allowed": false
+      },
+      "lineage_policy": {
+        "lineage_required": true,
+        "evidence_bundle_required": false,
+        "evidence_access_class_ref": "customer_consumable"
+      },
+      "security_profile_ref": "business_consumer_access:client_confidential:retain_for_client_record:audit_read_and_export",
+      "approved_consumers": [
+        "lotus-gateway"
+      ],
+      "deprecation_policy": {
+        "state": "not_deprecated",
+        "successor_product": null
+      },
+      "identifier_refs": [
+        "portfolio_id",
+        "position_id",
+        "instrument_id",
+        "issuer_id"
+      ],
+      "temporal_semantics_ref": "as_of_date"
+    }
+  ]
+}
