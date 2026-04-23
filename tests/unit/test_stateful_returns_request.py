@@ -18,6 +18,7 @@ def test_build_stateful_returns_series_request_shapes_common_contract() -> None:
         reporting_currency="USD",
         include_benchmark=True,
         include_risk_free=True,
+        benchmark_id="BMK_PB_GLOBAL_BALANCED_60_40",
         missing_data_policy="ALLOW_PARTIAL",
     )
 
@@ -36,6 +37,10 @@ def test_build_stateful_returns_series_request_shapes_common_contract() -> None:
             "include_portfolio": True,
             "include_benchmark": True,
             "include_risk_free": True,
+        },
+        "benchmark": {
+            "benchmark_id": "BMK_PB_GLOBAL_BALANCED_60_40",
+            "return_source": "calculated",
         },
         "data_policy": {
             "missing_data_policy": "ALLOW_PARTIAL",

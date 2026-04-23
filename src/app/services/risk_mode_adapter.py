@@ -50,6 +50,7 @@ def _build_stateful_source_request(stateful: StatefulRiskInput) -> dict[str, Any
         metric_basis=stateful.net_or_gross,
         reporting_currency=stateful.reporting_currency,
         include_benchmark=include_benchmark,
+        benchmark_id=stateful.benchmark_id,
         include_risk_free=include_risk_free,
         missing_data_policy="ALLOW_PARTIAL",
     )

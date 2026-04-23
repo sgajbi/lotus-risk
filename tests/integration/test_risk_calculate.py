@@ -313,6 +313,7 @@ def test_risk_calculate_stateful_mode_uses_lotus_performance_returns_series() ->
                 "stateful_input": {
                     "portfolio_id": "DEMO_DPM_EUR_001",
                     "as_of_date": "2025-01-07",
+                    "benchmark_id": "BMK_PB_GLOBAL_BALANCED_60_40",
                     "net_or_gross": "NET",
                     "periods": [{"type": "YTD", "name": "YTD"}],
                     "metrics": ["VOLATILITY", "BETA"],
@@ -334,6 +335,10 @@ def test_risk_calculate_stateful_mode_uses_lotus_performance_returns_series() ->
         "include_portfolio": True,
         "include_benchmark": True,
         "include_risk_free": False,
+    }
+    assert payload["benchmark"] == {
+        "benchmark_id": "BMK_PB_GLOBAL_BALANCED_60_40",
+        "return_source": "calculated",
     }
     assert performance_client.calls[0]["correlation_id"] == "corr-risk-stateful"
     body = response.json()

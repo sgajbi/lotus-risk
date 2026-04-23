@@ -58,6 +58,23 @@ def test_stateful_source_payload_requests_risk_free_for_sharpe() -> None:
     assert payload["series_selection"]["include_risk_free"] is True
 
 
+def test_stateful_source_payload_passes_benchmark_override_for_relative_metrics() -> None:
+    stateful = _stateful_input().model_copy(
+        update={
+            "benchmark_id": "BMK_PB_GLOBAL_BALANCED_60_40",
+            "metrics": ["TRACKING_ERROR"],
+        }
+    )
+
+    payload = _build_stateful_source_request(stateful)
+
+    assert payload["series_selection"]["include_benchmark"] is True
+    assert payload["benchmark"] == {
+        "benchmark_id": "BMK_PB_GLOBAL_BALANCED_60_40",
+        "return_source": "calculated",
+    }
+
+
 def test_calculate_risk_stateful_characterization() -> None:
     performance_client = RecordingLotusPerformanceClient(
         response_payload=build_returns_series_response(
