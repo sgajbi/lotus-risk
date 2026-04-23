@@ -45,10 +45,11 @@
   - `reporting_currency?: str`
   - `net_or_gross: "NET" | "GROSS"`
 - `stateless_input.periods[]`
-  - `type: EXPLICIT|YEAR|MTD|QTD|YTD|ONE_YEAR|THREE_YEAR|FIVE_YEAR|SI`
+  - `type: EXPLICIT|YEAR|MTD|QTD|YTD|1Y|3Y|5Y|SI`
   - `name?: str`
   - `from_date?/to_date?` (required for `EXPLICIT`)
   - `year?` (required for `YEAR`)
+  - legacy aliases `ONE_YEAR`, `THREE_YEAR`, `FIVE_YEAR`, and `ITD` are accepted and normalized at the API boundary
 - `stateless_input.metrics[]`
   - `VOLATILITY|DRAWDOWN|SHARPE|SORTINO|BETA|TRACKING_ERROR|INFORMATION_RATIO|VAR`
 - `stateless_input.options`

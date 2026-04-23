@@ -40,12 +40,16 @@ def test_period_explicit_canonical_fields() -> None:
     assert str(period.to_date) == "2025-01-31"
 
 
-def test_period_rejects_non_canonical_alias_type() -> None:
-    try:
-        RiskRequestPeriod.model_validate({"type": "1Y"})
-        assert False, "Expected validation error"
-    except Exception as exc:
-        assert "Input should be" in str(exc)
+def test_period_accepts_canonical_trailing_year_type() -> None:
+    period = RiskRequestPeriod.model_validate({"type": "1Y"})
+
+    assert period.type == "1Y"
+
+
+def test_period_normalizes_legacy_trailing_year_alias_type() -> None:
+    period = RiskRequestPeriod.model_validate({"type": "THREE_YEAR"})
+
+    assert period.type == "3Y"
 
 
 def test_period_validation_rejects_missing_explicit_bounds() -> None:

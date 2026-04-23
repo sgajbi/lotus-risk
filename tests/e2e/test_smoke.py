@@ -272,6 +272,22 @@ def test_e2e_risk_calculate_happy_path() -> None:
     assert metrics["VAR"]["value"] is not None
 
 
+def test_e2e_risk_calculate_accepts_canonical_rolling_periods() -> None:
+    client = TestClient(app)
+    payload = _risk_payload()
+    stateless_input = payload["stateless_input"]
+    assert isinstance(stateless_input, dict)
+    stateless_input["periods"] = [{"type": "1Y"}, {"type": "3Y"}]
+
+    response = client.post("/analytics/risk/calculate", json=payload)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert set(body["results"]) == {"1Y", "3Y"}
+    assert body["results"]["1Y"]["metrics"]["VOLATILITY"]["value"] is not None
+    assert body["results"]["3Y"]["metrics"]["VAR"]["value"] is not None
+
+
 def test_e2e_risk_calculate_stateful_mode() -> None:
     performance_client = RecordingLotusPerformanceClient(
         response_payload=build_returns_series_response(

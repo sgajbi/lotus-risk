@@ -30,14 +30,15 @@
 ## Supported Period Types
 - `EXPLICIT`: requires `from/to` (`fromDate` and `toDate` also supported).
 - `YEAR`: requires `year`.
-- Standard: `MTD`, `QTD`, `YTD`, `ONE_YEAR`, `THREE_YEAR`, `FIVE_YEAR`, `SI`.
+- Canonical: `MTD`, `QTD`, `YTD`, `1Y`, `3Y`, `5Y`, `SI`.
 
 ## Compatibility Normalization
 - Accepted aliases normalized internally:
 - `CUSTOM` -> `EXPLICIT`
-- `1Y` -> `ONE_YEAR`
-- `3Y` -> `THREE_YEAR`
-- `5Y` -> `FIVE_YEAR`
+- `ONE_YEAR` -> `1Y`
+- `THREE_YEAR` -> `3Y`
+- `FIVE_YEAR` -> `5Y`
+- `ITD` -> `SI`
 
 ## VaR Methods
 - `HISTORICAL`

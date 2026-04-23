@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 from enum import Enum
-from typing import Literal
+from typing import Any, ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -44,19 +44,33 @@ class RiskRequestScope(BaseModel):
 
 
 class RiskRequestPeriod(BaseModel):
+    PERIOD_ALIASES: ClassVar[dict[str, str]] = {
+        "ONE_YEAR": "1Y",
+        "THREE_YEAR": "3Y",
+        "FIVE_YEAR": "5Y",
+        "ITD": "SI",
+    }
+
     type: Literal[
         "EXPLICIT",
         "YEAR",
         "MTD",
         "QTD",
         "YTD",
+        "1Y",
+        "3Y",
+        "5Y",
         "ONE_YEAR",
         "THREE_YEAR",
         "FIVE_YEAR",
         "SI",
     ] = Field(
-        description="Period type used for metric aggregation.",
-        json_schema_extra={"example": "EXPLICIT"},
+        description=(
+            "Period type used for metric aggregation. Prefer canonical values "
+            "EXPLICIT, YEAR, MTD, QTD, YTD, 1Y, 3Y, 5Y, and SI. Legacy aliases "
+            "ONE_YEAR, THREE_YEAR, FIVE_YEAR, and ITD are accepted and normalized."
+        ),
+        json_schema_extra={"example": "3Y"},
     )
     name: str | None = Field(
         default=None,
@@ -78,6 +92,17 @@ class RiskRequestPeriod(BaseModel):
         description="Calendar year (required when type=YEAR).",
         json_schema_extra={"example": 2025},
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_period_aliases(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            period_type = data.get("type")
+            if isinstance(period_type, str):
+                normalized_type = cls.PERIOD_ALIASES.get(period_type, period_type)
+                if normalized_type != period_type:
+                    return {**data, "type": normalized_type}
+        return data
 
     @model_validator(mode="after")
     def validate_semantics(self) -> "RiskRequestPeriod":
@@ -174,9 +199,11 @@ class ReturnPoint(BaseModel):
         description="Date of return observation.",
         json_schema_extra={"example": "2025-01-02"},
     )
-    value: float = Field(
-        description="Return value in percentage points.",
-        json_schema_extra={"example": 0.85},
+    value: float = (  # monetary-float-allow: return observation in percentage points, not money.
+        Field(
+            description="Return value in percentage points.",
+            json_schema_extra={"example": 0.85},
+        )
     )
 
 
@@ -383,7 +410,7 @@ RiskCalculationRequest = StatelessRiskInput
 
 
 class RiskValue(BaseModel):
-    value: float | None = Field(
+    value: float | None = Field(  # monetary-float-allow: risk metric value, not money.
         default=None,
         description="Computed metric value.",
         json_schema_extra={"example": 0.1234},

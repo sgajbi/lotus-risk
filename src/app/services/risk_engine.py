@@ -63,11 +63,11 @@ def _resolve_period(
         start, end = date(as_of.year, quarter_start_month, 1), as_of
     elif period_type == "MTD":
         start, end = date(as_of.year, as_of.month, 1), as_of
-    elif period_type == "ONE_YEAR":
+    elif period_type == "1Y":
         start, end = as_of - timedelta(days=365) + timedelta(days=1), as_of
-    elif period_type == "THREE_YEAR":
+    elif period_type == "3Y":
         start, end = as_of - timedelta(days=365 * 3) + timedelta(days=1), as_of
-    elif period_type == "FIVE_YEAR":
+    elif period_type == "5Y":
         start, end = as_of - timedelta(days=365 * 5) + timedelta(days=1), as_of
     elif period_type == "SI":
         start, end = open_date, as_of

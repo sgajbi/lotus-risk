@@ -141,3 +141,25 @@ def test_build_stateful_returns_series_request_uses_longest_explicit_window_acro
         "from_date": "2026-01-01",
         "to_date": "2026-03-31",
     }
+
+
+def test_build_stateful_returns_series_request_resolves_canonical_three_year_period() -> None:
+    periods = [RiskRequestPeriod.model_validate({"type": "3Y", "name": "3Y"})]
+
+    payload = build_stateful_returns_series_request(
+        portfolio_id="PB_SG_GLOBAL_BAL_001",
+        as_of_date=date(2026, 3, 31),
+        periods=periods,
+        frequency="DAILY",
+        metric_basis="NET",
+        reporting_currency="USD",
+        include_benchmark=True,
+        include_risk_free=True,
+        missing_data_policy="ALLOW_PARTIAL",
+    )
+
+    assert payload["window"] == {
+        "mode": "EXPLICIT",
+        "from_date": "2023-04-02",
+        "to_date": "2026-03-31",
+    }
