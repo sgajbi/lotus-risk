@@ -199,9 +199,11 @@ class ReturnPoint(BaseModel):
         description="Date of return observation.",
         json_schema_extra={"example": "2025-01-02"},
     )
-    value: float = Field(  # monetary-float-allow: return observation in percentage points, not money.
-        description="Return value in percentage points.",
-        json_schema_extra={"example": 0.85},
+    value: float = (  # monetary-float-allow: return observation in percentage points, not money.
+        Field(
+            description="Return value in percentage points.",
+            json_schema_extra={"example": 0.85},
+        )
     )
 
 
