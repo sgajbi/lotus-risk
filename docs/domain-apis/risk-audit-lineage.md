@@ -22,7 +22,7 @@ shape changed without logging full customer payloads.
 
 | Endpoint | Stateless Source Services | Stateful / Simulation Source Services |
 | --- | --- | --- |
-| `risk/calculate` | `lotus-risk` | `lotus-risk`, `lotus-performance` |
+| `risk/calculate` | `lotus-risk` | `lotus-risk`, `lotus-performance`; plus `lotus-core` when Sharpe uses sourced risk-free returns |
 | `drawdown` | `lotus-risk` | `lotus-risk`, `lotus-performance` |
 | `rolling-metrics` | `lotus-risk` | `lotus-risk`, `lotus-performance`; plus `lotus-core` when risk-free sourcing is required |
 | `historical-attribution` | `lotus-risk` | `lotus-risk`, `lotus-performance`, `lotus-core` |

@@ -10,6 +10,7 @@ from app.services.risk_mode_adapter import (
     _portfolio_open_date,
     calculate_risk_stateful,
 )
+from app.upstream_errors import UpstreamServiceError
 from tests.support.lotus_performance_fakes import RecordingLotusPerformanceClient
 from tests.support.returns_series_payloads import build_returns_series_response
 
@@ -46,6 +47,15 @@ def test_stateful_source_payload_characterization() -> None:
     }
     assert payload["frequency"] == "DAILY"
     assert payload["metric_basis"] == "NET"
+    assert payload["series_selection"]["include_risk_free"] is False
+
+
+def test_stateful_source_payload_requests_risk_free_for_sharpe() -> None:
+    stateful = _stateful_input().model_copy(update={"metrics": ["SHARPE"]})
+
+    payload = _build_stateful_source_request(stateful)
+
+    assert payload["series_selection"]["include_risk_free"] is True
 
 
 def test_calculate_risk_stateful_characterization() -> None:
@@ -77,6 +87,71 @@ def test_calculate_risk_stateful_characterization() -> None:
     assert list(response.metadata.upstream_request_fingerprints) == [
         "lotus-performance:/integration/returns/series"
     ]
+
+
+def test_calculate_risk_stateful_applies_sourced_risk_free_for_sharpe() -> None:
+    stateful = _stateful_input().model_copy(update={"metrics": ["SHARPE"]})
+    performance_client = RecordingLotusPerformanceClient(
+        response_payload=build_returns_series_response(
+            portfolio_returns=[
+                ("2025-01-02", "0.0100"),
+                ("2025-01-03", "-0.0050"),
+                ("2025-01-06", "0.0030"),
+            ],
+            risk_free_returns=[
+                ("2025-01-02", "0.000100"),
+                ("2025-01-03", "0.000100"),
+                ("2025-01-06", "0.000100"),
+            ],
+        )
+    )
+
+    response = asyncio.run(
+        calculate_risk_stateful(
+            stateful,
+            performance_client=performance_client,
+            correlation_id="corr-risk-stateful-rf",
+        )
+    )
+
+    assert performance_client.request_payload is not None
+    assert performance_client.request_payload["series_selection"]["include_risk_free"] is True
+    assert response.metadata.risk_free_context.reason == "ANNUAL_RATE_APPLIED"
+    assert response.metadata.risk_free_context.periodic_rate > 0
+    assert response.metadata.risk_free_annual_rate is not None
+    assert response.metadata.source_services == [
+        "lotus-risk",
+        "lotus-performance",
+        "lotus-core",
+    ]
+    sharpe = response.results["YTD"].metrics["SHARPE"]
+    assert sharpe.details is not None
+    periodic_risk_free_rate = sharpe.details["periodic_risk_free_rate"]
+    assert isinstance(periodic_risk_free_rate, float)
+    assert periodic_risk_free_rate > 0
+
+
+def test_calculate_risk_stateful_rejects_missing_risk_free_for_sharpe() -> None:
+    stateful = _stateful_input().model_copy(update={"metrics": ["SHARPE"]})
+    performance_client = RecordingLotusPerformanceClient(
+        response_payload=build_returns_series_response(
+            portfolio_returns=[
+                ("2025-01-02", "0.0100"),
+                ("2025-01-03", "-0.0050"),
+                ("2025-01-06", "0.0030"),
+            ],
+            risk_free_returns=[],
+        )
+    )
+
+    with pytest.raises(UpstreamServiceError, match="no sourced risk-free returns"):
+        asyncio.run(
+            calculate_risk_stateful(
+                stateful,
+                performance_client=performance_client,
+                correlation_id="corr-risk-stateful-rf",
+            )
+        )
 
 
 def test_calculate_risk_stateful_requires_series_payload() -> None:

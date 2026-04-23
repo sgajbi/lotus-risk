@@ -112,7 +112,7 @@
       "producer_repository": "lotus-core",
       "required_product_version": "v1",
       "consumption_mode": "api_read",
-      "business_purpose": "Source governed risk-free series context when rolling Sharpe requires explicit upstream risk-free treatment.",
+      "business_purpose": "Source governed risk-free series context when stateful Sharpe or rolling Sharpe requires explicit upstream risk-free treatment.",
       "validation_lanes": [
         "feature",
         "pr-merge"
