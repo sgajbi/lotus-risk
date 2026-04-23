@@ -34,18 +34,6 @@
       "review_by": "2026-10-10"
     },
     {
-      "finding": "src/app/contracts/risk.py:177:value: float = Field(",
-      "justification": "Temporary approved monetary float usage; migrate to Decimal.",
-      "owner": "platform-governance",
-      "review_by": "2026-10-10"
-    },
-    {
-      "finding": "src/app/contracts/risk.py:386:value: float | None = Field(",
-      "justification": "Temporary approved monetary float usage; migrate to Decimal.",
-      "owner": "platform-governance",
-      "review_by": "2026-10-20"
-    },
-    {
       "finding": "src/app/services/attribution_engine.py:103:total_value: float,",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",

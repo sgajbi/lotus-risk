@@ -199,7 +199,7 @@ class ReturnPoint(BaseModel):
         description="Date of return observation.",
         json_schema_extra={"example": "2025-01-02"},
     )
-    value: float = Field(
+    value: float = Field(  # monetary-float-allow: return observation in percentage points, not money.
         description="Return value in percentage points.",
         json_schema_extra={"example": 0.85},
     )
@@ -408,7 +408,7 @@ RiskCalculationRequest = StatelessRiskInput
 
 
 class RiskValue(BaseModel):
-    value: float | None = Field(
+    value: float | None = Field(  # monetary-float-allow: risk metric value, not money.
         default=None,
         description="Computed metric value.",
         json_schema_extra={"example": 0.1234},
