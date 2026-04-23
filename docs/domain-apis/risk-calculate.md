@@ -22,6 +22,9 @@
 - Status: implemented in lotus-risk.
 - Current behavior:
   - caller supplies identifiers plus risk metric specification (`periods`, `metrics`, `options`).
+  - caller may provide `stateful_input.benchmark_id` to force benchmark-dependent metrics
+    (`BETA`, `TRACKING_ERROR`, `INFORMATION_RATIO`) to use a specific governed benchmark; when
+    omitted, `lotus-performance` resolves the portfolio benchmark assignment.
   - lotus-risk sources canonical return series from `lotus-performance` using `input_mode=stateful` and `stateful_input is an empty envelope; consumer identity is stamped by lotus-performance server-side`.
   - when `SHARPE` is requested, the stateful returns-series request includes risk-free returns sourced from the `lotus-core` mastered risk-free series through `lotus-performance`.
   - sourced risk-free period returns are converted into the existing annual-rate risk-engine option so `metadata.risk_free_context.reason` becomes `ANNUAL_RATE_APPLIED`; missing sourced risk-free returns fail closed instead of silently using a zero-rate convention.
@@ -54,6 +57,24 @@
 - `stateless_input.returns[]: [{date, value}]`
 - `stateless_input.benchmark_returns[]: [{date, value}]` (required for benchmark-dependent metrics)
 
+## Stateful Inputs (Current)
+
+- `input_mode: "stateful"`
+- `stateful_input.portfolio_id: str`
+- `stateful_input.as_of_date: date`
+- `stateful_input.reporting_currency?: str`
+- `stateful_input.client_id?: str`
+- `stateful_input.benchmark_id?: str`
+  - optional benchmark override for benchmark-dependent metrics
+  - forwarded to `lotus-performance` as `benchmark.benchmark_id`
+  - if omitted, the upstream benchmark assignment is used
+- `stateful_input.net_or_gross: "NET" | "GROSS"`
+- `stateful_input.periods[]`
+- `stateful_input.metrics[]`
+  - benchmark metrics cause `series_selection.include_benchmark=true`
+  - `SHARPE` causes `series_selection.include_risk_free=true`
+- `stateful_input.options`
+
 ## Stateful/Simulation Input Source Mapping (Current + Target)
 
 | Input Needed | Preferred Source App | Availability | Notes |
@@ -61,8 +82,9 @@
 | Portfolio baseline snapshot (`portfolioId`, holdings, valuation context) | lotus-core (`/integration/portfolios/{id}/core-snapshot`) | Exists | Already used by other services. |
 | Raw valuation/performance input points | lotus-core (`/integration/portfolios/{id}/performance-input`) | Exists | Provides valuation points and metadata. |
 | Daily return series normalized for risk engine | lotus-performance (`/integration/returns/series` with `input_mode=stateful`) | Exists | Implemented stateful path in lotus-risk; upstream decimal returns are filtered to trading days and converted to percentage-point risk engine input. |
-| Benchmark return series | lotus-performance (`/integration/returns/series` with `include_benchmark=true`) | Exists | Used by stateful beta, tracking error, information ratio, and benchmark-relative drawdown paths; aligned by trading date inside lotus-risk. |
+| Benchmark return series | lotus-performance (`/integration/returns/series` with `include_benchmark=true` and optional `benchmark.benchmark_id`) | Exists | Used by stateful beta, tracking error, information ratio, and benchmark-relative drawdown paths; aligned by trading date inside lotus-risk. |
 | Risk-free return series | lotus-performance (`/integration/returns/series` with `include_risk_free=true`, sourced from lotus-core risk-free reference data) | Exists | Used by stateful Sharpe. Empty risk-free returns fail closed so downstream consumers do not certify zero-rate Sharpe as source-backed. |
+
 ## Expected Output Structure
 
 - `scope` (echoed normalized request scope)

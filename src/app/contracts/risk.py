@@ -268,6 +268,14 @@ class StatefulRiskInput(BaseModel):
         description="Optional client identifier used for upstream data access policy controls.",
         json_schema_extra={"example": "CLIENT_1000123"},
     )
+    benchmark_id: str | None = Field(
+        default=None,
+        description=(
+            "Optional benchmark override for benchmark-dependent stateful metrics. When omitted, "
+            "lotus-performance resolves the portfolio benchmark assignment."
+        ),
+        json_schema_extra={"example": "BMK_PB_GLOBAL_BALANCED_60_40"},
+    )
     net_or_gross: Literal["NET", "GROSS"] = Field(
         default="NET",
         description="Whether sourced returns are evaluated on net or gross basis.",
@@ -339,6 +347,7 @@ class RiskAnalyticsRequest(BaseModel):
                 "as_of_date": "2026-02-27",
                 "reporting_currency": "USD",
                 "client_id": "CLIENT_1000123",
+                "benchmark_id": "BMK_PB_GLOBAL_BALANCED_60_40",
                 "periods": [{"type": "YTD", "name": "YTD"}],
                 "metrics": ["VOLATILITY", "BETA", "TRACKING_ERROR", "INFORMATION_RATIO"],
                 "options": {

@@ -18,8 +18,9 @@ def build_stateful_returns_series_request(
     include_benchmark: bool,
     include_risk_free: bool,
     missing_data_policy: Literal["ALLOW_PARTIAL", "FAIL_FAST"],
+    benchmark_id: str | None = None,
 ) -> dict[str, Any]:
-    return {
+    request: dict[str, Any] = {
         "portfolio_id": portfolio_id,
         "as_of_date": as_of_date.isoformat(),
         "window": build_returns_series_window(
@@ -42,3 +43,9 @@ def build_stateful_returns_series_request(
         "input_mode": "stateful",
         "stateful_input": {},
     }
+    if include_benchmark and benchmark_id:
+        request["benchmark"] = {
+            "benchmark_id": benchmark_id,
+            "return_source": "calculated",
+        }
+    return request
