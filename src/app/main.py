@@ -808,7 +808,8 @@ async def analytics_risk_rolling_metrics(
     tags=["risk-analytics"],
     description=(
         "Calculates risk metrics from provided return series using stateless or stateful input modes. "
-        "Supports EXPLICIT/YEAR/MTD/QTD/YTD/ONE_YEAR/THREE_YEAR/FIVE_YEAR/SI periods, "
+        "Supports EXPLICIT/YEAR/MTD/QTD/YTD/1Y/3Y/5Y/SI periods, with legacy "
+        "ONE_YEAR/THREE_YEAR/FIVE_YEAR aliases normalized at the boundary. "
         "all VaR methods (HISTORICAL/GAUSSIAN/CORNISH_FISHER), and benchmark-aware metrics."
     ),
 )

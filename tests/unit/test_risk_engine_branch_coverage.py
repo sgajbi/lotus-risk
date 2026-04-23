@@ -17,9 +17,9 @@ def _payload_all_metrics() -> dict[str, object]:
             {"type": "MTD", "name": "MTD"},
             {"type": "QTD", "name": "QTD"},
             {"type": "YTD", "name": "YTD"},
-            {"type": "ONE_YEAR", "name": "1Y"},
-            {"type": "THREE_YEAR", "name": "3Y"},
-            {"type": "FIVE_YEAR", "name": "5Y"},
+            {"type": "1Y", "name": "1Y"},
+            {"type": "3Y", "name": "3Y"},
+            {"type": "5Y", "name": "5Y"},
             {"type": "SI", "name": "SI"},
             {"type": "YEAR", "name": "Y2025", "year": 2025},
             {
