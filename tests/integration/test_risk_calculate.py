@@ -373,6 +373,58 @@ def test_risk_calculate_stateful_mode_uses_lotus_performance_returns_series() ->
     assert "benchmark_variance" in metrics["BETA"]["details"]
 
 
+def test_risk_calculate_stateful_sharpe_uses_sourced_risk_free_returns() -> None:
+    performance_client = RecordingLotusPerformanceClient(
+        response_payload=build_returns_series_response(
+            portfolio_returns=RISK_STATEFUL_RETURNS,
+            risk_free_returns=[
+                ("2025-01-02", "0.000100"),
+                ("2025-01-03", "0.000100"),
+                ("2025-01-06", "0.000100"),
+                ("2025-01-07", "0.000100"),
+            ],
+        )
+    )
+    with override_app_runtime(lotus_performance_client=performance_client):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/calculate",
+            headers={"X-Correlation-Id": "corr-risk-stateful-rf"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2025-01-07",
+                    "net_or_gross": "NET",
+                    "reporting_currency": "USD",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "metrics": ["SHARPE"],
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    payload = performance_client.calls[0]["request_payload"]
+    assert isinstance(payload, dict)
+    assert payload["series_selection"] == {
+        "include_portfolio": True,
+        "include_benchmark": False,
+        "include_risk_free": True,
+    }
+    body = response.json()
+    assert body["metadata"]["source_services"] == [
+        "lotus-risk",
+        "lotus-performance",
+        "lotus-core",
+    ]
+    assert body["metadata"]["risk_free_context"]["reason"] == "ANNUAL_RATE_APPLIED"
+    assert body["metadata"]["risk_free_context"]["periodic_rate"] > 0
+    assert body["metadata"]["risk_free_annual_rate"] > 0
+    sharpe = body["results"]["YTD"]["metrics"]["SHARPE"]
+    assert sharpe["value"] is not None
+    assert sharpe["details"]["periodic_risk_free_rate"] > 0
+
+
 def test_risk_calculate_stateless_benchmark_metrics_expose_components() -> None:
     client = TestClient(app)
     payload = _request_payload()
