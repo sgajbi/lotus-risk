@@ -154,13 +154,13 @@
       "review_by": "2026-10-10"
     },
     {
-      "finding": "src/app/services/risk_engine.py:120:peak_value = _as_number(cast(float, peak.loc[trough_idx]))",
+      "finding": "src/app/services/risk_engine.py:124:peak_value = _as_number(cast(float, peak.loc[trough_idx]))",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
       "review_by": "2026-10-10"
     },
     {
-      "finding": "src/app/services/risk_engine.py:182:def _expected_shortfall(returns: pd.Series, var_value: float) -> float:",
+      "finding": "src/app/services/risk_engine.py:186:def _expected_shortfall(returns: pd.Series, var_value: float) -> float:",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
       "review_by": "2026-10-10"

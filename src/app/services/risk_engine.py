@@ -11,13 +11,17 @@ from prometheus_client import Counter, Histogram
 
 from app.contracts.risk import (
     BenchmarkRequestContext,
+    RiskCalculationSupportability,
+    RiskFreshnessBucket,
     RiskFreeContext,
     RiskPeriodResult,
     RiskResponseMetadata,
     RiskResponse,
     RiskStatelessCalculationInput,
+    RiskSupportabilityReason,
     RiskValue,
 )
+from app.observability import record_calculation_supportability
 from app.services.audit_lineage import fingerprint_model
 
 RISK_METRIC_REQUESTED_TOTAL = Counter(
@@ -282,6 +286,7 @@ def _build_metadata(
     *,
     annual_factor: int,
     periodic_rf: float,
+    calculation_supportability: RiskCalculationSupportability,
 ) -> RiskResponseMetadata:
     risk_free_requested = "SHARPE" in request.metrics
     benchmark_metrics = [str(metric) for metric in request.metrics if metric in BENCHMARK_METRICS]
@@ -311,10 +316,102 @@ def _build_metadata(
             requested=bool(benchmark_metrics),
             requested_metrics=benchmark_metrics,
         ),
+        calculation_supportability=calculation_supportability,
         mar_annual_rate=request.options.mar_annual_rate,
         var_method=request.options.var.method,
         var_confidence=request.options.var.confidence,
         var_horizon_days=request.options.var.horizon_days,
+    )
+
+
+def _freshness_bucket(request: RiskStatelessCalculationInput) -> RiskFreshnessBucket:
+    if not request.returns:
+        return "unknown"
+    latest_observation_date = max(point.date for point in request.returns)
+    age_days = (request.scope.as_of_date - latest_observation_date).days
+    if age_days <= 0:
+        return "current"
+    if age_days <= 1:
+        return "same_day"
+    return "stale"
+
+
+def _supportability_reason_for_error(error: str) -> RiskSupportabilityReason:
+    if error == "Benchmark returns required for benchmark-dependent metric":
+        return "benchmark_unavailable"
+    if error == "Insufficient aligned observations":
+        return "insufficient_aligned_observations"
+    if error == "Insufficient data":
+        return "insufficient_observations"
+    return "calculation_quality_issue"
+
+
+def _resolve_calculation_supportability(
+    request: RiskStatelessCalculationInput,
+    results: dict[str, RiskPeriodResult],
+) -> RiskCalculationSupportability:
+    freshness_bucket = _freshness_bucket(request)
+    if not request.returns:
+        return RiskCalculationSupportability(
+            state="empty",
+            reason="no_return_observations",
+            freshness_bucket=freshness_bucket,
+            evaluated_period_count=len(results),
+        )
+
+    degraded_reasons: list[RiskSupportabilityReason] = []
+    empty_period_count = 0
+    degraded_metric_count = 0
+    for period_result in results.values():
+        if period_result.portfolio_observation_count == 0:
+            empty_period_count += 1
+        for metric_result in period_result.metrics.values():
+            error = (metric_result.details or {}).get("error")
+            if isinstance(error, str):
+                degraded_metric_count += 1
+                degraded_reasons.append(_supportability_reason_for_error(error))
+
+    if degraded_metric_count:
+        reason_order: tuple[RiskSupportabilityReason, ...] = (
+            "benchmark_unavailable",
+            "insufficient_aligned_observations",
+            "insufficient_observations",
+            "calculation_quality_issue",
+        )
+        selected_reason: RiskSupportabilityReason = next(
+            reason for reason in reason_order if reason in set(degraded_reasons)
+        )
+        return RiskCalculationSupportability(
+            state="degraded",
+            reason=selected_reason,
+            freshness_bucket=freshness_bucket,
+            degraded_metric_count=degraded_metric_count,
+            empty_period_count=empty_period_count,
+            evaluated_period_count=len(results),
+        )
+
+    if empty_period_count:
+        return RiskCalculationSupportability(
+            state="empty",
+            reason="insufficient_observations",
+            freshness_bucket=freshness_bucket,
+            empty_period_count=empty_period_count,
+            evaluated_period_count=len(results),
+        )
+
+    if freshness_bucket == "stale":
+        return RiskCalculationSupportability(
+            state="stale",
+            reason="stale_source_observations",
+            freshness_bucket=freshness_bucket,
+            evaluated_period_count=len(results),
+        )
+
+    return RiskCalculationSupportability(
+        state="ready",
+        reason="calculation_complete",
+        freshness_bucket=freshness_bucket,
+        evaluated_period_count=len(results),
     )
 
 
@@ -332,10 +429,22 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
 
     returns_df = pd.DataFrame([{"date": p.date, "value": p.value} for p in request.returns])
     if returns_df.empty:
+        calculation_supportability = _resolve_calculation_supportability(request, {})
+        record_calculation_supportability(
+            operation="risk/calculate",
+            supportability_state=calculation_supportability.state,
+            reason=calculation_supportability.reason,
+            freshness_bucket=calculation_supportability.freshness_bucket,
+        )
         return RiskResponse(
             scope=request.scope,
             results={},
-            metadata=_build_metadata(request, annual_factor=annual_factor, periodic_rf=0.0),
+            metadata=_build_metadata(
+                request,
+                annual_factor=annual_factor,
+                periodic_rf=0.0,
+                calculation_supportability=calculation_supportability,
+            ),
         )
 
     returns_df["date"] = pd.to_datetime(returns_df["date"])
@@ -577,8 +686,20 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
             metrics=metric_map,
         )
 
+    calculation_supportability = _resolve_calculation_supportability(request, results)
+    record_calculation_supportability(
+        operation="risk/calculate",
+        supportability_state=calculation_supportability.state,
+        reason=calculation_supportability.reason,
+        freshness_bucket=calculation_supportability.freshness_bucket,
+    )
     return RiskResponse(
         scope=request.scope,
         results=results,
-        metadata=_build_metadata(request, annual_factor=annual_factor, periodic_rf=periodic_rf),
+        metadata=_build_metadata(
+            request,
+            annual_factor=annual_factor,
+            periodic_rf=periodic_rf,
+            calculation_supportability=calculation_supportability,
+        ),
     )

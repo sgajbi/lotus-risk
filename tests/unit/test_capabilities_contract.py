@@ -10,7 +10,7 @@ from app.contracts.capabilities import (
 def test_capability_feature_keys_follow_risk_analytics_namespace() -> None:
     assert CAPABILITY_FEATURE_KEYS
     for key in CAPABILITY_FEATURE_KEYS:
-        assert key.startswith("risk.analytics.")
+        assert key.startswith(("risk.analytics.", "risk.observability."))
 
 
 def test_capability_workflow_keys_use_snake_case_domain_vocabulary() -> None:

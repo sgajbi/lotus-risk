@@ -71,6 +71,16 @@ Use:
 4. `docs/operations/canonical-local-upstream-urls.md`
 5. `docs/operations/live-risk-validation-matrix.md`
 
+For `POST /analytics/risk/calculate`, response metadata includes
+`metadata.calculation_supportability`. Use it before inferring UI state from individual metric
+values. It reports bounded `ready`, `stale`, `degraded`, or `empty` posture, a bounded reason, and a
+freshness bucket. The matching Prometheus counter is
+`lotus_risk_calculation_supportability_total` with only bounded labels: `operation`,
+`supportability_state`, `reason`, and `freshness_bucket`.
+
+Do not add portfolio, client, account, position, transaction, trace, correlation, or request
+identifiers to supportability metric labels.
+
 When the question is "should this workflow be offered at all?" also check:
 
 1. `/integration/capabilities`

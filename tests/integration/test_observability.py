@@ -49,6 +49,11 @@ def test_metrics_expose_endpoint_execution_mode_and_outcome() -> None:
     assert 'input_mode="stateless"' in metrics
     assert 'outcome="success"' in metrics
     assert "lotus_risk_endpoint_execution_seconds_bucket" in metrics
+    assert "lotus_risk_calculation_supportability_total{" in metrics
+    assert 'operation="risk/calculate"' in metrics
+    assert 'supportability_state="stale"' in metrics
+    assert 'reason="stale_source_observations"' in metrics
+    assert 'freshness_bucket="stale"' in metrics
 
 
 def test_metrics_expose_stateful_endpoint_execution_mode() -> None:
