@@ -25,6 +25,11 @@ UPSTREAM_REQUEST_SECONDS = Histogram(
     "Upstream dependency request duration by dependency, operation, outcome, and failure category.",
     ["dependency", "operation", "outcome", "category"],
 )
+CALCULATION_SUPPORTABILITY_TOTAL = Counter(
+    "lotus_risk_calculation_supportability_total",
+    "Risk calculation supportability posture by bounded operation, state, reason, and freshness bucket.",
+    ["operation", "supportability_state", "reason", "freshness_bucket"],
+)
 
 
 def observation_start() -> float:
@@ -72,3 +77,18 @@ def record_upstream_request(
         outcome=outcome,
         category=category,
     ).observe(elapsed)
+
+
+def record_calculation_supportability(
+    *,
+    operation: str,
+    supportability_state: str,
+    reason: str,
+    freshness_bucket: str,
+) -> None:
+    CALCULATION_SUPPORTABILITY_TOTAL.labels(
+        operation=operation,
+        supportability_state=supportability_state,
+        reason=reason,
+        freshness_bucket=freshness_bucket,
+    ).inc()

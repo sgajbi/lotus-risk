@@ -44,6 +44,7 @@ def test_integration_capabilities_contract() -> None:
         "risk.analytics.rolling_metrics",
         "risk.analytics.historical_attribution",
         "risk.analytics.metrics",
+        "risk.observability.calculation_supportability",
     }
     workflow_keys = {workflow["workflow_key"] for workflow in body["workflows"]}
     assert workflow_keys == {

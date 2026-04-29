@@ -20,6 +20,7 @@
   - `risk.analytics.historical_attribution`
   - `risk.analytics.concentration`
   - `risk.analytics.metrics`
+  - `risk.observability.calculation_supportability`
 - `workflows`:
   - `risk_snapshot`
   - `drawdown_analytics`
@@ -52,6 +53,18 @@
 - If benchmark returns are missing, API returns deterministic metric payloads:
 - `value: null`
 - `details.error: "Benchmark returns required for benchmark-dependent metric"`
+
+## Calculation Supportability
+- `POST /analytics/risk/calculate` emits `metadata.calculation_supportability`.
+- Supported states: `ready`, `stale`, `degraded`, `empty`, `error`, `permission_blocked`, `unsupported`.
+- Supported freshness buckets: `current`, `same_day`, `stale`, `unknown`.
+- Supported reasons include `calculation_complete`, `benchmark_unavailable`, `calculation_quality_issue`,
+  `insufficient_aligned_observations`, `insufficient_observations`, `no_return_observations`,
+  `permission_blocked`, `stale_source_observations`, and `unsupported_input_mode`.
+- Prometheus exports the same posture through `lotus_risk_calculation_supportability_total` with
+  bounded labels only: `operation`, `supportability_state`, `reason`, and `freshness_bucket`.
+- Metrics and response metadata must not expose portfolio, client, account, position, transaction,
+  trace, correlation, or raw request identifiers.
 
 ## Risk Calculate Mode Support
 - `stateless`: caller supplies full return series.

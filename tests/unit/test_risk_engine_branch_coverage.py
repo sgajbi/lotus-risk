@@ -90,6 +90,10 @@ def test_engine_covers_all_period_types_and_benchmark_metrics() -> None:
     assert metrics["BETA"].value is not None
     assert metrics["TRACKING_ERROR"].value is not None
     assert metrics["INFORMATION_RATIO"].value is not None
+    assert response.metadata.calculation_supportability.state == "stale"
+    assert response.metadata.calculation_supportability.reason == "stale_source_observations"
+    assert response.metadata.calculation_supportability.freshness_bucket == "stale"
+    assert response.metadata.calculation_supportability.degraded_metric_count == 0
 
 
 def test_var_helper_unsupported_method_raises() -> None:
@@ -209,6 +213,10 @@ def test_risk_metrics_return_domain_errors_for_insufficient_data() -> None:
         "benchmark_returns": [{"date": "2025-01-02", "value": 0.4}],
     }
     response = risk_engine.calculate_risk(RiskCalculationRequest.model_validate(payload))
+    supportability = response.metadata.calculation_supportability
+    assert supportability.state == "degraded"
+    assert supportability.reason == "insufficient_aligned_observations"
+    assert supportability.degraded_metric_count == len(cast(list[str], payload["metrics"]))
     metrics = response.results["YTD"].metrics
     metric_names = cast(list[str], payload["metrics"])
     benchmark_aligned_metrics = {"BETA", "TRACKING_ERROR", "INFORMATION_RATIO"}
@@ -222,6 +230,44 @@ def test_risk_metrics_return_domain_errors_for_insufficient_data() -> None:
             else "Insufficient data"
         )
         assert metric.details["error"] == expected_error
+
+
+def test_risk_calculation_supportability_reports_empty_when_no_returns() -> None:
+    payload = {
+        "scope": {"as_of_date": "2025-03-31", "net_or_gross": "NET"},
+        "portfolio_open_date": "2024-01-01",
+        "periods": [{"type": "YTD", "name": "YTD"}],
+        "metrics": ["VOLATILITY"],
+        "returns": [],
+    }
+
+    response = risk_engine.calculate_risk(RiskCalculationRequest.model_validate(payload))
+
+    assert response.results == {}
+    supportability = response.metadata.calculation_supportability
+    assert supportability.state == "empty"
+    assert supportability.reason == "no_return_observations"
+    assert supportability.freshness_bucket == "unknown"
+
+
+def test_risk_calculation_supportability_reports_stale_source_observations() -> None:
+    payload = {
+        "scope": {"as_of_date": "2025-03-31", "net_or_gross": "NET"},
+        "portfolio_open_date": "2024-01-01",
+        "periods": [{"type": "YTD", "name": "YTD"}],
+        "metrics": ["VOLATILITY"],
+        "returns": [
+            {"date": "2025-01-02", "value": 0.5},
+            {"date": "2025-01-03", "value": -0.2},
+        ],
+    }
+
+    response = risk_engine.calculate_risk(RiskCalculationRequest.model_validate(payload))
+
+    supportability = response.metadata.calculation_supportability
+    assert supportability.state == "stale"
+    assert supportability.reason == "stale_source_observations"
+    assert supportability.freshness_bucket == "stale"
 
 
 def test_beta_and_information_ratio_guard_clauses() -> None:

@@ -95,6 +95,14 @@
   - applied frequency / annualization / log-return / risk-free / VaR settings
   - `risk_free_context` (`requested`, `applied`, `reason`, `periodic_rate`)
   - `benchmark_context` (`requested`, `requested_metrics`)
+  - `calculation_supportability`
+    - `state`: `ready`, `stale`, `degraded`, `empty`, `error`, `permission_blocked`, or
+      `unsupported`
+    - `reason`: bounded cause such as `calculation_complete`, `benchmark_unavailable`,
+      `insufficient_aligned_observations`, `insufficient_observations`,
+      `no_return_observations`, or `stale_source_observations`
+    - `freshness_bucket`: `current`, `same_day`, `stale`, or `unknown`
+    - `degraded_metric_count`, `empty_period_count`, `evaluated_period_count`
 - `results` map keyed by period name/type:
   - `start_date`
   - `end_date`
@@ -118,6 +126,8 @@
 - API mode support: finalized for current scope (`stateless` + `stateful` only; `simulation` intentionally unsupported).
 - Cross-service integration posture: integrated with `lotus-performance` for stateful return sourcing.
 - Naming/vocabulary: aligned with canonical `client_id` naming and RFC-0067 guardrails.
+- Supportability posture: implemented for `risk/calculate` and mirrored in bounded Prometheus
+  metric labels through `lotus_risk_calculation_supportability_total`.
 
 ## Gaps and Decisions Required
 

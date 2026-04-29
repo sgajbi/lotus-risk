@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-04-19T05:13:25.970324+00:00",
+  "generatedAt": "2026-04-29T08:51:34.345691+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.alignment_policy",
@@ -171,6 +171,22 @@
       ],
       "observedTypes": [
         "BenchmarkDrawdownPolicy"
+      ]
+    },
+    {
+      "semanticId": "lotus.calculation_supportability",
+      "canonicalTerm": "calculation_supportability",
+      "preferredName": "calculation_supportability",
+      "description": "Canonical calculation supportability used by lotus-risk APIs.",
+      "example": {
+        "key": "value"
+      },
+      "type": "RiskCalculationSupportability",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "RiskCalculationSupportability"
       ]
     },
     {
@@ -495,6 +511,20 @@
       ]
     },
     {
+      "semanticId": "lotus.degraded_metric_count",
+      "canonicalTerm": "degraded_metric_count",
+      "preferredName": "degraded_metric_count",
+      "description": "Number of requested metric results carrying deterministic error details.",
+      "example": 0,
+      "type": "integer",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "integer"
+      ]
+    },
+    {
       "semanticId": "lotus.dependencies",
       "canonicalTerm": "dependencies",
       "preferredName": "dependencies",
@@ -594,6 +624,20 @@
       ]
     },
     {
+      "semanticId": "lotus.empty_period_count",
+      "canonicalTerm": "empty_period_count",
+      "preferredName": "empty_period_count",
+      "description": "Number of response periods with no portfolio observations.",
+      "example": 0,
+      "type": "integer",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "integer"
+      ]
+    },
+    {
       "semanticId": "lotus.enabled",
       "canonicalTerm": "enabled",
       "preferredName": "enabled",
@@ -636,6 +680,20 @@
       ]
     },
     {
+      "semanticId": "lotus.evaluated_period_count",
+      "canonicalTerm": "evaluated_period_count",
+      "preferredName": "evaluated_period_count",
+      "description": "Number of periods evaluated in this response.",
+      "example": 1,
+      "type": "integer",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "integer"
+      ]
+    },
+    {
       "semanticId": "lotus.failure_posture",
       "canonicalTerm": "failure_posture",
       "preferredName": "failure_posture",
@@ -674,6 +732,20 @@
       "preferredName": "frequency",
       "description": "Applied return sampling frequency.",
       "example": "DAILY",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.freshness_bucket",
+      "canonicalTerm": "freshness_bucket",
+      "preferredName": "freshness_bucket",
+      "description": "Bounded source freshness bucket based on the latest return observation.",
+      "example": "current",
       "type": "string",
       "locations": [
         "body"
@@ -1712,6 +1784,20 @@
       ],
       "observedTypes": [
         "array"
+      ]
+    },
+    {
+      "semanticId": "lotus.state",
+      "canonicalTerm": "state",
+      "preferredName": "state",
+      "description": "Bounded supportability state for the risk calculation payload.",
+      "example": "ready",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
       ]
     },
     {
@@ -4719,6 +4805,62 @@
             "type": "array",
             "semanticId": "lotus.requested_metrics",
             "attributeRef": "#/attributeCatalog/lotus.requested_metrics"
+          },
+          {
+            "name": "metadata.calculation_supportability",
+            "location": "body",
+            "required": false,
+            "type": "RiskCalculationSupportability",
+            "semanticId": "lotus.calculation_supportability",
+            "attributeRef": "#/attributeCatalog/lotus.calculation_supportability"
+          },
+          {
+            "name": "metadata.calculation_supportability.state",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.state",
+            "attributeRef": "#/attributeCatalog/lotus.state"
+          },
+          {
+            "name": "metadata.calculation_supportability.reason",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.reason",
+            "attributeRef": "#/attributeCatalog/lotus.reason"
+          },
+          {
+            "name": "metadata.calculation_supportability.freshness_bucket",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.freshness_bucket",
+            "attributeRef": "#/attributeCatalog/lotus.freshness_bucket"
+          },
+          {
+            "name": "metadata.calculation_supportability.degraded_metric_count",
+            "location": "body",
+            "required": false,
+            "type": "integer",
+            "semanticId": "lotus.degraded_metric_count",
+            "attributeRef": "#/attributeCatalog/lotus.degraded_metric_count"
+          },
+          {
+            "name": "metadata.calculation_supportability.empty_period_count",
+            "location": "body",
+            "required": false,
+            "type": "integer",
+            "semanticId": "lotus.empty_period_count",
+            "attributeRef": "#/attributeCatalog/lotus.empty_period_count"
+          },
+          {
+            "name": "metadata.calculation_supportability.evaluated_period_count",
+            "location": "body",
+            "required": false,
+            "type": "integer",
+            "semanticId": "lotus.evaluated_period_count",
+            "attributeRef": "#/attributeCatalog/lotus.evaluated_period_count"
           },
           {
             "name": "metadata.mar_annual_rate",

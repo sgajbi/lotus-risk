@@ -18,6 +18,27 @@ RiskMetric = Literal[
     "INFORMATION_RATIO",
     "VAR",
 ]
+RiskSupportabilityState = Literal[
+    "ready",
+    "stale",
+    "degraded",
+    "empty",
+    "error",
+    "permission_blocked",
+    "unsupported",
+]
+RiskSupportabilityReason = Literal[
+    "calculation_complete",
+    "benchmark_unavailable",
+    "calculation_quality_issue",
+    "insufficient_aligned_observations",
+    "insufficient_observations",
+    "no_return_observations",
+    "permission_blocked",
+    "stale_source_observations",
+    "unsupported_input_mode",
+]
+RiskFreshnessBucket = Literal["current", "same_day", "stale", "unknown"]
 
 
 class RiskInputMode(str, Enum):
@@ -512,6 +533,39 @@ class BenchmarkRequestContext(BaseModel):
     )
 
 
+class RiskCalculationSupportability(BaseModel):
+    state: RiskSupportabilityState = Field(
+        description="Bounded supportability state for the risk calculation payload.",
+        json_schema_extra={"example": "ready"},
+    )
+    reason: RiskSupportabilityReason = Field(
+        description="Bounded supportability reason that is safe for UI and operator metrics.",
+        json_schema_extra={"example": "calculation_complete"},
+    )
+    freshness_bucket: RiskFreshnessBucket = Field(
+        description="Bounded source freshness bucket based on the latest return observation.",
+        json_schema_extra={"example": "current"},
+    )
+    degraded_metric_count: int = Field(
+        default=0,
+        ge=0,
+        description="Number of requested metric results carrying deterministic error details.",
+        json_schema_extra={"example": 0},
+    )
+    empty_period_count: int = Field(
+        default=0,
+        ge=0,
+        description="Number of response periods with no portfolio observations.",
+        json_schema_extra={"example": 0},
+    )
+    evaluated_period_count: int = Field(
+        default=0,
+        ge=0,
+        description="Number of periods evaluated in this response.",
+        json_schema_extra={"example": 1},
+    )
+
+
 class RiskResponseMetadata(AuditMetadataFields):
     contract_version: str = Field(
         default="v1",
@@ -567,6 +621,24 @@ class RiskResponseMetadata(AuditMetadataFields):
             "example": {
                 "requested": True,
                 "requested_metrics": ["BETA", "TRACKING_ERROR", "INFORMATION_RATIO"],
+            }
+        },
+    )
+    calculation_supportability: RiskCalculationSupportability = Field(
+        default_factory=lambda: RiskCalculationSupportability(
+            state="ready",
+            reason="calculation_complete",
+            freshness_bucket="unknown",
+        ),
+        description="Source-backed supportability posture for UI and operator consumption.",
+        json_schema_extra={
+            "example": {
+                "state": "ready",
+                "reason": "calculation_complete",
+                "freshness_bucket": "current",
+                "degraded_metric_count": 0,
+                "empty_period_count": 0,
+                "evaluated_period_count": 1,
             }
         },
     )
