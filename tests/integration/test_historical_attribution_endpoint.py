@@ -210,10 +210,37 @@ def test_historical_attribution_stateless_happy_path() -> None:
         body["metadata"]["stateful_active_risk_gate_reason"]
         == "benchmark issuer exposure semantics unavailable"
     )
+    assert body["metadata"]["calculation_supportability"] == {
+        "state": "ready",
+        "reason": "calculation_complete",
+        "freshness_bucket": "current",
+        "degraded_metric_count": 0,
+        "empty_period_count": 0,
+        "evaluated_period_count": 1,
+    }
     assert "YTD" in body["results"]
     ytd = body["results"]["YTD"]
     assert ytd["error"] is None
     assert len(ytd["attribution_sets"]) == 4
+
+
+def test_historical_attribution_supportability_marks_empty_returns() -> None:
+    client = TestClient(app)
+    payload = _stateless_attribution_payload()
+    payload["stateless_input"]["returns"] = []  # type: ignore[index]
+    response = client.post(
+        "/analytics/risk/historical-attribution",
+        json=payload,
+    )
+    assert response.status_code == 200
+    assert response.json()["metadata"]["calculation_supportability"] == {
+        "state": "empty",
+        "reason": "no_return_observations",
+        "freshness_bucket": "unknown",
+        "degraded_metric_count": 0,
+        "empty_period_count": 0,
+        "evaluated_period_count": 0,
+    }
 
 
 def test_historical_attribution_stateful_total_risk_happy_path() -> None:

@@ -22,9 +22,12 @@ from app.contracts.drawdown import (
     RelativeDrawdownSummary,
     UnderwaterPoint,
 )
-from app.contracts.risk import RiskRequestPeriod
-from app.contracts.risk import ReturnPoint
+from app.contracts.risk import ReturnPoint, RiskCalculationSupportability, RiskRequestPeriod
 from app.services.audit_lineage import fingerprint_model
+from app.services.calculation_supportability import (
+    record_operation_supportability,
+    supportability_from_period_results,
+)
 from app.services.risk_engine import _resolve_period
 
 
@@ -198,6 +201,7 @@ def _build_metadata(
     analysis_options: DrawdownAnalysisOptions,
     include_benchmark: bool | None,
     missing_benchmark_policy: Literal["IGNORE", "REQUIRE"] | None,
+    calculation_supportability: RiskCalculationSupportability,
 ) -> DrawdownMetadata:
     return DrawdownMetadata(
         request_fingerprint=fingerprint_model(request),
@@ -209,6 +213,7 @@ def _build_metadata(
         duration_unit=analysis_options.duration_unit,
         include_benchmark=include_benchmark,
         missing_benchmark_policy=missing_benchmark_policy,
+        calculation_supportability=calculation_supportability,
     )
 
 
@@ -223,6 +228,15 @@ def calculate_drawdown(
     returns_df = _build_returns_df(request.returns)
     benchmark_df = _build_returns_df(request.benchmark_returns)
     if returns_df.empty:
+        calculation_supportability = supportability_from_period_results(
+            returns=request.returns,
+            as_of_date=request.scope.as_of_date,
+            results={},
+        )
+        record_operation_supportability(
+            operation="risk/drawdown",
+            supportability=calculation_supportability,
+        )
         return DrawdownResponse(
             input_mode=input_mode,
             scope=request.scope,
@@ -232,6 +246,7 @@ def calculate_drawdown(
                 analysis_options=analysis_options,
                 include_benchmark=include_benchmark,
                 missing_benchmark_policy=missing_benchmark_policy,
+                calculation_supportability=calculation_supportability,
             ),
         )
 
@@ -362,6 +377,15 @@ def calculate_drawdown(
             error=None,
         )
 
+    calculation_supportability = supportability_from_period_results(
+        returns=request.returns,
+        as_of_date=request.scope.as_of_date,
+        results=results,
+    )
+    record_operation_supportability(
+        operation="risk/drawdown",
+        supportability=calculation_supportability,
+    )
     return DrawdownResponse(
         input_mode=input_mode,
         scope=request.scope,
@@ -371,5 +395,6 @@ def calculate_drawdown(
             analysis_options=analysis_options,
             include_benchmark=include_benchmark,
             missing_benchmark_policy=missing_benchmark_policy,
+            calculation_supportability=calculation_supportability,
         ),
     )

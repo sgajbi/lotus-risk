@@ -21,6 +21,10 @@ from app.contracts.attribution import (
 )
 from app.contracts.risk import ReturnPoint, RiskRequestPeriod
 from app.services.audit_lineage import fingerprint_model
+from app.services.calculation_supportability import (
+    record_operation_supportability,
+    supportability_from_period_results,
+)
 from app.services.risk_engine import _resolve_period
 
 
@@ -261,6 +265,15 @@ def calculate_historical_attribution(
     benchmark_exposure_df = _exposure_df(request.benchmark_exposure_history)
 
     if returns_df.empty:
+        calculation_supportability = supportability_from_period_results(
+            returns=request.returns,
+            as_of_date=request.scope.as_of_date,
+            results={},
+        )
+        record_operation_supportability(
+            operation="risk/historical-attribution",
+            supportability=calculation_supportability,
+        )
         return HistoricalAttributionResponse(
             input_mode=input_mode,
             scope=request.scope,
@@ -273,6 +286,7 @@ def calculate_historical_attribution(
                 requested_metrics=list(request.attribution_options.metrics),
                 requested_grouping_dimensions=list(request.attribution_options.grouping_dimensions),
                 min_observations_policy=request.attribution_options.min_observations_policy,
+                calculation_supportability=calculation_supportability,
             ),
         )
 
@@ -355,6 +369,15 @@ def calculate_historical_attribution(
             error=None,
         )
 
+    calculation_supportability = supportability_from_period_results(
+        returns=request.returns,
+        as_of_date=request.scope.as_of_date,
+        results=results,
+    )
+    record_operation_supportability(
+        operation="risk/historical-attribution",
+        supportability=calculation_supportability,
+    )
     return HistoricalAttributionResponse(
         input_mode=input_mode,
         scope=request.scope,
@@ -367,5 +390,6 @@ def calculate_historical_attribution(
             requested_metrics=list(options.metrics),
             requested_grouping_dimensions=list(options.grouping_dimensions),
             min_observations_policy=options.min_observations_policy,
+            calculation_supportability=calculation_supportability,
         ),
     )

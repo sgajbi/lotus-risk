@@ -97,6 +97,14 @@ def test_rolling_metrics_endpoint_stateless_contract() -> None:
         "requested": True,
         "requested_metrics": ["ROLLING_SHARPE"],
     }
+    assert body["metadata"]["calculation_supportability"] == {
+        "state": "stale",
+        "reason": "stale_source_observations",
+        "freshness_bucket": "stale",
+        "degraded_metric_count": 0,
+        "empty_period_count": 0,
+        "evaluated_period_count": 1,
+    }
     assert "YTD" in body["results"]
     assert body["results"]["YTD"]["benchmark_series_count"] == 4
     assert body["results"]["YTD"]["aligned_benchmark_series_count"] == 4
@@ -138,6 +146,29 @@ def test_rolling_metrics_endpoint_stateless_contract() -> None:
     assert summary["non_computed_point_count"] == 2
     assert summary["post_warmup_gap_point_count"] == 0
     assert summary["latest_observation_date"] == "2026-01-05"
+
+
+def test_rolling_metrics_endpoint_supportability_marks_insufficient_period() -> None:
+    client = TestClient(app)
+    payload = _stateless_payload()
+    payload["stateless_input"]["periods"] = [  # type: ignore[index]
+        {
+            "type": "EXPLICIT",
+            "name": "SHORT",
+            "from_date": "2026-01-02",
+            "to_date": "2026-01-02",
+        }
+    ]
+    response = client.post("/analytics/risk/rolling-metrics", json=payload)
+    assert response.status_code == 200
+    assert response.json()["metadata"]["calculation_supportability"] == {
+        "state": "degraded",
+        "reason": "insufficient_observations",
+        "freshness_bucket": "stale",
+        "degraded_metric_count": 1,
+        "empty_period_count": 0,
+        "evaluated_period_count": 1,
+    }
 
 
 def test_rolling_metrics_endpoint_stateful_uses_lotus_performance() -> None:

@@ -7,7 +7,12 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.contracts.audit import AuditMetadataFields
-from app.contracts.risk import ReturnPoint, RiskRequestPeriod, RiskRequestScope
+from app.contracts.risk import (
+    ReturnPoint,
+    RiskCalculationSupportability,
+    RiskRequestPeriod,
+    RiskRequestScope,
+)
 
 
 class RollingInputMode(str, Enum):
@@ -661,6 +666,24 @@ class RollingMetadata(AuditMetadataFields):
             "example": {
                 "requested": True,
                 "requested_metrics": ["ROLLING_SHARPE"],
+            }
+        },
+    )
+    calculation_supportability: RiskCalculationSupportability = Field(
+        default_factory=lambda: RiskCalculationSupportability(
+            state="ready",
+            reason="calculation_complete",
+            freshness_bucket="unknown",
+        ),
+        description="Source-backed supportability posture for UI and operator consumption.",
+        json_schema_extra={
+            "example": {
+                "state": "ready",
+                "reason": "calculation_complete",
+                "freshness_bucket": "current",
+                "degraded_metric_count": 0,
+                "empty_period_count": 0,
+                "evaluated_period_count": 1,
             }
         },
     )
