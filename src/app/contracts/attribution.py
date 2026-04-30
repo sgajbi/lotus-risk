@@ -7,7 +7,12 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.contracts.audit import AuditMetadataFields
-from app.contracts.risk import ReturnPoint, RiskRequestPeriod, RiskRequestScope
+from app.contracts.risk import (
+    ReturnPoint,
+    RiskCalculationSupportability,
+    RiskRequestPeriod,
+    RiskRequestScope,
+)
 
 
 class AttributionInputMode(str, Enum):
@@ -525,6 +530,24 @@ class HistoricalAttributionMetadata(AuditMetadataFields):
         default="benchmark issuer exposure semantics unavailable",
         description="Deterministic reason for any gated stateful ACTIVE_RISK grouping dimensions.",
         json_schema_extra={"example": "benchmark issuer exposure semantics unavailable"},
+    )
+    calculation_supportability: RiskCalculationSupportability = Field(
+        default_factory=lambda: RiskCalculationSupportability(
+            state="ready",
+            reason="calculation_complete",
+            freshness_bucket="unknown",
+        ),
+        description="Source-backed supportability posture for UI and operator consumption.",
+        json_schema_extra={
+            "example": {
+                "state": "ready",
+                "reason": "calculation_complete",
+                "freshness_bucket": "current",
+                "degraded_metric_count": 0,
+                "empty_period_count": 0,
+                "evaluated_period_count": 1,
+            }
+        },
     )
 
 

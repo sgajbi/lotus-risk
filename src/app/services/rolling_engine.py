@@ -25,6 +25,10 @@ from app.contracts.rolling import (
 )
 from app.contracts.risk import ReturnPoint, RiskRequestPeriod
 from app.services.audit_lineage import fingerprint_model
+from app.services.calculation_supportability import (
+    record_operation_supportability,
+    supportability_from_period_results,
+)
 from app.services.risk_engine import _resolve_period
 
 
@@ -343,6 +347,15 @@ def calculate_rolling_metrics(
     risk_free_df = _build_returns_df(request.risk_free_returns)
 
     if portfolio_df.empty:
+        calculation_supportability = supportability_from_period_results(
+            returns=request.returns,
+            as_of_date=request.scope.as_of_date,
+            results={},
+        )
+        record_operation_supportability(
+            operation="risk/rolling-metrics",
+            supportability=calculation_supportability,
+        )
         return RollingResponse(
             input_mode=input_mode,
             scope=request.scope,
@@ -364,6 +377,7 @@ def calculate_rolling_metrics(
                     request.rolling_options.metrics,
                     {ROLLING_SHARPE_METRIC},
                 ),
+                calculation_supportability=calculation_supportability,
             ),
         )
 
@@ -520,6 +534,15 @@ def calculate_rolling_metrics(
             error=None,
         )
 
+    calculation_supportability = supportability_from_period_results(
+        returns=request.returns,
+        as_of_date=request.scope.as_of_date,
+        results=results,
+    )
+    record_operation_supportability(
+        operation="risk/rolling-metrics",
+        supportability=calculation_supportability,
+    )
     return RollingResponse(
         input_mode=input_mode,
         scope=request.scope,
@@ -541,5 +564,6 @@ def calculate_rolling_metrics(
                 requested_metrics,
                 {ROLLING_SHARPE_METRIC},
             ),
+            calculation_supportability=calculation_supportability,
         ),
     )

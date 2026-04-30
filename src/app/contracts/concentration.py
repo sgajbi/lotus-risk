@@ -6,6 +6,7 @@ from enum import Enum
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.contracts.audit import AuditMetadataFields
+from app.contracts.risk import RiskCalculationSupportability
 
 
 class ConcentrationInputMode(str, Enum):
@@ -684,6 +685,24 @@ class ConcentrationMetadata(AuditMetadataFields):
         default=None,
         description="Whether zero-quantity positions were included in the evaluated concentration universe.",
         json_schema_extra={"example": False},
+    )
+    calculation_supportability: RiskCalculationSupportability = Field(
+        default_factory=lambda: RiskCalculationSupportability(
+            state="ready",
+            reason="calculation_complete",
+            freshness_bucket="unknown",
+        ),
+        description="Source-backed supportability posture for UI and operator consumption.",
+        json_schema_extra={
+            "example": {
+                "state": "ready",
+                "reason": "calculation_complete",
+                "freshness_bucket": "unknown",
+                "degraded_metric_count": 0,
+                "empty_period_count": 0,
+                "evaluated_period_count": 1,
+            }
+        },
     )
 
 

@@ -28,6 +28,10 @@ from app.services.audit_lineage import (
     ordered_source_services,
     upstream_request_fingerprint,
 )
+from app.services.calculation_supportability import (
+    record_operation_supportability,
+    supportability_from_concentration_response,
+)
 
 SERVICE_NAME = "lotus-risk"
 _ROUND_PRECISION = 6
@@ -363,6 +367,19 @@ def _build_response(payload: ConcentrationComputationInput) -> ConcentrationResp
             or payload.covered_position_count_proposed > 0
         ):
             coverage_status = IssuerCoverageStatus.PARTIAL
+    calculation_supportability = supportability_from_concentration_response(
+        covered_position_count_current=payload.covered_position_count_current,
+        covered_position_count_proposed=payload.covered_position_count_proposed,
+        total_position_count_current=payload.total_position_count_current,
+        total_position_count_proposed=payload.total_position_count_proposed,
+        issuer_note=payload.issuer_note,
+    )
+    if payload.metadata is not None:
+        payload.metadata.calculation_supportability = calculation_supportability
+    record_operation_supportability(
+        operation="risk/concentration",
+        supportability=calculation_supportability,
+    )
 
     return ConcentrationResponse(
         source_service=SERVICE_NAME,

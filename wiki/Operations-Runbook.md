@@ -71,10 +71,11 @@ Use:
 4. `docs/operations/canonical-local-upstream-urls.md`
 5. `docs/operations/live-risk-validation-matrix.md`
 
-For `POST /analytics/risk/calculate`, response metadata includes
-`metadata.calculation_supportability`. Use it before inferring UI state from individual metric
-values. It reports bounded `ready`, `stale`, `degraded`, or `empty` posture, a bounded reason, and a
-freshness bucket. The matching Prometheus counter is
+For risk analytics responses, `metadata.calculation_supportability` is emitted by `risk/calculate`,
+drawdown, rolling metrics, historical attribution, and concentration. Use it before inferring UI
+state from individual metric values, period errors, issuer coverage, or stale returns. It reports
+bounded `ready`, `stale`, `degraded`, or `empty` posture, a bounded reason, and a freshness bucket.
+The matching Prometheus counter is
 `lotus_risk_calculation_supportability_total` with only bounded labels: `operation`,
 `supportability_state`, `reason`, and `freshness_bucket`.
 

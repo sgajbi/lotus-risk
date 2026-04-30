@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-04-29T08:51:34.345691+00:00",
+  "generatedAt": "2026-04-30T06:24:23.286167+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.alignment_policy",
@@ -514,7 +514,7 @@
       "semanticId": "lotus.degraded_metric_count",
       "canonicalTerm": "degraded_metric_count",
       "preferredName": "degraded_metric_count",
-      "description": "Number of requested metric results carrying deterministic error details.",
+      "description": "Number of requested metric or period results carrying deterministic error details.",
       "example": 0,
       "type": "integer",
       "locations": [
@@ -1369,8 +1369,8 @@
       "semanticId": "lotus.reason",
       "canonicalTerm": "reason",
       "preferredName": "reason",
-      "description": "Deterministic explanation of how risk-free configuration affected this response.",
-      "example": "ANNUAL_RATE_APPLIED",
+      "description": "Bounded supportability reason that is safe for UI and operator metrics.",
+      "example": "calculation_complete",
       "type": "string",
       "locations": [
         "body"
@@ -3561,6 +3561,62 @@
             "type": "string",
             "semanticId": "lotus.stateful_active_risk_gate_reason",
             "attributeRef": "#/attributeCatalog/lotus.stateful_active_risk_gate_reason"
+          },
+          {
+            "name": "metadata.calculation_supportability",
+            "location": "body",
+            "required": false,
+            "type": "RiskCalculationSupportability",
+            "semanticId": "lotus.calculation_supportability",
+            "attributeRef": "#/attributeCatalog/lotus.calculation_supportability"
+          },
+          {
+            "name": "metadata.calculation_supportability.state",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.state",
+            "attributeRef": "#/attributeCatalog/lotus.state"
+          },
+          {
+            "name": "metadata.calculation_supportability.reason",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.reason",
+            "attributeRef": "#/attributeCatalog/lotus.reason"
+          },
+          {
+            "name": "metadata.calculation_supportability.freshness_bucket",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.freshness_bucket",
+            "attributeRef": "#/attributeCatalog/lotus.freshness_bucket"
+          },
+          {
+            "name": "metadata.calculation_supportability.degraded_metric_count",
+            "location": "body",
+            "required": false,
+            "type": "integer",
+            "semanticId": "lotus.degraded_metric_count",
+            "attributeRef": "#/attributeCatalog/lotus.degraded_metric_count"
+          },
+          {
+            "name": "metadata.calculation_supportability.empty_period_count",
+            "location": "body",
+            "required": false,
+            "type": "integer",
+            "semanticId": "lotus.empty_period_count",
+            "attributeRef": "#/attributeCatalog/lotus.empty_period_count"
+          },
+          {
+            "name": "metadata.calculation_supportability.evaluated_period_count",
+            "location": "body",
+            "required": false,
+            "type": "integer",
+            "semanticId": "lotus.evaluated_period_count",
+            "attributeRef": "#/attributeCatalog/lotus.evaluated_period_count"
           }
         ]
       }
@@ -4311,6 +4367,62 @@
             "type": "object",
             "semanticId": "lotus.missing_benchmark_policy",
             "attributeRef": "#/attributeCatalog/lotus.missing_benchmark_policy"
+          },
+          {
+            "name": "metadata.calculation_supportability",
+            "location": "body",
+            "required": false,
+            "type": "RiskCalculationSupportability",
+            "semanticId": "lotus.calculation_supportability",
+            "attributeRef": "#/attributeCatalog/lotus.calculation_supportability"
+          },
+          {
+            "name": "metadata.calculation_supportability.state",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.state",
+            "attributeRef": "#/attributeCatalog/lotus.state"
+          },
+          {
+            "name": "metadata.calculation_supportability.reason",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.reason",
+            "attributeRef": "#/attributeCatalog/lotus.reason"
+          },
+          {
+            "name": "metadata.calculation_supportability.freshness_bucket",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.freshness_bucket",
+            "attributeRef": "#/attributeCatalog/lotus.freshness_bucket"
+          },
+          {
+            "name": "metadata.calculation_supportability.degraded_metric_count",
+            "location": "body",
+            "required": false,
+            "type": "integer",
+            "semanticId": "lotus.degraded_metric_count",
+            "attributeRef": "#/attributeCatalog/lotus.degraded_metric_count"
+          },
+          {
+            "name": "metadata.calculation_supportability.empty_period_count",
+            "location": "body",
+            "required": false,
+            "type": "integer",
+            "semanticId": "lotus.empty_period_count",
+            "attributeRef": "#/attributeCatalog/lotus.empty_period_count"
+          },
+          {
+            "name": "metadata.calculation_supportability.evaluated_period_count",
+            "location": "body",
+            "required": false,
+            "type": "integer",
+            "semanticId": "lotus.evaluated_period_count",
+            "attributeRef": "#/attributeCatalog/lotus.evaluated_period_count"
           }
         ]
       }
@@ -4566,6 +4678,62 @@
             "type": "array",
             "semanticId": "lotus.requested_metrics",
             "attributeRef": "#/attributeCatalog/lotus.requested_metrics"
+          },
+          {
+            "name": "metadata.calculation_supportability",
+            "location": "body",
+            "required": false,
+            "type": "RiskCalculationSupportability",
+            "semanticId": "lotus.calculation_supportability",
+            "attributeRef": "#/attributeCatalog/lotus.calculation_supportability"
+          },
+          {
+            "name": "metadata.calculation_supportability.state",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.state",
+            "attributeRef": "#/attributeCatalog/lotus.state"
+          },
+          {
+            "name": "metadata.calculation_supportability.reason",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.reason",
+            "attributeRef": "#/attributeCatalog/lotus.reason"
+          },
+          {
+            "name": "metadata.calculation_supportability.freshness_bucket",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.freshness_bucket",
+            "attributeRef": "#/attributeCatalog/lotus.freshness_bucket"
+          },
+          {
+            "name": "metadata.calculation_supportability.degraded_metric_count",
+            "location": "body",
+            "required": false,
+            "type": "integer",
+            "semanticId": "lotus.degraded_metric_count",
+            "attributeRef": "#/attributeCatalog/lotus.degraded_metric_count"
+          },
+          {
+            "name": "metadata.calculation_supportability.empty_period_count",
+            "location": "body",
+            "required": false,
+            "type": "integer",
+            "semanticId": "lotus.empty_period_count",
+            "attributeRef": "#/attributeCatalog/lotus.empty_period_count"
+          },
+          {
+            "name": "metadata.calculation_supportability.evaluated_period_count",
+            "location": "body",
+            "required": false,
+            "type": "integer",
+            "semanticId": "lotus.evaluated_period_count",
+            "attributeRef": "#/attributeCatalog/lotus.evaluated_period_count"
           }
         ]
       }

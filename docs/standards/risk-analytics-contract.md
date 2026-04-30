@@ -55,7 +55,9 @@
 - `details.error: "Benchmark returns required for benchmark-dependent metric"`
 
 ## Calculation Supportability
-- `POST /analytics/risk/calculate` emits `metadata.calculation_supportability`.
+- `POST /analytics/risk/calculate`, `POST /analytics/risk/drawdown`,
+  `POST /analytics/risk/rolling-metrics`, `POST /analytics/risk/historical-attribution`, and
+  `POST /analytics/risk/concentration` emit `metadata.calculation_supportability`.
 - Supported states: `ready`, `stale`, `degraded`, `empty`, `error`, `permission_blocked`, `unsupported`.
 - Supported freshness buckets: `current`, `same_day`, `stale`, `unknown`.
 - Supported reasons include `calculation_complete`, `benchmark_unavailable`, `calculation_quality_issue`,
@@ -65,6 +67,9 @@
   bounded labels only: `operation`, `supportability_state`, `reason`, and `freshness_bucket`.
 - Metrics and response metadata must not expose portfolio, client, account, position, transaction,
   trace, correlation, or raw request identifiers.
+- Endpoint-specific supportability must be source-backed: return-series endpoints derive freshness
+  and empty/degraded posture from period results, while concentration derives degraded posture from
+  issuer coverage and empty universe support.
 
 ## Risk Calculate Mode Support
 - `stateless`: caller supplies full return series.

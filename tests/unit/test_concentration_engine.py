@@ -107,6 +107,14 @@ async def test_calculate_concentration_stateless_uses_projected_values_when_prov
         "enrichment_policy": "merge_caller_then_core",
         "include_cash_positions": None,
         "include_zero_quantity_positions": None,
+        "calculation_supportability": {
+            "state": "ready",
+            "reason": "calculation_complete",
+            "freshness_bucket": "unknown",
+            "degraded_metric_count": 0,
+            "empty_period_count": 0,
+            "evaluated_period_count": 1,
+        },
     }
 
 
@@ -137,3 +145,11 @@ async def test_calculate_concentration_falls_back_to_current_when_no_projected()
     assert response["issuer_concentration"]["uncovered_position_count_proposed"] == 1
     assert response["metadata"]["issuer_grouping_level"] == "ultimate_parent"
     assert response["metadata"]["enrichment_policy"] == "merge_caller_then_core"
+    assert response["metadata"]["calculation_supportability"] == {
+        "state": "degraded",
+        "reason": "calculation_quality_issue",
+        "freshness_bucket": "unknown",
+        "degraded_metric_count": 1,
+        "empty_period_count": 0,
+        "evaluated_period_count": 1,
+    }

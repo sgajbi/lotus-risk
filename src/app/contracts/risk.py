@@ -549,7 +549,9 @@ class RiskCalculationSupportability(BaseModel):
     degraded_metric_count: int = Field(
         default=0,
         ge=0,
-        description="Number of requested metric results carrying deterministic error details.",
+        description=(
+            "Number of requested metric or period results carrying deterministic error details."
+        ),
         json_schema_extra={"example": 0},
     )
     empty_period_count: int = Field(

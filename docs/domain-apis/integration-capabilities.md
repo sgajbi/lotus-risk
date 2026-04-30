@@ -82,10 +82,11 @@ This allows consumers to discover that:
   - vocabulary is centralized in constants to reduce drift.
   - workflow-level mode support is explicit enough for gateway and Workbench surfaces to avoid
     unsupported simulation and issuer active-risk affordances.
-  - risk calculation supportability is implementation-backed by
-    `metadata.calculation_supportability` and
-    `lotus_risk_calculation_supportability_total`, so downstream consumers can distinguish ready,
-    stale, degraded, and empty risk results without inspecting sensitive request context.
+  - risk calculation supportability is implementation-backed across `risk/calculate`, drawdown,
+    rolling metrics, historical attribution, and concentration through
+    `metadata.calculation_supportability` and `lotus_risk_calculation_supportability_total`, so
+    downstream consumers can distinguish ready, stale, degraded, and empty risk results without
+    inspecting sensitive request context.
 - Gaps:
   - endpoint remains globally published and does not expose consumer- or tenant-shaped query controls.
   - some downstream callers still send advisory query params for cross-service parity; that drift should

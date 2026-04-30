@@ -49,6 +49,14 @@ def test_drawdown_endpoint_stateless_contract() -> None:
     assert body["metadata"]["include_episode_list"] is True
     assert body["metadata"]["include_benchmark"] is False
     assert body["metadata"]["missing_benchmark_policy"] == "IGNORE"
+    assert body["metadata"]["calculation_supportability"] == {
+        "state": "ready",
+        "reason": "calculation_complete",
+        "freshness_bucket": "current",
+        "degraded_metric_count": 0,
+        "empty_period_count": 0,
+        "evaluated_period_count": 1,
+    }
 
 
 def test_drawdown_endpoint_stateful_uses_lotus_performance() -> None:
@@ -118,6 +126,37 @@ def test_drawdown_endpoint_marks_benchmark_unavailable_when_requested_without_se
         "applied": False,
         "reason": "BENCHMARK_UNAVAILABLE",
         "aligned_observation_count": 0,
+    }
+    assert response.json()["metadata"]["calculation_supportability"] == {
+        "state": "degraded",
+        "reason": "benchmark_unavailable",
+        "freshness_bucket": "current",
+        "degraded_metric_count": 1,
+        "empty_period_count": 0,
+        "evaluated_period_count": 1,
+    }
+
+
+def test_drawdown_endpoint_supportability_marks_empty_periods() -> None:
+    client = TestClient(app)
+    payload = _stateless_payload()
+    payload["stateless_input"]["periods"] = [  # type: ignore[index]
+        {
+            "type": "EXPLICIT",
+            "name": "EMPTY",
+            "from_date": "2025-12-01",
+            "to_date": "2025-12-31",
+        }
+    ]
+    response = client.post("/analytics/risk/drawdown", json=payload)
+    assert response.status_code == 200
+    assert response.json()["metadata"]["calculation_supportability"] == {
+        "state": "degraded",
+        "reason": "insufficient_observations",
+        "freshness_bucket": "current",
+        "degraded_metric_count": 1,
+        "empty_period_count": 1,
+        "evaluated_period_count": 1,
     }
 
 
