@@ -54,6 +54,11 @@ def test_metrics_expose_endpoint_execution_mode_and_outcome() -> None:
     assert 'supportability_state="stale"' in metrics
     assert 'reason="stale_source_observations"' in metrics
     assert 'freshness_bucket="stale"' in metrics
+    assert "lotus_analytics_freshness_bucket_total" in metrics
+    assert (
+        'lotus_analytics_freshness_bucket_total{freshness_bucket="stale",'
+        'operation="risk/calculate",service="lotus-risk",supportability_state="stale"}'
+    ) in metrics
 
 
 def test_metrics_expose_stateful_endpoint_execution_mode() -> None:

@@ -42,6 +42,7 @@ from deterministic upstream error classification, for example:
 | Metric | Labels | Meaning |
 | --- | --- | --- |
 | `lotus_risk_calculation_supportability_total` | `operation`, `supportability_state`, `reason`, `freshness_bucket` | Count of risk calculation supportability outcomes using the same bounded posture emitted in `metadata.calculation_supportability`. |
+| `lotus_analytics_freshness_bucket_total` | `service`, `operation`, `freshness_bucket`, `supportability_state` | RFC-0108 cross-service backend freshness counter emitted from the same source-owned supportability posture. |
 
 The supported states are `ready`, `stale`, `degraded`, `empty`, `error`, `permission_blocked`, and
 `unsupported`. Implemented operations are `risk/calculate`, `risk/drawdown`,
