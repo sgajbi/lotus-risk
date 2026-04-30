@@ -44,13 +44,14 @@ from deterministic upstream error classification, for example:
 | `lotus_risk_calculation_supportability_total` | `operation`, `supportability_state`, `reason`, `freshness_bucket` | Count of risk calculation supportability outcomes using the same bounded posture emitted in `metadata.calculation_supportability`. |
 
 The supported states are `ready`, `stale`, `degraded`, `empty`, `error`, `permission_blocked`, and
-`unsupported`. The first implemented Slice 12 operation is `risk/calculate`; the labels are bounded
-and intentionally exclude portfolio, client, account, position, transaction, trace, correlation, and
-request identifiers.
+`unsupported`. Implemented operations are `risk/calculate`, `risk/drawdown`,
+`risk/rolling-metrics`, `risk/historical-attribution`, and `risk/concentration`; the labels are
+bounded and intentionally exclude portfolio, client, account, position, transaction, trace,
+correlation, and request identifiers.
 
-The calculation response now includes `metadata.calculation_supportability` so Gateway and
-Workbench can consume source-backed supportability posture without inferring it from individual
-metric errors. Current reason values include:
+The analytics responses include `metadata.calculation_supportability` so Gateway and Workbench can
+consume source-backed supportability posture without inferring it from individual metric errors,
+period errors, issuer coverage, or return-series recency. Current reason values include:
 
 1. `calculation_complete`,
 2. `benchmark_unavailable`,

@@ -72,6 +72,10 @@ Boundary rules:
 4. supportability and evidence posture should remain truthful and data-backed,
 5. downstream consumers must preserve signed VaR semantics, attribution reconciliation fields, issuer active-risk gating, concentration-only simulation support, and audit lineage metadata as documented in `docs/domain-apis/risk-product-surface-alignment.md`,
 6. `lotus-core` must be consumed as a governed source-data, analytics-input, snapshot/simulation, and support-metadata authority, while `lotus-performance` remains the authority for performance return and benchmark exposure context inputs.
+7. RFC-0108 calculation supportability is source-owned in this repository across `risk/calculate`,
+   drawdown, rolling metrics, historical attribution, and concentration through
+   `metadata.calculation_supportability` plus bounded
+   `lotus_risk_calculation_supportability_total` labels.
 
 Canonical direct local validation ports:
 
