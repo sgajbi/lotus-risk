@@ -30,6 +30,11 @@ CALCULATION_SUPPORTABILITY_TOTAL = Counter(
     "Risk calculation supportability posture by bounded operation, state, reason, and freshness bucket.",
     ["operation", "supportability_state", "reason", "freshness_bucket"],
 )
+ANALYTICS_FRESHNESS_BUCKET_TOTAL = Counter(
+    "lotus_analytics_freshness_bucket_total",
+    "Backend analytics freshness and supportability posture by service, operation, and bounded freshness bucket.",
+    ["service", "operation", "freshness_bucket", "supportability_state"],
+)
 
 
 def observation_start() -> float:
@@ -91,4 +96,18 @@ def record_calculation_supportability(
         supportability_state=supportability_state,
         reason=reason,
         freshness_bucket=freshness_bucket,
+    ).inc()
+
+
+def record_analytics_freshness_bucket(
+    *,
+    operation: str,
+    freshness_bucket: str,
+    supportability_state: str,
+) -> None:
+    ANALYTICS_FRESHNESS_BUCKET_TOTAL.labels(
+        service="lotus-risk",
+        operation=operation,
+        freshness_bucket=freshness_bucket,
+        supportability_state=supportability_state,
     ).inc()
