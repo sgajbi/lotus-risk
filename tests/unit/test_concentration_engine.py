@@ -1,4 +1,5 @@
 from app.contracts.concentration import ConcentrationRequest
+from app.observability_contracts import RISK_CALCULATION_SUPPORTABILITY_METRIC_LABELS
 from app.services.concentration_engine import _compute_hhi, calculate_concentration
 import pytest
 from pydantic import ValidationError
@@ -111,6 +112,7 @@ async def test_calculate_concentration_stateless_uses_projected_values_when_prov
             "state": "ready",
             "reason": "calculation_complete",
             "freshness_bucket": "unknown",
+            "metric_labels": RISK_CALCULATION_SUPPORTABILITY_METRIC_LABELS,
             "degraded_metric_count": 0,
             "empty_period_count": 0,
             "evaluated_period_count": 1,
@@ -149,6 +151,7 @@ async def test_calculate_concentration_falls_back_to_current_when_no_projected()
         "state": "degraded",
         "reason": "calculation_quality_issue",
         "freshness_bucket": "unknown",
+        "metric_labels": RISK_CALCULATION_SUPPORTABILITY_METRIC_LABELS,
         "degraded_metric_count": 1,
         "empty_period_count": 0,
         "evaluated_period_count": 1,

@@ -75,7 +75,10 @@ Boundary rules:
 7. RFC-0108 calculation supportability is source-owned in this repository across `risk/calculate`,
    drawdown, rolling metrics, historical attribution, and concentration through
    `metadata.calculation_supportability` plus bounded
-   `lotus_risk_calculation_supportability_total` labels.
+   `lotus_risk_calculation_supportability_total` labels. The supportability contract publishes
+   explicit `metric_labels`, and tests prove the Prometheus labels remain bounded to `operation`,
+   `supportability_state`, `reason`, and `freshness_bucket` without portfolio, client,
+   correlation, trace, security, request-body, or response-body label fields.
 
 Canonical direct local validation ports:
 

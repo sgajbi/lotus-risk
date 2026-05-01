@@ -41,18 +41,23 @@ from deterministic upstream error classification, for example:
 
 | Metric | Labels | Meaning |
 | --- | --- | --- |
-| `lotus_risk_calculation_supportability_total` | `operation`, `supportability_state`, `reason`, `freshness_bucket` | Count of risk calculation supportability outcomes using the same bounded posture emitted in `metadata.calculation_supportability`. |
+| `lotus_risk_calculation_supportability_total` | `operation`, `supportability_state`, `reason`, `freshness_bucket` | Count of risk calculation supportability outcomes using the same bounded posture emitted in `metadata.calculation_supportability.metric_labels`. |
 | `lotus_analytics_freshness_bucket_total` | `service`, `operation`, `freshness_bucket`, `supportability_state` | RFC-0108 cross-service backend freshness counter emitted from the same source-owned supportability posture. |
 
 The supported states are `ready`, `stale`, `degraded`, `empty`, `error`, `permission_blocked`, and
 `unsupported`. Implemented operations are `risk/calculate`, `risk/drawdown`,
 `risk/rolling-metrics`, `risk/historical-attribution`, and `risk/concentration`; the labels are
-bounded and intentionally exclude portfolio, client, account, position, transaction, trace,
-correlation, and request identifiers.
+bounded and intentionally exclude portfolio, client, account, position, transaction, security,
+trace, correlation, request-body, and response-body identifiers.
 
 The analytics responses include `metadata.calculation_supportability` so Gateway and Workbench can
 consume source-backed supportability posture without inferring it from individual metric errors,
 period errors, issuer coverage, or return-series recency. Current reason values include:
+
+The same block includes `metric_labels`. It is the implementation-backed operator contract for
+`lotus_risk_calculation_supportability_total`; identifiers, correlation or trace values, security
+or transaction identifiers, and request or response payload fields are explicitly excluded from
+metric labels.
 
 1. `calculation_complete`,
 2. `benchmark_unavailable`,

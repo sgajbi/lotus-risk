@@ -2,6 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.observability_contracts import RISK_CALCULATION_SUPPORTABILITY_METRIC_LABELS
 from app.upstream_errors import UpstreamServiceError
 from tests.support.app_runtime import override_app_runtime
 from tests.support.historical_attribution_fakes import (
@@ -10,6 +11,8 @@ from tests.support.historical_attribution_fakes import (
     build_sector_position_timeseries_rows,
     build_stateful_attribution_returns_client,
 )
+
+_EXPECTED_SUPPORTABILITY_METRIC_LABELS = list(RISK_CALCULATION_SUPPORTABILITY_METRIC_LABELS)
 
 
 def _stateless_attribution_payload() -> dict[str, object]:
@@ -214,6 +217,7 @@ def test_historical_attribution_stateless_happy_path() -> None:
         "state": "ready",
         "reason": "calculation_complete",
         "freshness_bucket": "current",
+        "metric_labels": _EXPECTED_SUPPORTABILITY_METRIC_LABELS,
         "degraded_metric_count": 0,
         "empty_period_count": 0,
         "evaluated_period_count": 1,
@@ -237,6 +241,7 @@ def test_historical_attribution_supportability_marks_empty_returns() -> None:
         "state": "empty",
         "reason": "no_return_observations",
         "freshness_bucket": "unknown",
+        "metric_labels": _EXPECTED_SUPPORTABILITY_METRIC_LABELS,
         "degraded_metric_count": 0,
         "empty_period_count": 0,
         "evaluated_period_count": 0,

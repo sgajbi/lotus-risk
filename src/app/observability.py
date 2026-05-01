@@ -4,6 +4,10 @@ from time import perf_counter
 
 from prometheus_client import Counter, Histogram
 
+from app.observability_contracts import (
+    RISK_ANALYTICS_FRESHNESS_METRIC_LABELS,
+    RISK_CALCULATION_SUPPORTABILITY_METRIC_LABELS,
+)
 
 ENDPOINT_EXECUTIONS_TOTAL = Counter(
     "lotus_risk_endpoint_executions_total",
@@ -28,12 +32,12 @@ UPSTREAM_REQUEST_SECONDS = Histogram(
 CALCULATION_SUPPORTABILITY_TOTAL = Counter(
     "lotus_risk_calculation_supportability_total",
     "Risk calculation supportability posture by bounded operation, state, reason, and freshness bucket.",
-    ["operation", "supportability_state", "reason", "freshness_bucket"],
+    RISK_CALCULATION_SUPPORTABILITY_METRIC_LABELS,
 )
 ANALYTICS_FRESHNESS_BUCKET_TOTAL = Counter(
     "lotus_analytics_freshness_bucket_total",
     "Backend analytics freshness and supportability posture by service, operation, and bounded freshness bucket.",
-    ["service", "operation", "freshness_bucket", "supportability_state"],
+    RISK_ANALYTICS_FRESHNESS_METRIC_LABELS,
 )
 
 
