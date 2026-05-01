@@ -102,6 +102,8 @@
       `insufficient_aligned_observations`, `insufficient_observations`,
       `no_return_observations`, or `stale_source_observations`
     - `freshness_bucket`: `current`, `same_day`, `stale`, or `unknown`
+    - `metric_labels`: bounded Prometheus label keys for
+      `lotus_risk_calculation_supportability_total`
     - `degraded_metric_count`, `empty_period_count`, `evaluated_period_count`
 - `results` map keyed by period name/type:
   - `start_date`
@@ -127,7 +129,10 @@
 - Cross-service integration posture: integrated with `lotus-performance` for stateful return sourcing.
 - Naming/vocabulary: aligned with canonical `client_id` naming and RFC-0067 guardrails.
 - Supportability posture: implemented for `risk/calculate` and mirrored in bounded Prometheus
-  metric labels through `lotus_risk_calculation_supportability_total`.
+  metric labels through `lotus_risk_calculation_supportability_total`. The metric labels are
+  limited to `operation`, `supportability_state`, `reason`, and `freshness_bucket`; portfolio,
+  client, trace, correlation, security, transaction, request-body, and response-body values must
+  not be labels.
 
 ## Gaps and Decisions Required
 

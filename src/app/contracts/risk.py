@@ -7,6 +7,7 @@ from typing import Any, ClassVar, Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.contracts.audit import AuditMetadataFields
+from app.observability_contracts import RISK_CALCULATION_SUPPORTABILITY_METRIC_LABELS
 
 RiskMetric = Literal[
     "VOLATILITY",
@@ -545,6 +546,23 @@ class RiskCalculationSupportability(BaseModel):
     freshness_bucket: RiskFreshnessBucket = Field(
         description="Bounded source freshness bucket based on the latest return observation.",
         json_schema_extra={"example": "current"},
+    )
+    metric_labels: tuple[str, ...] = Field(
+        default=RISK_CALCULATION_SUPPORTABILITY_METRIC_LABELS,
+        description=(
+            "Bounded Prometheus label keys emitted by "
+            "lotus_risk_calculation_supportability_total. Identifiers, trace or "
+            "correlation values, and request or response payload fields must not be "
+            "metric labels."
+        ),
+        json_schema_extra={
+            "example": [
+                "operation",
+                "supportability_state",
+                "reason",
+                "freshness_bucket",
+            ]
+        },
     )
     degraded_metric_count: int = Field(
         default=0,

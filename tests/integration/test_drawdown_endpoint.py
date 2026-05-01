@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.observability_contracts import RISK_CALCULATION_SUPPORTABILITY_METRIC_LABELS
 from tests.support.app_runtime import override_app_runtime
 from tests.support.lotus_performance_fakes import (
     RecordingLotusPerformanceClient,
@@ -17,6 +18,7 @@ _AutoWiredLotusPerformanceClient = build_autowired_lotus_performance_client_clas
         portfolio_returns=JAN_2026_PORTFOLIO_RETURNS[:2],
     )
 )
+_EXPECTED_SUPPORTABILITY_METRIC_LABELS = list(RISK_CALCULATION_SUPPORTABILITY_METRIC_LABELS)
 
 
 def _stateless_payload() -> dict[str, object]:
@@ -53,6 +55,7 @@ def test_drawdown_endpoint_stateless_contract() -> None:
         "state": "ready",
         "reason": "calculation_complete",
         "freshness_bucket": "current",
+        "metric_labels": _EXPECTED_SUPPORTABILITY_METRIC_LABELS,
         "degraded_metric_count": 0,
         "empty_period_count": 0,
         "evaluated_period_count": 1,
@@ -131,6 +134,7 @@ def test_drawdown_endpoint_marks_benchmark_unavailable_when_requested_without_se
         "state": "degraded",
         "reason": "benchmark_unavailable",
         "freshness_bucket": "current",
+        "metric_labels": _EXPECTED_SUPPORTABILITY_METRIC_LABELS,
         "degraded_metric_count": 1,
         "empty_period_count": 0,
         "evaluated_period_count": 1,
@@ -154,6 +158,7 @@ def test_drawdown_endpoint_supportability_marks_empty_periods() -> None:
         "state": "degraded",
         "reason": "insufficient_observations",
         "freshness_bucket": "current",
+        "metric_labels": _EXPECTED_SUPPORTABILITY_METRIC_LABELS,
         "degraded_metric_count": 1,
         "empty_period_count": 1,
         "evaluated_period_count": 1,

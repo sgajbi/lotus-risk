@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-04-30T06:24:23.286167+00:00",
+  "generatedAt": "2026-05-01T12:41:21.413246+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.alignment_policy",
@@ -1064,6 +1064,25 @@
       ],
       "observedTypes": [
         "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.metric_labels",
+      "canonicalTerm": "metric_labels",
+      "preferredName": "metric_labels",
+      "description": "Bounded Prometheus label keys emitted by lotus_risk_calculation_supportability_total. Identifiers, trace or correlation values, and request or response payload fields must not be metric labels.",
+      "example": [
+        "operation",
+        "supportability_state",
+        "reason",
+        "freshness_bucket"
+      ],
+      "type": "array",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "array"
       ]
     },
     {
@@ -3595,6 +3614,14 @@
             "attributeRef": "#/attributeCatalog/lotus.freshness_bucket"
           },
           {
+            "name": "metadata.calculation_supportability.metric_labels",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.metric_labels",
+            "attributeRef": "#/attributeCatalog/lotus.metric_labels"
+          },
+          {
             "name": "metadata.calculation_supportability.degraded_metric_count",
             "location": "body",
             "required": false,
@@ -4401,6 +4428,14 @@
             "attributeRef": "#/attributeCatalog/lotus.freshness_bucket"
           },
           {
+            "name": "metadata.calculation_supportability.metric_labels",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.metric_labels",
+            "attributeRef": "#/attributeCatalog/lotus.metric_labels"
+          },
+          {
             "name": "metadata.calculation_supportability.degraded_metric_count",
             "location": "body",
             "required": false,
@@ -4712,6 +4747,14 @@
             "attributeRef": "#/attributeCatalog/lotus.freshness_bucket"
           },
           {
+            "name": "metadata.calculation_supportability.metric_labels",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.metric_labels",
+            "attributeRef": "#/attributeCatalog/lotus.metric_labels"
+          },
+          {
             "name": "metadata.calculation_supportability.degraded_metric_count",
             "location": "body",
             "required": false,
@@ -5005,6 +5048,14 @@
             "type": "string",
             "semanticId": "lotus.freshness_bucket",
             "attributeRef": "#/attributeCatalog/lotus.freshness_bucket"
+          },
+          {
+            "name": "metadata.calculation_supportability.metric_labels",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.metric_labels",
+            "attributeRef": "#/attributeCatalog/lotus.metric_labels"
           },
           {
             "name": "metadata.calculation_supportability.degraded_metric_count",

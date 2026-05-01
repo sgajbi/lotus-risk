@@ -4,6 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.observability_contracts import RISK_CALCULATION_SUPPORTABILITY_METRIC_LABELS
 from tests.support.app_runtime import override_app_runtime
 from tests.support.lotus_core_fakes import RecordingLotusCoreReferenceClient
 from tests.support.lotus_performance_fakes import (
@@ -23,6 +24,7 @@ _AutoWiredLotusPerformanceClient = build_autowired_lotus_performance_client_clas
         benchmark_returns=JAN_2026_ROLLING_BENCHMARK_RETURNS,
     )
 )
+_EXPECTED_SUPPORTABILITY_METRIC_LABELS = list(RISK_CALCULATION_SUPPORTABILITY_METRIC_LABELS)
 
 
 def _stateless_payload() -> dict[str, object]:
@@ -101,6 +103,7 @@ def test_rolling_metrics_endpoint_stateless_contract() -> None:
         "state": "stale",
         "reason": "stale_source_observations",
         "freshness_bucket": "stale",
+        "metric_labels": _EXPECTED_SUPPORTABILITY_METRIC_LABELS,
         "degraded_metric_count": 0,
         "empty_period_count": 0,
         "evaluated_period_count": 1,
@@ -165,6 +168,7 @@ def test_rolling_metrics_endpoint_supportability_marks_insufficient_period() -> 
         "state": "degraded",
         "reason": "insufficient_observations",
         "freshness_bucket": "stale",
+        "metric_labels": _EXPECTED_SUPPORTABILITY_METRIC_LABELS,
         "degraded_metric_count": 1,
         "empty_period_count": 0,
         "evaluated_period_count": 1,

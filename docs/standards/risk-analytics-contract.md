@@ -65,8 +65,10 @@
   `permission_blocked`, `stale_source_observations`, and `unsupported_input_mode`.
 - Prometheus exports the same posture through `lotus_risk_calculation_supportability_total` with
   bounded labels only: `operation`, `supportability_state`, `reason`, and `freshness_bucket`.
+- The response contract publishes these keys as `metric_labels` so operators, Gateway, Workbench,
+  and demos can inspect the supportability metric contract without inferring it from scrape output.
 - Metrics and response metadata must not expose portfolio, client, account, position, transaction,
-  trace, correlation, or raw request identifiers.
+  security, trace, correlation, request-body, response-body, or raw request identifiers.
 - Endpoint-specific supportability must be source-backed: return-series endpoints derive freshness
   and empty/degraded posture from period results, while concentration derives degraded posture from
   issuer coverage and empty universe support.

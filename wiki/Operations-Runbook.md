@@ -81,8 +81,19 @@ The matching Prometheus counter is
 The same source-owned posture also increments the RFC-0108 cross-service freshness counter
 `lotus_analytics_freshness_bucket_total{service="lotus-risk",operation,freshness_bucket,supportability_state}`.
 
-Do not add portfolio, client, account, position, transaction, trace, correlation, or request
-identifiers to supportability metric labels.
+The response contract publishes `metadata.calculation_supportability.metric_labels` so operators
+can verify the metric-label contract directly from the API response. Do not add portfolio, account,
+client, correlation, trace, transaction, request-body, response-body, or security identifiers to
+supportability metric labels.
+
+```mermaid
+flowchart LR
+    RiskEndpoint[Risk analytics endpoint] --> Supportability[metadata.calculation_supportability]
+    Supportability --> Gateway[Gateway source_supportability]
+    Supportability --> Metrics[lotus_risk_calculation_supportability_total]
+    Metrics --> Platform[Platform dashboards and alerts]
+    Gateway --> Workbench[Workbench risk panel support state]
+```
 
 When the question is "should this workflow be offered at all?" also check:
 
