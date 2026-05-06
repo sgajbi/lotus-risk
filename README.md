@@ -39,15 +39,19 @@ Current primary workflows:
 3. `POST /analytics/risk/rolling-metrics`
 4. `POST /analytics/risk/historical-attribution`
 5. `POST /analytics/risk/concentration`
-6. `GET /integration/capabilities`
-7. `GET /ops`
+6. `POST /analytics/risk/regime-scenario-pack/evaluate`
+7. `GET /integration/capabilities`
+8. `GET /ops`
 
 Important posture limits:
 
 1. concentration is the only workflow that currently supports `simulation`,
-2. stateful historical attribution remains `partial` because `ACTIVE_RISK + ISSUER` is intentionally gated,
-3. live validation defaults to canonical portfolio `PB_SG_GLOBAL_BAL_001`,
-4. broader enterprise-bank claims require more seeded archetypes and attached evidence.
+2. regime scenario-pack evaluation is stateless and consumes caller-supplied exposure weights
+   against risk-owned CIO scenario definitions; it does not forecast markets or accept UI-owned
+   scenario methodology,
+3. stateful historical attribution remains `partial` because `ACTIVE_RISK + ISSUER` is intentionally gated,
+4. live validation defaults to canonical portfolio `PB_SG_GLOBAL_BAL_001`,
+5. broader enterprise-bank claims require more seeded archetypes and attached evidence.
 
 ## Architectural Shape
 

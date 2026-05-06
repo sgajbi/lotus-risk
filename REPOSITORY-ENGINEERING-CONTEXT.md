@@ -21,7 +21,9 @@ This repository owns:
 1. risk analytics calculations,
 2. risk workspace supportability and decomposition payloads,
 3. drawdown and concentration review data,
-4. integration-ready risk contracts consumed by `lotus-gateway`.
+4. governed regime scenario-pack evaluation for downstream construction and stress posture,
+5. integration-ready risk contracts consumed by `lotus-gateway` and domain consumers such as
+   `lotus-manage`.
 
 ## Current-State Summary
 
@@ -36,7 +38,11 @@ Current repository posture:
 7. repo-native RFC-0086 product and consumer declarations now live under `contracts/domain-data-products/` with a local `make domain-data-product-gate` validation path,
 8. RFC-0087 trust telemetry proof for `RiskMetricsReport` now lives under
    `contracts/trust-telemetry/` and is validated by `tests/unit/test_trust_telemetry.py` against
-   the platform trust telemetry validator when `lotus-platform` is available.
+   the platform trust telemetry validator when `lotus-platform` is available,
+9. `RegimeScenarioPackEvaluation:v1` is a repo-native domain data product exposed through
+   `POST /analytics/risk/regime-scenario-pack/evaluate`; it evaluates caller-supplied exposure
+   weights against governed CIO scenario-pack definitions and returns source-owned worst-case loss,
+   threshold breach posture, lineage, supportability, and bounded reason codes.
 
 ## Architecture And Module Map
 

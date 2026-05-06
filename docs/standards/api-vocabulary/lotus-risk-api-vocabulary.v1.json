@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-05-01T12:41:21.413246+00:00",
+  "generatedAt": "2026-05-06T03:02:34.947310+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.alignment_policy",
@@ -102,8 +102,8 @@
       "semanticId": "lotus.as_of_date",
       "canonicalTerm": "as_of_date",
       "preferredName": "as_of_date",
-      "description": "As-of date used for risk metric evaluation.",
-      "example": "2025-03-31",
+      "description": "Business date for the scenario-pack evaluation.",
+      "example": "2026-05-03",
       "type": "string",
       "locations": [
         "body"
@@ -174,18 +174,45 @@
       ]
     },
     {
-      "semanticId": "lotus.calculation_supportability",
-      "canonicalTerm": "calculation_supportability",
-      "preferredName": "calculation_supportability",
-      "description": "Canonical calculation supportability used by lotus-risk APIs.",
-      "example": {
-        "key": "value"
-      },
-      "type": "RiskCalculationSupportability",
+      "semanticId": "lotus.breach",
+      "canonicalTerm": "breach",
+      "preferredName": "breach",
+      "description": "Whether worst_case_loss_pct exceeds maximum_allowed_loss_pct.",
+      "example": false,
+      "type": "boolean",
       "locations": [
         "body"
       ],
       "observedTypes": [
+        "boolean"
+      ]
+    },
+    {
+      "semanticId": "lotus.bucket",
+      "canonicalTerm": "bucket",
+      "preferredName": "bucket",
+      "description": "Risk scenario exposure bucket.",
+      "example": "EQUITY",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.calculation_supportability",
+      "canonicalTerm": "calculation_supportability",
+      "preferredName": "calculation_supportability",
+      "description": "Canonical calculation supportability used by lotus-risk APIs.",
+      "example": "ready",
+      "type": "ScenarioSupportabilityState",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "ScenarioSupportabilityState",
         "RiskCalculationSupportability"
       ]
     },
@@ -471,7 +498,7 @@
       "canonicalTerm": "declared_product_count",
       "preferredName": "declared_product_count",
       "description": "Number of repo-native declared producer products included in the snapshot.",
-      "example": 5,
+      "example": 6,
       "type": "integer",
       "locations": [
         "body"
@@ -579,6 +606,20 @@
       ],
       "observedTypes": [
         "object"
+      ]
+    },
+    {
+      "semanticId": "lotus.display_name",
+      "canonicalTerm": "display_name",
+      "preferredName": "display_name",
+      "description": "Scenario display name.",
+      "example": "Growth slowdown",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
       ]
     },
     {
@@ -691,6 +732,47 @@
       ],
       "observedTypes": [
         "integer"
+      ]
+    },
+    {
+      "semanticId": "lotus.expected_loss_pct",
+      "canonicalTerm": "expected_loss_pct",
+      "preferredName": "expected_loss_pct",
+      "description": "Expected portfolio loss ratio under this scenario.",
+      "example": 0.0845,
+      "type": "number",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "number"
+      ]
+    },
+    {
+      "semanticId": "lotus.exposures",
+      "canonicalTerm": "exposures",
+      "preferredName": "exposures",
+      "description": "Caller-supplied portfolio exposure weights by scenario bucket.",
+      "example": [
+        {
+          "bucket": "EQUITY",
+          "weight": 0.55
+        },
+        {
+          "bucket": "FIXED_INCOME",
+          "weight": 0.35
+        },
+        {
+          "bucket": "CASH",
+          "weight": 0.1
+        }
+      ],
+      "type": "array",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "array"
       ]
     },
     {
@@ -1033,6 +1115,20 @@
       ]
     },
     {
+      "semanticId": "lotus.maximum_allowed_loss_pct",
+      "canonicalTerm": "maximum_allowed_loss_pct",
+      "preferredName": "maximum_allowed_loss_pct",
+      "description": "Maximum permitted scenario loss ratio for the consumer policy.",
+      "example": 0.12,
+      "type": "number",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "number"
+      ]
+    },
+    {
       "semanticId": "lotus.metadata",
       "canonicalTerm": "metadata",
       "preferredName": "metadata",
@@ -1040,11 +1136,12 @@
       "example": {
         "key": "value"
       },
-      "type": "HistoricalAttributionMetadata",
+      "type": "ScenarioEvaluationMetadata",
       "locations": [
         "body"
       ],
       "observedTypes": [
+        "ScenarioEvaluationMetadata",
         "HistoricalAttributionMetadata",
         "object",
         "DrawdownMetadata",
@@ -1244,6 +1341,20 @@
       ]
     },
     {
+      "semanticId": "lotus.portfolio_id",
+      "canonicalTerm": "portfolio_id",
+      "preferredName": "portfolio_id",
+      "description": "Optional portfolio identifier used for lineage and diagnostics.",
+      "example": "PB_SG_GLOBAL_BAL_001",
+      "type": "object",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "object"
+      ]
+    },
+    {
       "semanticId": "lotus.producer_repository",
       "canonicalTerm": "producer_repository",
       "preferredName": "producer_repository",
@@ -1399,6 +1510,22 @@
       ]
     },
     {
+      "semanticId": "lotus.reason_codes",
+      "canonicalTerm": "reason_codes",
+      "preferredName": "reason_codes",
+      "description": "Bounded reason codes explaining scenario evaluation posture.",
+      "example": [
+        "REGIME_SCENARIO_PACK_READY"
+      ],
+      "type": "array",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "array"
+      ]
+    },
+    {
       "semanticId": "lotus.reporting_currency",
       "canonicalTerm": "reporting_currency",
       "preferredName": "reporting_currency",
@@ -1423,7 +1550,8 @@
         "body"
       ],
       "observedTypes": [
-        "object"
+        "object",
+        "string"
       ]
     },
     {
@@ -1675,6 +1803,58 @@
       ]
     },
     {
+      "semanticId": "lotus.scenario_id",
+      "canonicalTerm": "scenario_id",
+      "preferredName": "scenario_id",
+      "description": "Scenario identifier within the governed pack.",
+      "example": "growth_slowdown",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.scenario_pack_id",
+      "canonicalTerm": "scenario_pack_id",
+      "preferredName": "scenario_pack_id",
+      "description": "Governed scenario pack identifier.",
+      "example": "CIO_REGIME_2026_Q2",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.scenario_results",
+      "canonicalTerm": "scenario_results",
+      "preferredName": "scenario_results",
+      "description": "Per-scenario loss results from the governed scenario pack.",
+      "example": [
+        {
+          "display_name": "Growth slowdown",
+          "expected_loss_pct": 0.0765,
+          "scenario_id": "growth_slowdown",
+          "shock_by_bucket": {
+            "EQUITY": -0.12,
+            "FIXED_INCOME": -0.03
+          }
+        }
+      ],
+      "type": "array",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "array"
+      ]
+    },
+    {
       "semanticId": "lotus.scope",
       "canonicalTerm": "scope",
       "preferredName": "scope",
@@ -1730,6 +1910,23 @@
       ],
       "observedTypes": [
         "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.shock_by_bucket",
+      "canonicalTerm": "shock_by_bucket",
+      "preferredName": "shock_by_bucket",
+      "description": "Scenario shock ratios by exposure bucket.",
+      "example": {
+        "EQUITY": -0.12,
+        "FIXED_INCOME": -0.03
+      },
+      "type": "object",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "object"
       ]
     },
     {
@@ -2435,8 +2632,8 @@
       "semanticId": "lotus.weight",
       "canonicalTerm": "weight",
       "preferredName": "weight",
-      "description": "Portfolio weight of the top concentration-driving position.",
-      "example": 0.23014,
+      "description": "Portfolio weight for this exposure bucket.",
+      "example": 0.55,
       "type": "number",
       "locations": [
         "body"
@@ -2517,6 +2714,20 @@
       ],
       "observedTypes": [
         "array"
+      ]
+    },
+    {
+      "semanticId": "lotus.worst_case_loss_pct",
+      "canonicalTerm": "worst_case_loss_pct",
+      "preferredName": "worst_case_loss_pct",
+      "description": "Largest expected portfolio loss ratio across scenarios.",
+      "example": 0.0845,
+      "type": "number",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "number"
       ]
     }
   ],
@@ -3359,6 +3570,229 @@
       },
       "response": {
         "fields": []
+      }
+    },
+    {
+      "domain": "risk_analytics",
+      "method": "POST",
+      "path": "/analytics/risk/regime-scenario-pack/evaluate",
+      "operationId": "analytics_risk_regime_scenario_pack_analytics_risk_regime_scenario_pack_evaluate_post",
+      "summary": "Evaluate a governed regime scenario pack",
+      "request": {
+        "fields": [
+          {
+            "name": "scenario_pack_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.scenario_pack_id",
+            "attributeRef": "#/attributeCatalog/lotus.scenario_pack_id"
+          },
+          {
+            "name": "portfolio_id",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.portfolio_id",
+            "attributeRef": "#/attributeCatalog/lotus.portfolio_id"
+          },
+          {
+            "name": "as_of_date",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.as_of_date"
+          },
+          {
+            "name": "exposures",
+            "location": "body",
+            "required": true,
+            "type": "array",
+            "semanticId": "lotus.exposures",
+            "attributeRef": "#/attributeCatalog/lotus.exposures"
+          },
+          {
+            "name": "exposures[].bucket",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.bucket",
+            "attributeRef": "#/attributeCatalog/lotus.bucket"
+          },
+          {
+            "name": "exposures[].weight",
+            "location": "body",
+            "required": true,
+            "type": "number",
+            "semanticId": "lotus.weight",
+            "attributeRef": "#/attributeCatalog/lotus.weight"
+          },
+          {
+            "name": "maximum_allowed_loss_pct",
+            "location": "body",
+            "required": true,
+            "type": "number",
+            "semanticId": "lotus.maximum_allowed_loss_pct",
+            "attributeRef": "#/attributeCatalog/lotus.maximum_allowed_loss_pct"
+          }
+        ]
+      },
+      "response": {
+        "fields": [
+          {
+            "name": "scenario_pack_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.scenario_pack_id",
+            "attributeRef": "#/attributeCatalog/lotus.scenario_pack_id"
+          },
+          {
+            "name": "portfolio_id",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.portfolio_id",
+            "attributeRef": "#/attributeCatalog/lotus.portfolio_id"
+          },
+          {
+            "name": "as_of_date",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.as_of_date"
+          },
+          {
+            "name": "worst_case_loss_pct",
+            "location": "body",
+            "required": true,
+            "type": "number",
+            "semanticId": "lotus.worst_case_loss_pct",
+            "attributeRef": "#/attributeCatalog/lotus.worst_case_loss_pct"
+          },
+          {
+            "name": "maximum_allowed_loss_pct",
+            "location": "body",
+            "required": true,
+            "type": "number",
+            "semanticId": "lotus.maximum_allowed_loss_pct",
+            "attributeRef": "#/attributeCatalog/lotus.maximum_allowed_loss_pct"
+          },
+          {
+            "name": "breach",
+            "location": "body",
+            "required": true,
+            "type": "boolean",
+            "semanticId": "lotus.breach",
+            "attributeRef": "#/attributeCatalog/lotus.breach"
+          },
+          {
+            "name": "scenario_results",
+            "location": "body",
+            "required": true,
+            "type": "array",
+            "semanticId": "lotus.scenario_results",
+            "attributeRef": "#/attributeCatalog/lotus.scenario_results"
+          },
+          {
+            "name": "scenario_results[].scenario_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.scenario_id",
+            "attributeRef": "#/attributeCatalog/lotus.scenario_id"
+          },
+          {
+            "name": "scenario_results[].display_name",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.display_name",
+            "attributeRef": "#/attributeCatalog/lotus.display_name"
+          },
+          {
+            "name": "scenario_results[].expected_loss_pct",
+            "location": "body",
+            "required": true,
+            "type": "number",
+            "semanticId": "lotus.expected_loss_pct",
+            "attributeRef": "#/attributeCatalog/lotus.expected_loss_pct"
+          },
+          {
+            "name": "scenario_results[].shock_by_bucket",
+            "location": "body",
+            "required": true,
+            "type": "object",
+            "semanticId": "lotus.shock_by_bucket",
+            "attributeRef": "#/attributeCatalog/lotus.shock_by_bucket"
+          },
+          {
+            "name": "reason_codes",
+            "location": "body",
+            "required": true,
+            "type": "array",
+            "semanticId": "lotus.reason_codes",
+            "attributeRef": "#/attributeCatalog/lotus.reason_codes"
+          },
+          {
+            "name": "metadata",
+            "location": "body",
+            "required": true,
+            "type": "ScenarioEvaluationMetadata",
+            "semanticId": "lotus.metadata",
+            "attributeRef": "#/attributeCatalog/lotus.metadata"
+          },
+          {
+            "name": "metadata.product_name",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.product_name",
+            "attributeRef": "#/attributeCatalog/lotus.product_name"
+          },
+          {
+            "name": "metadata.product_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.product_version",
+            "attributeRef": "#/attributeCatalog/lotus.product_version"
+          },
+          {
+            "name": "metadata.source_service",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.source_service",
+            "attributeRef": "#/attributeCatalog/lotus.source_service"
+          },
+          {
+            "name": "metadata.lineage_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.lineage_version",
+            "attributeRef": "#/attributeCatalog/lotus.lineage_version"
+          },
+          {
+            "name": "metadata.request_fingerprint",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.request_fingerprint",
+            "attributeRef": "#/attributeCatalog/lotus.request_fingerprint"
+          },
+          {
+            "name": "metadata.calculation_supportability",
+            "location": "body",
+            "required": true,
+            "type": "ScenarioSupportabilityState",
+            "semanticId": "lotus.calculation_supportability",
+            "attributeRef": "#/attributeCatalog/lotus.calculation_supportability"
+          }
+        ]
       }
     },
     {

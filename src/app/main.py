@@ -34,6 +34,7 @@ from app.contracts.rolling import (
     RollingResponse,
 )
 from app.contracts.risk import RiskAnalyticsRequest, RiskInputMode, RiskResponse
+from app.contracts.scenario import RegimeScenarioPackRequest, RegimeScenarioPackResponse
 from app.enterprise_readiness import (
     build_enterprise_audit_middleware,
     validate_enterprise_runtime_config,
@@ -53,6 +54,7 @@ from app.services.rolling_engine import calculate_rolling_metrics
 from app.services.rolling_mode_adapter import calculate_rolling_metrics_stateful
 from app.services.risk_engine import calculate_risk
 from app.services.risk_mode_adapter import calculate_risk_stateful
+from app.services.scenario_engine import evaluate_regime_scenario_pack
 from app.trust_telemetry import (
     DeclaredProductTrustTelemetrySnapshot,
     build_declared_product_trust_telemetry_snapshot,
@@ -581,6 +583,17 @@ async def integration_capabilities() -> IntegrationCapabilitiesResponse:
                     "attribution residual and reconciled_sum must be preserved with contributors",
                 ],
             ),
+            CapabilityWorkflow(
+                workflow_key="regime_scenario_pack_evaluation",
+                endpoint_path="/analytics/risk/regime-scenario-pack/evaluate",
+                supported_input_modes=["stateless"],
+                support_status="full",
+                notes=[
+                    "evaluates caller-supplied exposure weights against governed CIO scenario packs",
+                    "returns source-owned worst-case loss, policy breach posture, and lineage",
+                    "does not forecast market states or accept browser-owned scenario methodology",
+                ],
+            ),
         ],
     )
 
@@ -600,6 +613,29 @@ async def integration_capabilities() -> IntegrationCapabilitiesResponse:
 )
 async def metrics() -> Response:
     return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
+@app.post(
+    "/analytics/risk/regime-scenario-pack/evaluate",
+    response_model=RegimeScenarioPackResponse,
+    responses=STANDARD_ERROR_RESPONSES,
+    summary="Evaluate a governed regime scenario pack",
+    tags=["risk-analytics"],
+    description=(
+        "Evaluates caller-supplied portfolio exposure weights against a governed CIO regime "
+        "scenario pack and returns source-owned worst-case loss, policy-threshold breach posture, "
+        "bounded reason codes, and lineage metadata. Consumers must not reconstruct scenario "
+        "methodology outside lotus-risk."
+    ),
+)
+async def analytics_risk_regime_scenario_pack(
+    request_payload: RegimeScenarioPackRequest,
+) -> RegimeScenarioPackResponse:
+    return await _observed_endpoint(
+        endpoint="regime-scenario-pack",
+        input_mode="stateless",
+        operation=lambda: evaluate_regime_scenario_pack(request_payload),
+    )
 
 
 @app.post(

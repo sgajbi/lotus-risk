@@ -42,7 +42,9 @@ The current domain workflows are:
 2. realized drawdown analytics via `/analytics/risk/drawdown`,
 3. rolling historical risk metrics via `/analytics/risk/rolling-metrics`,
 4. historical attribution analytics via `/analytics/risk/historical-attribution`,
-5. concentration analytics via `/analytics/risk/concentration`.
+5. concentration analytics via `/analytics/risk/concentration`,
+6. governed regime scenario-pack evaluation via
+   `/analytics/risk/regime-scenario-pack/evaluate`.
 
 Operational and integration surfaces also matter:
 
