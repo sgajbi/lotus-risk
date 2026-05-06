@@ -213,7 +213,7 @@ def test_e2e_ops_trust_telemetry_exposes_declared_products_and_summary() -> None
         body["consumer_declaration_source"]
         == "contracts/domain-data-products/lotus-risk-consumers.v1.json"
     )
-    assert body["summary"]["declared_product_count"] == 5
+    assert body["summary"]["declared_product_count"] == 6
     assert body["summary"]["declared_dependency_count"] == 6
     assert [product["product_name"] for product in body["products"]] == [
         "RiskMetricsReport",
@@ -221,6 +221,7 @@ def test_e2e_ops_trust_telemetry_exposes_declared_products_and_summary() -> None
         "RollingRiskMetricsReport",
         "HistoricalRiskAttributionReport",
         "ConcentrationRiskReport",
+        "RegimeScenarioPackEvaluation",
     ]
 
 

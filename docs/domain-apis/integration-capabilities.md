@@ -35,6 +35,7 @@
   - `risk.analytics.concentration`
   - `risk.analytics.rolling_metrics`
   - `risk.analytics.historical_attribution`
+  - `risk.analytics.regime_scenario_pack`
   - `risk.analytics.metrics`
   - `risk.observability.calculation_supportability`
 - `workflows`:
@@ -43,6 +44,7 @@
   - `concentration_risk`
   - `rolling_risk_analytics`
   - `historical_risk_attribution`
+  - `regime_scenario_pack_evaluation`
 
 Each workflow now also publishes:
 
@@ -59,6 +61,9 @@ This allows consumers to discover that:
 - historical-attribution response metadata is the authoritative active-risk support contract
 - risk snapshot VaR and expected shortfall are signed return-threshold metrics
 - historical attribution residual and `reconciled_sum` must be preserved with contributors
+- regime scenario-pack evaluation is a stateless source-owned workflow that returns worst-case loss,
+  policy-threshold breach posture, lineage, and bounded reason codes from risk-owned CIO scenario
+  definitions
 - downstream product surfaces must derive simulation and issuer active-risk affordances from this
   payload, not from broad service-level support for the word `simulation`
 - downstream consumers must also treat

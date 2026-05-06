@@ -1,0 +1,53 @@
+{
+  "rfc": "RFC-0039",
+  "wtbd_id": "RFC39-WTBD-009",
+  "repository": "lotus-risk",
+  "slice": "source-owned regime scenario-pack evaluation",
+  "timestamp_sgt": "2026-05-06T10:53:00+08:00",
+  "branch": "feat/rfc39-scenario-pack-source-product",
+  "implementation_summary": {
+    "completed": [
+      "Added RegimeScenarioPackEvaluation:v1 as a lotus-risk domain data product.",
+      "Added POST /analytics/risk/regime-scenario-pack/evaluate.",
+      "Implemented deterministic evaluation of caller-supplied exposure weights against governed CIO scenario-pack definitions.",
+      "Returned source-owned worst-case loss, policy-threshold breach posture, supportability, lineage, request fingerprint, and bounded reason codes.",
+      "Updated endpoint matrix, integration-capabilities docs, README, repository context, wiki source, API vocabulary, and trust telemetry product count."
+    ],
+    "explicit_non_claims": [
+      "The endpoint does not forecast future market states.",
+      "The endpoint does not accept UI-owned or Gateway-owned scenario methodology.",
+      "Stateful scenario-pack sourcing remains unsupported until upstream exposure retrieval is separately governed."
+    ]
+  },
+  "critical_review": {
+    "design_assessment": "The implementation keeps scenario methodology in lotus-risk and gives consumers a bounded, source-owned stress evaluation contract. This is a better source-owner fit than putting scenario-pack logic into lotus-manage construction.",
+    "quality_improvements": [
+      "New contract and engine modules keep scenario schema separate from existing risk, drawdown, rolling, attribution, and concentration code.",
+      "OpenAPI gate forced field examples for every new response object field.",
+      "Domain-product gate forced platform mirror synchronization before risk closure."
+    ],
+    "remaining_boundaries": [
+      "Downstream manage consumption must be implemented separately and must preserve risk-owned outputs without recomputation.",
+      "Gateway/Workbench product-surface support remains unclaimed until downstream implementation and proof."
+    ]
+  },
+  "validation": [
+    {
+      "command": "python -m pytest tests\\unit\\test_scenario_engine.py tests\\unit\\test_scenario_api.py tests\\unit\\test_domain_data_products.py tests\\unit\\test_capabilities_contract.py -q",
+      "result": "13 passed"
+    },
+    {
+      "command": "make check",
+      "result": "passed: Ruff, format, no-alias guard, mypy, OpenAPI quality, API vocabulary inventory, domain-data product contract check, and 303 unit tests"
+    },
+    {
+      "command": "python -m pytest tests\\integration\\test_health.py tests\\e2e\\test_smoke.py -q",
+      "result": "50 passed after updating trust-telemetry product-count and capability-contract expectations for the new product"
+    },
+    {
+      "command": "lotus-platform PR #303",
+      "result": "merged platform mirror for RegimeScenarioPackEvaluation:v1 after green platform checks"
+    }
+  ],
+  "status": "ready_for_risk_pr"
+}
