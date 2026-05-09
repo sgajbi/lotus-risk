@@ -1,3 +1,5 @@
+import pytest
+
 from app.contracts.rolling import RollingInputMode, RollingStatelessInput
 from app.services.rolling_engine import calculate_rolling_metrics
 
@@ -68,6 +70,25 @@ def test_rolling_engine_returns_window_results_and_metadata() -> None:
     assert window.metric_summaries["ROLLING_MAX_DRAWDOWN"].minimum is not None
     assert window.metric_series is not None
     assert len(window.metric_series) > 0
+
+
+def test_rolling_tracking_error_matches_documented_decimal_methodology() -> None:
+    response = calculate_rolling_metrics(_base_input(), input_mode=RollingInputMode.STATELESS)
+
+    window = response.results["YTD"].window_results[0]
+    summary = window.metric_summaries["ROLLING_TRACKING_ERROR"]
+
+    assert summary.latest == pytest.approx(0.02424871130596428)
+    assert summary.latest_observation_date is not None
+    assert summary.latest_observation_date.isoformat() == "2026-01-08"
+    assert summary.min_observations_required == 3
+    assert summary.warmup_point_count == 2
+    assert summary.computed_point_count == 5
+
+    assert window.metric_series is not None
+    latest_point = window.metric_series[-1]
+    assert latest_point.date.isoformat() == "2026-01-08"
+    assert latest_point.metric_values["ROLLING_TRACKING_ERROR"] == pytest.approx(summary.latest)
 
 
 def test_rolling_engine_returns_period_error_when_insufficient_period_data() -> None:
