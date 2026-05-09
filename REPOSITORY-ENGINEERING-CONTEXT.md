@@ -44,9 +44,11 @@ Current repository posture:
    weights against governed CIO scenario-pack definitions and returns source-owned worst-case loss,
    threshold breach posture, lineage, supportability, and bounded reason codes.
 10. `RollingRiskMetricsReport:v1` now has implementation-backed methodology truth for
-    `ROLLING_TRACKING_ERROR`: the docs and tests pin inner date alignment, percentage-point to
-    decimal conversion, `ddof=1` sample standard deviation, annualized decimal-ratio output,
-    warm-up/null behavior, and no-aligned-benchmark supportability posture.
+    `ROLLING_TRACKING_ERROR` and `ROLLING_INFORMATION_RATIO`: the docs and tests pin inner date
+    alignment, percentage-point to decimal conversion, `ddof=1` sample standard deviation,
+    annualized decimal tracking-error output, dimensionless information-ratio output,
+    warm-up/null behavior, no-aligned-benchmark supportability posture, and zero-tracking-error
+    information-ratio flagging.
 
 ## Architecture And Module Map
 

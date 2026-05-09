@@ -1,4 +1,6 @@
 from fastapi.testclient import TestClient
+import pytest
+
 from app.main import app
 from tests.support.app_runtime import override_app_runtime
 from tests.support.historical_attribution_fakes import (
@@ -345,6 +347,39 @@ def test_e2e_rolling_metrics_stateless_happy_path() -> None:
     assert body["input_mode"] == "stateless"
     assert "YTD" in body["results"]
     assert body["results"]["YTD"]["window_results"][0]["window_length"] == 3
+
+
+def test_e2e_rolling_active_risk_metrics_follow_methodology_contract() -> None:
+    client = TestClient(app)
+    payload = _rolling_payload()
+    stateless_input = payload["stateless_input"]
+    assert isinstance(stateless_input, dict)
+    rolling_options = stateless_input["rolling_options"]
+    assert isinstance(rolling_options, dict)
+    rolling_options["metrics"] = ["ROLLING_TRACKING_ERROR", "ROLLING_INFORMATION_RATIO"]
+    rolling_options["annualization_basis"] = 252
+    rolling_options["include_time_series"] = True
+
+    response = client.post("/analytics/risk/rolling-metrics", json=payload)
+
+    assert response.status_code == 200
+    body = response.json()
+    period = body["results"]["YTD"]
+    assert period["benchmark_context"]["reason"] == "APPLIED"
+    assert period["quality_flags"] == []
+
+    window = period["window_results"][0]
+    summaries = window["metric_summaries"]
+    assert summaries["ROLLING_TRACKING_ERROR"]["latest"] == pytest.approx(0.23384610323886096)
+    assert summaries["ROLLING_INFORMATION_RATIO"]["latest"] == pytest.approx(10.776318121606494)
+
+    latest_point = window["metric_series"][-1]
+    assert latest_point["metric_values"]["ROLLING_TRACKING_ERROR"] == pytest.approx(
+        summaries["ROLLING_TRACKING_ERROR"]["latest"]
+    )
+    assert latest_point["metric_values"]["ROLLING_INFORMATION_RATIO"] == pytest.approx(
+        summaries["ROLLING_INFORMATION_RATIO"]["latest"]
+    )
 
 
 def test_e2e_historical_attribution_stateless_happy_path() -> None:
