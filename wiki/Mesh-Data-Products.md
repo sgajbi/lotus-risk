@@ -21,10 +21,12 @@
 ## Implementation-backed methodology coverage
 
 `RollingRiskMetricsReport:v1` now has auditable source-owner methodology truth for rolling tracking
-error. The methodology is tied to the implemented `/analytics/risk/rolling-metrics` engine and
-states the exact date-alignment rule, percentage-point to decimal conversion, `ddof=1` sample
-standard deviation, annualization basis, strict versus partial minimum-observation behavior,
-warm-up null handling, no-aligned-benchmark behavior, and decimal-ratio output mapping.
+error and rolling information ratio. The methodologies are tied to the implemented
+`/analytics/risk/rolling-metrics` engine and state the exact date-alignment rule, percentage-point
+to decimal conversion, `ddof=1` sample standard deviation, annualization basis, strict versus
+partial minimum-observation behavior, warm-up null handling, no-aligned-benchmark behavior,
+zero-tracking-error information-ratio flagging, decimal-ratio tracking-error output, and
+dimensionless information-ratio output.
 
 ```mermaid
 flowchart LR
@@ -35,7 +37,7 @@ flowchart LR
     MANAGE[lotus-manage<br/>realized outcome source adapter]
 
     PERF -->|dated return series| RISK
-    RISK -->|rolling tracking error + lineage| GW
+    RISK -->|rolling active-risk metrics + lineage| GW
     GW --> WB
     RISK -->|source-owned scalar evidence| MANAGE
 ```
@@ -43,9 +45,11 @@ flowchart LR
 Audience notes:
 
 - Business users can read rolling tracking error as annualized active-return volatility versus the
-  selected benchmark.
+  selected benchmark, and rolling information ratio as annualized active return per unit of that
+  active risk.
 - Operations teams can distinguish warm-up gaps, missing benchmark alignment, and upstream sourcing
-  issues from calculation failure.
+  issues from calculation failure; zero-tracking-error windows are flagged rather than promoted as
+  valid ratios.
 - Developers and downstream services must preserve `RollingRiskMetricsReport:v1` values and
   supportability metadata rather than recomputing rolling tracking error locally.
 - Sales and pre-sales can describe the canonical capability as implementation-backed for supported

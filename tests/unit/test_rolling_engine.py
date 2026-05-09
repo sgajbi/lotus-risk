@@ -91,6 +91,27 @@ def test_rolling_tracking_error_matches_documented_decimal_methodology() -> None
     assert latest_point.metric_values["ROLLING_TRACKING_ERROR"] == pytest.approx(summary.latest)
 
 
+def test_rolling_information_ratio_matches_documented_decimal_methodology() -> None:
+    response = calculate_rolling_metrics(_base_input(), input_mode=RollingInputMode.STATELESS)
+
+    period = response.results["YTD"]
+    window = period.window_results[0]
+    summary = window.metric_summaries["ROLLING_INFORMATION_RATIO"]
+
+    assert period.quality_flags == []
+    assert summary.latest == pytest.approx(6.928203230275508)
+    assert summary.latest_observation_date is not None
+    assert summary.latest_observation_date.isoformat() == "2026-01-08"
+    assert summary.min_observations_required == 3
+    assert summary.warmup_point_count == 2
+    assert summary.computed_point_count == 5
+
+    assert window.metric_series is not None
+    latest_point = window.metric_series[-1]
+    assert latest_point.date.isoformat() == "2026-01-08"
+    assert latest_point.metric_values["ROLLING_INFORMATION_RATIO"] == pytest.approx(summary.latest)
+
+
 def test_rolling_engine_returns_period_error_when_insufficient_period_data() -> None:
     payload = {
         "scope": {"as_of_date": "2026-01-08", "net_or_gross": "NET"},
