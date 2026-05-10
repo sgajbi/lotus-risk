@@ -44,6 +44,7 @@ def test_integration_capabilities_contract() -> None:
         "risk.analytics.rolling_metrics",
         "risk.analytics.historical_attribution",
         "risk.analytics.regime_scenario_pack",
+        "risk.analytics.risk_event_affected_cohort",
         "risk.analytics.metrics",
         "risk.observability.calculation_supportability",
     }
@@ -55,6 +56,7 @@ def test_integration_capabilities_contract() -> None:
         "rolling_risk_analytics",
         "historical_risk_attribution",
         "regime_scenario_pack_evaluation",
+        "risk_event_affected_cohort",
     }
     workflow_by_key = {workflow["workflow_key"]: workflow for workflow in body["workflows"]}
     assert workflow_by_key["risk_snapshot"]["endpoint_path"] == "/analytics/risk/calculate"
@@ -73,6 +75,10 @@ def test_integration_capabilities_contract() -> None:
     assert workflow_by_key["regime_scenario_pack_evaluation"]["supported_input_modes"] == [
         "stateless"
     ]
+    assert workflow_by_key["risk_event_affected_cohort"]["endpoint_path"] == (
+        "/analytics/risk/risk-event-cohorts/evaluate"
+    )
+    assert workflow_by_key["risk_event_affected_cohort"]["support_status"] == "partial"
     assert (
         "stateful active-risk ISSUER remains gated"
         in workflow_by_key["historical_risk_attribution"]["notes"]
@@ -212,7 +218,7 @@ def test_metadata_and_ops_contract_shape() -> None:
         == "lotus-performance"
     )
     assert trust_telemetry_body["declared_dependencies"][0]["runtime_status"] == "ok"
-    assert trust_telemetry_body["summary"]["declared_product_count"] == 6
+    assert trust_telemetry_body["summary"]["declared_product_count"] == 7
     assert trust_telemetry_body["summary"]["declared_dependency_count"] == 6
     assert trust_telemetry_body["summary"]["degraded_dependency_count"] == 0
     assert trust_telemetry_body["summary"]["unavailable_dependency_count"] == 0
@@ -224,6 +230,7 @@ def test_metadata_and_ops_contract_shape() -> None:
         "HistoricalRiskAttributionReport",
         "ConcentrationRiskReport",
         "RegimeScenarioPackEvaluation",
+        "RiskEventAffectedCohort",
     ]
     assert all(
         product["lifecycle_status"] == "active" for product in trust_telemetry_body["products"]
@@ -493,7 +500,7 @@ def test_openapi_exposes_local_trust_telemetry_snapshot_schema() -> None:
     assert (
         dependency_schema["properties"]["runtime_issue_code"]["example"] == "UPSTREAM_HIGH_LATENCY"
     )
-    assert summary_schema["properties"]["declared_product_count"]["example"] == 6
+    assert summary_schema["properties"]["declared_product_count"]["example"] == 7
     assert summary_schema["properties"]["declared_dependency_count"]["example"] == 6
     assert (
         seed_schema["properties"]["readiness_status"]["description"]

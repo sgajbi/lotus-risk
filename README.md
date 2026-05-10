@@ -40,8 +40,9 @@ Current primary workflows:
 4. `POST /analytics/risk/historical-attribution`
 5. `POST /analytics/risk/concentration`
 6. `POST /analytics/risk/regime-scenario-pack/evaluate`
-7. `GET /integration/capabilities`
-8. `GET /ops`
+7. `POST /analytics/risk/risk-event-cohorts/evaluate`
+8. `GET /integration/capabilities`
+9. `GET /ops`
 
 Important posture limits:
 
@@ -49,9 +50,12 @@ Important posture limits:
 2. regime scenario-pack evaluation is stateless and consumes caller-supplied exposure weights
    against risk-owned CIO scenario definitions; it does not forecast markets or accept UI-owned
    scenario methodology,
-3. stateful historical attribution remains `partial` because `ACTIVE_RISK + ISSUER` is intentionally gated,
-4. live validation defaults to canonical portfolio `PB_SG_GLOBAL_BAL_001`,
-5. broader enterprise-bank claims require more seeded archetypes and attached evidence.
+3. risk-event affected-cohort evaluation is stateless and consumes caller-supplied candidate
+   portfolios and source-supplied exposure weights against risk-owned event definitions; it does
+   not create rebalance waves or own campaign approval workflow,
+4. stateful historical attribution remains `partial` because `ACTIVE_RISK + ISSUER` is intentionally gated,
+5. live validation defaults to canonical portfolio `PB_SG_GLOBAL_BAL_001`,
+6. broader enterprise-bank claims require more seeded archetypes and attached evidence.
 
 ## Architectural Shape
 

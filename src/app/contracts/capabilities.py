@@ -11,6 +11,7 @@ CAPABILITY_FEATURE_KEYS: tuple[str, ...] = (
     "risk.analytics.rolling_metrics",
     "risk.analytics.historical_attribution",
     "risk.analytics.regime_scenario_pack",
+    "risk.analytics.risk_event_affected_cohort",
     "risk.analytics.metrics",
     "risk.observability.calculation_supportability",
 )
@@ -21,6 +22,7 @@ CAPABILITY_WORKFLOW_KEYS: tuple[str, ...] = (
     "rolling_risk_analytics",
     "historical_risk_attribution",
     "regime_scenario_pack_evaluation",
+    "risk_event_affected_cohort",
 )
 SupportedInputMode = Literal["stateless", "stateful", "simulation"]
 WorkflowSupportStatus = Literal["full", "partial"]

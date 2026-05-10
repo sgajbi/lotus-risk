@@ -43,7 +43,12 @@ Current repository posture:
    `POST /analytics/risk/regime-scenario-pack/evaluate`; it evaluates caller-supplied exposure
    weights against governed CIO scenario-pack definitions and returns source-owned worst-case loss,
    threshold breach posture, lineage, supportability, and bounded reason codes.
-10. `RollingRiskMetricsReport:v1` now has implementation-backed methodology truth for
+10. `RiskEventAffectedCohort:v1` is a repo-native domain data product exposed through
+    `POST /analytics/risk/risk-event-cohorts/evaluate`; it evaluates candidate portfolios and
+    source-supplied exposure weights against governed risk-event definitions and returns affected
+    membership, exclusions, impact scores, source refs, supportability, and bounded reason codes
+    for future manage wave-trigger consumption without creating waves or campaign approvals.
+11. `RollingRiskMetricsReport:v1` now has implementation-backed methodology truth for
     `ROLLING_TRACKING_ERROR` and `ROLLING_INFORMATION_RATIO`: the docs and tests pin inner date
     alignment, percentage-point to decimal conversion, `ddof=1` sample standard deviation,
     annualized decimal tracking-error output, dimensionless information-ratio output,

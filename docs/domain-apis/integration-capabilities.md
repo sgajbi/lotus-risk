@@ -36,6 +36,7 @@
   - `risk.analytics.rolling_metrics`
   - `risk.analytics.historical_attribution`
   - `risk.analytics.regime_scenario_pack`
+  - `risk.analytics.risk_event_affected_cohort`
   - `risk.analytics.metrics`
   - `risk.observability.calculation_supportability`
 - `workflows`:
@@ -45,6 +46,7 @@
   - `rolling_risk_analytics`
   - `historical_risk_attribution`
   - `regime_scenario_pack_evaluation`
+  - `risk_event_affected_cohort`
 
 Each workflow now also publishes:
 
@@ -64,6 +66,9 @@ This allows consumers to discover that:
 - regime scenario-pack evaluation is a stateless source-owned workflow that returns worst-case loss,
   policy-threshold breach posture, lineage, and bounded reason codes from risk-owned CIO scenario
   definitions
+- risk-event affected-cohort evaluation is a stateless source-owned workflow that returns affected
+  portfolio membership, exclusions, source refs, impact scores, supportability posture, and bounded
+  reason codes from risk-owned event definitions
 - downstream product surfaces must derive simulation and issuer active-risk affordances from this
   payload, not from broad service-level support for the word `simulation`
 - downstream consumers must also treat
@@ -75,6 +80,7 @@ This allows consumers to discover that:
 
 - Downstream consumers:
   - `lotus-gateway` capability aggregation (`/api/v1/platform/capabilities`).
+  - `lotus-manage` future RFC41-WTBD-003 wave trigger consumption for risk-event cohorts.
   - downstream cleanup for undeclared risk capability query params is tracked in
     `sgajbi/lotus-gateway#113`.
 - Upstream dependencies:

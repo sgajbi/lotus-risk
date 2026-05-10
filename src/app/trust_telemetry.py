@@ -200,7 +200,7 @@ class DeclaredConsumerDependencyTelemetry(BaseModel):
 class TrustTelemetryReviewSummary(BaseModel):
     declared_product_count: int = Field(
         description="Number of repo-native declared producer products included in the snapshot.",
-        json_schema_extra={"example": 6},
+        json_schema_extra={"example": 7},
     )
     declared_dependency_count: int = Field(
         description="Number of repo-native declared upstream dependencies included in the snapshot.",
@@ -290,7 +290,7 @@ class DeclaredProductTrustTelemetrySnapshot(BaseModel):
         description="Operator-facing rollup of declaration counts and current runtime dependency posture.",
         json_schema_extra={
             "example": {
-                "declared_product_count": 6,
+                "declared_product_count": 7,
                 "declared_dependency_count": 6,
                 "degraded_dependency_count": 2,
                 "unavailable_dependency_count": 0,

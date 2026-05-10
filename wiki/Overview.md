@@ -44,7 +44,9 @@ The current domain workflows are:
 4. historical attribution analytics via `/analytics/risk/historical-attribution`,
 5. concentration analytics via `/analytics/risk/concentration`,
 6. governed regime scenario-pack evaluation via
-   `/analytics/risk/regime-scenario-pack/evaluate`.
+   `/analytics/risk/regime-scenario-pack/evaluate`,
+7. governed risk-event affected-cohort evaluation via
+   `/analytics/risk/risk-event-cohorts/evaluate`.
 
 Operational and integration surfaces also matter:
 

@@ -25,6 +25,7 @@ def test_list_declared_products_matches_expected_wave() -> None:
         "HistoricalRiskAttributionReport",
         "ConcentrationRiskReport",
         "RegimeScenarioPackEvaluation",
+        "RiskEventAffectedCohort",
     ]
 
 
