@@ -13,8 +13,10 @@
   - `lotus-risk:HistoricalRiskAttributionReport:v1`
   - `lotus-risk:ConcentrationRiskReport:v1`
   - `lotus-risk:RegimeScenarioPackEvaluation:v1`
-- Product role: governed risk analytics reports and scenario-pack evaluation outputs for advisory,
-  reporting, gateway, Workbench discovery, and manage construction-supportability flows
+  - `lotus-risk:RiskEventAffectedCohort:v1`
+- Product role: governed risk analytics reports, scenario-pack evaluation outputs, and risk-event
+  affected-cohort membership for advisory, reporting, gateway, Workbench discovery, manage
+  construction-supportability, and future rebalance-wave trigger flows
 - Source declaration: `contracts/domain-data-products/`
 - Trust telemetry: `contracts/trust-telemetry/`
 
@@ -35,11 +37,13 @@ flowchart LR
     GW[lotus-gateway<br/>risk composition]
     WB[lotus-workbench<br/>risk workspace]
     MANAGE[lotus-manage<br/>realized outcome source adapter]
+    COHORT[lotus-risk<br/>RiskEventAffectedCohort:v1]
 
     PERF -->|dated return series| RISK
     RISK -->|rolling active-risk metrics + lineage| GW
     GW --> WB
     RISK -->|source-owned scalar evidence| MANAGE
+    COHORT -->|affected portfolios + source refs| MANAGE
 ```
 
 Audience notes:
@@ -52,6 +56,9 @@ Audience notes:
   valid ratios.
 - Developers and downstream services must preserve `RollingRiskMetricsReport:v1` values and
   supportability metadata rather than recomputing rolling tracking error locally.
+- Developers and downstream services must preserve `RiskEventAffectedCohort:v1` membership,
+  exclusions, source refs, and impact scores rather than reconstructing risk-event cohort
+  membership locally.
 - Sales and pre-sales can describe the canonical capability as implementation-backed for supported
   seeded portfolios, while broader portfolio-archetype coverage still depends on live validation
   evidence.

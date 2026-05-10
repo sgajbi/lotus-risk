@@ -34,6 +34,10 @@ from app.contracts.rolling import (
     RollingResponse,
 )
 from app.contracts.risk import RiskAnalyticsRequest, RiskInputMode, RiskResponse
+from app.contracts.risk_event_cohort import (
+    RiskEventAffectedCohortRequest,
+    RiskEventAffectedCohortResponse,
+)
 from app.contracts.scenario import RegimeScenarioPackRequest, RegimeScenarioPackResponse
 from app.enterprise_readiness import (
     build_enterprise_audit_middleware,
@@ -53,6 +57,7 @@ from app.services.drawdown_mode_adapter import calculate_drawdown_stateful
 from app.services.rolling_engine import calculate_rolling_metrics
 from app.services.rolling_mode_adapter import calculate_rolling_metrics_stateful
 from app.services.risk_engine import calculate_risk
+from app.services.risk_event_cohort_engine import evaluate_risk_event_affected_cohort
 from app.services.risk_mode_adapter import calculate_risk_stateful
 from app.services.scenario_engine import evaluate_regime_scenario_pack
 from app.trust_telemetry import (
@@ -594,6 +599,17 @@ async def integration_capabilities() -> IntegrationCapabilitiesResponse:
                     "does not forecast market states or accept browser-owned scenario methodology",
                 ],
             ),
+            CapabilityWorkflow(
+                workflow_key="risk_event_affected_cohort",
+                endpoint_path="/analytics/risk/risk-event-cohorts/evaluate",
+                supported_input_modes=["stateless"],
+                support_status="partial",
+                notes=[
+                    "evaluates candidate portfolios against governed risk-event definitions",
+                    "returns affected membership, exclusions, impact scores, source refs, and supportability",
+                    "does not create rebalance waves or own campaign approval workflow",
+                ],
+            ),
         ],
     )
 
@@ -635,6 +651,30 @@ async def analytics_risk_regime_scenario_pack(
         endpoint="regime-scenario-pack",
         input_mode="stateless",
         operation=lambda: evaluate_regime_scenario_pack(request_payload),
+    )
+
+
+@app.post(
+    "/analytics/risk/risk-event-cohorts/evaluate",
+    response_model=RiskEventAffectedCohortResponse,
+    responses=STANDARD_ERROR_RESPONSES,
+    summary="Evaluate a governed risk-event affected cohort",
+    tags=["risk-analytics"],
+    description=(
+        "Evaluates candidate portfolios against governed risk-event definitions and returns "
+        "source-owned affected-cohort membership, impact scores, exclusions, lineage source refs, "
+        "bounded reason codes, and supportability posture. Consumers must not reconstruct "
+        "risk-event cohort membership outside lotus-risk, and this endpoint does not create "
+        "rebalance waves, approvals, or campaign workflow."
+    ),
+)
+async def analytics_risk_event_affected_cohort(
+    request_payload: RiskEventAffectedCohortRequest,
+) -> RiskEventAffectedCohortResponse:
+    return await _observed_endpoint(
+        endpoint="risk-event-cohort",
+        input_mode="stateless",
+        operation=lambda: evaluate_risk_event_affected_cohort(request_payload),
     )
 
 

@@ -8,8 +8,39 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-05-06T03:02:34.947310+00:00",
+  "generatedAt": "2026-05-10T03:43:10.709088+00:00",
   "attributeCatalog": [
+    {
+      "semanticId": "lotus.affected_portfolios",
+      "canonicalTerm": "affected_portfolios",
+      "preferredName": "affected_portfolios",
+      "description": "Portfolios whose source-owned risk-event impact meets the inclusion threshold.",
+      "example": [
+        {
+          "bucket_impacts": {
+            "CASH": 0.0,
+            "EQUITY": -0.022,
+            "FIXED_INCOME": -0.0525
+          },
+          "dominant_bucket": "FIXED_INCOME",
+          "impact_score": 0.0745,
+          "mandate_id": "MANDATE-PB-SG-GLOBAL-BAL-001",
+          "portfolio_id": "PB_SG_GLOBAL_BAL_001",
+          "portfolio_manager_id": "pm-singapore-01",
+          "reason_codes": [
+            "RISK_EVENT_THRESHOLD_BREACHED"
+          ],
+          "source_ref": "risk-event-cohort:RISK_EVENT_2026_Q2_RATES_UP:2026-05-10:PB_SG_GLOBAL_BAL_001"
+        }
+      ],
+      "type": "array",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "array"
+      ]
+    },
     {
       "semanticId": "lotus.alignment_policy",
       "canonicalTerm": "alignment_policy",
@@ -202,6 +233,23 @@
       ]
     },
     {
+      "semanticId": "lotus.bucket_impacts",
+      "canonicalTerm": "bucket_impacts",
+      "preferredName": "bucket_impacts",
+      "description": "Signed event-impact contribution by exposure bucket.",
+      "example": {
+        "EQUITY": -0.022,
+        "FIXED_INCOME": -0.0525
+      },
+      "type": "object",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "object"
+      ]
+    },
+    {
       "semanticId": "lotus.calculation_supportability",
       "canonicalTerm": "calculation_supportability",
       "preferredName": "calculation_supportability",
@@ -213,6 +261,7 @@
       ],
       "observedTypes": [
         "ScenarioSupportabilityState",
+        "RiskEventCohortSupportabilityState",
         "RiskCalculationSupportability"
       ]
     },
@@ -258,6 +307,20 @@
       ],
       "observedTypes": [
         "OpsChecks"
+      ]
+    },
+    {
+      "semanticId": "lotus.cohort_id",
+      "canonicalTerm": "cohort_id",
+      "preferredName": "cohort_id",
+      "description": "Deterministic affected-cohort identifier.",
+      "example": "risk_event_cohort_7f4d2a1c",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
       ]
     },
     {
@@ -498,7 +561,7 @@
       "canonicalTerm": "declared_product_count",
       "preferredName": "declared_product_count",
       "description": "Number of repo-native declared producer products included in the snapshot.",
-      "example": 6,
+      "example": 7,
       "type": "integer",
       "locations": [
         "body"
@@ -623,6 +686,20 @@
       ]
     },
     {
+      "semanticId": "lotus.dominant_bucket",
+      "canonicalTerm": "dominant_bucket",
+      "preferredName": "dominant_bucket",
+      "description": "Exposure bucket contributing the largest absolute event impact.",
+      "example": "FIXED_INCOME",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
       "semanticId": "lotus.draining",
       "canonicalTerm": "draining",
       "preferredName": "draining",
@@ -735,6 +812,28 @@
       ]
     },
     {
+      "semanticId": "lotus.excluded_portfolios",
+      "canonicalTerm": "excluded_portfolios",
+      "preferredName": "excluded_portfolios",
+      "description": "Candidate portfolios excluded with explicit source-owner reason codes.",
+      "example": [
+        {
+          "impact_score": 0.015,
+          "portfolio_id": "PB_SG_LOW_RISK_002",
+          "reason_codes": [
+            "RISK_EVENT_BELOW_THRESHOLD"
+          ]
+        }
+      ],
+      "type": "array",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "array"
+      ]
+    },
+    {
       "semanticId": "lotus.expected_loss_pct",
       "canonicalTerm": "expected_loss_pct",
       "preferredName": "expected_loss_pct",
@@ -746,6 +845,24 @@
       ],
       "observedTypes": [
         "number"
+      ]
+    },
+    {
+      "semanticId": "lotus.exposure_weights",
+      "canonicalTerm": "exposure_weights",
+      "preferredName": "exposure_weights",
+      "description": "Portfolio exposure weights by risk-event exposure bucket.",
+      "example": {
+        "CASH": 0.1,
+        "EQUITY": 0.55,
+        "FIXED_INCOME": 0.35
+      },
+      "type": "object",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "object"
       ]
     },
     {
@@ -870,6 +987,20 @@
       "preferredName": "hhi_proposed",
       "description": "Proposed Herfindahl-Hirschman Index after applying projected positions.",
       "example": 2710.0,
+      "type": "number",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "number"
+      ]
+    },
+    {
+      "semanticId": "lotus.impact_score",
+      "canonicalTerm": "impact_score",
+      "preferredName": "impact_score",
+      "description": "Source-owned absolute risk-event impact score.",
+      "example": 0.073,
       "type": "number",
       "locations": [
         "body"
@@ -1101,6 +1232,20 @@
       ]
     },
     {
+      "semanticId": "lotus.mandate_id",
+      "canonicalTerm": "mandate_id",
+      "preferredName": "mandate_id",
+      "description": "Optional mandate identifier preserved for downstream wave lineage.",
+      "example": "MANDATE-PB-SG-GLOBAL-BAL-001",
+      "type": "object",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "object"
+      ]
+    },
+    {
       "semanticId": "lotus.mar_annual_rate",
       "canonicalTerm": "mar_annual_rate",
       "preferredName": "mar_annual_rate",
@@ -1142,6 +1287,7 @@
       ],
       "observedTypes": [
         "ScenarioEvaluationMetadata",
+        "RiskEventCohortMetadata",
         "HistoricalAttributionMetadata",
         "object",
         "DrawdownMetadata",
@@ -1202,6 +1348,20 @@
       "preferredName": "minimum_episode_depth_bps",
       "description": "Minimum episode depth (in basis points) required to include an episode in the list.",
       "example": 25.0,
+      "type": "number",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "number"
+      ]
+    },
+    {
+      "semanticId": "lotus.minimum_impact_score",
+      "canonicalTerm": "minimum_impact_score",
+      "preferredName": "minimum_impact_score",
+      "description": "Minimum absolute event-impact score required for cohort inclusion.",
+      "example": 0.05,
       "type": "number",
       "locations": [
         "body"
@@ -1351,7 +1511,47 @@
         "body"
       ],
       "observedTypes": [
+        "object",
+        "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.portfolio_manager_id",
+      "canonicalTerm": "portfolio_manager_id",
+      "preferredName": "portfolio_manager_id",
+      "description": "Optional portfolio-manager identifier preserved for downstream review routing.",
+      "example": "pm-singapore-01",
+      "type": "object",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
         "object"
+      ]
+    },
+    {
+      "semanticId": "lotus.portfolios",
+      "canonicalTerm": "portfolios",
+      "preferredName": "portfolios",
+      "description": "Candidate portfolios with source-supplied exposure weights.",
+      "example": [
+        {
+          "exposure_weights": {
+            "CASH": 0.1,
+            "EQUITY": 0.55,
+            "FIXED_INCOME": 0.35
+          },
+          "mandate_id": "MANDATE-PB-SG-GLOBAL-BAL-001",
+          "portfolio_id": "PB_SG_GLOBAL_BAL_001",
+          "portfolio_manager_id": "pm-singapore-01"
+        }
+      ],
+      "type": "array",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "array"
       ]
     },
     {
@@ -1672,6 +1872,20 @@
       ]
     },
     {
+      "semanticId": "lotus.risk_event_id",
+      "canonicalTerm": "risk_event_id",
+      "preferredName": "risk_event_id",
+      "description": "Governed risk-event identifier.",
+      "example": "RISK_EVENT_2026_Q2_RATES_UP",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
       "semanticId": "lotus.risk_free_annual_rate",
       "canonicalTerm": "risk_free_annual_rate",
       "preferredName": "risk_free_annual_rate",
@@ -1969,6 +2183,20 @@
       ],
       "observedTypes": [
         "SinglePositionConcentration"
+      ]
+    },
+    {
+      "semanticId": "lotus.source_ref",
+      "canonicalTerm": "source_ref",
+      "preferredName": "source_ref",
+      "description": "Stable source reference for downstream wave lineage.",
+      "example": "risk-event-cohort:RISK_EVENT_2026_Q2_RATES_UP:PB_SG_GLOBAL_BAL_001",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
       ]
     },
     {
@@ -3789,6 +4017,285 @@
             "location": "body",
             "required": true,
             "type": "ScenarioSupportabilityState",
+            "semanticId": "lotus.calculation_supportability",
+            "attributeRef": "#/attributeCatalog/lotus.calculation_supportability"
+          }
+        ]
+      }
+    },
+    {
+      "domain": "risk_analytics",
+      "method": "POST",
+      "path": "/analytics/risk/risk-event-cohorts/evaluate",
+      "operationId": "analytics_risk_event_affected_cohort_analytics_risk_risk_event_cohorts_evaluate_post",
+      "summary": "Evaluate a governed risk-event affected cohort",
+      "request": {
+        "fields": [
+          {
+            "name": "risk_event_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.risk_event_id",
+            "attributeRef": "#/attributeCatalog/lotus.risk_event_id"
+          },
+          {
+            "name": "as_of_date",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.as_of_date"
+          },
+          {
+            "name": "portfolios",
+            "location": "body",
+            "required": true,
+            "type": "array",
+            "semanticId": "lotus.portfolios",
+            "attributeRef": "#/attributeCatalog/lotus.portfolios"
+          },
+          {
+            "name": "portfolios[].portfolio_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.portfolio_id",
+            "attributeRef": "#/attributeCatalog/lotus.portfolio_id"
+          },
+          {
+            "name": "portfolios[].exposure_weights",
+            "location": "body",
+            "required": true,
+            "type": "object",
+            "semanticId": "lotus.exposure_weights",
+            "attributeRef": "#/attributeCatalog/lotus.exposure_weights"
+          },
+          {
+            "name": "portfolios[].mandate_id",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.mandate_id",
+            "attributeRef": "#/attributeCatalog/lotus.mandate_id"
+          },
+          {
+            "name": "portfolios[].portfolio_manager_id",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.portfolio_manager_id",
+            "attributeRef": "#/attributeCatalog/lotus.portfolio_manager_id"
+          },
+          {
+            "name": "minimum_impact_score",
+            "location": "body",
+            "required": false,
+            "type": "number",
+            "semanticId": "lotus.minimum_impact_score",
+            "attributeRef": "#/attributeCatalog/lotus.minimum_impact_score"
+          }
+        ]
+      },
+      "response": {
+        "fields": [
+          {
+            "name": "cohort_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.cohort_id",
+            "attributeRef": "#/attributeCatalog/lotus.cohort_id"
+          },
+          {
+            "name": "risk_event_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.risk_event_id",
+            "attributeRef": "#/attributeCatalog/lotus.risk_event_id"
+          },
+          {
+            "name": "display_name",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.display_name",
+            "attributeRef": "#/attributeCatalog/lotus.display_name"
+          },
+          {
+            "name": "as_of_date",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.as_of_date"
+          },
+          {
+            "name": "affected_portfolios",
+            "location": "body",
+            "required": true,
+            "type": "array",
+            "semanticId": "lotus.affected_portfolios",
+            "attributeRef": "#/attributeCatalog/lotus.affected_portfolios"
+          },
+          {
+            "name": "affected_portfolios[].portfolio_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.portfolio_id",
+            "attributeRef": "#/attributeCatalog/lotus.portfolio_id"
+          },
+          {
+            "name": "affected_portfolios[].mandate_id",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.mandate_id",
+            "attributeRef": "#/attributeCatalog/lotus.mandate_id"
+          },
+          {
+            "name": "affected_portfolios[].portfolio_manager_id",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.portfolio_manager_id",
+            "attributeRef": "#/attributeCatalog/lotus.portfolio_manager_id"
+          },
+          {
+            "name": "affected_portfolios[].impact_score",
+            "location": "body",
+            "required": true,
+            "type": "number",
+            "semanticId": "lotus.impact_score",
+            "attributeRef": "#/attributeCatalog/lotus.impact_score"
+          },
+          {
+            "name": "affected_portfolios[].dominant_bucket",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.dominant_bucket",
+            "attributeRef": "#/attributeCatalog/lotus.dominant_bucket"
+          },
+          {
+            "name": "affected_portfolios[].bucket_impacts",
+            "location": "body",
+            "required": true,
+            "type": "object",
+            "semanticId": "lotus.bucket_impacts",
+            "attributeRef": "#/attributeCatalog/lotus.bucket_impacts"
+          },
+          {
+            "name": "affected_portfolios[].source_ref",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.source_ref",
+            "attributeRef": "#/attributeCatalog/lotus.source_ref"
+          },
+          {
+            "name": "affected_portfolios[].reason_codes",
+            "location": "body",
+            "required": true,
+            "type": "array",
+            "semanticId": "lotus.reason_codes",
+            "attributeRef": "#/attributeCatalog/lotus.reason_codes"
+          },
+          {
+            "name": "excluded_portfolios",
+            "location": "body",
+            "required": true,
+            "type": "array",
+            "semanticId": "lotus.excluded_portfolios",
+            "attributeRef": "#/attributeCatalog/lotus.excluded_portfolios"
+          },
+          {
+            "name": "excluded_portfolios[].portfolio_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.portfolio_id",
+            "attributeRef": "#/attributeCatalog/lotus.portfolio_id"
+          },
+          {
+            "name": "excluded_portfolios[].impact_score",
+            "location": "body",
+            "required": true,
+            "type": "number",
+            "semanticId": "lotus.impact_score",
+            "attributeRef": "#/attributeCatalog/lotus.impact_score"
+          },
+          {
+            "name": "excluded_portfolios[].reason_codes",
+            "location": "body",
+            "required": true,
+            "type": "array",
+            "semanticId": "lotus.reason_codes",
+            "attributeRef": "#/attributeCatalog/lotus.reason_codes"
+          },
+          {
+            "name": "reason_codes",
+            "location": "body",
+            "required": true,
+            "type": "array",
+            "semanticId": "lotus.reason_codes",
+            "attributeRef": "#/attributeCatalog/lotus.reason_codes"
+          },
+          {
+            "name": "metadata",
+            "location": "body",
+            "required": true,
+            "type": "RiskEventCohortMetadata",
+            "semanticId": "lotus.metadata",
+            "attributeRef": "#/attributeCatalog/lotus.metadata"
+          },
+          {
+            "name": "metadata.product_name",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.product_name",
+            "attributeRef": "#/attributeCatalog/lotus.product_name"
+          },
+          {
+            "name": "metadata.product_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.product_version",
+            "attributeRef": "#/attributeCatalog/lotus.product_version"
+          },
+          {
+            "name": "metadata.source_service",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.source_service",
+            "attributeRef": "#/attributeCatalog/lotus.source_service"
+          },
+          {
+            "name": "metadata.lineage_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.lineage_version",
+            "attributeRef": "#/attributeCatalog/lotus.lineage_version"
+          },
+          {
+            "name": "metadata.request_fingerprint",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.request_fingerprint",
+            "attributeRef": "#/attributeCatalog/lotus.request_fingerprint"
+          },
+          {
+            "name": "metadata.calculation_supportability",
+            "location": "body",
+            "required": true,
+            "type": "RiskEventCohortSupportabilityState",
             "semanticId": "lotus.calculation_supportability",
             "attributeRef": "#/attributeCatalog/lotus.calculation_supportability"
           }
