@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-05-10T03:43:10.709088+00:00",
+  "generatedAt": "2026-05-10T14:04:39.680501+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.affected_portfolios",
@@ -380,6 +380,20 @@
       ]
     },
     {
+      "semanticId": "lotus.contribution_loss_pct",
+      "canonicalTerm": "contribution_loss_pct",
+      "preferredName": "contribution_loss_pct",
+      "description": "Non-negative contribution to expected portfolio loss under the scenario.",
+      "example": 0.0216,
+      "type": "number",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "number"
+      ]
+    },
+    {
       "semanticId": "lotus.covariance_method",
       "canonicalTerm": "covariance_method",
       "preferredName": "covariance_method",
@@ -675,13 +689,14 @@
       "semanticId": "lotus.display_name",
       "canonicalTerm": "display_name",
       "preferredName": "display_name",
-      "description": "Scenario display name.",
-      "example": "Growth slowdown",
-      "type": "string",
+      "description": "Optional display name for the contributing security or instrument.",
+      "example": "Apple Inc.",
+      "type": "object",
       "locations": [
         "body"
       ],
       "observedTypes": [
+        "object",
         "string"
       ]
     },
@@ -845,6 +860,33 @@
       ],
       "observedTypes": [
         "number"
+      ]
+    },
+    {
+      "semanticId": "lotus.exposure_components",
+      "canonicalTerm": "exposure_components",
+      "preferredName": "exposure_components",
+      "description": "Optional position-level exposure components used to emit per-security scenario contribution rows. When supplied, component weights must reconcile to the bucket weights in exposures.",
+      "example": [
+        {
+          "bucket": "EQUITY",
+          "display_name": "Apple Inc.",
+          "security_id": "FO_EQ_AAPL_US",
+          "weight": 0.18
+        },
+        {
+          "bucket": "FIXED_INCOME",
+          "display_name": "United States Treasury 3.875% 2030",
+          "security_id": "FO_BOND_UST_2030",
+          "weight": 0.35
+        }
+      ],
+      "type": "array",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "array"
       ]
     },
     {
@@ -1555,6 +1597,29 @@
       ]
     },
     {
+      "semanticId": "lotus.position_contributions",
+      "canonicalTerm": "position_contributions",
+      "preferredName": "position_contributions",
+      "description": "Optional per-security contribution rows when exposure_components were supplied. Rows are source-owned scenario contribution evidence, not a full repricing model.",
+      "example": [
+        {
+          "bucket": "EQUITY",
+          "contribution_loss_pct": 0.0216,
+          "display_name": "Apple Inc.",
+          "security_id": "FO_EQ_AAPL_US",
+          "shock_pct": -0.12,
+          "weight": 0.18
+        }
+      ],
+      "type": "array",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "array"
+      ]
+    },
+    {
       "semanticId": "lotus.producer_repository",
       "canonicalTerm": "producer_repository",
       "preferredName": "producer_repository",
@@ -2053,6 +2118,16 @@
         {
           "display_name": "Growth slowdown",
           "expected_loss_pct": 0.0765,
+          "position_contributions": [
+            {
+              "bucket": "EQUITY",
+              "contribution_loss_pct": 0.0216,
+              "display_name": "Apple Inc.",
+              "security_id": "FO_EQ_AAPL_US",
+              "shock_pct": -0.12,
+              "weight": 0.18
+            }
+          ],
           "scenario_id": "growth_slowdown",
           "shock_by_bucket": {
             "EQUITY": -0.12,
@@ -2088,13 +2163,14 @@
       "semanticId": "lotus.security_id",
       "canonicalTerm": "security_id",
       "preferredName": "security_id",
-      "description": "Security identifier of the top concentration-driving position.",
-      "example": "FO_FUND_PIMCO_INC",
-      "type": "object",
+      "description": "Security or instrument identifier contributing to the scenario bucket.",
+      "example": "FO_EQ_AAPL_US",
+      "type": "string",
       "locations": [
         "body"
       ],
       "observedTypes": [
+        "string",
         "object"
       ]
     },
@@ -2141,6 +2217,20 @@
       ],
       "observedTypes": [
         "object"
+      ]
+    },
+    {
+      "semanticId": "lotus.shock_pct",
+      "canonicalTerm": "shock_pct",
+      "preferredName": "shock_pct",
+      "description": "Scenario shock ratio applied to the security contribution bucket.",
+      "example": -0.12,
+      "type": "number",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "number"
       ]
     },
     {
@@ -3857,6 +3947,46 @@
             "attributeRef": "#/attributeCatalog/lotus.weight"
           },
           {
+            "name": "exposure_components",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.exposure_components",
+            "attributeRef": "#/attributeCatalog/lotus.exposure_components"
+          },
+          {
+            "name": "exposure_components[].security_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.security_id",
+            "attributeRef": "#/attributeCatalog/lotus.security_id"
+          },
+          {
+            "name": "exposure_components[].display_name",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.display_name",
+            "attributeRef": "#/attributeCatalog/lotus.display_name"
+          },
+          {
+            "name": "exposure_components[].bucket",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.bucket",
+            "attributeRef": "#/attributeCatalog/lotus.bucket"
+          },
+          {
+            "name": "exposure_components[].weight",
+            "location": "body",
+            "required": true,
+            "type": "number",
+            "semanticId": "lotus.weight",
+            "attributeRef": "#/attributeCatalog/lotus.weight"
+          },
+          {
             "name": "maximum_allowed_loss_pct",
             "location": "body",
             "required": true,
@@ -3955,6 +4085,62 @@
             "type": "object",
             "semanticId": "lotus.shock_by_bucket",
             "attributeRef": "#/attributeCatalog/lotus.shock_by_bucket"
+          },
+          {
+            "name": "scenario_results[].position_contributions",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.position_contributions",
+            "attributeRef": "#/attributeCatalog/lotus.position_contributions"
+          },
+          {
+            "name": "scenario_results[].position_contributions[].security_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.security_id",
+            "attributeRef": "#/attributeCatalog/lotus.security_id"
+          },
+          {
+            "name": "scenario_results[].position_contributions[].display_name",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.display_name",
+            "attributeRef": "#/attributeCatalog/lotus.display_name"
+          },
+          {
+            "name": "scenario_results[].position_contributions[].bucket",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.bucket",
+            "attributeRef": "#/attributeCatalog/lotus.bucket"
+          },
+          {
+            "name": "scenario_results[].position_contributions[].weight",
+            "location": "body",
+            "required": true,
+            "type": "number",
+            "semanticId": "lotus.weight",
+            "attributeRef": "#/attributeCatalog/lotus.weight"
+          },
+          {
+            "name": "scenario_results[].position_contributions[].shock_pct",
+            "location": "body",
+            "required": true,
+            "type": "number",
+            "semanticId": "lotus.shock_pct",
+            "attributeRef": "#/attributeCatalog/lotus.shock_pct"
+          },
+          {
+            "name": "scenario_results[].position_contributions[].contribution_loss_pct",
+            "location": "body",
+            "required": true,
+            "type": "number",
+            "semanticId": "lotus.contribution_loss_pct",
+            "attributeRef": "#/attributeCatalog/lotus.contribution_loss_pct"
           },
           {
             "name": "reason_codes",

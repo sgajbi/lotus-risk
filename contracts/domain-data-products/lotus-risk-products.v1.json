@@ -339,7 +339,8 @@
         "successor_product": null
       },
       "identifier_refs": [
-        "portfolio_id"
+        "portfolio_id",
+        "instrument_id"
       ],
       "temporal_semantics_ref": "as_of_date"
     },

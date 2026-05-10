@@ -8,6 +8,8 @@ from app.contracts.scenario import (
     RegimeScenarioPackRequest,
     RegimeScenarioPackResponse,
     ScenarioEvaluationMetadata,
+    ScenarioExposureComponent,
+    ScenarioPositionContribution,
     ScenarioResult,
     ScenarioSupportabilityState,
 )
@@ -77,6 +79,7 @@ def evaluate_regime_scenario_pack(
         _evaluate_scenario(
             scenario=scenario,
             exposure_by_bucket=exposure_by_bucket,
+            exposure_components=request.exposure_components,
         )
         for scenario in scenario_pack
     ]
@@ -113,6 +116,7 @@ def _evaluate_scenario(
     *,
     scenario: ScenarioDefinition,
     exposure_by_bucket: dict[str, float],
+    exposure_components: list[ScenarioExposureComponent],
 ) -> ScenarioResult:
     loss = 0.0
     for bucket, weight in exposure_by_bucket.items():
@@ -123,6 +127,41 @@ def _evaluate_scenario(
         display_name=scenario.display_name,
         expected_loss_pct=round(loss, 6),
         shock_by_bucket=dict(scenario.shock_by_bucket),
+        position_contributions=_evaluate_position_contributions(
+            scenario=scenario,
+            exposure_components=exposure_components,
+        ),
+    )
+
+
+def _evaluate_position_contributions(
+    *,
+    scenario: ScenarioDefinition,
+    exposure_components: list[ScenarioExposureComponent],
+) -> list[ScenarioPositionContribution]:
+    contributions = [
+        ScenarioPositionContribution(
+            security_id=component.security_id,
+            display_name=component.display_name,
+            bucket=component.bucket.upper(),
+            weight=component.weight,
+            shock_pct=scenario.shock_by_bucket.get(component.bucket.upper(), 0.0),
+            contribution_loss_pct=round(
+                max(
+                    -(
+                        component.weight
+                        * scenario.shock_by_bucket.get(component.bucket.upper(), 0.0)
+                    ),
+                    0.0,
+                ),
+                6,
+            ),
+        )
+        for component in exposure_components
+    ]
+    return sorted(
+        contributions,
+        key=lambda row: (-row.contribution_loss_pct, row.bucket, row.security_id),
     )
 
 

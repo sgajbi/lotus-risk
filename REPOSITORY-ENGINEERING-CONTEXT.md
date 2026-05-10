@@ -42,7 +42,8 @@ Current repository posture:
 9. `RegimeScenarioPackEvaluation:v1` is a repo-native domain data product exposed through
    `POST /analytics/risk/regime-scenario-pack/evaluate`; it evaluates caller-supplied exposure
    weights against governed CIO scenario-pack definitions and returns source-owned worst-case loss,
-   threshold breach posture, lineage, supportability, and bounded reason codes.
+   optional reconciled per-security contribution rows, threshold breach posture, lineage,
+   supportability, and bounded reason codes.
 10. `RiskEventAffectedCohort:v1` is a repo-native domain data product exposed through
     `POST /analytics/risk/risk-event-cohorts/evaluate`; it evaluates candidate portfolios and
     source-supplied exposure weights against governed risk-event definitions and returns affected

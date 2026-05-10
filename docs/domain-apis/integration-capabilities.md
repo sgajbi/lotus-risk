@@ -64,6 +64,7 @@ This allows consumers to discover that:
 - risk snapshot VaR and expected shortfall are signed return-threshold metrics
 - historical attribution residual and `reconciled_sum` must be preserved with contributors
 - regime scenario-pack evaluation is a stateless source-owned workflow that returns worst-case loss,
+  optional per-security contribution rows when reconciled exposure components are supplied,
   policy-threshold breach posture, lineage, and bounded reason codes from risk-owned CIO scenario
   definitions
 - risk-event affected-cohort evaluation is a stateless source-owned workflow that returns affected
@@ -80,7 +81,8 @@ This allows consumers to discover that:
 
 - Downstream consumers:
   - `lotus-gateway` capability aggregation (`/api/v1/platform/capabilities`).
-  - `lotus-manage` future RFC41-WTBD-003 wave trigger consumption for risk-event cohorts.
+  - `lotus-manage` future RFC40 scenario proof-pack and RFC41 wave trigger consumption for
+    source-owned scenario and risk-event evidence.
   - downstream cleanup for undeclared risk capability query params is tracked in
     `sgajbi/lotus-gateway#113`.
 - Upstream dependencies:

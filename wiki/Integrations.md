@@ -37,7 +37,9 @@ This matters because:
 3. historical attribution is intentionally `partial`,
 4. workflow notes carry real supportability meaning,
 5. regime scenario-pack evaluation is stateless and source-owned by `lotus-risk`,
-6. one remaining functional gap inside the approved analytics surface is stateful `ACTIVE_RISK + ISSUER`.
+6. per-security regime scenario contribution rows are available when callers supply reconciled
+   exposure components,
+7. one remaining functional gap inside the approved analytics surface is stateful `ACTIVE_RISK + ISSUER`.
 
 ## Downstream Preservation Rules
 
@@ -48,7 +50,8 @@ Gateway, Workbench, reporting, and AI consumers must preserve:
 3. issuer active-risk gating,
 4. concentration-only simulation support,
 5. regime scenario-pack evaluation reason codes and threshold-breach posture,
-6. lineage and upstream request-fingerprint metadata.
+6. regime scenario-pack per-security contribution rows when present,
+7. lineage and upstream request-fingerprint metadata.
 
 If those are dropped or flattened, a numerically correct response can still become product-wrong.
 
@@ -72,8 +75,10 @@ Use `lotus-risk` directly or through gateway with these rules:
 3. treat partial historical attribution support as a real product limit,
 4. consume regime scenario-pack evaluation as source-owned stress evidence rather than
    reconstructing scenario shocks downstream,
-5. preserve audit and lineage metadata whenever responses are stored or passed onward,
-6. do not rewrite signed VaR into an always-positive loss figure unless the presentation layer explicitly records that sign-convention conversion.
+5. preserve regime scenario-pack contribution rows in proof packs and product surfaces when
+   `exposure_components` were supplied,
+6. preserve audit and lineage metadata whenever responses are stored or passed onward,
+7. do not rewrite signed VaR into an always-positive loss figure unless the presentation layer explicitly records that sign-convention conversion.
 
 ## Integration Sources
 

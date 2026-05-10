@@ -25,6 +25,27 @@ class ScenarioExposure(BaseModel):
     )
 
 
+class ScenarioExposureComponent(BaseModel):
+    security_id: str = Field(
+        description="Security or instrument identifier contributing to the scenario bucket.",
+        json_schema_extra={"example": "FO_EQ_AAPL_US"},
+    )
+    display_name: str | None = Field(
+        default=None,
+        description="Optional display name for the contributing security or instrument.",
+        json_schema_extra={"example": "Apple Inc."},
+    )
+    bucket: str = Field(
+        description="Scenario bucket used for the security contribution.",
+        json_schema_extra={"example": "EQUITY"},
+    )
+    weight: float = Field(
+        ge=0.0,
+        description="Portfolio weight represented by this security contribution.",
+        json_schema_extra={"example": 0.18},
+    )
+
+
 class RegimeScenarioPackRequest(BaseModel):
     scenario_pack_id: str = Field(
         description="Governed scenario pack identifier.",
@@ -49,6 +70,30 @@ class RegimeScenarioPackRequest(BaseModel):
             ]
         },
     )
+    exposure_components: list[ScenarioExposureComponent] = Field(
+        default_factory=list,
+        description=(
+            "Optional position-level exposure components used to emit per-security scenario "
+            "contribution rows. When supplied, component weights must reconcile to the bucket "
+            "weights in exposures."
+        ),
+        json_schema_extra={
+            "example": [
+                {
+                    "security_id": "FO_EQ_AAPL_US",
+                    "display_name": "Apple Inc.",
+                    "bucket": "EQUITY",
+                    "weight": 0.18,
+                },
+                {
+                    "security_id": "FO_BOND_UST_2030",
+                    "display_name": "United States Treasury 3.875% 2030",
+                    "bucket": "FIXED_INCOME",
+                    "weight": 0.35,
+                },
+            ]
+        },
+    )
     maximum_allowed_loss_pct: float = Field(
         ge=0.0,
         le=1.0,
@@ -60,7 +105,61 @@ class RegimeScenarioPackRequest(BaseModel):
     def validate_exposures(self) -> "RegimeScenarioPackRequest":
         if not self.exposures:
             raise ValueError("exposures must contain at least one scenario exposure bucket")
+        if self.exposure_components:
+            exposure_by_bucket = {
+                exposure.bucket.upper(): exposure.weight for exposure in self.exposures
+            }
+            component_totals: dict[str, float] = {}
+            for component in self.exposure_components:
+                bucket = component.bucket.upper()
+                component_totals[bucket] = component_totals.get(bucket, 0.0) + component.weight
+            unknown_component_buckets = sorted(set(component_totals) - set(exposure_by_bucket))
+            if unknown_component_buckets:
+                raise ValueError(
+                    "exposure_components contain buckets absent from exposures: "
+                    + ", ".join(unknown_component_buckets)
+                )
+            mismatched_buckets = [
+                bucket
+                for bucket, component_weight in sorted(component_totals.items())
+                if abs(component_weight - exposure_by_bucket[bucket]) > 0.000001
+            ]
+            if mismatched_buckets:
+                raise ValueError(
+                    "exposure_components must reconcile to exposures for buckets: "
+                    + ", ".join(mismatched_buckets)
+                )
         return self
+
+
+class ScenarioPositionContribution(BaseModel):
+    security_id: str = Field(
+        description="Security or instrument identifier for the scenario contribution row.",
+        json_schema_extra={"example": "FO_EQ_AAPL_US"},
+    )
+    display_name: str | None = Field(
+        default=None,
+        description="Optional display name for the contributing security or instrument.",
+        json_schema_extra={"example": "Apple Inc."},
+    )
+    bucket: str = Field(
+        description="Scenario bucket used to assign the risk shock.",
+        json_schema_extra={"example": "EQUITY"},
+    )
+    weight: float = Field(
+        ge=0.0,
+        description="Portfolio weight used for this security contribution.",
+        json_schema_extra={"example": 0.18},
+    )
+    shock_pct: float = Field(
+        description="Scenario shock ratio applied to the security contribution bucket.",
+        json_schema_extra={"example": -0.12},
+    )
+    contribution_loss_pct: float = Field(
+        ge=0.0,
+        description="Non-negative contribution to expected portfolio loss under the scenario.",
+        json_schema_extra={"example": 0.0216},
+    )
 
 
 class ScenarioResult(BaseModel):
@@ -79,6 +178,25 @@ class ScenarioResult(BaseModel):
     shock_by_bucket: dict[str, float] = Field(
         description="Scenario shock ratios by exposure bucket.",
         json_schema_extra={"example": {"EQUITY": -0.12, "FIXED_INCOME": -0.03}},
+    )
+    position_contributions: list[ScenarioPositionContribution] = Field(
+        default_factory=list,
+        description=(
+            "Optional per-security contribution rows when exposure_components were supplied. "
+            "Rows are source-owned scenario contribution evidence, not a full repricing model."
+        ),
+        json_schema_extra={
+            "example": [
+                {
+                    "security_id": "FO_EQ_AAPL_US",
+                    "display_name": "Apple Inc.",
+                    "bucket": "EQUITY",
+                    "weight": 0.18,
+                    "shock_pct": -0.12,
+                    "contribution_loss_pct": 0.0216,
+                }
+            ]
+        },
     )
 
 
@@ -148,6 +266,16 @@ class RegimeScenarioPackResponse(BaseModel):
                     "display_name": "Growth slowdown",
                     "expected_loss_pct": 0.0765,
                     "shock_by_bucket": {"EQUITY": -0.12, "FIXED_INCOME": -0.03},
+                    "position_contributions": [
+                        {
+                            "security_id": "FO_EQ_AAPL_US",
+                            "display_name": "Apple Inc.",
+                            "bucket": "EQUITY",
+                            "weight": 0.18,
+                            "shock_pct": -0.12,
+                            "contribution_loss_pct": 0.0216,
+                        }
+                    ],
                 }
             ]
         },
