@@ -30,6 +30,13 @@ partial minimum-observation behavior, warm-up null handling, no-aligned-benchmar
 zero-tracking-error information-ratio flagging, decimal-ratio tracking-error output, and
 dimensionless information-ratio output.
 
+`RegimeScenarioPackEvaluation:v1` now carries source-owned scenario-pack evidence beyond aggregate
+loss. When callers provide reconciled `exposure_components`, the product emits per-security
+scenario contribution rows alongside worst-case loss, threshold-breach posture, lineage, and
+bounded reason codes. The rows are contribution evidence for governed CIO shocks, not full
+instrument repricing, and downstream proof packs must preserve them instead of rebuilding scenario
+logic outside `lotus-risk`.
+
 ```mermaid
 flowchart LR
     PERF[lotus-performance<br/>portfolio + benchmark returns]
@@ -42,7 +49,7 @@ flowchart LR
     PERF -->|dated return series| RISK
     RISK -->|rolling active-risk metrics + lineage| GW
     GW --> WB
-    RISK -->|source-owned scalar evidence| MANAGE
+    RISK -->|source-owned scalar + scenario contribution evidence| MANAGE
     COHORT -->|affected portfolios + source refs| MANAGE
 ```
 
@@ -59,6 +66,9 @@ Audience notes:
 - Developers and downstream services must preserve `RiskEventAffectedCohort:v1` membership,
   exclusions, source refs, and impact scores rather than reconstructing risk-event cohort
   membership locally.
+- Developers and downstream services must preserve `RegimeScenarioPackEvaluation:v1` scenario
+  results, per-security contribution rows, reason codes, and lineage rather than applying local
+  scenario methodology in gateway, Workbench, reporting, or manage proof packs.
 - Sales and pre-sales can describe the canonical capability as implementation-backed for supported
   seeded portfolios, while broader portfolio-archetype coverage still depends on live validation
   evidence.

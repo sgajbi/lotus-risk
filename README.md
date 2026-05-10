@@ -48,8 +48,9 @@ Important posture limits:
 
 1. concentration is the only workflow that currently supports `simulation`,
 2. regime scenario-pack evaluation is stateless and consumes caller-supplied exposure weights
-   against risk-owned CIO scenario definitions; it does not forecast markets or accept UI-owned
-   scenario methodology,
+   against risk-owned CIO scenario definitions; optional `exposure_components` produce
+   source-owned per-security scenario contribution rows that reconcile to the bucket exposures,
+   but the workflow does not forecast markets or accept UI-owned scenario methodology,
 3. risk-event affected-cohort evaluation is stateless and consumes caller-supplied candidate
    portfolios and source-supplied exposure weights against risk-owned event definitions; it does
    not create rebalance waves or own campaign approval workflow,

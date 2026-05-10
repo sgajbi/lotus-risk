@@ -20,6 +20,32 @@ def test_regime_scenario_pack_endpoint_returns_evaluation_contract() -> None:
                 {"bucket": "FIXED_INCOME", "weight": 0.35},
                 {"bucket": "CASH", "weight": 0.10},
             ],
+            "exposure_components": [
+                {
+                    "security_id": "FO_EQ_AAPL_US",
+                    "display_name": "Apple Inc.",
+                    "bucket": "EQUITY",
+                    "weight": 0.30,
+                },
+                {
+                    "security_id": "FO_EQ_MSFT_US",
+                    "display_name": "Microsoft Corporation",
+                    "bucket": "EQUITY",
+                    "weight": 0.25,
+                },
+                {
+                    "security_id": "FO_BOND_UST_2030",
+                    "display_name": "United States Treasury 3.875% 2030",
+                    "bucket": "FIXED_INCOME",
+                    "weight": 0.35,
+                },
+                {
+                    "security_id": "CASH_USD_BOOK_OPERATING",
+                    "display_name": "USD Operating Cash",
+                    "bucket": "CASH",
+                    "weight": 0.10,
+                },
+            ],
         },
         headers={"X-Correlation-Id": "corr-scenario-api"},
     )
@@ -31,6 +57,19 @@ def test_regime_scenario_pack_endpoint_returns_evaluation_contract() -> None:
     assert body["metadata"]["product_name"] == "RegimeScenarioPackEvaluation"
     assert body["metadata"]["calculation_supportability"] == "ready"
     assert body["reason_codes"] == ["REGIME_SCENARIO_PACK_READY"]
+    growth_slowdown = next(
+        scenario
+        for scenario in body["scenario_results"]
+        if scenario["scenario_id"] == "growth_slowdown"
+    )
+    assert growth_slowdown["position_contributions"][0] == {
+        "security_id": "FO_EQ_AAPL_US",
+        "display_name": "Apple Inc.",
+        "bucket": "EQUITY",
+        "weight": 0.3,
+        "shock_pct": -0.12,
+        "contribution_loss_pct": 0.036,
+    }
 
 
 def test_capabilities_include_regime_scenario_pack_workflow() -> None:
@@ -44,3 +83,28 @@ def test_capabilities_include_regime_scenario_pack_workflow() -> None:
         "/analytics/risk/regime-scenario-pack/evaluate"
     )
     assert workflows["regime_scenario_pack_evaluation"]["support_status"] == "full"
+    assert (
+        "returns source-owned worst-case loss, per-security contribution rows when supplied, policy breach posture, and lineage"
+        in workflows["regime_scenario_pack_evaluation"]["notes"]
+    )
+
+
+def test_openapi_documents_regime_scenario_pack_component_rows() -> None:
+    client = TestClient(app)
+
+    response = client.get("/openapi.json")
+
+    assert response.status_code == 200
+    components = response.json()["components"]["schemas"]
+    request_schema = components["RegimeScenarioPackRequest"]
+    result_schema = components["ScenarioResult"]
+    assert "exposure_components" in request_schema["properties"]
+    assert (
+        "component weights must reconcile"
+        in request_schema["properties"]["exposure_components"]["description"]
+    )
+    assert "position_contributions" in result_schema["properties"]
+    assert (
+        "not a full repricing model"
+        in result_schema["properties"]["position_contributions"]["description"]
+    )

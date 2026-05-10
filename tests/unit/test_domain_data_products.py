@@ -39,6 +39,16 @@ def test_get_declared_product_returns_repo_native_lifecycle_and_route() -> None:
     assert product["current_routes"] == ["/analytics/risk/historical-attribution"]
 
 
+def test_regime_scenario_pack_declaration_tracks_position_identifiers() -> None:
+    product = get_declared_product(
+        product_name="RegimeScenarioPackEvaluation",
+        product_version="v1",
+    )
+
+    assert product["approved_consumers"] == ["lotus-gateway", "lotus-manage"]
+    assert product["identifier_refs"] == ["portfolio_id", "instrument_id"]
+
+
 def test_get_declared_product_rejects_unknown_product() -> None:
     try:
         get_declared_product(product_name="UnknownReport", product_version="v1")
