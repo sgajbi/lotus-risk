@@ -5,31 +5,62 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 ROLLING_TRACKING_ERROR_DOC = (
     REPO_ROOT / "docs" / "methodologies" / "metrics" / "rolling-tracking-error.md"
 )
+ROLLING_VOLATILITY_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "rolling-volatility.md"
 ROLLING_INFORMATION_RATIO_DOC = (
     REPO_ROOT / "docs" / "methodologies" / "metrics" / "rolling-information-ratio.md"
 )
 
 
+EXPECTED_V3_SECTIONS = [
+    "## Metric",
+    "## Endpoint and Mode Coverage",
+    "## Inputs",
+    "## Upstream Data Sources",
+    "## Unit Conventions",
+    "## Variable Dictionary",
+    "## Methodology and Formulas",
+    "## Step-by-Step Computation",
+    "## Validation and Failure Behavior",
+    "## Configuration Options",
+    "## Outputs",
+    "## Worked Example",
+]
+
+
+def _assert_v3_section_order(text: str) -> None:
+    section_positions = [text.index(section) for section in EXPECTED_V3_SECTIONS]
+    assert section_positions == sorted(section_positions)
+
+
+def test_rolling_volatility_methodology_is_auditable_against_engine_contract() -> None:
+    text = ROLLING_VOLATILITY_DOC.read_text(encoding="utf-8")
+
+    _assert_v3_section_order(text)
+
+    required_truth = [
+        "metric_id: ROLLING_VOLATILITY",
+        "/analytics/risk/rolling-metrics",
+        "lotus-performance",
+        "r_decimal = r_pp / 100",
+        "annualized decimal ratio",
+        "ddof=1",
+        "`min_obs = W` when `min_observations_policy = STRICT`",
+        "`min_obs = 2` when `min_observations_policy = ALLOW_PARTIAL`",
+        "Constant portfolio returns are valid and produce `0.0`",
+        "No benchmark or risk-free dependency is required for `ROLLING_VOLATILITY`",
+        "metric_summaries.ROLLING_VOLATILITY.latest",
+        "metric_series[].metric_values.ROLLING_VOLATILITY",
+        "0.3004995840",
+    ]
+
+    for phrase in required_truth:
+        assert phrase in text
+
+
 def test_rolling_tracking_error_methodology_is_auditable_against_engine_contract() -> None:
     text = ROLLING_TRACKING_ERROR_DOC.read_text(encoding="utf-8")
 
-    expected_sections = [
-        "## Metric",
-        "## Endpoint and Mode Coverage",
-        "## Inputs",
-        "## Upstream Data Sources",
-        "## Unit Conventions",
-        "## Variable Dictionary",
-        "## Methodology and Formulas",
-        "## Step-by-Step Computation",
-        "## Validation and Failure Behavior",
-        "## Configuration Options",
-        "## Outputs",
-        "## Worked Example",
-    ]
-
-    section_positions = [text.index(section) for section in expected_sections]
-    assert section_positions == sorted(section_positions)
+    _assert_v3_section_order(text)
 
     required_truth = [
         "metric_id: ROLLING_TRACKING_ERROR",
@@ -54,23 +85,7 @@ def test_rolling_tracking_error_methodology_is_auditable_against_engine_contract
 def test_rolling_information_ratio_methodology_is_auditable_against_engine_contract() -> None:
     text = ROLLING_INFORMATION_RATIO_DOC.read_text(encoding="utf-8")
 
-    expected_sections = [
-        "## Metric",
-        "## Endpoint and Mode Coverage",
-        "## Inputs",
-        "## Upstream Data Sources",
-        "## Unit Conventions",
-        "## Variable Dictionary",
-        "## Methodology and Formulas",
-        "## Step-by-Step Computation",
-        "## Validation and Failure Behavior",
-        "## Configuration Options",
-        "## Outputs",
-        "## Worked Example",
-    ]
-
-    section_positions = [text.index(section) for section in expected_sections]
-    assert section_positions == sorted(section_positions)
+    _assert_v3_section_order(text)
 
     required_truth = [
         "metric_id: ROLLING_INFORMATION_RATIO",

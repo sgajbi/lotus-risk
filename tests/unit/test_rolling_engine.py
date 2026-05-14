@@ -72,6 +72,44 @@ def test_rolling_engine_returns_window_results_and_metadata() -> None:
     assert len(window.metric_series) > 0
 
 
+def test_rolling_volatility_matches_documented_decimal_methodology() -> None:
+    payload = RollingStatelessInput.model_validate(
+        {
+            "scope": {"as_of_date": "2026-01-03", "net_or_gross": "NET"},
+            "periods": [{"type": "YTD", "name": "YTD"}],
+            "returns": [
+                {"date": "2026-01-01", "value": 1.0},
+                {"date": "2026-01-02", "value": -2.0},
+                {"date": "2026-01-03", "value": 1.5},
+            ],
+            "rolling_options": {
+                "window_lengths": [3],
+                "metrics": ["ROLLING_VOLATILITY"],
+                "annualization_basis": 252,
+                "min_observations_policy": "STRICT",
+                "include_time_series": True,
+            },
+        }
+    )
+
+    response = calculate_rolling_metrics(payload, input_mode=RollingInputMode.STATELESS)
+
+    window = response.results["YTD"].window_results[0]
+    summary = window.metric_summaries["ROLLING_VOLATILITY"]
+
+    assert summary.latest == pytest.approx(0.3004995840263344)
+    assert summary.latest_observation_date is not None
+    assert summary.latest_observation_date.isoformat() == "2026-01-03"
+    assert summary.min_observations_required == 3
+    assert summary.warmup_point_count == 2
+    assert summary.computed_point_count == 1
+
+    assert window.metric_series is not None
+    latest_point = window.metric_series[-1]
+    assert latest_point.date.isoformat() == "2026-01-03"
+    assert latest_point.metric_values["ROLLING_VOLATILITY"] == pytest.approx(summary.latest)
+
+
 def test_rolling_tracking_error_matches_documented_decimal_methodology() -> None:
     response = calculate_rolling_metrics(_base_input(), input_mode=RollingInputMode.STATELESS)
 
