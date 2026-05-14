@@ -150,6 +150,51 @@ def test_rolling_information_ratio_matches_documented_decimal_methodology() -> N
     assert latest_point.metric_values["ROLLING_INFORMATION_RATIO"] == pytest.approx(summary.latest)
 
 
+def test_rolling_sharpe_matches_documented_decimal_methodology() -> None:
+    payload = RollingStatelessInput.model_validate(
+        {
+            "scope": {"as_of_date": "2026-01-03", "net_or_gross": "NET"},
+            "periods": [{"type": "YTD", "name": "YTD"}],
+            "returns": [
+                {"date": "2026-01-01", "value": 0.50},
+                {"date": "2026-01-02", "value": 0.20},
+                {"date": "2026-01-03", "value": -0.10},
+            ],
+            "risk_free_returns": [
+                {"date": "2026-01-01", "value": 0.01},
+                {"date": "2026-01-02", "value": 0.01},
+                {"date": "2026-01-03", "value": 0.01},
+            ],
+            "rolling_options": {
+                "window_lengths": [3],
+                "metrics": ["ROLLING_SHARPE"],
+                "annualization_basis": 252,
+                "min_observations_policy": "STRICT",
+                "include_time_series": True,
+            },
+        }
+    )
+
+    response = calculate_rolling_metrics(payload, input_mode=RollingInputMode.STATELESS)
+
+    period = response.results["YTD"]
+    window = period.window_results[0]
+    summary = window.metric_summaries["ROLLING_SHARPE"]
+
+    assert period.quality_flags == []
+    assert summary.latest == pytest.approx(10.053854982045443)
+    assert summary.latest_observation_date is not None
+    assert summary.latest_observation_date.isoformat() == "2026-01-03"
+    assert summary.min_observations_required == 3
+    assert summary.warmup_point_count == 2
+    assert summary.computed_point_count == 1
+
+    assert window.metric_series is not None
+    latest_point = window.metric_series[-1]
+    assert latest_point.date.isoformat() == "2026-01-03"
+    assert latest_point.metric_values["ROLLING_SHARPE"] == pytest.approx(summary.latest)
+
+
 def test_rolling_engine_returns_period_error_when_insufficient_period_data() -> None:
     payload = {
         "scope": {"as_of_date": "2026-01-08", "net_or_gross": "NET"},
