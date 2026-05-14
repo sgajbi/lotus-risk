@@ -23,14 +23,14 @@
 ## Implementation-backed methodology coverage
 
 `RollingRiskMetricsReport:v1` now has auditable source-owner methodology truth for rolling
-volatility, rolling Sharpe, rolling tracking error, and rolling information ratio. The
+volatility, rolling Sharpe, rolling beta, rolling tracking error, and rolling information ratio. The
 methodologies are tied to the implemented `/analytics/risk/rolling-metrics` engine and state the
 exact percentage-point to decimal conversion, `ddof=1` sample standard deviation, annualization
 basis, strict versus partial minimum-observation behavior, warm-up null handling, risk-free and
 benchmark date-alignment rules where required, no-aligned-dependency behavior, zero-excess-volatility
-Sharpe flagging, zero-tracking-error information-ratio flagging, annualized decimal
-volatility output, decimal-ratio tracking-error output, and dimensionless Sharpe and
-information-ratio output.
+Sharpe flagging, zero-benchmark-variance beta flagging, zero-tracking-error information-ratio
+flagging, annualized decimal volatility output, decimal-ratio tracking-error output, and
+dimensionless Sharpe, beta, and information-ratio output.
 
 `RegimeScenarioPackEvaluation:v1` now carries source-owned scenario-pack evidence beyond aggregate
 loss. When callers provide reconciled `exposure_components`, the product emits per-security
@@ -59,15 +59,16 @@ Audience notes:
 
 - Business users can read rolling volatility as annualized portfolio-return dispersion, rolling
   Sharpe as annualized excess return per unit of portfolio excess-return volatility, rolling
-  tracking error as annualized active-return volatility versus the selected benchmark, and rolling
-  information ratio as annualized active return per unit of that active risk.
+  beta as sensitivity to benchmark return variance, rolling tracking error as annualized
+  active-return volatility versus the selected benchmark, and rolling information ratio as
+  annualized active return per unit of that active risk.
 - Operations teams can distinguish warm-up gaps, missing benchmark alignment, and upstream sourcing
   issues from calculation failure; missing risk-free alignment and zero-excess-volatility windows
-  are explicit for Sharpe, and zero-tracking-error windows are flagged rather than promoted as valid
-  ratios.
+  are explicit for Sharpe, zero-benchmark-variance windows are explicit for beta, and
+  zero-tracking-error windows are flagged rather than promoted as valid ratios.
 - Developers and downstream services must preserve `RollingRiskMetricsReport:v1` values and
-  supportability metadata rather than recomputing rolling volatility, Sharpe, tracking error, or
-  information ratio locally.
+  supportability metadata rather than recomputing rolling volatility, Sharpe, beta, tracking error,
+  or information ratio locally.
 - Developers and downstream services must preserve `RiskEventAffectedCohort:v1` membership,
   exclusions, source refs, and impact scores rather than reconstructing risk-event cohort
   membership locally.
