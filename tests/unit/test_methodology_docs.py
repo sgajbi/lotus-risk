@@ -11,6 +11,9 @@ ROLLING_INFORMATION_RATIO_DOC = (
 )
 ROLLING_SHARPE_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "rolling-sharpe.md"
 ROLLING_BETA_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "rolling-beta.md"
+ROLLING_MAX_DRAWDOWN_DOC = (
+    REPO_ROOT / "docs" / "methodologies" / "metrics" / "rolling-max-drawdown.md"
+)
 
 
 EXPECTED_V3_SECTIONS = [
@@ -155,6 +158,31 @@ def test_rolling_beta_methodology_is_auditable_against_engine_contract() -> None
         "metric_summaries.ROLLING_BETA.latest",
         "metric_series[].metric_values.ROLLING_BETA",
         "1.5000000000",
+    ]
+
+    for phrase in required_truth:
+        assert phrase in text
+
+
+def test_rolling_max_drawdown_methodology_is_auditable_against_engine_contract() -> None:
+    text = ROLLING_MAX_DRAWDOWN_DOC.read_text(encoding="utf-8")
+
+    _assert_v3_section_order(text)
+
+    required_truth = [
+        "metric_id: ROLLING_MAX_DRAWDOWN",
+        "/analytics/risk/rolling-metrics",
+        "lotus-performance",
+        "r_decimal = r_pp / 100",
+        "not used by `ROLLING_MAX_DRAWDOWN`",
+        "decimal drawdown ratio",
+        "`min_obs = W` when `min_observations_policy = STRICT`",
+        "`min_obs = 2` when `min_observations_policy = ALLOW_PARTIAL`",
+        "No benchmark or risk-free dependency is required for `ROLLING_MAX_DRAWDOWN`",
+        "No denominator is used",
+        "metric_summaries.ROLLING_MAX_DRAWDOWN.latest",
+        "metric_series[].metric_values.ROLLING_MAX_DRAWDOWN",
+        "-0.1000000000",
     ]
 
     for phrase in required_truth:

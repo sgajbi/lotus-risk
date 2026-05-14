@@ -50,14 +50,15 @@ Current repository posture:
     membership, exclusions, impact scores, source refs, supportability, and bounded reason codes
     for future manage wave-trigger consumption without creating waves or campaign approvals.
 11. `RollingRiskMetricsReport:v1` now has implementation-backed methodology truth for
-    `ROLLING_VOLATILITY`, `ROLLING_SHARPE`, `ROLLING_BETA`, `ROLLING_TRACKING_ERROR`, and
-    `ROLLING_INFORMATION_RATIO`: the docs and tests pin percentage-point to decimal conversion,
-    `ddof=1` sample standard deviation/covariance/variance behavior, annualization where used,
-    annualized decimal volatility output, annualized decimal tracking-error output, dimensionless
-    Sharpe, beta, and information-ratio output, warm-up/null behavior, source-owned
-    risk-free/benchmark alignment posture, no-aligned dependency supportability posture,
-    zero-excess-volatility Sharpe flagging, zero-benchmark-variance beta flagging, and
-    zero-tracking-error information-ratio flagging.
+    `ROLLING_VOLATILITY`, `ROLLING_SHARPE`, `ROLLING_BETA`, `ROLLING_TRACKING_ERROR`,
+    `ROLLING_INFORMATION_RATIO`, and `ROLLING_MAX_DRAWDOWN`: the docs and tests pin
+    percentage-point to decimal conversion, `ddof=1` sample standard deviation/covariance/variance
+    behavior, annualization where used, rolling maximum drawdown cumulative-wealth/running-peak
+    behavior, annualized decimal volatility output, annualized decimal tracking-error output,
+    dimensionless Sharpe, beta, and information-ratio output, decimal drawdown-ratio output,
+    warm-up/null behavior, source-owned risk-free/benchmark alignment posture, no-aligned
+    dependency supportability posture, zero-excess-volatility Sharpe flagging,
+    zero-benchmark-variance beta flagging, and zero-tracking-error information-ratio flagging.
 
 ## Architecture And Module Map
 
