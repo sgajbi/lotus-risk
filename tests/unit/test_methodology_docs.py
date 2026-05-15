@@ -16,6 +16,7 @@ ROLLING_MAX_DRAWDOWN_DOC = (
 )
 RISK_VOLATILITY_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-volatility.md"
 RISK_SHARPE_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-sharpe.md"
+RISK_SORTINO_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-sortino.md"
 RISK_BETA_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-beta.md"
 RISK_TRACKING_ERROR_DOC = (
     REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-tracking-error.md"
@@ -246,6 +247,35 @@ def test_risk_sharpe_methodology_is_auditable_against_engine_contract() -> None:
         "4.7688716199",
         "0.0000785849",
         "0.0075055535",
+    ]
+
+    for phrase in required_truth:
+        assert phrase in text
+
+
+def test_risk_sortino_methodology_is_auditable_against_engine_contract() -> None:
+    text = RISK_SORTINO_DOC.read_text(encoding="utf-8")
+
+    _assert_v3_section_order(text)
+
+    required_truth = [
+        "metric_id: SORTINO",
+        "/analytics/risk/calculate",
+        "lotus-performance",
+        "r_log_pp = ln(1 + r_pp / 100) * 100",
+        "MAR_periodic = (1 + MAR_annual)^(1 / AF) - 1",
+        "sigma_down_dec = sqrt(mean(x_t^2 for x_t in D))",
+        "`metrics.SORTINO.value` is a dimensionless annualized ratio",
+        "`AF = 252` for `DAILY`, `52` for `WEEKLY`, and `12` for `MONTHLY`",
+        'details.error = "Insufficient data"',
+        'details.error = "No downside observations"',
+        "No benchmark dependency is required for `SORTINO`",
+        "No risk-free dependency is required for `SORTINO`",
+        "The denominator is `sigma_down_dec`",
+        "results[period].metrics.SORTINO.value",
+        "6.1462967894",
+        "0.0000785849",
+        "0.0036711967",
     ]
 
     for phrase in required_truth:
