@@ -49,15 +49,17 @@ Current repository posture:
     source-supplied exposure weights against governed risk-event definitions and returns affected
     membership, exclusions, impact scores, source refs, supportability, and bounded reason codes
     for future manage wave-trigger consumption without creating waves or campaign approvals.
-11. `RiskMetricsReport:v1` now has implementation-backed methodology truth for `VOLATILITY` and
-    `SHARPE`: the docs and tests pin percentage-point input conventions, optional log-return
-    transformation, frequency compounding before volatility or Sharpe, `ddof=1` sample standard
-    deviation, decimal volatility details, periodic risk-free rate resolution, annualized
+11. `RiskMetricsReport:v1` now has implementation-backed methodology truth for `VOLATILITY`,
+    `SHARPE`, and `BETA`: the docs and tests pin percentage-point input conventions, optional
+    log-return transformation, frequency compounding before metric calculation, `ddof=1` sample
+    standard deviation/covariance/variance behavior, decimal volatility and risk-free details,
+    percentage-point-squared beta covariance/benchmark-variance details, annualized
     percentage-point `metrics.VOLATILITY.value`, dimensionless annualized
-    `metrics.SHARPE.value`, default and override annualization-factor resolution, no benchmark
-    dependency posture for Sharpe, no risk-free dependency posture for volatility,
-    no-denominator posture for volatility, zero-volatility fail-closed posture for Sharpe, and
-    insufficient-data failure behavior.
+    `metrics.SHARPE.value`, dimensionless slope `metrics.BETA.value`, default and override
+    annualization-factor resolution where used, benchmark dependency posture for beta, no
+    benchmark dependency posture for Sharpe, no risk-free dependency posture for volatility and
+    beta, no-denominator posture for volatility, zero-volatility fail-closed posture for Sharpe,
+    zero-benchmark-variance fail-closed posture for beta, and insufficient-data failure behavior.
 12. `RollingRiskMetricsReport:v1` now has implementation-backed methodology truth for
     `ROLLING_VOLATILITY`, `ROLLING_SHARPE`, `ROLLING_BETA`, `ROLLING_TRACKING_ERROR`,
     `ROLLING_INFORMATION_RATIO`, and `ROLLING_MAX_DRAWDOWN`: the docs and tests pin

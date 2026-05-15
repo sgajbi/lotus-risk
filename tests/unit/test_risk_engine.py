@@ -136,6 +136,40 @@ def test_sharpe_matches_documented_dimensionless_output_contract() -> None:
     assert metric.details["annualization_factor"] == 252
 
 
+def test_beta_matches_documented_dimensionless_output_contract() -> None:
+    payload = {
+        "scope": {"as_of_date": "2026-01-03", "net_or_gross": "NET"},
+        "portfolio_open_date": "2026-01-01",
+        "periods": [{"type": "YTD", "name": "YTD"}],
+        "metrics": ["BETA"],
+        "options": {
+            "frequency": "DAILY",
+            "use_log_returns": False,
+        },
+        "returns": [
+            {"date": "2026-01-01", "value": 1.00},
+            {"date": "2026-01-02", "value": -1.00},
+            {"date": "2026-01-03", "value": 2.00},
+        ],
+        "benchmark_returns": [
+            {"date": "2026-01-01", "value": 0.50},
+            {"date": "2026-01-02", "value": -0.50},
+            {"date": "2026-01-03", "value": 1.00},
+        ],
+    }
+
+    response = calculate_risk(RiskCalculationRequest.model_validate(payload))
+
+    metric = response.results["YTD"].metrics["BETA"]
+    assert metric.value == pytest.approx(2.0)
+    assert metric.details is not None
+    assert metric.details["aligned_observation_count"] == 3
+    assert metric.details["portfolio_mean_return"] == pytest.approx(0.006666666666666666)
+    assert metric.details["benchmark_mean_return"] == pytest.approx(0.003333333333333333)
+    assert metric.details["covariance"] == pytest.approx(1.1666666666666667)
+    assert metric.details["benchmark_variance"] == pytest.approx(0.5833333333333334)
+
+
 def test_drawdown_metadata_fields_present() -> None:
     payload = _base_payload()
     payload["metrics"] = ["DRAWDOWN"]
