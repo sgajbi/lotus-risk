@@ -170,6 +170,42 @@ def test_beta_matches_documented_dimensionless_output_contract() -> None:
     assert metric.details["benchmark_variance"] == pytest.approx(0.5833333333333334)
 
 
+def test_tracking_error_matches_documented_percentage_point_output_contract() -> None:
+    payload = {
+        "scope": {"as_of_date": "2026-01-03", "net_or_gross": "NET"},
+        "portfolio_open_date": "2026-01-01",
+        "periods": [{"type": "YTD", "name": "YTD"}],
+        "metrics": ["TRACKING_ERROR"],
+        "options": {
+            "frequency": "DAILY",
+            "use_log_returns": False,
+        },
+        "returns": [
+            {"date": "2026-01-01", "value": 1.00},
+            {"date": "2026-01-02", "value": -0.50},
+            {"date": "2026-01-03", "value": 0.20},
+        ],
+        "benchmark_returns": [
+            {"date": "2026-01-01", "value": 0.90},
+            {"date": "2026-01-02", "value": -0.30},
+            {"date": "2026-01-03", "value": 0.10},
+        ],
+    }
+
+    response = calculate_risk(RiskCalculationRequest.model_validate(payload))
+
+    metric = response.results["YTD"].metrics["TRACKING_ERROR"]
+    assert metric.value == pytest.approx(2.749545416973504)
+    assert metric.details is not None
+    assert metric.details["aligned_observation_count"] == 3
+    assert metric.details["annualization_factor"] == 252
+    assert metric.details["portfolio_mean_return"] == pytest.approx(0.002333333333333333)
+    assert metric.details["benchmark_mean_return"] == pytest.approx(0.002333333333333333)
+    assert metric.details["active_mean_return"] == pytest.approx(0.0)
+    assert metric.details["active_volatility"] == pytest.approx(0.0017320508075688774)
+    assert metric.details["annualized_tracking_error"] == pytest.approx(0.02749545416973504)
+
+
 def test_drawdown_metadata_fields_present() -> None:
     payload = _base_payload()
     payload["metrics"] = ["DRAWDOWN"]
