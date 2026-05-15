@@ -35,6 +35,9 @@ CONCENTRATION_TOP_POSITION_WEIGHT_DOC = (
 CONCENTRATION_TOP_N_CUMULATIVE_WEIGHT_DOC = (
     REPO_ROOT / "docs" / "methodologies" / "metrics" / "concentration-top-n-cumulative-weight.md"
 )
+CONCENTRATION_ISSUER_HHI_DOC = (
+    REPO_ROOT / "docs" / "methodologies" / "metrics" / "concentration-issuer-hhi.md"
+)
 RISK_VOLATILITY_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-volatility.md"
 RISK_DRAWDOWN_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-drawdown.md"
 RISK_SHARPE_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-sharpe.md"
@@ -445,6 +448,49 @@ def test_concentration_top_n_cumulative_weight_methodology_is_auditable_against_
         "`single_position_concentration.top_n_cumulative_weight_proposed = 0.85`",
         "`single_position_concentration.top_n_cumulative_weight_delta = 0.05`",
         "`single_position_concentration.top_n = 2`",
+    ]
+
+    for phrase in required_truth:
+        assert phrase in text
+
+
+def test_concentration_issuer_hhi_methodology_is_auditable_against_engine_contract() -> None:
+    text = CONCENTRATION_ISSUER_HHI_DOC.read_text(encoding="utf-8")
+
+    _assert_v3_section_order(text)
+
+    required_truth = [
+        "metric_id: ISSUER_HHI",
+        "source_product: ConcentrationRiskReport:v1",
+        "/analytics/risk/concentration",
+        "`issuer_concentration`",
+        "lotus-core instrument enrichment",
+        "lotus-core baseline snapshot",
+        "lotus-core simulation session",
+        "There is no lotus-performance dependency for issuer HHI",
+        "legal issuer grouping uses `issuer_id`",
+        "ultimate-parent grouping uses `ultimate_parent_issuer_id`",
+        "merged policy starts with lotus-core identity and lets caller identity override",
+        "market_value_base` when present",
+        "projected_market_value_base` when present",
+        "Missing, non-numeric, zero, and negative values are excluded",
+        "`issuer_concentration.hhi_*` values are emitted on the conventional Herfindahl-Hirschman",
+        "ISSUER_HHI_raw = sum_k(w_k^2) * 10000",
+        "`issuer_concentration.hhi_current = round6(ISSUER_HHI_current_raw)`",
+        "When no proposed issuer buckets are available",
+        "A single covered issuer bucket produces issuer HHI `10000.0`",
+        "Equal weights across `N` covered issuer buckets produce issuer HHI `10000 / N`",
+        "Positions without resolved issuer identity are excluded from issuer HHI",
+        "`coverage_status = partial`",
+        "`metadata.calculation_supportability`",
+        "issuer enrichment coverage does",
+        "not change `risk_proxy.hhi_*`",
+        "`include_cash_positions`",
+        "`top_n`",
+        "`issuer_concentration.hhi_current = 6800.0`",
+        "`issuer_concentration.hhi_proposed = 5800.0`",
+        "`issuer_concentration.hhi_delta = -1000.0`",
+        "`issuer_concentration.coverage_status = complete`",
     ]
 
     for phrase in required_truth:

@@ -554,11 +554,17 @@ class IssuerCoverageStatus(str, Enum):
 
 class IssuerConcentration(BaseModel):
     hhi_current: float = Field(
-        description="Issuer-level baseline HHI concentration (0 to 10000).",
+        description=(
+            "Issuer-level baseline HHI concentration on the conventional 0 to 10000 scale, "
+            "computed from covered mapped issuer buckets."
+        ),
         json_schema_extra={"example": 3200.0},
     )
     hhi_proposed: float = Field(
-        description="Issuer-level proposed HHI concentration (0 to 10000).",
+        description=(
+            "Issuer-level proposed HHI concentration on the conventional 0 to 10000 scale, "
+            "falling back to baseline issuer HHI when proposed issuer buckets are unavailable."
+        ),
         json_schema_extra={"example": 3475.0},
     )
     hhi_delta: float = Field(
