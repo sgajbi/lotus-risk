@@ -14,6 +14,9 @@ ROLLING_BETA_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "rolling-b
 ROLLING_MAX_DRAWDOWN_DOC = (
     REPO_ROOT / "docs" / "methodologies" / "metrics" / "rolling-max-drawdown.md"
 )
+DRAWDOWN_MAX_DRAWDOWN_DOC = (
+    REPO_ROOT / "docs" / "methodologies" / "metrics" / "drawdown-max-drawdown.md"
+)
 RISK_VOLATILITY_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-volatility.md"
 RISK_DRAWDOWN_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-drawdown.md"
 RISK_SHARPE_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-sharpe.md"
@@ -195,6 +198,35 @@ def test_rolling_max_drawdown_methodology_is_auditable_against_engine_contract()
         "metric_summaries.ROLLING_MAX_DRAWDOWN.latest",
         "metric_series[].metric_values.ROLLING_MAX_DRAWDOWN",
         "-0.1000000000",
+    ]
+
+    for phrase in required_truth:
+        assert phrase in text
+
+
+def test_drawdown_max_drawdown_methodology_is_auditable_against_engine_contract() -> None:
+    text = DRAWDOWN_MAX_DRAWDOWN_DOC.read_text(encoding="utf-8")
+
+    _assert_v3_section_order(text)
+
+    required_truth = [
+        "metric_id: MAX_DRAWDOWN",
+        "/analytics/risk/drawdown",
+        "`DrawdownAnalyticsReport:v1`",
+        "lotus-performance",
+        "r_decimal = r_pp / 100",
+        "decimal drawdown ratios",
+        "summary.max_drawdown = depth_max_episode",
+        'error = "Insufficient data"',
+        "A one-observation or never-underwater period is valid",
+        "analysis_options.duration_unit",
+        "analysis_options.minimum_episode_depth_bps",
+        "results[period].summary.max_drawdown",
+        "results[period].episodes[].depth",
+        "results[period].underwater_series[].drawdown",
+        "-0.2000000000",
+        'summary.max_drawdown_peak_date = "2026-01-02"',
+        'summary.max_drawdown_recovery_date = "2026-01-06"',
     ]
 
     for phrase in required_truth:
