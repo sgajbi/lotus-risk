@@ -20,6 +20,9 @@ DRAWDOWN_MAX_DRAWDOWN_DOC = (
 DRAWDOWN_AVERAGE_DRAWDOWN_DOC = (
     REPO_ROOT / "docs" / "methodologies" / "metrics" / "drawdown-average-drawdown.md"
 )
+DRAWDOWN_ULCER_INDEX_DOC = (
+    REPO_ROOT / "docs" / "methodologies" / "metrics" / "drawdown-ulcer-index.md"
+)
 RISK_VOLATILITY_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-volatility.md"
 RISK_DRAWDOWN_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-drawdown.md"
 RISK_SHARPE_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-sharpe.md"
@@ -258,6 +261,34 @@ def test_drawdown_average_drawdown_methodology_is_auditable_against_engine_contr
         "results[period].underwater_series[].drawdown",
         "-0.0757600000",
         "summary.time_under_water_days = 3",
+    ]
+
+    for phrase in required_truth:
+        assert phrase in text
+
+
+def test_drawdown_ulcer_index_methodology_is_auditable_against_engine_contract() -> None:
+    text = DRAWDOWN_ULCER_INDEX_DOC.read_text(encoding="utf-8")
+
+    _assert_v3_section_order(text)
+
+    required_truth = [
+        "metric_id: ULCER_INDEX",
+        "/analytics/risk/drawdown",
+        "`DrawdownAnalyticsReport:v1`",
+        "lotus-performance",
+        "r_decimal = r_pp / 100",
+        "non-negative decimal drawdown ratio",
+        "including peak observations where `DD_t = 0`",
+        "summary.ulcer_index = sqrt(sum(S_t) / N)",
+        'error = "Insufficient data"',
+        "A one-observation or never-underwater period is valid",
+        "analysis_options.minimum_episode_depth_bps",
+        "results[period].summary.ulcer_index",
+        "results[period].summary.time_under_water_days",
+        "results[period].underwater_series[].drawdown",
+        "0.0685096314",
+        "mean(S_t)",
     ]
 
     for phrase in required_truth:
