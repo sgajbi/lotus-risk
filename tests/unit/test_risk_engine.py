@@ -76,6 +76,52 @@ def test_calculate_risk_var_methods() -> None:
     assert len(set(results)) >= 2
 
 
+def test_var_matches_documented_signed_percentage_point_output_contract() -> None:
+    payload = {
+        "scope": {"as_of_date": "2026-01-05", "net_or_gross": "NET"},
+        "portfolio_open_date": "2026-01-01",
+        "periods": [{"type": "YTD", "name": "YTD"}],
+        "metrics": ["VAR"],
+        "options": {
+            "frequency": "DAILY",
+            "use_log_returns": False,
+            "var": {
+                "method": "HISTORICAL",
+                "confidence": 0.95,
+                "horizon_days": 4,
+                "include_expected_shortfall": True,
+            },
+        },
+        "returns": [
+            {"date": "2026-01-01", "value": -2.0},
+            {"date": "2026-01-02", "value": -1.0},
+            {"date": "2026-01-03", "value": 0.0},
+            {"date": "2026-01-04", "value": 1.0},
+            {"date": "2026-01-05", "value": 2.0},
+        ],
+    }
+
+    response = calculate_risk(RiskCalculationRequest.model_validate(payload))
+
+    metric = response.results["YTD"].metrics["VAR"]
+    assert metric.value == pytest.approx(-3.6)
+    assert metric.details is not None
+    assert metric.details["method"] == "HISTORICAL"
+    assert metric.details["confidence"] == pytest.approx(0.95)
+    assert metric.details["tail_probability"] == pytest.approx(0.05)
+    assert metric.details["base_horizon_days"] == 1
+    assert metric.details["horizon_days"] == 4
+    assert metric.details["horizon_scale_method"] == "SQRT_TIME"
+    assert metric.details["horizon_scale_factor"] == pytest.approx(2.0)
+    assert metric.details["include_expected_shortfall"] is True
+    assert metric.details["base_var"] == pytest.approx(-1.8)
+    assert metric.details["observation_count"] == 5
+    assert metric.details["tail_observation_count"] == 1
+    assert metric.details["base_expected_shortfall"] == pytest.approx(-2.0)
+    assert metric.details["expected_shortfall_observation_count"] == 1
+    assert metric.details["expected_shortfall"] == pytest.approx(-4.0)
+
+
 def test_volatility_matches_documented_percentage_point_output_contract() -> None:
     payload = {
         "scope": {"as_of_date": "2026-01-03", "net_or_gross": "NET"},

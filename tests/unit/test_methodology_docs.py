@@ -17,6 +17,7 @@ ROLLING_MAX_DRAWDOWN_DOC = (
 RISK_VOLATILITY_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-volatility.md"
 RISK_SHARPE_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-sharpe.md"
 RISK_SORTINO_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-sortino.md"
+RISK_VAR_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-var.md"
 RISK_BETA_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-beta.md"
 RISK_TRACKING_ERROR_DOC = (
     REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-tracking-error.md"
@@ -276,6 +277,36 @@ def test_risk_sortino_methodology_is_auditable_against_engine_contract() -> None
         "6.1462967894",
         "0.0000785849",
         "0.0036711967",
+    ]
+
+    for phrase in required_truth:
+        assert phrase in text
+
+
+def test_risk_var_methodology_is_auditable_against_engine_contract() -> None:
+    text = RISK_VAR_DOC.read_text(encoding="utf-8")
+
+    _assert_v3_section_order(text)
+
+    required_truth = [
+        "metric_id: VAR",
+        "/analytics/risk/calculate",
+        "lotus-performance",
+        "r_log_pp = ln(1 + r_pp / 100) * 100",
+        "`HISTORICAL`, `GAUSSIAN`, or `CORNISH_FISHER`",
+        "signed return thresholds in percentage points",
+        "HISTORICAL`: `VaR_base_pp = percentile(r_used_pp, alpha * 100)`",
+        "GAUSSIAN`: `VaR_base_pp = mu_pp + sigma_pp * z_alpha`",
+        "`z_cf = z_alpha + ((z_alpha^2 - 1) * S) / 6",
+        '`metrics.VAR.value = null` with `details.error = "Insufficient data"',
+        "No benchmark dependency is required for `VAR`",
+        "No risk-free dependency is required for `VAR`",
+        "No annualization factor is used for `VAR`",
+        "results[period].metrics.VAR.details.horizon_scale_method",
+        "results[period].metrics.VAR.details.expected_shortfall",
+        "-3.6000000000",
+        "-1.8000000000",
+        "-4.0000000000",
     ]
 
     for phrase in required_truth:

@@ -23,19 +23,21 @@
 ## Implementation-backed methodology coverage
 
 `RiskMetricsReport:v1` now has auditable source-owner methodology truth for volatility, Sharpe,
-Sortino, beta, tracking error, and information ratio. The methodologies are tied to the implemented
+Sortino, VaR, beta, tracking error, and information ratio. The methodologies are tied to the implemented
 `/analytics/risk/calculate` engine and state the exact percentage-point input convention, optional
 log-return transform, frequency compounding before metric calculation, `ddof=1` sample standard
-deviation/covariance/variance behavior, decimal volatility, risk-free, Sortino, tracking-error,
-and information-ratio details, percentage-point-squared beta covariance/benchmark-variance
+deviation/covariance/variance behavior, decimal volatility, risk-free, Sortino, VaR,
+tracking-error, and information-ratio details, percentage-point-squared beta covariance/benchmark-variance
 details, annualized percentage-point `metrics.VOLATILITY.value`, dimensionless annualized
-`metrics.SHARPE.value`, dimensionless annualized `metrics.SORTINO.value`, dimensionless slope
-`metrics.BETA.value`, annualized percentage-point `metrics.TRACKING_ERROR.value`, dimensionless
+`metrics.SHARPE.value`, dimensionless annualized `metrics.SORTINO.value`, signed
+percentage-point `metrics.VAR.value`, dimensionless slope `metrics.BETA.value`, annualized
+percentage-point `metrics.TRACKING_ERROR.value`, dimensionless
 annualized `metrics.INFORMATION_RATIO.value`, annualization-factor resolution where used,
 benchmark dependency for beta, tracking error, and information ratio, no benchmark dependency for
-Sharpe and Sortino, no risk-free dependency for volatility, Sortino, beta, tracking error, and
-information ratio, no-denominator posture for volatility and tracking error, zero-volatility
-fail-closed posture for Sharpe, no-downside-observation fail-closed posture for Sortino,
+Sharpe, Sortino, and VaR, no risk-free dependency for volatility, Sortino, VaR, beta, tracking
+error, and information ratio, no-denominator posture for volatility and tracking error,
+zero-volatility fail-closed posture for Sharpe, no-downside-observation fail-closed posture for Sortino,
+signed VaR loss-threshold posture, square-root horizon scaling,
 zero-benchmark-variance fail-closed posture for beta, zero-tracking-error fail-closed posture for
 information ratio, constant-active-return zero tracking-error posture, and insufficient-data
 failure behavior.
@@ -85,8 +87,9 @@ Audience notes:
   peak-to-trough loss inside each rolling return window.
 - Business users can read `RiskMetricsReport:v1` volatility as annualized portfolio-return
   dispersion in percentage points for the resolved period, Sharpe as annualized excess return per
-  unit of portfolio return volatility, and Sortino as annualized excess return over MAR per unit of
-  downside deviation. Beta is the period sensitivity slope of portfolio returns to benchmark return
+  unit of portfolio return volatility, Sortino as annualized excess return over MAR per unit of
+  downside deviation, and VaR as a signed lower-tail return threshold in percentage points. Beta is
+  the period sensitivity slope of portfolio returns to benchmark return
   variance after strict date alignment, and tracking error is annualized active-return volatility
   versus the selected benchmark for the resolved period. Information ratio is annualized active
   return per unit of tracking error for the same period.
@@ -98,7 +101,7 @@ Audience notes:
   supportability metadata rather than recomputing rolling volatility, Sharpe, beta, tracking error,
   information ratio, or maximum drawdown locally.
 - Developers and downstream services must preserve `RiskMetricsReport:v1` volatility, Sharpe,
-  Sortino, beta, tracking-error, and information-ratio values and supportability metadata rather than
+  Sortino, VaR, beta, tracking-error, and information-ratio values and supportability metadata rather than
   recomputing period risk metrics locally.
 - Developers and downstream services must preserve `RiskEventAffectedCohort:v1` membership,
   exclusions, source refs, and impact scores rather than reconstructing risk-event cohort
