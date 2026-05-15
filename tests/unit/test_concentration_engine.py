@@ -212,6 +212,38 @@ async def test_top_position_weight_matches_documented_stateless_methodology_exam
 
 
 @pytest.mark.asyncio
+async def test_top_n_cumulative_weight_matches_documented_stateless_methodology_example() -> None:
+    request = ConcentrationRequest.model_validate(
+        {
+            "input_mode": "stateless",
+            "stateless_input": {
+                "current_positions": [
+                    {"security_id": "A", "market_value_base": 50},
+                    {"security_id": "B", "market_value_base": 30},
+                    {"security_id": "C", "market_value_base": 20},
+                    {"security_id": "IGNORED_ZERO", "market_value_base": 0},
+                    {"security_id": "IGNORED_NEGATIVE", "market_value_base": -10},
+                ],
+                "projected_positions": [
+                    {"security_id": "A", "projected_market_value_base": 60},
+                    {"security_id": "B", "projected_market_value_base": 25},
+                    {"security_id": "C", "projected_market_value_base": 15},
+                ],
+                "top_n": 2,
+            },
+        }
+    )
+
+    response = (await calculate_concentration(request)).model_dump()
+
+    single_position = response["single_position_concentration"]
+    assert single_position["top_n_cumulative_weight_current"] == 0.8
+    assert single_position["top_n_cumulative_weight_proposed"] == 0.85
+    assert single_position["top_n_cumulative_weight_delta"] == 0.05
+    assert single_position["top_n"] == 2
+
+
+@pytest.mark.asyncio
 async def test_calculate_concentration_rejects_legacy_payload() -> None:
     with pytest.raises(ValidationError):
         ConcentrationRequest.model_validate(

@@ -468,19 +468,26 @@ class SinglePositionConcentration(BaseModel):
         json_schema_extra={"example": 0.0175},
     )
     top_n_cumulative_weight_current: float = Field(
-        description="Cumulative baseline weight of top-N positions.",
+        description=(
+            "Cumulative baseline weight of the largest N positive extracted position values as "
+            "a decimal ratio in the 0..1 range."
+        ),
         json_schema_extra={"example": 0.4123},
     )
     top_n_cumulative_weight_proposed: float = Field(
-        description="Cumulative proposed weight of top-N positions.",
+        description=(
+            "Cumulative proposed weight of the largest N positive extracted position values as "
+            "a decimal ratio in the 0..1 range; falls back to the baseline top-N cumulative "
+            "weight when no proposed position values are available."
+        ),
         json_schema_extra={"example": 0.4551},
     )
     top_n_cumulative_weight_delta: float = Field(
-        description="Difference between proposed and baseline top-N cumulative weights.",
+        description="Proposed-minus-baseline top-N cumulative weight change as a decimal ratio.",
         json_schema_extra={"example": 0.0428},
     )
     top_n: int = Field(
-        description="Top-N parameter used for cumulative concentration calculations.",
+        description="Top-N parameter used for cumulative single-position concentration calculations.",
         json_schema_extra={"example": 10},
     )
     top_position_current: "TopPositionDriver" = Field(

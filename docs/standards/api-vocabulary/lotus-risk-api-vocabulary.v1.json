@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-05-15T10:18:10.183436+00:00",
+  "generatedAt": "2026-05-15T11:26:32.002005+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.affected_portfolios",
@@ -2600,7 +2600,7 @@
       "semanticId": "lotus.top_n",
       "canonicalTerm": "top_n",
       "preferredName": "top_n",
-      "description": "Top-N parameter used for cumulative concentration calculations.",
+      "description": "Top-N parameter used for cumulative single-position concentration calculations.",
       "example": 10,
       "type": "integer",
       "locations": [
@@ -2614,7 +2614,7 @@
       "semanticId": "lotus.top_n_cumulative_weight_current",
       "canonicalTerm": "top_n_cumulative_weight_current",
       "preferredName": "top_n_cumulative_weight_current",
-      "description": "Cumulative baseline weight of top-N positions.",
+      "description": "Cumulative baseline weight of the largest N positive extracted position values as a decimal ratio in the 0..1 range.",
       "example": 0.4123,
       "type": "number",
       "locations": [
@@ -2628,7 +2628,7 @@
       "semanticId": "lotus.top_n_cumulative_weight_delta",
       "canonicalTerm": "top_n_cumulative_weight_delta",
       "preferredName": "top_n_cumulative_weight_delta",
-      "description": "Difference between proposed and baseline top-N cumulative weights.",
+      "description": "Proposed-minus-baseline top-N cumulative weight change as a decimal ratio.",
       "example": 0.0428,
       "type": "number",
       "locations": [
@@ -2642,7 +2642,7 @@
       "semanticId": "lotus.top_n_cumulative_weight_proposed",
       "canonicalTerm": "top_n_cumulative_weight_proposed",
       "preferredName": "top_n_cumulative_weight_proposed",
-      "description": "Cumulative proposed weight of top-N positions.",
+      "description": "Cumulative proposed weight of the largest N positive extracted position values as a decimal ratio in the 0..1 range; falls back to the baseline top-N cumulative weight when no proposed position values are available.",
       "example": 0.4551,
       "type": "number",
       "locations": [
