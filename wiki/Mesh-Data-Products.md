@@ -22,14 +22,17 @@
 
 ## Implementation-backed methodology coverage
 
-`RiskMetricsReport:v1` now has auditable source-owner methodology truth for volatility and Sharpe.
-The methodologies are tied to the implemented `/analytics/risk/calculate` engine and state the
-exact percentage-point input convention, optional log-return transform, frequency compounding
-before volatility or Sharpe, `ddof=1` sample standard deviation, decimal volatility details,
-periodic risk-free rate resolution, annualized percentage-point `metrics.VOLATILITY.value`,
-dimensionless annualized `metrics.SHARPE.value`, annualization-factor resolution, no benchmark
-dependency for Sharpe, no risk-free dependency for volatility, no-denominator posture for
-volatility, zero-volatility fail-closed posture for Sharpe, and insufficient-data failure behavior.
+`RiskMetricsReport:v1` now has auditable source-owner methodology truth for volatility, Sharpe,
+and beta. The methodologies are tied to the implemented `/analytics/risk/calculate` engine and
+state the exact percentage-point input convention, optional log-return transform, frequency
+compounding before metric calculation, `ddof=1` sample standard deviation/covariance/variance
+behavior, decimal volatility and risk-free details, percentage-point-squared beta
+covariance/benchmark-variance details, annualized percentage-point `metrics.VOLATILITY.value`,
+dimensionless annualized `metrics.SHARPE.value`, dimensionless slope `metrics.BETA.value`,
+annualization-factor resolution where used, benchmark dependency for beta, no benchmark dependency
+for Sharpe, no risk-free dependency for volatility and beta, no-denominator posture for volatility,
+zero-volatility fail-closed posture for Sharpe, zero-benchmark-variance fail-closed posture for
+beta, and insufficient-data failure behavior.
 
 `RollingRiskMetricsReport:v1` now has auditable source-owner methodology truth for rolling
 volatility, rolling Sharpe, rolling beta, rolling tracking error, rolling information ratio, and
@@ -76,7 +79,8 @@ Audience notes:
   peak-to-trough loss inside each rolling return window.
 - Business users can read `RiskMetricsReport:v1` volatility as annualized portfolio-return
   dispersion in percentage points for the resolved period and Sharpe as annualized excess return
-  per unit of portfolio return volatility for the resolved period.
+  per unit of portfolio return volatility for the resolved period. Beta is the period sensitivity
+  slope of portfolio returns to benchmark return variance after strict date alignment.
 - Operations teams can distinguish warm-up gaps, missing benchmark alignment, and upstream sourcing
   issues from calculation failure; missing risk-free alignment and zero-excess-volatility windows
   are explicit for Sharpe, zero-benchmark-variance windows are explicit for beta, and
@@ -84,8 +88,8 @@ Audience notes:
 - Developers and downstream services must preserve `RollingRiskMetricsReport:v1` values and
   supportability metadata rather than recomputing rolling volatility, Sharpe, beta, tracking error,
   information ratio, or maximum drawdown locally.
-- Developers and downstream services must preserve `RiskMetricsReport:v1` volatility and Sharpe
-  values and supportability metadata rather than recomputing period risk metrics locally.
+- Developers and downstream services must preserve `RiskMetricsReport:v1` volatility, Sharpe, and
+  beta values and supportability metadata rather than recomputing period risk metrics locally.
 - Developers and downstream services must preserve `RiskEventAffectedCohort:v1` membership,
   exclusions, source refs, and impact scores rather than reconstructing risk-event cohort
   membership locally.
