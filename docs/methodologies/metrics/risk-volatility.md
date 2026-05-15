@@ -8,56 +8,79 @@
 - supported_modes: stateless, stateful
 
 ## Inputs
-- Portfolio return observations for the resolved period (minimum 2).
-- Annualization basis from frequency or explicit override.
+- Portfolio return observations for the resolved period, with at least two observations after
+  period filtering and frequency resampling.
+- Calculation frequency: `DAILY`, `WEEKLY`, or `MONTHLY`.
+- Optional annualization-factor override.
 - Optional log-return transform flag.
 
 ## Upstream Data Sources
-- Stateless: caller `returns[]`.
-- Stateful: lotus-performance return series.
+- Stateless mode: caller-provided `returns`.
+- Stateful mode: `lotus-performance` portfolio return series fetched through the governed
+  risk-calculate integration path.
+- `lotus-risk` owns the volatility calculation after dated portfolio return series are resolved.
+  It does not source portfolio returns from Workbench, Gateway, or manage.
 
 ## Unit Conventions
 - Return inputs are percentage points (pp): `1.0` means `+1%`.
-- Engine converts to decimal when needed: `r_decimal = r_pp / 100`.
-- Output unit follows metric contract (ratio, annualized decimal, drawdown decimal, or HHI scale).
+- Frequency resampling compounds percentage-point returns and emits percentage-point period
+  returns.
+- If `options.use_log_returns=true`, the engine transforms percentage-point returns with
+  `r_log_pp = ln(1 + r_pp / 100) * 100`.
+- The sample standard deviation detail is stored as a decimal ratio:
+  `details.standard_deviation = std(r_used_pp, ddof=1) / 100`.
+- `metrics.VOLATILITY.value` is an annualized percentage-point output:
+  `11.9147` means `11.9147%`.
 
 ## Variable Dictionary
-- `t`: observation index in chronological order.
-- `r_t_pp`: portfolio return at `t` in percentage points.
-- `r_t_pp*`: transformed return used for volatility calculation (`raw` or `log`).
-- `n`: number of observations used in the metric.
-- `mu_pp`: arithmetic mean of transformed pp returns.
-- `sigma_pp`: sample standard deviation of transformed pp returns (`ddof=1`).
+- `t`: observation date.
+- `r_t_pp`: portfolio return on date `t`, in percentage points.
+- `r_t_used_pp`: return used for volatility after optional log transformation, in percentage
+  points.
+- `n`: number of observations after period filtering, resampling, and optional log transformation.
 - `AF`: annualization factor.
-- `VOL`: annualized volatility output.
+- `sigma_pp`: sample standard deviation of `r_t_used_pp` with `ddof=1`, in percentage points.
+- `sigma_decimal`: `sigma_pp / 100`.
+- `VOL_pp`: annualized volatility output in percentage points.
 
 ## Methodology and Formulas
-1. Optional log transform:
-- if `use_log_returns=false`: `r_t_pp* = r_t_pp`
-- if `use_log_returns=true`: `r_t_pp* = ln(1 + r_t_pp/100) * 100`
-2. Sample standard deviation:
-`sigma_pp = std(r_t_pp*, ddof=1)`.
-3. Annualization:
-`VOL = sigma_pp * sqrt(AF)`.
-4. Annualization factor resolution:
-- `AF = options.annualization_factor` when provided;
-- otherwise from frequency map (`DAILY=252`, `WEEKLY=52`, `MONTHLY=12`).
+1. Resolve the requested period from `scope.as_of_date`, `portfolio_open_date`, and the period
+   definition.
+2. Filter portfolio returns to the resolved period.
+3. Resample returns when `options.frequency` is not `DAILY`:
+   `r_period_pp = (product(1 + r_i_pp / 100) - 1) * 100`.
+4. Apply the optional log-return transform:
+   - when `options.use_log_returns=false`, `r_t_used_pp = r_t_pp`;
+   - when `options.use_log_returns=true`, `r_t_used_pp = ln(1 + r_t_pp / 100) * 100`.
+5. Resolve annualization factor:
+   - `AF = options.annualization_factor` when supplied;
+   - otherwise `AF = 252` for `DAILY`, `52` for `WEEKLY`, and `12` for `MONTHLY`.
+6. Require at least two non-null observations.
+7. Compute sample standard deviation:
+   `sigma_pp = std(r_t_used_pp, ddof=1)`.
+8. Convert the detail value to decimal:
+   `sigma_decimal = sigma_pp / 100`.
+9. Annualize and map the response value:
+   `VOL_pp = sigma_decimal * sqrt(AF) * 100`.
 
 ## Step-by-Step Computation
-1. Resolve period and filter returns to date window.
-2. Apply frequency resampling when requested (weekly/monthly compounding).
-3. Resolve annualization factor (`AF`) from override or frequency default.
-4. Apply optional log-return transform to produce `r_t_pp*`.
-5. Validate at least two observations after filtering/transforms.
-6. Compute `sigma_pp` using sample standard deviation (`ddof=1`).
-7. Compute annualized volatility `VOL = sigma_pp * sqrt(AF)`.
-8. Return value in `metrics.VOLATILITY.value`.
+1. Build a dated portfolio-return series and sort by date.
+2. Resolve each requested period.
+3. Filter the return series to the period date range.
+4. Apply weekly or monthly compounding when requested.
+5. Apply log-return transformation when requested.
+6. Validate that at least two observations remain.
+7. Compute `details.standard_deviation` as decimal sample standard deviation.
+8. Compute `metrics.VOLATILITY.value` as annualized percentage points.
+9. Preserve `details.observation_count` and `details.annualization_factor` for auditability.
 
 ## Validation and Failure Behavior
-- Fewer than 2 observations after period filtering/resampling: `details.error = "Insufficient data"`.
-- Invalid return values (non-numeric): rejected by request-contract validation before engine math.
-- If all transformed returns are identical, `sigma_pp = 0` and output volatility is `0`.
-- Frequency resampling happens before standard deviation, so the observation count can change materially.
+- Fewer than two observations after period filtering, resampling, and optional transformation
+  returns `metrics.VOLATILITY.value = null` with `details.error = "Insufficient data"`.
+- Constant transformed returns are valid and produce `0.0`.
+- Non-numeric return values are rejected by request-contract validation before engine math.
+- No benchmark or risk-free dependency is required for `VOLATILITY`.
+- No denominator is used, so there is no zero-denominator quality flag for this metric.
 
 ## Configuration Options
 - `options.frequency`
@@ -66,23 +89,36 @@
 
 ## Outputs
 - `results[period].metrics.VOLATILITY.value`
+- `results[period].metrics.VOLATILITY.details.standard_deviation`
+- `results[period].metrics.VOLATILITY.details.observation_count`
+- `results[period].metrics.VOLATILITY.details.annualization_factor`
 - `results[period].metrics.VOLATILITY.details.error`
 
 ## Worked Example
-Assume no log transform (`use_log_returns=false`) and daily annualization (`AF=252`).
+Assume no log transform (`options.use_log_returns=false`), daily frequency, default daily
+annualization (`AF = 252`), and portfolio return observations:
 
-| Date | `r_t_pp` | `r_t_pp*` used in std | `r_t_pp* - mu_pp` | `(r_t_pp* - mu_pp)^2` |
-|---|---:|---:|---:|---:|
-| Day1 | 1.00 | 1.00 | 0.7667 | 0.5878 |
-| Day2 | -0.50 | -0.50 | -0.7333 | 0.5378 |
-| Day3 | 0.20 | 0.20 | -0.0333 | 0.0011 |
+| Date | `r_t_pp` | `r_t_used_pp` |
+| --- | ---: | ---: |
+| Day 1 | `1.00` | `1.00` |
+| Day 2 | `-0.50` | `-0.50` |
+| Day 3 | `0.20` | `0.20` |
 
 Intermediate calculations:
-- `mu_pp = (1.00 + (-0.50) + 0.20) / 3 = 0.2333`
-- Sum of squared deviations `= 0.5878 + 0.5378 + 0.0011 = 1.1267`
-- Sample variance `= 1.1267 / (3-1) = 0.5633`
-- `sigma_pp = sqrt(0.5633) = 0.7505`
-- `VOL = 0.7505 * sqrt(252) = 11.914`
+
+| Step | Value |
+| --- | ---: |
+| Mean return, pp | `0.2333333333` |
+| Squared deviations sum | `1.1266666667` |
+| Sample variance, pp (`ddof=1`) | `0.5633333333` |
+| `sigma_pp` | `0.7505553499` |
+| `details.standard_deviation = sigma_pp / 100` | `0.0075055535` |
+| Annualization multiplier | `sqrt(252) = 15.8745078664` |
+| `VOL_pp` | `11.9146968069` |
 
 Output mapping:
-- `results[period].metrics.VOLATILITY.value = 11.914`
+
+- `results[period].metrics.VOLATILITY.value = 11.9146968069`
+- `results[period].metrics.VOLATILITY.details.standard_deviation = 0.0075055535`
+- `results[period].metrics.VOLATILITY.details.observation_count = 3`
+- `results[period].metrics.VOLATILITY.details.annualization_factor = 252`

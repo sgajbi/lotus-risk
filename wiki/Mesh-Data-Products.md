@@ -22,6 +22,13 @@
 
 ## Implementation-backed methodology coverage
 
+`RiskMetricsReport:v1` now has auditable source-owner methodology truth for volatility. The
+methodology is tied to the implemented `/analytics/risk/calculate` engine and states the exact
+percentage-point input convention, optional log-return transform, frequency compounding before
+volatility, `ddof=1` sample standard deviation, decimal `details.standard_deviation`, annualized
+percentage-point `metrics.VOLATILITY.value`, annualization-factor resolution, no benchmark or
+risk-free dependency, no-denominator posture, and insufficient-data failure behavior.
+
 `RollingRiskMetricsReport:v1` now has auditable source-owner methodology truth for rolling
 volatility, rolling Sharpe, rolling beta, rolling tracking error, rolling information ratio, and
 rolling maximum drawdown. The methodologies are tied to the implemented
@@ -65,6 +72,8 @@ Audience notes:
   active-return volatility versus the selected benchmark, rolling information ratio as annualized
   active return per unit of that active risk, and rolling maximum drawdown as the worst decimal
   peak-to-trough loss inside each rolling return window.
+- Business users can read `RiskMetricsReport:v1` volatility as annualized portfolio-return
+  dispersion in percentage points for the resolved period.
 - Operations teams can distinguish warm-up gaps, missing benchmark alignment, and upstream sourcing
   issues from calculation failure; missing risk-free alignment and zero-excess-volatility windows
   are explicit for Sharpe, zero-benchmark-variance windows are explicit for beta, and
@@ -72,6 +81,8 @@ Audience notes:
 - Developers and downstream services must preserve `RollingRiskMetricsReport:v1` values and
   supportability metadata rather than recomputing rolling volatility, Sharpe, beta, tracking error,
   information ratio, or maximum drawdown locally.
+- Developers and downstream services must preserve `RiskMetricsReport:v1` volatility values and
+  supportability metadata rather than recomputing period volatility locally.
 - Developers and downstream services must preserve `RiskEventAffectedCohort:v1` membership,
   exclusions, source refs, and impact scores rather than reconstructing risk-event cohort
   membership locally.

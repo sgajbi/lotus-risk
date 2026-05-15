@@ -14,6 +14,7 @@ ROLLING_BETA_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "rolling-b
 ROLLING_MAX_DRAWDOWN_DOC = (
     REPO_ROOT / "docs" / "methodologies" / "metrics" / "rolling-max-drawdown.md"
 )
+RISK_VOLATILITY_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-volatility.md"
 
 
 EXPECTED_V3_SECTIONS = [
@@ -183,6 +184,32 @@ def test_rolling_max_drawdown_methodology_is_auditable_against_engine_contract()
         "metric_summaries.ROLLING_MAX_DRAWDOWN.latest",
         "metric_series[].metric_values.ROLLING_MAX_DRAWDOWN",
         "-0.1000000000",
+    ]
+
+    for phrase in required_truth:
+        assert phrase in text
+
+
+def test_risk_volatility_methodology_is_auditable_against_engine_contract() -> None:
+    text = RISK_VOLATILITY_DOC.read_text(encoding="utf-8")
+
+    _assert_v3_section_order(text)
+
+    required_truth = [
+        "metric_id: VOLATILITY",
+        "/analytics/risk/calculate",
+        "lotus-performance",
+        "r_log_pp = ln(1 + r_pp / 100) * 100",
+        "details.standard_deviation = std(r_used_pp, ddof=1) / 100",
+        "annualized percentage-point output",
+        "Frequency resampling compounds percentage-point returns",
+        "`AF = 252` for `DAILY`, `52` for `WEEKLY`, and `12` for `MONTHLY`",
+        'details.error = "Insufficient data"',
+        "No benchmark or risk-free dependency is required for `VOLATILITY`",
+        "No denominator is used",
+        "results[period].metrics.VOLATILITY.value",
+        "11.9146968069",
+        "0.0075055535",
     ]
 
     for phrase in required_truth:

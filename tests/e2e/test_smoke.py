@@ -276,6 +276,35 @@ def test_e2e_risk_calculate_happy_path() -> None:
     assert metrics["VAR"]["value"] is not None
 
 
+def test_e2e_risk_calculate_volatility_public_contract() -> None:
+    client = TestClient(app)
+    response = client.post(
+        "/analytics/risk/calculate",
+        json={
+            "input_mode": "stateless",
+            "stateless_input": {
+                "scope": {"as_of_date": "2026-01-03", "net_or_gross": "NET"},
+                "portfolio_open_date": "2026-01-01",
+                "periods": [{"type": "YTD", "name": "YTD"}],
+                "metrics": ["VOLATILITY"],
+                "options": {"frequency": "DAILY", "use_log_returns": False},
+                "returns": [
+                    {"date": "2026-01-01", "value": 1.00},
+                    {"date": "2026-01-02", "value": -0.50},
+                    {"date": "2026-01-03", "value": 0.20},
+                ],
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    metric = response.json()["results"]["YTD"]["metrics"]["VOLATILITY"]
+    assert metric["value"] == pytest.approx(11.914696806885186)
+    assert metric["details"]["standard_deviation"] == pytest.approx(0.007505553499465135)
+    assert metric["details"]["observation_count"] == 3
+    assert metric["details"]["annualization_factor"] == 252
+
+
 def test_e2e_risk_calculate_accepts_canonical_rolling_periods() -> None:
     client = TestClient(app)
     payload = _risk_payload()

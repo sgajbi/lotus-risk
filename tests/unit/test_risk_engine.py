@@ -1,8 +1,9 @@
+from typing import Any
+
+import pytest
+
 from app.contracts.risk import RiskCalculationRequest, RiskRequestPeriod
 from app.services.risk_engine import calculate_risk
-
-
-from typing import Any
 
 
 def _base_payload() -> dict[str, Any]:
@@ -73,6 +74,33 @@ def test_calculate_risk_var_methods() -> None:
         results.append(var_value)
 
     assert len(set(results)) >= 2
+
+
+def test_volatility_matches_documented_percentage_point_output_contract() -> None:
+    payload = {
+        "scope": {"as_of_date": "2026-01-03", "net_or_gross": "NET"},
+        "portfolio_open_date": "2026-01-01",
+        "periods": [{"type": "YTD", "name": "YTD"}],
+        "metrics": ["VOLATILITY"],
+        "options": {
+            "frequency": "DAILY",
+            "use_log_returns": False,
+        },
+        "returns": [
+            {"date": "2026-01-01", "value": 1.00},
+            {"date": "2026-01-02", "value": -0.50},
+            {"date": "2026-01-03", "value": 0.20},
+        ],
+    }
+
+    response = calculate_risk(RiskCalculationRequest.model_validate(payload))
+
+    metric = response.results["YTD"].metrics["VOLATILITY"]
+    assert metric.value == pytest.approx(11.914696806885186)
+    assert metric.details is not None
+    assert metric.details["standard_deviation"] == pytest.approx(0.007505553499465135)
+    assert metric.details["observation_count"] == 3
+    assert metric.details["annualization_factor"] == 252
 
 
 def test_drawdown_metadata_fields_present() -> None:
