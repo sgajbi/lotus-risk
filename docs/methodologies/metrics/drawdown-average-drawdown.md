@@ -6,78 +6,122 @@
 ## Endpoint and Mode Coverage
 - endpoint: /analytics/risk/drawdown
 - supported_modes: stateless, stateful
+- source product: `DrawdownAnalyticsReport:v1`
 
 ## Inputs
-- Drawdown path derived from return series.
+- Portfolio return observations for the resolved period.
+- Return contract unit: percentage points (`value=1.0` means `+1%`).
+- Period boundaries after period resolution (`EXPLICIT`, `YEAR`, `YTD`, `QTD`, `MTD`, `1Y`, `3Y`,
+  `5Y`, or `SI`).
+- Drawdown analysis options controlling underwater-series inclusion, episode-list filtering, and
+  duration convention for episode counters.
 
 ## Upstream Data Sources
-- Derived by drawdown engine.
+- Stateless mode: caller-provided `stateless_input.returns[]`.
+- Stateful mode: `lotus-risk` sources `series.portfolio_returns` from
+  `lotus-performance` `/integration/returns/series` through the governed drawdown stateful
+  adapter.
+- `lotus-risk` owns the average-drawdown calculation after dated portfolio return series are
+  resolved. It does not source portfolio returns from Workbench, Gateway, or manage.
 
 ## Unit Conventions
-- Return inputs are percentage points (pp): `1.0` means `+1%`.
-- Engine converts to decimal when needed: `r_decimal = r_pp / 100`.
-- Output unit follows metric contract (ratio, annualized decimal, drawdown decimal, or HHI scale).
+- Input return values are percentage points: `5.0` means `+5.0%`.
+- The engine converts percentage-point returns to decimal only inside the wealth path:
+  `r_decimal = r_pp / 100`.
+- `summary.average_drawdown` is a decimal drawdown ratio:
+  `-0.07576` means the average underwater observation was `-7.576%` below its running peak.
+- Only strictly underwater observations (`DD_t < 0`) enter the average.
+- `analysis_options.duration_unit`, `analysis_options.top_n_episodes`, and
+  `analysis_options.minimum_episode_depth_bps` do not change `summary.average_drawdown`.
 
 ## Variable Dictionary
-- `t`: observation index in chronological order.
-- `r_t_pp`: period return at index `t` in percentage points.
-- `r_t`: period return at index `t` in decimal (`r_t = r_t_pp / 100`).
-- `W_t`: cumulative wealth index up to `t`.
-- `P_t`: running peak wealth up to `t`.
-- `DD_t`: drawdown at `t`.
-- `U`: underwater subset of drawdown values (`DD_t < 0`).
-- `AVG_DD`: average drawdown metric value.
+- `t`: observation date.
+- `r_t_pp`: portfolio return on date `t`, in percentage points.
+- `r_t_decimal`: `r_t_pp / 100`.
+- `W_t`: cumulative wealth index through date `t`, `product(1 + r_i_decimal)` for `i <= t`.
+- `P_t`: running peak wealth through date `t`, `max(W_i)` for `i <= t`.
+- `DD_t`: decimal drawdown ratio on date `t`, `W_t / P_t - 1`.
+- `U`: ordered set of strictly underwater drawdown observations, `{DD_t | DD_t < 0}`.
+- `N_U`: number of observations in `U`.
+- `AVG_DD`: average drawdown summary value.
 
 ## Methodology and Formulas
-1. Convert returns from pp to decimal:
-`r_t = r_t_pp / 100`.
-2. Build wealth path:
-`W_t = ∏_{i=1..t}(1 + r_i)`.
-3. Build running peak:
-`P_t = max(W_1, W_2, ..., W_t)`.
-4. Build drawdown path:
-`DD_t = (W_t / P_t) - 1`.
-5. Construct underwater set:
-`U = {DD_t | DD_t < 0}`.
-6. Average drawdown:
-`AVG_DD = mean(U)` if `U` is non-empty; otherwise `AVG_DD = 0.0`.
+1. Resolve the requested period from `scope.as_of_date`, the first return observation date, and the
+   period definition.
+2. Filter portfolio returns to the resolved period.
+3. Require at least one observation in the resolved period; an empty period emits period-level
+   error `"Insufficient data"`.
+4. Convert percentage-point returns to decimal:
+   `r_t_decimal = r_t_pp / 100`.
+5. Build cumulative wealth:
+   `W_t = product(1 + r_i_decimal)` for `i <= t`.
+6. Build running peak wealth:
+   `P_t = max(W_i)` for `i <= t`.
+7. Build decimal drawdown path:
+   `DD_t = W_t / P_t - 1`.
+8. Select the strictly underwater observations:
+   `U = {DD_t | DD_t < 0}`.
+9. Map summary output:
+   - when `N_U > 0`, `summary.average_drawdown = sum(U) / N_U`;
+   - when `N_U = 0`, `summary.average_drawdown = 0.0`.
 
 ## Step-by-Step Computation
-1. Resolve period and select portfolio return observations in that date range.
-2. Sort observations by date and convert pp returns to decimal.
-3. Compute `W_t`, `P_t`, and `DD_t` for each observation date.
-4. Filter drawdown observations where `DD_t < 0`.
-5. Compute arithmetic mean over filtered values.
-6. If filtered set is empty, set `average_drawdown = 0.0`.
-7. Write final value to response summary field.
+1. Build a dated portfolio-return series and sort by date.
+2. Resolve each requested period.
+3. Filter the return series to the period date range.
+4. Return a period-level `"Insufficient data"` error when the filtered period is empty.
+5. Compute cumulative wealth, running peak, and drawdown paths.
+6. Filter drawdown observations to strictly negative values.
+7. Compute the arithmetic mean of the filtered decimal drawdown values.
+8. Emit `0.0` when the period never goes underwater.
+9. Build optional `episodes[]` and `underwater_series[]` independently from the average-drawdown
+   summary value.
 
 ## Validation and Failure Behavior
-- No observations in period: period result is returned with `Insufficient data`.
-- One observation only: drawdown path is degenerate; underwater set may be empty, resulting in `average_drawdown = 0.0`.
-- Non-numeric returns: rejected by request-contract validation before engine math.
-- This metric is independent of episode-list filters (`top_n_episodes`, `minimum_episode_depth_bps`).
+- Empty service-level return input returns an empty `results` map.
+- Empty return series for a requested period returns that period with `summary = null`,
+  `episodes = []`, and `error = "Insufficient data"`.
+- A one-observation or never-underwater period is valid and emits
+  `summary.average_drawdown = 0.0`.
+- Non-numeric return entries are rejected by request-contract validation before engine math.
+- `analysis_options.duration_unit` changes episode day counters only.
+- `analysis_options.top_n_episodes` and `analysis_options.minimum_episode_depth_bps` do not alter
+  `summary.average_drawdown`.
 
 ## Configuration Options
-- No dedicated metric knob.
+- `analysis_options.include_underwater_series`
+- `analysis_options.include_episode_list`
+- `analysis_options.top_n_episodes`
+- `analysis_options.minimum_episode_depth_bps`
 
 ## Outputs
 - `results[period].summary.average_drawdown`
+- `results[period].summary.time_under_water_days`
+- `results[period].underwater_series[].drawdown`
+- `results[period].error`
 
 ## Worked Example
-Input return sequence (pp): Day1 `+5.00`, Day2 `-10.00`, Day3 `+2.00`, Day4 `+4.00`.
+Assume `include_underwater_series=true` and portfolio return observations:
 
-| Date | `r_t_pp` | `r_t` (decimal) | `W_t` | `P_t` | `DD_t = W_t/P_t - 1` | Underwater? |
-|---|---:|---:|---:|---:|---:|---|
-| Day1 | 5.00 | 0.0500 | 1.050000 | 1.050000 | 0.000000 | No |
-| Day2 | -10.00 | -0.1000 | 0.945000 | 1.050000 | -0.100000 | Yes |
-| Day3 | 2.00 | 0.0200 | 0.963900 | 1.050000 | -0.082000 | Yes |
-| Day4 | 4.00 | 0.0400 | 1.002456 | 1.050000 | -0.045280 | Yes |
+| Date | `r_t_pp` | `W_t` | `P_t` | `DD_t` | Included in `U`? |
+| --- | ---: | ---: | ---: | ---: | --- |
+| 2026-01-02 | `5.00` | `1.0500000000` | `1.0500000000` | `0.0000000000` | No |
+| 2026-01-05 | `-10.00` | `0.9450000000` | `1.0500000000` | `-0.1000000000` | Yes |
+| 2026-01-06 | `2.00` | `0.9639000000` | `1.0500000000` | `-0.0820000000` | Yes |
+| 2026-01-07 | `4.00` | `1.0024560000` | `1.0500000000` | `-0.0452800000` | Yes |
 
-Underwater subset:
-- `U = [-0.100000, -0.082000, -0.045280]`
+Intermediate calculations:
 
-Average drawdown:
-- `AVG_DD = (-0.100000 - 0.082000 - 0.045280) / 3 = -0.075760`
+| Step | Value |
+| --- | ---: |
+| Underwater set `U` | `[-0.1000000000, -0.0820000000, -0.0452800000]` |
+| `N_U` | `3` |
+| `summary.average_drawdown` | `-0.0757600000` |
+| `summary.time_under_water_days` | `3` |
 
 Output mapping:
-- `results[period].summary.average_drawdown = -0.075760`
+
+- `results[period].summary.average_drawdown = -0.0757600000`
+- `results[period].summary.time_under_water_days = 3`
+- `results[period].underwater_series[1].drawdown = -0.1000000000`
+- `results[period].underwater_series[3].drawdown = -0.0452800000`

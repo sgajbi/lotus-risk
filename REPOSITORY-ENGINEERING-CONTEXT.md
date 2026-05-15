@@ -88,11 +88,12 @@ Current repository posture:
     dependency supportability posture, zero-excess-volatility Sharpe flagging,
     zero-benchmark-variance beta flagging, and zero-tracking-error information-ratio flagging.
 13. `DrawdownAnalyticsReport:v1` now has implementation-backed methodology truth for
-    `MAX_DRAWDOWN`: the docs and tests pin percentage-point input conventions, decimal
-    cumulative-wealth/running-peak drawdown behavior, decimal `summary.max_drawdown` output,
-    episode peak/trough/recovery semantics, empty-period insufficient-data posture, never-underwater
-    zero-drawdown posture, duration-unit day counter behavior, and episode-list filter isolation
-    from the summary maximum drawdown value.
+    `MAX_DRAWDOWN` and `AVERAGE_DRAWDOWN`: the docs and tests pin percentage-point input
+    conventions, decimal cumulative-wealth/running-peak drawdown behavior, decimal
+    `summary.max_drawdown` and `summary.average_drawdown` outputs, episode peak/trough/recovery
+    semantics, strictly-underwater average-drawdown inclusion, empty-period insufficient-data
+    posture, never-underwater zero-drawdown posture, duration-unit day counter behavior, and
+    episode-list filter isolation from the summary maximum and average drawdown values.
 
 ## Architecture And Module Map
 
