@@ -26,6 +26,9 @@ DRAWDOWN_ULCER_INDEX_DOC = (
 DRAWDOWN_TIME_UNDER_WATER_DOC = (
     REPO_ROOT / "docs" / "methodologies" / "metrics" / "drawdown-time-under-water.md"
 )
+CONCENTRATION_POSITION_HHI_DOC = (
+    REPO_ROOT / "docs" / "methodologies" / "metrics" / "concentration-hhi.md"
+)
 RISK_VOLATILITY_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-volatility.md"
 RISK_DRAWDOWN_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-drawdown.md"
 RISK_SHARPE_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-sharpe.md"
@@ -322,6 +325,42 @@ def test_drawdown_time_under_water_methodology_is_auditable_against_engine_contr
         "results[period].underwater_series[].drawdown",
         "Underwater indicators",
         "summary.time_under_water_days = 3",
+    ]
+
+    for phrase in required_truth:
+        assert phrase in text
+
+
+def test_concentration_position_hhi_methodology_is_auditable_against_engine_contract() -> None:
+    text = CONCENTRATION_POSITION_HHI_DOC.read_text(encoding="utf-8")
+
+    _assert_v3_section_order(text)
+
+    required_truth = [
+        "metric_id: POSITION_HHI",
+        "source_product: ConcentrationAnalyticsReport:v1",
+        "/analytics/risk/concentration",
+        "`risk_proxy`",
+        "lotus-core baseline snapshot",
+        "lotus-core simulation session",
+        "There is no lotus-performance dependency for position HHI",
+        "market_value_base` when present",
+        "projected_market_value_base` when present",
+        "Missing, non-numeric, zero, and negative values are excluded",
+        "Position weights are decimal ratios in `[0, 1]`",
+        "`risk_proxy.hhi_*` values are emitted on the conventional Herfindahl-Hirschman `0..10000`",
+        "HHI_raw = sum(w_i^2) * 10000",
+        "`risk_proxy.hhi_current = round6(HHI_current_raw)`",
+        "When no proposed values are available",
+        "A single valid position produces HHI `10000.0`",
+        "Equal weights across `N` valid positions produce `10000 / N`",
+        "Issuer enrichment coverage does not change `risk_proxy.hhi_*`",
+        "`include_cash_positions`",
+        "`top_n`",
+        "`issuer_grouping_level`",
+        "`risk_proxy.hhi_current = 3800.0`",
+        "`risk_proxy.hhi_proposed = 4450.0`",
+        "`risk_proxy.hhi_delta = 650.0`",
     ]
 
     for phrase in required_truth:
