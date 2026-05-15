@@ -17,6 +17,9 @@ ROLLING_MAX_DRAWDOWN_DOC = (
 RISK_VOLATILITY_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-volatility.md"
 RISK_SHARPE_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-sharpe.md"
 RISK_BETA_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-beta.md"
+RISK_TRACKING_ERROR_DOC = (
+    REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-tracking-error.md"
+)
 
 
 EXPECTED_V3_SECTIONS = [
@@ -268,6 +271,35 @@ def test_risk_beta_methodology_is_auditable_against_engine_contract() -> None:
         "2.0000000000",
         "1.1666666667",
         "0.5833333333",
+    ]
+
+    for phrase in required_truth:
+        assert phrase in text
+
+
+def test_risk_tracking_error_methodology_is_auditable_against_engine_contract() -> None:
+    text = RISK_TRACKING_ERROR_DOC.read_text(encoding="utf-8")
+
+    _assert_v3_section_order(text)
+
+    required_truth = [
+        "metric_id: TRACKING_ERROR",
+        "/analytics/risk/calculate",
+        "lotus-performance",
+        "r_log_pp = ln(1 + r_pp / 100) * 100",
+        "details.active_volatility = std(A_used_pp, ddof=1) / 100",
+        "details.annualized_tracking_error = details.active_volatility * sqrt(AF)",
+        "`metrics.TRACKING_ERROR.value` is an annualized percentage-point output",
+        "`AF = 252` for `DAILY`, `52` for `WEEKLY`, and `12` for `MONTHLY`",
+        'details.error = "Benchmark returns required for benchmark-dependent metric"',
+        'details.error = "Insufficient aligned observations"',
+        "Constant active returns are valid and produce `0.0`",
+        "No risk-free dependency is required for `TRACKING_ERROR`",
+        "No denominator is used",
+        "results[period].metrics.TRACKING_ERROR.value",
+        "2.7495454169",
+        "0.0017320508",
+        "0.0274954542",
     ]
 
     for phrase in required_truth:
