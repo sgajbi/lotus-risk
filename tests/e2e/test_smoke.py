@@ -369,6 +369,34 @@ def test_e2e_drawdown_stateless_happy_path() -> None:
     assert body["results"]["YTD"]["summary"]["max_drawdown"] is not None
 
 
+def test_e2e_drawdown_average_drawdown_public_contract() -> None:
+    client = TestClient(app)
+    response = client.post(
+        "/analytics/risk/drawdown",
+        json={
+            "input_mode": "stateless",
+            "stateless_input": {
+                "scope": {"as_of_date": "2026-01-07", "net_or_gross": "NET"},
+                "periods": [{"type": "YTD", "name": "YTD"}],
+                "returns": [
+                    {"date": "2026-01-02", "value": 5.0},
+                    {"date": "2026-01-05", "value": -10.0},
+                    {"date": "2026-01-06", "value": 2.0},
+                    {"date": "2026-01-07", "value": 4.0},
+                ],
+            },
+            "analysis_options": {"include_underwater_series": True},
+        },
+    )
+
+    assert response.status_code == 200
+    period = response.json()["results"]["YTD"]
+    assert period["summary"]["average_drawdown"] == pytest.approx(-0.07576)
+    assert period["summary"]["time_under_water_days"] == 3
+    assert period["underwater_series"][1]["drawdown"] == pytest.approx(-0.1)
+    assert period["underwater_series"][3]["drawdown"] == pytest.approx(-0.04528)
+
+
 def test_e2e_rolling_metrics_stateless_happy_path() -> None:
     client = TestClient(app)
     response = client.post("/analytics/risk/rolling-metrics", json=_rolling_payload())

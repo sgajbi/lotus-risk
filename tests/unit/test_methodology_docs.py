@@ -17,6 +17,9 @@ ROLLING_MAX_DRAWDOWN_DOC = (
 DRAWDOWN_MAX_DRAWDOWN_DOC = (
     REPO_ROOT / "docs" / "methodologies" / "metrics" / "drawdown-max-drawdown.md"
 )
+DRAWDOWN_AVERAGE_DRAWDOWN_DOC = (
+    REPO_ROOT / "docs" / "methodologies" / "metrics" / "drawdown-average-drawdown.md"
+)
 RISK_VOLATILITY_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-volatility.md"
 RISK_DRAWDOWN_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-drawdown.md"
 RISK_SHARPE_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-sharpe.md"
@@ -227,6 +230,34 @@ def test_drawdown_max_drawdown_methodology_is_auditable_against_engine_contract(
         "-0.2000000000",
         'summary.max_drawdown_peak_date = "2026-01-02"',
         'summary.max_drawdown_recovery_date = "2026-01-06"',
+    ]
+
+    for phrase in required_truth:
+        assert phrase in text
+
+
+def test_drawdown_average_drawdown_methodology_is_auditable_against_engine_contract() -> None:
+    text = DRAWDOWN_AVERAGE_DRAWDOWN_DOC.read_text(encoding="utf-8")
+
+    _assert_v3_section_order(text)
+
+    required_truth = [
+        "metric_id: AVERAGE_DRAWDOWN",
+        "/analytics/risk/drawdown",
+        "`DrawdownAnalyticsReport:v1`",
+        "lotus-performance",
+        "r_decimal = r_pp / 100",
+        "decimal drawdown ratio",
+        "Only strictly underwater observations (`DD_t < 0`) enter the average",
+        "summary.average_drawdown = sum(U) / N_U",
+        'error = "Insufficient data"',
+        "A one-observation or never-underwater period is valid",
+        "analysis_options.minimum_episode_depth_bps",
+        "results[period].summary.average_drawdown",
+        "results[period].summary.time_under_water_days",
+        "results[period].underwater_series[].drawdown",
+        "-0.0757600000",
+        "summary.time_under_water_days = 3",
     ]
 
     for phrase in required_truth:
