@@ -149,6 +149,39 @@ def test_volatility_matches_documented_percentage_point_output_contract() -> Non
     assert metric.details["annualization_factor"] == 252
 
 
+def test_drawdown_matches_documented_signed_percentage_point_output_contract() -> None:
+    payload = {
+        "scope": {"as_of_date": "2026-01-03", "net_or_gross": "NET"},
+        "portfolio_open_date": "2026-01-01",
+        "periods": [{"type": "YTD", "name": "YTD"}],
+        "metrics": ["DRAWDOWN"],
+        "options": {
+            "frequency": "DAILY",
+            "use_log_returns": True,
+        },
+        "returns": [
+            {"date": "2026-01-01", "value": 10.00},
+            {"date": "2026-01-02", "value": -20.00},
+            {"date": "2026-01-03", "value": 5.00},
+        ],
+    }
+
+    response = calculate_risk(RiskCalculationRequest.model_validate(payload))
+
+    metric = response.results["YTD"].metrics["DRAWDOWN"]
+    assert metric.value == pytest.approx(-20.0)
+    assert metric.details is not None
+    assert metric.details["max_drawdown"] == pytest.approx(-20.0)
+    assert metric.details["peak_date"] == "2026-01-01"
+    assert metric.details["trough_date"] == "2026-01-02"
+    assert metric.details["max_drawdown_date"] == "2026-01-02"
+    assert metric.details["recovery_date"] is None
+    assert metric.details["is_recovered"] is False
+    assert metric.details["days_to_trough"] == 1
+    assert metric.details["days_to_recovery"] is None
+    assert metric.details["time_under_water_days"] == 2
+
+
 def test_sharpe_matches_documented_dimensionless_output_contract() -> None:
     payload = {
         "scope": {"as_of_date": "2026-01-03", "net_or_gross": "NET"},
