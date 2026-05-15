@@ -201,6 +201,48 @@ def test_drawdown_ulcer_index_matches_documented_decimal_output_contract() -> No
     assert period.underwater_series[3].drawdown == pytest.approx(-0.04528)
 
 
+def test_drawdown_time_under_water_matches_documented_observation_count_contract() -> None:
+    request = DrawdownStatelessInput.model_validate(
+        {
+            "scope": {"as_of_date": "2026-01-07", "net_or_gross": "NET"},
+            "periods": [{"type": "YTD", "name": "YTD"}],
+            "returns": [
+                {"date": "2026-01-02", "value": 5.0},
+                {"date": "2026-01-05", "value": -10.0},
+                {"date": "2026-01-06", "value": 2.0},
+                {"date": "2026-01-07", "value": 4.0},
+            ],
+        }
+    )
+
+    response = calculate_drawdown(
+        request,
+        input_mode=DrawdownInputMode.STATELESS,
+        analysis_options=DrawdownAnalysisOptions.model_validate(
+            {
+                "duration_unit": "CALENDAR_DAYS",
+                "include_underwater_series": True,
+                "include_episode_list": True,
+                "top_n_episodes": 1,
+                "minimum_episode_depth_bps": 500,
+            }
+        ),
+    )
+
+    period = response.results["YTD"]
+    assert period.error is None
+    assert period.summary is not None
+    assert period.summary.time_under_water_days == 3
+    assert period.episodes[0].total_days == 5
+    assert period.underwater_series is not None
+    assert [point.drawdown < 0 for point in period.underwater_series] == [
+        False,
+        True,
+        True,
+        True,
+    ]
+
+
 def test_drawdown_engine_handles_empty_returns() -> None:
     request = DrawdownStatelessInput.model_validate(
         {

@@ -23,6 +23,9 @@ DRAWDOWN_AVERAGE_DRAWDOWN_DOC = (
 DRAWDOWN_ULCER_INDEX_DOC = (
     REPO_ROOT / "docs" / "methodologies" / "metrics" / "drawdown-ulcer-index.md"
 )
+DRAWDOWN_TIME_UNDER_WATER_DOC = (
+    REPO_ROOT / "docs" / "methodologies" / "metrics" / "drawdown-time-under-water.md"
+)
 RISK_VOLATILITY_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-volatility.md"
 RISK_DRAWDOWN_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-drawdown.md"
 RISK_SHARPE_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-sharpe.md"
@@ -289,6 +292,36 @@ def test_drawdown_ulcer_index_methodology_is_auditable_against_engine_contract()
         "results[period].underwater_series[].drawdown",
         "0.0685096314",
         "mean(S_t)",
+    ]
+
+    for phrase in required_truth:
+        assert phrase in text
+
+
+def test_drawdown_time_under_water_methodology_is_auditable_against_engine_contract() -> None:
+    text = DRAWDOWN_TIME_UNDER_WATER_DOC.read_text(encoding="utf-8")
+
+    _assert_v3_section_order(text)
+
+    required_truth = [
+        "metric_id: TIME_UNDER_WATER_DAYS",
+        "/analytics/risk/drawdown",
+        "`DrawdownAnalyticsReport:v1`",
+        "lotus-performance",
+        "r_decimal = r_pp / 100",
+        "integer count of portfolio return observations",
+        "observation-based",
+        "not a calendar-day or business-day duration",
+        "summary.time_under_water_days = sum(I_t)",
+        'error = "Insufficient data"',
+        "A one-observation or never-underwater period is valid",
+        "analysis_options.duration_unit",
+        "analysis_options.minimum_episode_depth_bps",
+        "results[period].summary.time_under_water_days",
+        "results[period].episodes[].total_days",
+        "results[period].underwater_series[].drawdown",
+        "Underwater indicators",
+        "summary.time_under_water_days = 3",
     ]
 
     for phrase in required_truth:
