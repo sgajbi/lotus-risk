@@ -98,7 +98,8 @@ Current repository posture:
     duration-unit day counter behavior, and episode-list filter isolation from the summary
     maximum, average, ulcer-index, and time-under-water drawdown values.
 14. `ConcentrationRiskReport:v1` now has implementation-backed methodology truth for
-    `POSITION_HHI`, `TOP_POSITION_WEIGHT`, `TOP_N_CUMULATIVE_WEIGHT`, and `ISSUER_HHI`: the docs and tests pin
+    `POSITION_HHI`, `TOP_POSITION_WEIGHT`, `TOP_N_CUMULATIVE_WEIGHT`, `ISSUER_HHI`, and
+    `TOP_ISSUER_WEIGHT`: the docs and tests pin
     stateless, stateful, and simulation source resolution, positive numeric position-value
     extraction, market-value versus quantity fallback precedence, decimal position-weight
     construction, conventional `0..10000` Herfindahl-Hirschman scaling for HHI, decimal `0..1`
@@ -106,7 +107,8 @@ Current repository posture:
     proposed-state fallback to current values when projected values are unavailable, deterministic
     top-position driver selection, top-N cumulative summation, covered-subset issuer aggregation,
     legal versus ultimate-parent issuer grouping, issuer-enrichment precedence, issuer coverage
-    and supportability posture, input-universe option boundaries, and issuer-enrichment isolation
+    and supportability posture, deterministic top-issuer driver selection, top-issuer
+    proposed-state fallback, input-universe option boundaries, and issuer-enrichment isolation
     from `risk_proxy.hhi_*` and
     `single_position_concentration.top_position_*` / `top_n_cumulative_weight_*` outputs.
 

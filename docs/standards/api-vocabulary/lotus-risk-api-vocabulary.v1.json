@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-05-15T11:48:59.116122+00:00",
+  "generatedAt": "2026-05-15T12:12:55.855350+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.affected_portfolios",
@@ -2558,7 +2558,7 @@
       "semanticId": "lotus.top_issuer_weight_current",
       "canonicalTerm": "top_issuer_weight_current",
       "preferredName": "top_issuer_weight_current",
-      "description": "Highest issuer-level baseline concentration weight.",
+      "description": "Highest issuer-level baseline concentration weight from covered mapped issuer buckets.",
       "example": 0.18,
       "type": "number",
       "locations": [
@@ -2586,7 +2586,7 @@
       "semanticId": "lotus.top_issuer_weight_proposed",
       "canonicalTerm": "top_issuer_weight_proposed",
       "preferredName": "top_issuer_weight_proposed",
-      "description": "Highest issuer-level proposed concentration weight.",
+      "description": "Highest issuer-level proposed concentration weight from covered mapped issuer buckets, falling back to baseline top issuer weight when proposed issuer buckets are unavailable.",
       "example": 0.21,
       "type": "number",
       "locations": [

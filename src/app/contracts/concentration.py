@@ -572,11 +572,16 @@ class IssuerConcentration(BaseModel):
         json_schema_extra={"example": 275.0},
     )
     top_issuer_weight_current: float = Field(
-        description="Highest issuer-level baseline concentration weight.",
+        description=(
+            "Highest issuer-level baseline concentration weight from covered mapped issuer buckets."
+        ),
         json_schema_extra={"example": 0.18},
     )
     top_issuer_weight_proposed: float = Field(
-        description="Highest issuer-level proposed concentration weight.",
+        description=(
+            "Highest issuer-level proposed concentration weight from covered mapped issuer buckets, "
+            "falling back to baseline top issuer weight when proposed issuer buckets are unavailable."
+        ),
         json_schema_extra={"example": 0.21},
     )
     top_issuer_weight_delta: float = Field(

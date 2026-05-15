@@ -303,6 +303,59 @@ async def test_issuer_hhi_matches_documented_stateless_methodology_example() -> 
 
 
 @pytest.mark.asyncio
+async def test_top_issuer_weight_matches_documented_stateless_methodology_example() -> None:
+    request = ConcentrationRequest.model_validate(
+        {
+            "input_mode": "stateless",
+            "stateless_input": {
+                "current_positions": [
+                    {"security_id": "A", "market_value_base": 50, "issuer_id": "ISSUER_X"},
+                    {"security_id": "B", "market_value_base": 30, "issuer_id": "ISSUER_X"},
+                    {"security_id": "C", "market_value_base": 20, "issuer_id": "ISSUER_Y"},
+                    {"security_id": "IGNORED_ZERO", "market_value_base": 0},
+                    {"security_id": "IGNORED_NEGATIVE", "market_value_base": -10},
+                ],
+                "projected_positions": [
+                    {
+                        "security_id": "A",
+                        "projected_market_value_base": 60,
+                        "issuer_id": "ISSUER_X",
+                    },
+                    {
+                        "security_id": "B",
+                        "projected_market_value_base": 10,
+                        "issuer_id": "ISSUER_X",
+                    },
+                    {
+                        "security_id": "C",
+                        "projected_market_value_base": 30,
+                        "issuer_id": "ISSUER_Y",
+                    },
+                ],
+            },
+        }
+    )
+
+    response = (await calculate_concentration(request)).model_dump()
+
+    issuer_concentration = response["issuer_concentration"]
+    assert issuer_concentration["top_issuer_weight_current"] == 0.8
+    assert issuer_concentration["top_issuer_weight_proposed"] == 0.7
+    assert issuer_concentration["top_issuer_weight_delta"] == -0.1
+    assert issuer_concentration["top_issuer_current"] == {
+        "issuer_id": "ISSUER_X",
+        "issuer_name": None,
+        "weight": 0.8,
+    }
+    assert issuer_concentration["top_issuer_proposed"] == {
+        "issuer_id": "ISSUER_X",
+        "issuer_name": None,
+        "weight": 0.7,
+    }
+    assert issuer_concentration["coverage_status"] == "complete"
+
+
+@pytest.mark.asyncio
 async def test_calculate_concentration_rejects_legacy_payload() -> None:
     with pytest.raises(ValidationError):
         ConcentrationRequest.model_validate(

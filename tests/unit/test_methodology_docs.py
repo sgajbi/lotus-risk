@@ -38,6 +38,9 @@ CONCENTRATION_TOP_N_CUMULATIVE_WEIGHT_DOC = (
 CONCENTRATION_ISSUER_HHI_DOC = (
     REPO_ROOT / "docs" / "methodologies" / "metrics" / "concentration-issuer-hhi.md"
 )
+CONCENTRATION_TOP_ISSUER_WEIGHT_DOC = (
+    REPO_ROOT / "docs" / "methodologies" / "metrics" / "concentration-top-issuer-weight.md"
+)
 RISK_VOLATILITY_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-volatility.md"
 RISK_DRAWDOWN_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-drawdown.md"
 RISK_SHARPE_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-sharpe.md"
@@ -491,6 +494,51 @@ def test_concentration_issuer_hhi_methodology_is_auditable_against_engine_contra
         "`issuer_concentration.hhi_proposed = 5800.0`",
         "`issuer_concentration.hhi_delta = -1000.0`",
         "`issuer_concentration.coverage_status = complete`",
+    ]
+
+    for phrase in required_truth:
+        assert phrase in text
+
+
+def test_concentration_top_issuer_weight_methodology_is_auditable_against_engine_contract() -> None:
+    text = CONCENTRATION_TOP_ISSUER_WEIGHT_DOC.read_text(encoding="utf-8")
+
+    _assert_v3_section_order(text)
+
+    required_truth = [
+        "metric_id: TOP_ISSUER_WEIGHT",
+        "source_product: ConcentrationRiskReport:v1",
+        "/analytics/risk/concentration",
+        "`issuer_concentration`",
+        "lotus-core instrument enrichment",
+        "lotus-core baseline snapshot",
+        "lotus-core simulation session",
+        "There is no lotus-performance dependency for top issuer weight",
+        "legal issuer grouping uses `issuer_id`",
+        "ultimate-parent grouping uses `ultimate_parent_issuer_id`",
+        "merged policy starts with lotus-core identity and lets caller identity override",
+        "market_value_base` when present",
+        "projected_market_value_base` when present",
+        "Missing, non-numeric, zero, and negative values are excluded",
+        "Top issuer weights are decimal ratios in `[0, 1]`",
+        "TOP_ISSUER_raw = max_k(w_k)",
+        "`issuer_concentration.top_issuer_weight_current = round6(TOP_ISSUER_current_raw)`",
+        "`issuer_concentration.top_issuer_current.weight = round6(TOP_ISSUER_current_raw)`",
+        "When no proposed issuer buckets are available",
+        "A single covered issuer bucket produces top issuer weight `1.0`",
+        "Equal weights across `N` covered issuer buckets produce top issuer weight `1 / N`",
+        "lexicographically largest `issuer_id`",
+        "Positions without resolved issuer identity are excluded from top issuer weight",
+        "`coverage_status = partial`",
+        "`metadata.calculation_supportability`",
+        "not change `risk_proxy.hhi_*`",
+        "`include_cash_positions`",
+        "`top_n`",
+        "`issuer_concentration.top_issuer_weight_current = 0.80`",
+        "`issuer_concentration.top_issuer_weight_proposed = 0.70`",
+        "`issuer_concentration.top_issuer_weight_delta = -0.10`",
+        '`issuer_concentration.top_issuer_current.issuer_id = "ISSUER_X"`',
+        "`issuer_concentration.top_issuer_current.weight = 0.80`",
     ]
 
     for phrase in required_truth:
