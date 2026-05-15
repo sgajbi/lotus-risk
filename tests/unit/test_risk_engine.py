@@ -136,6 +136,41 @@ def test_sharpe_matches_documented_dimensionless_output_contract() -> None:
     assert metric.details["annualization_factor"] == 252
 
 
+def test_sortino_matches_documented_dimensionless_output_contract() -> None:
+    payload = {
+        "scope": {"as_of_date": "2026-01-04", "net_or_gross": "NET"},
+        "portfolio_open_date": "2026-01-01",
+        "periods": [{"type": "YTD", "name": "YTD"}],
+        "metrics": ["SORTINO"],
+        "options": {
+            "frequency": "DAILY",
+            "use_log_returns": False,
+            "mar_annual_rate": 0.02,
+        },
+        "returns": [
+            {"date": "2026-01-01", "value": 1.00},
+            {"date": "2026-01-02", "value": -0.50},
+            {"date": "2026-01-03", "value": 0.20},
+            {"date": "2026-01-04", "value": -0.10},
+        ],
+    }
+
+    response = calculate_risk(RiskCalculationRequest.model_validate(payload))
+
+    metric = response.results["YTD"].metrics["SORTINO"]
+    assert metric.value == pytest.approx(6.146296789445203)
+    assert metric.details is not None
+    assert metric.details["observation_count"] == 4
+    assert metric.details["annualization_factor"] == 252
+    assert metric.details["mar_annual_rate"] == pytest.approx(0.02)
+    assert metric.details["periodic_mar"] == pytest.approx(0.0000785849419846496)
+    assert metric.details["mean_return"] == pytest.approx(0.0015)
+    assert metric.details["excess_return"] == pytest.approx(0.0014214150580153504)
+    assert metric.details["annualized_excess_return"] == pytest.approx(0.3581965946198683)
+    assert metric.details["downside_observation_count"] == 2
+    assert metric.details["downside_deviation"] == pytest.approx(0.003671196704756452)
+
+
 def test_beta_matches_documented_dimensionless_output_contract() -> None:
     payload = {
         "scope": {"as_of_date": "2026-01-03", "net_or_gross": "NET"},

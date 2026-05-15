@@ -23,20 +23,22 @@
 ## Implementation-backed methodology coverage
 
 `RiskMetricsReport:v1` now has auditable source-owner methodology truth for volatility, Sharpe,
-beta, tracking error, and information ratio. The methodologies are tied to the implemented
+Sortino, beta, tracking error, and information ratio. The methodologies are tied to the implemented
 `/analytics/risk/calculate` engine and state the exact percentage-point input convention, optional
 log-return transform, frequency compounding before metric calculation, `ddof=1` sample standard
-deviation/covariance/variance behavior, decimal volatility, risk-free, tracking-error, and
-information-ratio details, percentage-point-squared beta covariance/benchmark-variance details,
-annualized percentage-point `metrics.VOLATILITY.value`, dimensionless annualized
-`metrics.SHARPE.value`, dimensionless slope `metrics.BETA.value`, annualized percentage-point
-`metrics.TRACKING_ERROR.value`, dimensionless annualized `metrics.INFORMATION_RATIO.value`,
-annualization-factor resolution where used, benchmark dependency for beta, tracking error, and
-information ratio, no benchmark dependency for Sharpe, no risk-free dependency for volatility,
-beta, tracking error, and information ratio, no-denominator posture for volatility and tracking
-error, zero-volatility fail-closed posture for Sharpe, zero-benchmark-variance fail-closed posture
-for beta, zero-tracking-error fail-closed posture for information ratio, constant-active-return
-zero tracking-error posture, and insufficient-data failure behavior.
+deviation/covariance/variance behavior, decimal volatility, risk-free, Sortino, tracking-error,
+and information-ratio details, percentage-point-squared beta covariance/benchmark-variance
+details, annualized percentage-point `metrics.VOLATILITY.value`, dimensionless annualized
+`metrics.SHARPE.value`, dimensionless annualized `metrics.SORTINO.value`, dimensionless slope
+`metrics.BETA.value`, annualized percentage-point `metrics.TRACKING_ERROR.value`, dimensionless
+annualized `metrics.INFORMATION_RATIO.value`, annualization-factor resolution where used,
+benchmark dependency for beta, tracking error, and information ratio, no benchmark dependency for
+Sharpe and Sortino, no risk-free dependency for volatility, Sortino, beta, tracking error, and
+information ratio, no-denominator posture for volatility and tracking error, zero-volatility
+fail-closed posture for Sharpe, no-downside-observation fail-closed posture for Sortino,
+zero-benchmark-variance fail-closed posture for beta, zero-tracking-error fail-closed posture for
+information ratio, constant-active-return zero tracking-error posture, and insufficient-data
+failure behavior.
 
 `RollingRiskMetricsReport:v1` now has auditable source-owner methodology truth for rolling
 volatility, rolling Sharpe, rolling beta, rolling tracking error, rolling information ratio, and
@@ -82,12 +84,12 @@ Audience notes:
   active return per unit of that active risk, and rolling maximum drawdown as the worst decimal
   peak-to-trough loss inside each rolling return window.
 - Business users can read `RiskMetricsReport:v1` volatility as annualized portfolio-return
-  dispersion in percentage points for the resolved period and Sharpe as annualized excess return
-  per unit of portfolio return volatility for the resolved period. Beta is the period sensitivity
-  slope of portfolio returns to benchmark return variance after strict date alignment, and tracking
-  error is annualized active-return volatility versus the selected benchmark for the resolved
-  period. Information ratio is annualized active return per unit of tracking error for the same
-  period.
+  dispersion in percentage points for the resolved period, Sharpe as annualized excess return per
+  unit of portfolio return volatility, and Sortino as annualized excess return over MAR per unit of
+  downside deviation. Beta is the period sensitivity slope of portfolio returns to benchmark return
+  variance after strict date alignment, and tracking error is annualized active-return volatility
+  versus the selected benchmark for the resolved period. Information ratio is annualized active
+  return per unit of tracking error for the same period.
 - Operations teams can distinguish warm-up gaps, missing benchmark alignment, and upstream sourcing
   issues from calculation failure; missing risk-free alignment and zero-excess-volatility windows
   are explicit for Sharpe, zero-benchmark-variance windows are explicit for beta, and
@@ -96,7 +98,7 @@ Audience notes:
   supportability metadata rather than recomputing rolling volatility, Sharpe, beta, tracking error,
   information ratio, or maximum drawdown locally.
 - Developers and downstream services must preserve `RiskMetricsReport:v1` volatility, Sharpe,
-  beta, tracking-error, and information-ratio values and supportability metadata rather than
+  Sortino, beta, tracking-error, and information-ratio values and supportability metadata rather than
   recomputing period risk metrics locally.
 - Developers and downstream services must preserve `RiskEventAffectedCohort:v1` membership,
   exclusions, source refs, and impact scores rather than reconstructing risk-event cohort
