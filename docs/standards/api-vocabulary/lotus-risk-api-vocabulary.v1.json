@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-05-15T07:39:13.884277+00:00",
+  "generatedAt": "2026-05-15T10:18:10.183436+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.affected_portfolios",
@@ -2702,7 +2702,7 @@
       "semanticId": "lotus.top_position_weight_current",
       "canonicalTerm": "top_position_weight_current",
       "preferredName": "top_position_weight_current",
-      "description": "Highest single-position weight in baseline state.",
+      "description": "Highest single-position weight in the baseline state, computed from positive extracted position values as a decimal ratio in the 0..1 range.",
       "example": 0.1245,
       "type": "number",
       "locations": [
@@ -2716,7 +2716,7 @@
       "semanticId": "lotus.top_position_weight_delta",
       "canonicalTerm": "top_position_weight_delta",
       "preferredName": "top_position_weight_delta",
-      "description": "Difference between proposed and baseline top-position weights.",
+      "description": "Proposed-minus-baseline top-position weight change as a decimal ratio.",
       "example": 0.0175,
       "type": "number",
       "locations": [
@@ -2730,7 +2730,7 @@
       "semanticId": "lotus.top_position_weight_proposed",
       "canonicalTerm": "top_position_weight_proposed",
       "preferredName": "top_position_weight_proposed",
-      "description": "Highest single-position weight in proposed state.",
+      "description": "Highest single-position weight in the proposed state as a decimal ratio in the 0..1 range; falls back to the baseline top-position weight when no proposed position values are available.",
       "example": 0.142,
       "type": "number",
       "locations": [

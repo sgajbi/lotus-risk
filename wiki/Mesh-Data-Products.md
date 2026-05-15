@@ -70,13 +70,16 @@ posture, never-underwater zero-drawdown posture, duration-unit day counter behav
 boundary that episode-list filters do not change the summary maximum, average, ulcer-index, or
 time-under-water drawdown values.
 
-`ConcentrationRiskReport:v1` now has auditable source-owner methodology truth for position HHI.
+`ConcentrationRiskReport:v1` now has auditable source-owner methodology truth for position HHI and
+top-position weight.
 The methodology is tied to the implemented `/analytics/risk/concentration` engine and states the
 stateless, stateful, and simulation source paths, positive numeric value extraction, market-value
 versus quantity fallback precedence, decimal position-weight construction, conventional `0..10000`
-Herfindahl-Hirschman scaling, six-decimal response rounding, proposed-state fallback to current
-HHI when projected values are unavailable, input-universe option boundaries, and issuer-enrichment
-isolation from `risk_proxy.hhi_*` outputs.
+Herfindahl-Hirschman scaling for HHI, decimal `0..1` top-position weight output, six-decimal
+response rounding, proposed-state fallback to current values when projected values are
+unavailable, deterministic top-position driver selection, input-universe option boundaries, and
+issuer-enrichment isolation from `risk_proxy.hhi_*` and
+`single_position_concentration.top_position_*` outputs.
 
 `RegimeScenarioPackEvaluation:v1` now carries source-owned scenario-pack evidence beyond aggregate
 loss. When callers provide reconciled `exposure_components`, the product emits per-security

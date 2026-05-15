@@ -98,12 +98,13 @@ Current repository posture:
     duration-unit day counter behavior, and episode-list filter isolation from the summary
     maximum, average, ulcer-index, and time-under-water drawdown values.
 14. `ConcentrationRiskReport:v1` now has implementation-backed methodology truth for
-    `POSITION_HHI`: the docs and tests pin stateless, stateful, and simulation source resolution,
-    positive numeric position-value extraction, market-value versus quantity fallback precedence,
-    decimal position-weight construction, conventional `0..10000` Herfindahl-Hirschman scaling,
-    six-decimal response rounding, proposed-state fallback to current HHI when projected values are
-    unavailable, input-universe option boundaries, and issuer-enrichment isolation from
-    `risk_proxy.hhi_*` outputs.
+    `POSITION_HHI` and `TOP_POSITION_WEIGHT`: the docs and tests pin stateless, stateful, and
+    simulation source resolution, positive numeric position-value extraction, market-value versus
+    quantity fallback precedence, decimal position-weight construction, conventional `0..10000`
+    Herfindahl-Hirschman scaling for HHI, six-decimal response rounding, proposed-state fallback
+    to current values when projected values are unavailable, deterministic top-position driver
+    selection, input-universe option boundaries, and issuer-enrichment isolation from
+    `risk_proxy.hhi_*` and `single_position_concentration.top_position_*` outputs.
 
 ## Architecture And Module Map
 

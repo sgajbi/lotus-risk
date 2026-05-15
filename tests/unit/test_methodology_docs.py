@@ -29,6 +29,9 @@ DRAWDOWN_TIME_UNDER_WATER_DOC = (
 CONCENTRATION_POSITION_HHI_DOC = (
     REPO_ROOT / "docs" / "methodologies" / "metrics" / "concentration-hhi.md"
 )
+CONCENTRATION_TOP_POSITION_WEIGHT_DOC = (
+    REPO_ROOT / "docs" / "methodologies" / "metrics" / "concentration-top-position-weight.md"
+)
 RISK_VOLATILITY_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-volatility.md"
 RISK_DRAWDOWN_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-drawdown.md"
 RISK_SHARPE_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-sharpe.md"
@@ -361,6 +364,44 @@ def test_concentration_position_hhi_methodology_is_auditable_against_engine_cont
         "`risk_proxy.hhi_current = 3800.0`",
         "`risk_proxy.hhi_proposed = 4450.0`",
         "`risk_proxy.hhi_delta = 650.0`",
+    ]
+
+    for phrase in required_truth:
+        assert phrase in text
+
+
+def test_concentration_top_position_weight_methodology_is_auditable_against_engine_contract() -> (
+    None
+):
+    text = CONCENTRATION_TOP_POSITION_WEIGHT_DOC.read_text(encoding="utf-8")
+
+    _assert_v3_section_order(text)
+
+    required_truth = [
+        "metric_id: TOP_POSITION_WEIGHT",
+        "source_product: ConcentrationRiskReport:v1",
+        "/analytics/risk/concentration",
+        "`single_position_concentration`",
+        "lotus-core baseline snapshot",
+        "lotus-core simulation session",
+        "There is no lotus-performance dependency for top-position weight",
+        "market_value_base` when present",
+        "projected_market_value_base` when present",
+        "Missing, non-numeric, zero, and negative values are excluded",
+        "Output weights are decimal ratios in `[0, 1]`",
+        "TOP_raw = max_i(w_i)",
+        "`single_position_concentration.top_position_weight_current = round6(TOP_current_raw)`",
+        "When no proposed values are available",
+        "lexicographically largest `security_id`",
+        "A single valid position produces top-position weight `1.0`",
+        "Equal weights across `N` valid positions produce top-position weight `1 / N`",
+        "Issuer enrichment coverage does not change `single_position_concentration.top_position_*`",
+        "`include_cash_positions`",
+        "`top_n`",
+        "`issuer_grouping_level`",
+        "`single_position_concentration.top_position_weight_current = 0.50`",
+        "`single_position_concentration.top_position_weight_proposed = 0.60`",
+        "`single_position_concentration.top_position_weight_delta = 0.10`",
     ]
 
     for phrase in required_truth:

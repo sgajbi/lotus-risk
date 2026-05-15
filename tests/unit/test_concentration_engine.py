@@ -155,6 +155,63 @@ async def test_position_hhi_matches_documented_stateless_methodology_example() -
 
 
 @pytest.mark.asyncio
+async def test_top_position_weight_matches_documented_stateless_methodology_example() -> None:
+    request = ConcentrationRequest.model_validate(
+        {
+            "input_mode": "stateless",
+            "stateless_input": {
+                "current_positions": [
+                    {
+                        "security_id": "A",
+                        "security_name": "Alpha",
+                        "market_value_base": 50,
+                    },
+                    {"security_id": "B", "security_name": "Beta", "market_value_base": 30},
+                    {"security_id": "C", "security_name": "Core", "market_value_base": 20},
+                    {"security_id": "IGNORED_ZERO", "market_value_base": 0},
+                    {"security_id": "IGNORED_NEGATIVE", "market_value_base": -10},
+                ],
+                "projected_positions": [
+                    {
+                        "security_id": "A",
+                        "security_name": "Alpha",
+                        "projected_market_value_base": 60,
+                    },
+                    {
+                        "security_id": "B",
+                        "security_name": "Beta",
+                        "projected_market_value_base": 25,
+                    },
+                    {
+                        "security_id": "C",
+                        "security_name": "Core",
+                        "projected_market_value_base": 15,
+                    },
+                ],
+                "top_n": 2,
+            },
+        }
+    )
+
+    response = (await calculate_concentration(request)).model_dump()
+
+    single_position = response["single_position_concentration"]
+    assert single_position["top_position_weight_current"] == 0.5
+    assert single_position["top_position_weight_proposed"] == 0.6
+    assert single_position["top_position_weight_delta"] == 0.1
+    assert single_position["top_position_current"] == {
+        "security_id": "A",
+        "security_name": "Alpha",
+        "weight": 0.5,
+    }
+    assert single_position["top_position_proposed"] == {
+        "security_id": "A",
+        "security_name": "Alpha",
+        "weight": 0.6,
+    }
+
+
+@pytest.mark.asyncio
 async def test_calculate_concentration_rejects_legacy_payload() -> None:
     with pytest.raises(ValidationError):
         ConcentrationRequest.model_validate(

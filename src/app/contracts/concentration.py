@@ -449,15 +449,22 @@ class ConcentrationRiskProxy(BaseModel):
 
 class SinglePositionConcentration(BaseModel):
     top_position_weight_current: float = Field(
-        description="Highest single-position weight in baseline state.",
+        description=(
+            "Highest single-position weight in the baseline state, computed from positive "
+            "extracted position values as a decimal ratio in the 0..1 range."
+        ),
         json_schema_extra={"example": 0.1245},
     )
     top_position_weight_proposed: float = Field(
-        description="Highest single-position weight in proposed state.",
+        description=(
+            "Highest single-position weight in the proposed state as a decimal ratio in the 0..1 "
+            "range; falls back to the baseline top-position weight when no proposed position "
+            "values are available."
+        ),
         json_schema_extra={"example": 0.142},
     )
     top_position_weight_delta: float = Field(
-        description="Difference between proposed and baseline top-position weights.",
+        description="Proposed-minus-baseline top-position weight change as a decimal ratio.",
         json_schema_extra={"example": 0.0175},
     )
     top_n_cumulative_weight_current: float = Field(
