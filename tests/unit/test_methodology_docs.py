@@ -15,6 +15,7 @@ ROLLING_MAX_DRAWDOWN_DOC = (
     REPO_ROOT / "docs" / "methodologies" / "metrics" / "rolling-max-drawdown.md"
 )
 RISK_VOLATILITY_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-volatility.md"
+RISK_SHARPE_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-sharpe.md"
 
 
 EXPECTED_V3_SECTIONS = [
@@ -209,6 +210,34 @@ def test_risk_volatility_methodology_is_auditable_against_engine_contract() -> N
         "No denominator is used",
         "results[period].metrics.VOLATILITY.value",
         "11.9146968069",
+        "0.0075055535",
+    ]
+
+    for phrase in required_truth:
+        assert phrase in text
+
+
+def test_risk_sharpe_methodology_is_auditable_against_engine_contract() -> None:
+    text = RISK_SHARPE_DOC.read_text(encoding="utf-8")
+
+    _assert_v3_section_order(text)
+
+    required_truth = [
+        "metric_id: SHARPE",
+        "/analytics/risk/calculate",
+        "lotus-performance",
+        "r_log_pp = ln(1 + r_pp / 100) * 100",
+        "details.volatility = std(r_used_pp, ddof=1) / 100",
+        "details.periodic_risk_free_rate = (1 + rf_annual)^(1 / AF) - 1",
+        "`metrics.SHARPE.value` is a dimensionless annualized ratio",
+        "`AF = 252` for `DAILY`, `52` for `WEEKLY`, and `12` for `MONTHLY`",
+        'details.error = "Insufficient data"',
+        'details.error = "Zero volatility"',
+        "No benchmark dependency is required for `SHARPE`",
+        "The denominator is `sigma_decimal`",
+        "results[period].metrics.SHARPE.value",
+        "4.7688716199",
+        "0.0000785849",
         "0.0075055535",
     ]
 

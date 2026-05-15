@@ -49,12 +49,15 @@ Current repository posture:
     source-supplied exposure weights against governed risk-event definitions and returns affected
     membership, exclusions, impact scores, source refs, supportability, and bounded reason codes
     for future manage wave-trigger consumption without creating waves or campaign approvals.
-11. `RiskMetricsReport:v1` now has implementation-backed methodology truth for `VOLATILITY`: the
-    docs and tests pin percentage-point input conventions, optional log-return transformation,
-    frequency compounding before volatility, `ddof=1` sample standard deviation, decimal
-    `details.standard_deviation`, annualized percentage-point `metrics.VOLATILITY.value`, default
-    and override annualization-factor resolution, no benchmark/risk-free dependency posture,
-    no-denominator posture, and insufficient-data failure behavior.
+11. `RiskMetricsReport:v1` now has implementation-backed methodology truth for `VOLATILITY` and
+    `SHARPE`: the docs and tests pin percentage-point input conventions, optional log-return
+    transformation, frequency compounding before volatility or Sharpe, `ddof=1` sample standard
+    deviation, decimal volatility details, periodic risk-free rate resolution, annualized
+    percentage-point `metrics.VOLATILITY.value`, dimensionless annualized
+    `metrics.SHARPE.value`, default and override annualization-factor resolution, no benchmark
+    dependency posture for Sharpe, no risk-free dependency posture for volatility,
+    no-denominator posture for volatility, zero-volatility fail-closed posture for Sharpe, and
+    insufficient-data failure behavior.
 12. `RollingRiskMetricsReport:v1` now has implementation-backed methodology truth for
     `ROLLING_VOLATILITY`, `ROLLING_SHARPE`, `ROLLING_BETA`, `ROLLING_TRACKING_ERROR`,
     `ROLLING_INFORMATION_RATIO`, and `ROLLING_MAX_DRAWDOWN`: the docs and tests pin
