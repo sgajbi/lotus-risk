@@ -1,4 +1,5 @@
 import pandas as pd
+import pytest
 
 from app.contracts.drawdown import (
     DrawdownAnalysisOptions,
@@ -77,6 +78,50 @@ def test_drawdown_engine_returns_period_summary_episode_and_underwater() -> None
     assert response.metadata.duration_unit == "BUSINESS_DAYS"
     assert response.metadata.include_benchmark is None
     assert response.metadata.missing_benchmark_policy is None
+
+
+def test_drawdown_max_drawdown_matches_documented_decimal_output_contract() -> None:
+    request = DrawdownStatelessInput.model_validate(
+        {
+            "scope": {"as_of_date": "2026-01-06", "net_or_gross": "NET"},
+            "periods": [{"type": "YTD", "name": "YTD"}],
+            "returns": [
+                {"date": "2026-01-02", "value": 10.0},
+                {"date": "2026-01-05", "value": -20.0},
+                {"date": "2026-01-06", "value": 30.0},
+            ],
+        }
+    )
+
+    response = calculate_drawdown(
+        request,
+        input_mode=DrawdownInputMode.STATELESS,
+        analysis_options=DrawdownAnalysisOptions.model_validate(
+            {
+                "duration_unit": "BUSINESS_DAYS",
+                "include_underwater_series": True,
+                "include_episode_list": True,
+            }
+        ),
+    )
+
+    period = response.results["YTD"]
+    assert period.error is None
+    assert period.summary is not None
+    assert period.summary.max_drawdown == pytest.approx(-0.2)
+    assert str(period.summary.max_drawdown_peak_date) == "2026-01-02"
+    assert str(period.summary.max_drawdown_trough_date) == "2026-01-05"
+    assert str(period.summary.max_drawdown_recovery_date) == "2026-01-06"
+    assert period.summary.is_recovered is True
+    assert period.summary.days_to_trough == 1
+    assert period.summary.days_to_recovery == 1
+    assert period.summary.time_under_water_days == 1
+    assert period.episodes[0].depth == pytest.approx(-0.2)
+    assert str(period.episodes[0].peak_date) == "2026-01-02"
+    assert str(period.episodes[0].trough_date) == "2026-01-05"
+    assert str(period.episodes[0].recovery_date) == "2026-01-06"
+    assert period.underwater_series is not None
+    assert period.underwater_series[1].drawdown == pytest.approx(-0.2)
 
 
 def test_drawdown_engine_handles_empty_returns() -> None:
