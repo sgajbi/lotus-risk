@@ -97,6 +97,13 @@ Current repository posture:
     under water, empty-period insufficient-data posture, never-underwater zero-drawdown posture,
     duration-unit day counter behavior, and episode-list filter isolation from the summary
     maximum, average, ulcer-index, and time-under-water drawdown values.
+14. `ConcentrationRiskReport:v1` now has implementation-backed methodology truth for
+    `POSITION_HHI`: the docs and tests pin stateless, stateful, and simulation source resolution,
+    positive numeric position-value extraction, market-value versus quantity fallback precedence,
+    decimal position-weight construction, conventional `0..10000` Herfindahl-Hirschman scaling,
+    six-decimal response rounding, proposed-state fallback to current HHI when projected values are
+    unavailable, input-universe option boundaries, and issuer-enrichment isolation from
+    `risk_proxy.hhi_*` outputs.
 
 ## Architecture And Module Map
 

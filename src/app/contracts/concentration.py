@@ -427,15 +427,22 @@ class ConcentrationRequest(BaseModel):
 
 class ConcentrationRiskProxy(BaseModel):
     hhi_current: float = Field(
-        description="Current Herfindahl-Hirschman Index value (0 to 10000).",
+        description=(
+            "Current position-level Herfindahl-Hirschman Index on the conventional 0..10000 "
+            "scale, computed from positive extracted current position values."
+        ),
         json_schema_extra={"example": 2450.0},
     )
     hhi_proposed: float = Field(
-        description="Proposed Herfindahl-Hirschman Index after applying projected positions.",
+        description=(
+            "Proposed position-level Herfindahl-Hirschman Index on the conventional 0..10000 "
+            "scale after projected positions are applied; falls back to current HHI when no "
+            "proposed position values are available."
+        ),
         json_schema_extra={"example": 2710.0},
     )
     hhi_delta: float = Field(
-        description="Difference between proposed and current concentration.",
+        description="Proposed-minus-current position-level HHI change on the 0..10000 scale.",
         json_schema_extra={"example": 260.0},
     )
 

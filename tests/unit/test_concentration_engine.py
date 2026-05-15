@@ -121,6 +121,40 @@ async def test_calculate_concentration_stateless_uses_projected_values_when_prov
 
 
 @pytest.mark.asyncio
+async def test_position_hhi_matches_documented_stateless_methodology_example() -> None:
+    request = ConcentrationRequest.model_validate(
+        {
+            "input_mode": "stateless",
+            "stateless_input": {
+                "current_positions": [
+                    {"security_id": "A", "market_value_base": 50},
+                    {"security_id": "B", "market_value_base": 30},
+                    {"security_id": "C", "market_value_base": 20},
+                    {"security_id": "IGNORED_ZERO", "market_value_base": 0},
+                    {"security_id": "IGNORED_NEGATIVE", "market_value_base": -10},
+                ],
+                "projected_positions": [
+                    {"security_id": "A", "projected_market_value_base": 60},
+                    {"security_id": "B", "projected_market_value_base": 25},
+                    {"security_id": "C", "projected_market_value_base": 15},
+                    {"security_id": "IGNORED_MISSING"},
+                ],
+                "top_n": 2,
+            },
+        }
+    )
+
+    response = (await calculate_concentration(request)).model_dump()
+
+    assert response["risk_proxy"] == {
+        "hhi_current": 3800.0,
+        "hhi_proposed": 4450.0,
+        "hhi_delta": 650.0,
+    }
+    assert response["single_position_concentration"]["top_n"] == 2
+
+
+@pytest.mark.asyncio
 async def test_calculate_concentration_rejects_legacy_payload() -> None:
     with pytest.raises(ValidationError):
         ConcentrationRequest.model_validate(

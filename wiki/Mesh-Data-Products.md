@@ -70,6 +70,14 @@ posture, never-underwater zero-drawdown posture, duration-unit day counter behav
 boundary that episode-list filters do not change the summary maximum, average, ulcer-index, or
 time-under-water drawdown values.
 
+`ConcentrationRiskReport:v1` now has auditable source-owner methodology truth for position HHI.
+The methodology is tied to the implemented `/analytics/risk/concentration` engine and states the
+stateless, stateful, and simulation source paths, positive numeric value extraction, market-value
+versus quantity fallback precedence, decimal position-weight construction, conventional `0..10000`
+Herfindahl-Hirschman scaling, six-decimal response rounding, proposed-state fallback to current
+HHI when projected values are unavailable, input-universe option boundaries, and issuer-enrichment
+isolation from `risk_proxy.hhi_*` outputs.
+
 `RegimeScenarioPackEvaluation:v1` now carries source-owned scenario-pack evidence beyond aggregate
 loss. When callers provide reconciled `exposure_components`, the product emits per-security
 scenario contribution rows alongside worst-case loss, threshold-breach posture, lineage, and
@@ -129,6 +137,8 @@ Audience notes:
 - Developers and downstream services must preserve `RiskMetricsReport:v1` volatility, drawdown,
   Sharpe, Sortino, VaR, beta, tracking-error, and information-ratio values and supportability metadata rather than
   recomputing period risk metrics locally.
+- Developers and downstream services must preserve `ConcentrationRiskReport:v1` position HHI and
+  related concentration outputs rather than recomputing concentration locally.
 - Developers and downstream services must preserve `RiskEventAffectedCohort:v1` membership,
   exclusions, source refs, and impact scores rather than reconstructing risk-event cohort
   membership locally.

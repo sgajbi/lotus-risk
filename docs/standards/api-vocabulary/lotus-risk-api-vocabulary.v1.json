@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-05-10T14:04:39.680501+00:00",
+  "generatedAt": "2026-05-15T07:39:13.884277+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.affected_portfolios",
@@ -999,7 +999,7 @@
       "semanticId": "lotus.hhi_current",
       "canonicalTerm": "hhi_current",
       "preferredName": "hhi_current",
-      "description": "Current Herfindahl-Hirschman Index value (0 to 10000).",
+      "description": "Current position-level Herfindahl-Hirschman Index on the conventional 0..10000 scale, computed from positive extracted current position values.",
       "example": 2450.0,
       "type": "number",
       "locations": [
@@ -1013,7 +1013,7 @@
       "semanticId": "lotus.hhi_delta",
       "canonicalTerm": "hhi_delta",
       "preferredName": "hhi_delta",
-      "description": "Difference between proposed and current concentration.",
+      "description": "Proposed-minus-current position-level HHI change on the 0..10000 scale.",
       "example": 260.0,
       "type": "number",
       "locations": [
@@ -1027,7 +1027,7 @@
       "semanticId": "lotus.hhi_proposed",
       "canonicalTerm": "hhi_proposed",
       "preferredName": "hhi_proposed",
-      "description": "Proposed Herfindahl-Hirschman Index after applying projected positions.",
+      "description": "Proposed position-level Herfindahl-Hirschman Index on the conventional 0..10000 scale after projected positions are applied; falls back to current HHI when no proposed position values are available.",
       "example": 2710.0,
       "type": "number",
       "locations": [
