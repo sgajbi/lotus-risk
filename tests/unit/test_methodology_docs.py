@@ -20,6 +20,9 @@ RISK_BETA_DOC = REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-beta.md
 RISK_TRACKING_ERROR_DOC = (
     REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-tracking-error.md"
 )
+RISK_INFORMATION_RATIO_DOC = (
+    REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-information-ratio.md"
+)
 
 
 EXPECTED_V3_SECTIONS = [
@@ -300,6 +303,37 @@ def test_risk_tracking_error_methodology_is_auditable_against_engine_contract() 
         "2.7495454169",
         "0.0017320508",
         "0.0274954542",
+    ]
+
+    for phrase in required_truth:
+        assert phrase in text
+
+
+def test_risk_information_ratio_methodology_is_auditable_against_engine_contract() -> None:
+    text = RISK_INFORMATION_RATIO_DOC.read_text(encoding="utf-8")
+
+    _assert_v3_section_order(text)
+
+    required_truth = [
+        "metric_id: INFORMATION_RATIO",
+        "/analytics/risk/calculate",
+        "lotus-performance",
+        "r_log_pp = ln(1 + r_pp / 100) * 100",
+        "details.tracking_error = std(A_used_pp, ddof=1) / 100",
+        "details.annualized_active_return = details.active_mean_return * AF",
+        "details.annualized_tracking_error = details.tracking_error * sqrt(AF)",
+        "`metrics.INFORMATION_RATIO.value` is a dimensionless annualized ratio",
+        "`AF = 252` for `DAILY`, `52` for `WEEKLY`, and `12` for `MONTHLY`",
+        'details.error = "Benchmark returns required for benchmark-dependent metric"',
+        'details.error = "Insufficient aligned observations"',
+        'details.error = "Tracking error is zero"',
+        "No risk-free dependency is required for `INFORMATION_RATIO`",
+        "The denominator is `sigma_a_pp`",
+        "results[period].metrics.INFORMATION_RATIO.value",
+        "6.1481704596",
+        "0.0012909944",
+        "0.1260000000",
+        "0.0204939015",
     ]
 
     for phrase in required_truth:

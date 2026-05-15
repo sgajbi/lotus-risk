@@ -206,6 +206,45 @@ def test_tracking_error_matches_documented_percentage_point_output_contract() ->
     assert metric.details["annualized_tracking_error"] == pytest.approx(0.02749545416973504)
 
 
+def test_information_ratio_matches_documented_dimensionless_output_contract() -> None:
+    payload = {
+        "scope": {"as_of_date": "2026-01-04", "net_or_gross": "NET"},
+        "portfolio_open_date": "2026-01-01",
+        "periods": [{"type": "YTD", "name": "YTD"}],
+        "metrics": ["INFORMATION_RATIO"],
+        "options": {
+            "frequency": "DAILY",
+            "use_log_returns": False,
+        },
+        "returns": [
+            {"date": "2026-01-01", "value": 1.00},
+            {"date": "2026-01-02", "value": -0.50},
+            {"date": "2026-01-03", "value": 0.20},
+            {"date": "2026-01-04", "value": 0.00},
+        ],
+        "benchmark_returns": [
+            {"date": "2026-01-01", "value": 0.80},
+            {"date": "2026-01-02", "value": -0.60},
+            {"date": "2026-01-03", "value": 0.30},
+            {"date": "2026-01-04", "value": 0.00},
+        ],
+    }
+
+    response = calculate_risk(RiskCalculationRequest.model_validate(payload))
+
+    metric = response.results["YTD"].metrics["INFORMATION_RATIO"]
+    assert metric.value == pytest.approx(6.148170459575758)
+    assert metric.details is not None
+    assert metric.details["aligned_observation_count"] == 4
+    assert metric.details["annualization_factor"] == 252
+    assert metric.details["portfolio_mean_return"] == pytest.approx(0.00175)
+    assert metric.details["benchmark_mean_return"] == pytest.approx(0.00125)
+    assert metric.details["active_mean_return"] == pytest.approx(0.0005)
+    assert metric.details["tracking_error"] == pytest.approx(0.0012909944487358054)
+    assert metric.details["annualized_active_return"] == pytest.approx(0.126)
+    assert metric.details["annualized_tracking_error"] == pytest.approx(0.020493901531919195)
+
+
 def test_drawdown_metadata_fields_present() -> None:
     payload = _base_payload()
     payload["metrics"] = ["DRAWDOWN"]
