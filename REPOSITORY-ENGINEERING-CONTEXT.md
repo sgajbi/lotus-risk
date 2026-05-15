@@ -88,14 +88,15 @@ Current repository posture:
     dependency supportability posture, zero-excess-volatility Sharpe flagging,
     zero-benchmark-variance beta flagging, and zero-tracking-error information-ratio flagging.
 13. `DrawdownAnalyticsReport:v1` now has implementation-backed methodology truth for
-    `MAX_DRAWDOWN`, `AVERAGE_DRAWDOWN`, and `ULCER_INDEX`: the docs and tests pin
-    percentage-point input conventions, decimal cumulative-wealth/running-peak drawdown behavior,
-    decimal `summary.max_drawdown`, `summary.average_drawdown`, and non-negative
-    `summary.ulcer_index` outputs, episode peak/trough/recovery semantics, strictly-underwater
-    average-drawdown inclusion, full-path squared drawdown inclusion for ulcer index, empty-period
-    insufficient-data posture, never-underwater zero-drawdown posture, duration-unit day counter
-    behavior, and episode-list filter isolation from the summary maximum, average, and ulcer-index
-    drawdown values.
+    `MAX_DRAWDOWN`, `AVERAGE_DRAWDOWN`, `ULCER_INDEX`, and `TIME_UNDER_WATER_DAYS`: the docs and
+    tests pin percentage-point input conventions, decimal cumulative-wealth/running-peak drawdown
+    behavior, decimal `summary.max_drawdown`, `summary.average_drawdown`, non-negative
+    `summary.ulcer_index`, and observation-count `summary.time_under_water_days` outputs, episode
+    peak/trough/recovery semantics, strictly-underwater average-drawdown inclusion, full-path
+    squared drawdown inclusion for ulcer index, strictly-underwater observation counting for time
+    under water, empty-period insufficient-data posture, never-underwater zero-drawdown posture,
+    duration-unit day counter behavior, and episode-list filter isolation from the summary
+    maximum, average, ulcer-index, and time-under-water drawdown values.
 
 ## Architecture And Module Map
 

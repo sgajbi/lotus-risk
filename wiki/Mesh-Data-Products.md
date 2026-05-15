@@ -58,14 +58,17 @@ decimal volatility output, decimal-ratio tracking-error output, dimensionless Sh
 information-ratio output, and decimal drawdown-ratio output.
 
 `DrawdownAnalyticsReport:v1` now has auditable source-owner methodology truth for maximum
-drawdown, average drawdown, and ulcer index. The methodologies are tied to the implemented
-`/analytics/risk/drawdown` engine and state the exact percentage-point input convention, decimal
-cumulative-wealth/running-peak drawdown behavior, decimal `summary.max_drawdown` and
-`summary.average_drawdown` outputs, non-negative decimal `summary.ulcer_index` output, episode
-peak/trough/recovery semantics, strictly-underwater average-drawdown inclusion, full-path squared
-drawdown inclusion for ulcer index, empty-period insufficient-data posture, never-underwater
-zero-drawdown posture, duration-unit day counter behavior, and the boundary that episode-list
-filters do not change the summary maximum, average, or ulcer-index drawdown values.
+drawdown, average drawdown, ulcer index, and time under water. The methodologies are tied to the
+implemented `/analytics/risk/drawdown` engine and state the exact percentage-point input
+convention, decimal cumulative-wealth/running-peak drawdown behavior, decimal
+`summary.max_drawdown` and `summary.average_drawdown` outputs, non-negative decimal
+`summary.ulcer_index` output,
+observation-count `summary.time_under_water_days` output, episode peak/trough/recovery semantics,
+strictly-underwater average-drawdown inclusion, full-path squared drawdown inclusion for ulcer
+index, strictly-underwater observation counting for time under water, empty-period insufficient-data
+posture, never-underwater zero-drawdown posture, duration-unit day counter behavior, and the
+boundary that episode-list filters do not change the summary maximum, average, ulcer-index, or
+time-under-water drawdown values.
 
 `RegimeScenarioPackEvaluation:v1` now carries source-owned scenario-pack evidence beyond aggregate
 loss. When callers provide reconciled `exposure_components`, the product emits per-security
@@ -101,8 +104,9 @@ Audience notes:
 - Business users can read `DrawdownAnalyticsReport:v1` maximum drawdown as the worst decimal
   peak-to-trough portfolio loss for the resolved period, and average drawdown as the mean decimal
   depth across strictly underwater observations. Ulcer index is the non-negative decimal
-  root-mean-square drawdown severity over the full drawdown path, with peak, trough, recovery, and
-  time-under-water evidence for the selected episode.
+  root-mean-square drawdown severity over the full drawdown path. Time under water is the count of
+  portfolio return observations that are strictly below the running peak; duration-unit settings
+  affect episode day counters, not this observation count.
 - Business users can read `RiskMetricsReport:v1` volatility as annualized portfolio-return
   dispersion in percentage points for the resolved period, Drawdown as signed percentage-point
   maximum peak-to-trough loss, Sharpe as annualized excess return per
@@ -120,8 +124,8 @@ Audience notes:
   supportability metadata rather than recomputing rolling volatility, Sharpe, beta, tracking error,
   information ratio, or maximum drawdown locally.
 - Developers and downstream services must preserve `DrawdownAnalyticsReport:v1` maximum drawdown,
-  average drawdown, ulcer index, episode, underwater-series, and relative-drawdown context rather
-  than recomputing drawdown analytics locally.
+  average drawdown, ulcer index, time-under-water, episode, underwater-series, and
+  relative-drawdown context rather than recomputing drawdown analytics locally.
 - Developers and downstream services must preserve `RiskMetricsReport:v1` volatility, drawdown,
   Sharpe, Sortino, VaR, beta, tracking-error, and information-ratio values and supportability metadata rather than
   recomputing period risk metrics locally.

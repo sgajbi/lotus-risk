@@ -397,7 +397,10 @@ class DrawdownSummary(BaseModel):
         json_schema_extra={"example": 11},
     )
     time_under_water_days: int = Field(
-        description="Total duration-unit days in the period where drawdown was below zero.",
+        description=(
+            "Number of portfolio return observations in the period where drawdown was below zero. "
+            "This is observation-based and is not affected by duration_unit."
+        ),
         json_schema_extra={"example": 34},
     )
     average_drawdown: float | None = Field(
@@ -459,7 +462,10 @@ class RelativeDrawdownSummary(BaseModel):
     )
     time_under_water_days: int = Field(
         default=0,
-        description="Number of duration-unit observations where active drawdown remained below zero.",
+        description=(
+            "Number of aligned active-return observations where active drawdown remained below "
+            "zero. This is observation-based and is not affected by duration_unit."
+        ),
         json_schema_extra={"example": 21},
     )
 
