@@ -71,14 +71,16 @@ boundary that episode-list filters do not change the summary maximum, average, u
 time-under-water drawdown values.
 
 `ConcentrationRiskReport:v1` now has auditable source-owner methodology truth for position HHI,
-top-position weight, and top-N cumulative weight.
+top-position weight, top-N cumulative weight, and issuer HHI.
 The methodology is tied to the implemented `/analytics/risk/concentration` engine and states the
 stateless, stateful, and simulation source paths, positive numeric value extraction, market-value
 versus quantity fallback precedence, decimal position-weight construction, conventional `0..10000`
 Herfindahl-Hirschman scaling for HHI, decimal `0..1` top-position and top-N cumulative weight
 output, six-decimal response rounding, proposed-state fallback to current values when projected
 values are unavailable, deterministic top-position driver selection, top-N cumulative summation,
-input-universe option boundaries, and issuer-enrichment isolation from `risk_proxy.hhi_*`,
+covered-subset issuer aggregation, legal versus ultimate-parent issuer grouping,
+issuer-enrichment precedence, issuer coverage and supportability posture, input-universe option
+boundaries, and issuer-enrichment isolation from `risk_proxy.hhi_*`,
 `single_position_concentration.top_position_*`, and
 `single_position_concentration.top_n_cumulative_weight_*` outputs.
 
@@ -141,8 +143,8 @@ Audience notes:
 - Developers and downstream services must preserve `RiskMetricsReport:v1` volatility, drawdown,
   Sharpe, Sortino, VaR, beta, tracking-error, and information-ratio values and supportability metadata rather than
   recomputing period risk metrics locally.
-- Developers and downstream services must preserve `ConcentrationRiskReport:v1` position HHI and
-  related concentration outputs rather than recomputing concentration locally.
+- Developers and downstream services must preserve `ConcentrationRiskReport:v1` position HHI,
+  issuer HHI, and related concentration outputs rather than recomputing concentration locally.
 - Developers and downstream services must preserve `RiskEventAffectedCohort:v1` membership,
   exclusions, source refs, and impact scores rather than reconstructing risk-event cohort
   membership locally.
