@@ -103,6 +103,39 @@ def test_volatility_matches_documented_percentage_point_output_contract() -> Non
     assert metric.details["annualization_factor"] == 252
 
 
+def test_sharpe_matches_documented_dimensionless_output_contract() -> None:
+    payload = {
+        "scope": {"as_of_date": "2026-01-03", "net_or_gross": "NET"},
+        "portfolio_open_date": "2026-01-01",
+        "periods": [{"type": "YTD", "name": "YTD"}],
+        "metrics": ["SHARPE"],
+        "options": {
+            "frequency": "DAILY",
+            "use_log_returns": False,
+            "risk_free_mode": "ANNUAL_RATE",
+            "risk_free_annual_rate": 0.02,
+        },
+        "returns": [
+            {"date": "2026-01-01", "value": 1.00},
+            {"date": "2026-01-02", "value": -0.50},
+            {"date": "2026-01-03", "value": 0.20},
+        ],
+    }
+
+    response = calculate_risk(RiskCalculationRequest.model_validate(payload))
+
+    metric = response.results["YTD"].metrics["SHARPE"]
+    assert metric.value == pytest.approx(4.768871619893194)
+    assert metric.details is not None
+    assert metric.details["mean_return"] == pytest.approx(0.002333333333333333)
+    assert metric.details["periodic_risk_free_rate"] == pytest.approx(0.0000785849419846496)
+    assert metric.details["excess_return"] == pytest.approx(0.0022547483913486835)
+    assert metric.details["annualized_excess_return"] == pytest.approx(0.5681965946198683)
+    assert metric.details["volatility"] == pytest.approx(0.007505553499465135)
+    assert metric.details["observation_count"] == 3
+    assert metric.details["annualization_factor"] == 252
+
+
 def test_drawdown_metadata_fields_present() -> None:
     payload = _base_payload()
     payload["metrics"] = ["DRAWDOWN"]
