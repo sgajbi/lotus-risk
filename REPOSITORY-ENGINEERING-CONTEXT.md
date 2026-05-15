@@ -50,22 +50,26 @@ Current repository posture:
     membership, exclusions, impact scores, source refs, supportability, and bounded reason codes
     for future manage wave-trigger consumption without creating waves or campaign approvals.
 11. `RiskMetricsReport:v1` now has implementation-backed methodology truth for `VOLATILITY`,
-    `SHARPE`, `SORTINO`, `BETA`, `TRACKING_ERROR`, and `INFORMATION_RATIO`: the docs and tests pin
+    `SHARPE`, `SORTINO`, `VAR`, `BETA`, `TRACKING_ERROR`, and `INFORMATION_RATIO`: the docs and tests pin
     percentage-point input conventions, optional
     log-return transformation, frequency compounding before metric calculation, `ddof=1` sample
-    standard deviation/covariance/variance behavior, decimal volatility and risk-free details,
+    standard deviation/covariance/variance behavior, decimal volatility, risk-free, Sortino, VaR,
+    tracking-error, and information-ratio details,
     percentage-point-squared beta covariance/benchmark-variance details, annualized
     percentage-point `metrics.VOLATILITY.value`, dimensionless annualized
-    `metrics.SHARPE.value`, dimensionless annualized `metrics.SORTINO.value`, dimensionless slope
-    `metrics.BETA.value`, annualized percentage-point `metrics.TRACKING_ERROR.value`,
+    `metrics.SHARPE.value`, dimensionless annualized `metrics.SORTINO.value`, signed
+    percentage-point `metrics.VAR.value`, dimensionless slope `metrics.BETA.value`,
+    annualized percentage-point `metrics.TRACKING_ERROR.value`,
     dimensionless annualized `metrics.INFORMATION_RATIO.value`, decimal tracking-error and
     information-ratio detail fields, decimal Sortino mean-return, MAR, excess-return,
-    annualized-excess-return, and downside-deviation detail fields, default and override
+    annualized-excess-return, and downside-deviation detail fields, signed VaR base, horizon, and
+    expected-shortfall detail fields, default and override
     annualization-factor resolution where used, benchmark dependency posture for beta, tracking
-    error, and information ratio, no benchmark dependency posture for Sharpe and Sortino, no
-    risk-free dependency posture for volatility, Sortino, beta, tracking error, and information
-    ratio, no-denominator posture for volatility and tracking error, zero-volatility fail-closed
-    posture for Sharpe, no-downside-observation fail-closed posture for Sortino,
+    error, and information ratio, no benchmark dependency posture for Sharpe, Sortino, and VaR, no
+    risk-free dependency posture for volatility, Sortino, VaR, beta, tracking error, and
+    information ratio, no-denominator posture for volatility and tracking error, zero-volatility
+    fail-closed posture for Sharpe, no-downside-observation fail-closed posture for Sortino,
+    signed VaR loss-threshold posture, square-root horizon scaling,
     zero-benchmark-variance fail-closed posture for beta, zero-tracking-error fail-closed posture
     for information ratio, constant-active-return zero tracking-error posture, and
     insufficient-data / insufficient-aligned-observation failure behavior.
