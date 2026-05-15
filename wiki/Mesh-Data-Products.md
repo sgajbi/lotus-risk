@@ -22,20 +22,23 @@
 
 ## Implementation-backed methodology coverage
 
-`RiskMetricsReport:v1` now has auditable source-owner methodology truth for volatility, Sharpe,
-Sortino, VaR, beta, tracking error, and information ratio. The methodologies are tied to the implemented
+`RiskMetricsReport:v1` now has auditable source-owner methodology truth for volatility, drawdown,
+Sharpe, Sortino, VaR, beta, tracking error, and information ratio. The methodologies are tied to the implemented
 `/analytics/risk/calculate` engine and state the exact percentage-point input convention, optional
-log-return transform, frequency compounding before metric calculation, `ddof=1` sample standard
+log-return transform, frequency compounding before metric calculation, drawdown
+cumulative-wealth/running-peak behavior, `ddof=1` sample standard
 deviation/covariance/variance behavior, decimal volatility, risk-free, Sortino, VaR,
 tracking-error, and information-ratio details, percentage-point-squared beta covariance/benchmark-variance
-details, annualized percentage-point `metrics.VOLATILITY.value`, dimensionless annualized
-`metrics.SHARPE.value`, dimensionless annualized `metrics.SORTINO.value`, signed
+details, annualized percentage-point `metrics.VOLATILITY.value`, signed percentage-point
+`metrics.DRAWDOWN.value`, dimensionless annualized `metrics.SHARPE.value`, dimensionless
+annualized `metrics.SORTINO.value`, signed
 percentage-point `metrics.VAR.value`, dimensionless slope `metrics.BETA.value`, annualized
 percentage-point `metrics.TRACKING_ERROR.value`, dimensionless
 annualized `metrics.INFORMATION_RATIO.value`, annualization-factor resolution where used,
 benchmark dependency for beta, tracking error, and information ratio, no benchmark dependency for
-Sharpe, Sortino, and VaR, no risk-free dependency for volatility, Sortino, VaR, beta, tracking
-error, and information ratio, no-denominator posture for volatility and tracking error,
+Drawdown, Sharpe, Sortino, and VaR, no risk-free dependency for volatility, Drawdown, Sortino,
+VaR, beta, tracking error, and information ratio, no-annualization-factor posture for Drawdown,
+no-denominator posture for volatility and tracking error,
 zero-volatility fail-closed posture for Sharpe, no-downside-observation fail-closed posture for Sortino,
 signed VaR loss-threshold posture, square-root horizon scaling,
 zero-benchmark-variance fail-closed posture for beta, zero-tracking-error fail-closed posture for
@@ -86,7 +89,8 @@ Audience notes:
   active return per unit of that active risk, and rolling maximum drawdown as the worst decimal
   peak-to-trough loss inside each rolling return window.
 - Business users can read `RiskMetricsReport:v1` volatility as annualized portfolio-return
-  dispersion in percentage points for the resolved period, Sharpe as annualized excess return per
+  dispersion in percentage points for the resolved period, Drawdown as signed percentage-point
+  maximum peak-to-trough loss, Sharpe as annualized excess return per
   unit of portfolio return volatility, Sortino as annualized excess return over MAR per unit of
   downside deviation, and VaR as a signed lower-tail return threshold in percentage points. Beta is
   the period sensitivity slope of portfolio returns to benchmark return
@@ -100,8 +104,8 @@ Audience notes:
 - Developers and downstream services must preserve `RollingRiskMetricsReport:v1` values and
   supportability metadata rather than recomputing rolling volatility, Sharpe, beta, tracking error,
   information ratio, or maximum drawdown locally.
-- Developers and downstream services must preserve `RiskMetricsReport:v1` volatility, Sharpe,
-  Sortino, VaR, beta, tracking-error, and information-ratio values and supportability metadata rather than
+- Developers and downstream services must preserve `RiskMetricsReport:v1` volatility, drawdown,
+  Sharpe, Sortino, VaR, beta, tracking-error, and information-ratio values and supportability metadata rather than
   recomputing period risk metrics locally.
 - Developers and downstream services must preserve `RiskEventAffectedCohort:v1` membership,
   exclusions, source refs, and impact scores rather than reconstructing risk-event cohort
