@@ -80,7 +80,7 @@ def test_integration_capabilities_contract() -> None:
     )
     assert workflow_by_key["risk_event_affected_cohort"]["support_status"] == "partial"
     assert (
-        "stateful active-risk ISSUER remains gated"
+        "issuer active-risk consumes lotus-performance benchmark exposure context issuer groups"
         in workflow_by_key["historical_risk_attribution"]["notes"]
     )
     assert (
@@ -449,7 +449,10 @@ def test_openapi_exposes_historical_attribution_support_metadata() -> None:
     assert "min_observations_policy" in serialized_spec
     assert "stateful_active_risk_supported_grouping_dimensions" in serialized_spec
     assert "stateful_active_risk_gated_grouping_dimensions" in serialized_spec
-    assert "benchmark issuer exposure semantics unavailable" in serialized_spec
+    assert (
+        "ISSUER is supported through lotus-performance benchmark exposure context issuer groups"
+        in serialized_spec
+    )
 
 
 def test_openapi_exposes_ops_dependency_diagnostics_schema() -> None:
@@ -568,7 +571,7 @@ def test_openapi_exposes_health_and_liveness_contracts() -> None:
     assert liveness_schema["properties"]["status"]["example"] == "live"
 
 
-def test_historical_attribution_openapi_examples_and_description_reflect_stateful_gate() -> None:
+def test_historical_attribution_openapi_examples_and_description_reflect_stateful_support() -> None:
     client = TestClient(app)
     spec = client.get("/openapi.json").json()
     operation = spec["paths"]["/analytics/risk/historical-attribution"]["post"]
@@ -576,8 +579,8 @@ def test_historical_attribution_openapi_examples_and_description_reflect_statefu
     request_schema = spec["components"]["schemas"]["HistoricalAttributionRequest"]
     response_schema = spec["components"]["schemas"]["HistoricalAttributionResponse"]
 
-    assert "POSITION, SECTOR, and ASSET_CLASS" in description
-    assert "ISSUER is intentionally gated" in description
+    assert "POSITION, SECTOR, ASSET_CLASS, and ISSUER" in description
+    assert "benchmark exposure context" in description
     assert "CUSTOM grouping is not supported in stateful mode" in description
     assert request_schema["example"]["input_mode"] == "stateful"
     assert request_schema["example"]["stateful_input"]["attribution_options"][

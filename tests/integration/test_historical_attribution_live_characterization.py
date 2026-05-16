@@ -184,8 +184,9 @@ def test_live_stateful_historical_attribution_supports_sector_active_risk() -> N
         "POSITION",
         "SECTOR",
         "ASSET_CLASS",
+        "ISSUER",
     ]
-    assert body["metadata"]["stateful_active_risk_gated_grouping_dimensions"] == ["ISSUER"]
+    assert body["metadata"]["stateful_active_risk_gated_grouping_dimensions"] == []
 
     period = body["results"]["YTD"]
     assert period["error"] is None

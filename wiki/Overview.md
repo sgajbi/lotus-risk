@@ -26,7 +26,7 @@ That is why this repo cares so much about:
 1. explicit mode support,
 2. signed VaR semantics,
 3. attribution reconciliation fields,
-4. issuer active-risk gating,
+4. issuer active-risk support metadata,
 5. lineage and upstream fingerprint metadata.
 
 One practical consequence follows from that:
@@ -74,7 +74,7 @@ Those boundaries are governed and should stay explicit.
 
 The only material gap inside the current approved API surface is:
 
-1. stateful `ACTIVE_RISK + ISSUER` for historical attribution.
+1. broader live portfolio-archetype proof for stateful `ACTIVE_RISK + ISSUER` beyond the canonical baseline.
 
 That gap is intentionally exposed rather than hidden:
 

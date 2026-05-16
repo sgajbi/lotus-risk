@@ -282,7 +282,7 @@ Required behavior:
 - needs `portfolio_returns` and `benchmark_returns` from lotus-performance
 - needs portfolio exposure timeseries from lotus-core
 - needs benchmark exposure context from lotus-performance as the performance-aligned derived view backed by lotus-core lineage
-- issuer active-risk remains gated until benchmark issuer exposure semantics are available
+- issuer active-risk consumes lotus-performance benchmark exposure context issuer groups
 
 3. `grouping_dimension=ISSUER`:
 - needs instrument enrichment-bulk from lotus-core
@@ -320,8 +320,8 @@ Required behavior:
 ## Acceptance Checklist
 
 1. Stateful `TOTAL_RISK` attribution succeeds end-to-end using upstream data only.
-2. Stateful `ACTIVE_RISK` attribution succeeds end-to-end for POSITION, SECTOR, and ASSET_CLASS using the lotus-performance benchmark exposure context.
-3. `ISSUER` grouping succeeds for `TOTAL_RISK` with enrichment-bulk and remains gated for `ACTIVE_RISK` until benchmark issuer exposure semantics are available.
+2. Stateful `ACTIVE_RISK` attribution succeeds end-to-end for POSITION, SECTOR, ASSET_CLASS, and ISSUER using the lotus-performance benchmark exposure context.
+3. `ISSUER` grouping succeeds for `TOTAL_RISK` with enrichment-bulk and for `ACTIVE_RISK` with lotus-performance benchmark exposure context issuer rows.
 4. Contract tests validate required fields and type/shape guarantees.
 5. Characterization tests lock numerical behavior for stable fixtures.
 6. OpenAPI docs include full descriptions and realistic examples for all attributes.

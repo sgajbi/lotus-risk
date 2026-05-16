@@ -18,7 +18,7 @@ The highest-value rules for this repo are:
 
 1. signed VaR and expected shortfall semantics must be preserved,
 2. attribution reconciliation fields must stay attached to contributor outputs,
-3. stateful issuer active-risk must remain visibly gated,
+3. stateful issuer active-risk must remain backed by lotus-performance benchmark exposure context issuer groups,
 4. simulation must remain concentration-only,
 5. lineage and upstream request-fingerprint metadata must survive downstream shaping.
 
@@ -48,7 +48,7 @@ A feature being implemented is not the same as a feature being broadly supportab
 
 Current examples:
 
-1. historical attribution exists, but one important stateful active-risk path is still intentionally partial,
+1. historical attribution exists with issuer active-risk support; broader live archetype evidence remains intentionally scoped,
 2. live validation exists, but enterprise archetype breadth is still limited,
 3. concentration simulation is real, but simulation support does not generalize to the rest of the service.
 

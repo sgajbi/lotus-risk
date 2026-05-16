@@ -46,13 +46,19 @@ def test_product_surface_contract_keeps_simulation_concentration_only() -> None:
         assert any("simulation is intentionally unsupported" == note for note in workflow["notes"])
 
 
-def test_product_surface_contract_keeps_issuer_active_risk_gated() -> None:
+def test_product_surface_contract_supports_issuer_active_risk() -> None:
     workflows = _capability_workflows()
     attribution = workflows["historical_risk_attribution"]
 
     assert attribution["support_status"] == "partial"
-    assert "stateful active-risk supports POSITION, SECTOR, and ASSET_CLASS" in attribution["notes"]
-    assert "stateful active-risk ISSUER remains gated" in attribution["notes"]
+    assert (
+        "stateful active-risk supports POSITION, SECTOR, ASSET_CLASS, and ISSUER"
+        in attribution["notes"]
+    )
+    assert (
+        "issuer active-risk consumes lotus-performance benchmark exposure context issuer groups"
+        in attribution["notes"]
+    )
     assert (
         "historical-attribution response metadata is the authoritative active-risk support contract"
         in attribution["notes"]

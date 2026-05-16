@@ -34,5 +34,5 @@
 
 - Gateway and Workbench consumers must derive simulation and issuer active-risk affordances from `GET /integration/capabilities`.
 - Concentration is the only simulation-enabled risk flow in the current contract.
-- Stateful `ACTIVE_RISK + ISSUER` remains intentionally unsupported until benchmark issuer exposure semantics are approved.
+- Stateful `ACTIVE_RISK + ISSUER` is supported through lotus-performance benchmark exposure context issuer groups; unsupported grouping posture now applies to `CUSTOM` stateful grouping.
 - See `docs/domain-apis/risk-product-surface-alignment.md`.

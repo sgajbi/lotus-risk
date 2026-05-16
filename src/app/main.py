@@ -582,8 +582,8 @@ async def integration_capabilities() -> IntegrationCapabilitiesResponse:
                 support_status="partial",
                 notes=[
                     "simulation is intentionally unsupported",
-                    "stateful active-risk supports POSITION, SECTOR, and ASSET_CLASS",
-                    "stateful active-risk ISSUER remains gated",
+                    "stateful active-risk supports POSITION, SECTOR, ASSET_CLASS, and ISSUER",
+                    "issuer active-risk consumes lotus-performance benchmark exposure context issuer groups",
                     "historical-attribution response metadata is the authoritative active-risk support contract",
                     "attribution residual and reconciled_sum must be preserved with contributors",
                 ],
@@ -688,8 +688,8 @@ async def analytics_risk_event_affected_cohort(
         "Calculates historical risk and active-risk attribution decompositions with contributor-level "
         "component, marginal, and percent contributions plus reconciliation diagnostics. Supports "
         "stateless execution and approved stateful execution. Stateful ACTIVE_RISK currently supports "
-        "POSITION, SECTOR, and ASSET_CLASS grouping dimensions; ISSUER is intentionally gated and "
-        "CUSTOM grouping is not supported in stateful mode."
+        "POSITION, SECTOR, ASSET_CLASS, and ISSUER grouping dimensions through lotus-performance "
+        "benchmark exposure context. CUSTOM grouping is not supported in stateful mode."
     ),
 )
 async def analytics_risk_historical_attribution(

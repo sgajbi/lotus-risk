@@ -60,21 +60,22 @@ If a compact UI cannot render all fields, it must preserve them in the backing A
 drawer. Hiding `residual` while showing only contributors can mislead users into believing the
 selected grouping fully explains the metric.
 
-### 3. Gate Unsupported Issuer Active-Risk Affordances
+### 3. Preserve Issuer Active-Risk Support Metadata
 
 Stateful historical attribution supports `ACTIVE_RISK` for these grouping dimensions:
 
 - `POSITION`
 - `SECTOR`
 - `ASSET_CLASS`
+- `ISSUER`
 
-Stateful `ACTIVE_RISK + ISSUER` remains intentionally unsupported until benchmark issuer exposure
-semantics are explicitly available and approved. Downstream surfaces must not offer issuer active-risk
-controls as supported. If they expose the disabled option for transparency, it must be disabled and
-explain that benchmark issuer exposure semantics are not currently supported.
+Stateful `ACTIVE_RISK + ISSUER` is supported through lotus-performance benchmark exposure context
+issuer groups. Downstream surfaces must derive issuer active-risk affordances from lotus-risk
+capabilities and historical-attribution metadata instead of maintaining a separate local support
+matrix.
 
-The runtime contract enforces this with request validation and `GET /integration/capabilities`, where
-historical attribution is published as `partial`.
+The runtime contract enforces unsupported `CUSTOM` grouping with request validation and publishes
+current support through `GET /integration/capabilities`.
 
 ### 4. Keep Simulation Concentration-Only
 

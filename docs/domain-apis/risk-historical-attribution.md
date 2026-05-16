@@ -20,8 +20,8 @@ Provide decomposition of historical realized risk and active risk into transpare
 - Status: implemented for approved v1 stateful scope
 - Current behavior:
   - `TOTAL_RISK` stateful path is implemented
-  - `ACTIVE_RISK` stateful path is implemented for `POSITION`, `SECTOR`, and `ASSET_CLASS` grouping dimensions through the lotus-performance benchmark exposure context derived view
-  - `ACTIVE_RISK` + `ISSUER` remains gated until benchmark issuer exposure semantics are explicitly available and is rejected at request validation
+  - `ACTIVE_RISK` stateful path is implemented for `POSITION`, `SECTOR`, `ASSET_CLASS`, and `ISSUER` grouping dimensions through the lotus-performance benchmark exposure context derived view
+  - `ACTIVE_RISK` + `ISSUER` consumes lotus-performance benchmark exposure context issuer rows sourced from lotus-core index-catalog issuer labels
   - `CUSTOM` grouping remains unsupported in stateful mode and is rejected at request validation
 
 ### Simulation
@@ -54,7 +54,6 @@ Provide decomposition of historical realized risk and active risk into transpare
 
 - request validation rejects these combinations before any upstream call:
   - `grouping_dimensions=["CUSTOM"]`
-  - any stateful request that needs benchmark-relative attribution semantics and includes `ISSUER`
 - request validation currently returns:
   - HTTP `422`
   - `error.code = INVALID_REQUEST`
@@ -145,7 +144,7 @@ grouping does not fully explain active-risk dynamics.
 2. v1 grouping dimension set.
 3. residual tolerance policy.
 4. rolling-window attribution inclusion in v1 or v2.
-5. benchmark issuer exposure semantics for stateful `ACTIVE_RISK` + `ISSUER`.
+5. broader live portfolio-archetype validation for issuer active-risk beyond the canonical baseline.
 
 ## Current Stateful Active-Risk Support Matrix
 
@@ -153,16 +152,14 @@ grouping does not fully explain active-risk dynamics.
   - `POSITION`
   - `SECTOR`
   - `ASSET_CLASS`
-- gated:
   - `ISSUER`
-- gate reason:
-  - benchmark issuer exposure semantics unavailable from the lotus-performance benchmark exposure context
+- gated: none
+- gate reason: `none`
 
 ## Live Validation Note
 
 - live platform characterization currently confirms:
   - lotus-risk stateful `TOTAL_RISK` works live for `SECTOR` after aligning exposure history to trading-day return observations
-  - lotus-risk stateful `ACTIVE_RISK` works live for supported grouping dimensions `POSITION`, `SECTOR`, and `ASSET_CLASS`
-  - lotus-performance benchmark exposure context works for supported stateful dimensions `POSITION`, `SECTOR`, and `ASSET_CLASS`
-  - lotus-performance benchmark exposure context rejects `grouping_dimensions=["ISSUER"]`
-  - lotus-risk rejects stateful `ACTIVE_RISK` + `ISSUER` at request validation with HTTP `422`
+  - lotus-risk stateful `ACTIVE_RISK` works for supported grouping dimensions `POSITION`, `SECTOR`, `ASSET_CLASS`, and `ISSUER`
+  - lotus-performance benchmark exposure context works for supported stateful dimensions `POSITION`, `SECTOR`, `ASSET_CLASS`, and `ISSUER`
+  - lotus-risk rejects only `CUSTOM` stateful grouping at request validation

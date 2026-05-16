@@ -121,23 +121,25 @@ def test_attribution_contract_rejects_duplicate_period_names() -> None:
         HistoricalAttributionRequest.model_validate(payload)
 
 
-def test_stateful_attribution_contract_rejects_active_risk_issuer_grouping() -> None:
-    with pytest.raises(ValueError, match="grouping_dimension=ISSUER"):
-        HistoricalAttributionRequest.model_validate(
-            {
-                "input_mode": "stateful",
-                "stateful_input": {
-                    "portfolio_id": "DEMO_DPM_EUR_001",
-                    "as_of_date": "2026-01-04",
-                    "periods": [{"type": "YTD", "name": "YTD"}],
-                    "attribution_options": {
-                        "attribution_types": ["ACTIVE_RISK"],
-                        "metrics": ["TRACKING_ERROR"],
-                        "grouping_dimensions": ["ISSUER"],
-                    },
+def test_stateful_attribution_contract_accepts_active_risk_issuer_grouping() -> None:
+    request = HistoricalAttributionRequest.model_validate(
+        {
+            "input_mode": "stateful",
+            "stateful_input": {
+                "portfolio_id": "DEMO_DPM_EUR_001",
+                "as_of_date": "2026-01-04",
+                "periods": [{"type": "YTD", "name": "YTD"}],
+                "attribution_options": {
+                    "attribution_types": ["ACTIVE_RISK"],
+                    "metrics": ["TRACKING_ERROR"],
+                    "grouping_dimensions": ["ISSUER"],
                 },
-            }
-        )
+            },
+        }
+    )
+
+    assert request.stateful_input is not None
+    assert request.stateful_input.attribution_options.grouping_dimensions == ["ISSUER"]
 
 
 def test_stateful_attribution_contract_rejects_custom_grouping() -> None:

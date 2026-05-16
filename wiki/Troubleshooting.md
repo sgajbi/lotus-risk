@@ -36,11 +36,11 @@ Use the canonical local URL runbook before changing more code.
 Symptoms:
 
 1. stateful historical attribution works for some dimensions but not others,
-2. issuer active-risk appears missing or rejected.
+2. issuer active-risk appears missing, degraded, or rejected.
 
 Interpretation:
 
-1. this may be the intentional `ACTIVE_RISK + ISSUER` gate,
+1. verify the request is not using unsupported `CUSTOM` stateful grouping,
 2. check `/integration/capabilities`,
 3. check the endpoint matrix and product-surface alignment docs.
 

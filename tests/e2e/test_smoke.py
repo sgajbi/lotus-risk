@@ -5,6 +5,7 @@ from app.main import app
 from tests.support.app_runtime import override_app_runtime
 from tests.support.historical_attribution_fakes import (
     RecordingHistoricalAttributionCoreClient,
+    build_benchmark_exposure_context_response,
     build_stateful_attribution_returns_client,
 )
 from tests.support.lotus_core_fakes import SimulationLotusCoreClient
@@ -196,7 +197,7 @@ def test_integration_capabilities_endpoint_exposes_support_matrix() -> None:
     assert workflow_by_key["concentration_risk"]["support_status"] == "full"
     assert workflow_by_key["historical_risk_attribution"]["support_status"] == "partial"
     assert (
-        "stateful active-risk ISSUER remains gated"
+        "issuer active-risk consumes lotus-performance benchmark exposure context issuer groups"
         in workflow_by_key["historical_risk_attribution"]["notes"]
     )
 
@@ -662,27 +663,49 @@ def test_e2e_historical_attribution_stateful_active_risk_mode() -> None:
     assert not hasattr(core_client, "get_benchmark_market_series")
 
 
-def test_e2e_historical_attribution_stateful_issuer_is_rejected_at_boundary() -> None:
-    client = TestClient(app)
-    response = client.post(
-        "/analytics/risk/historical-attribution",
-        json={
-            "input_mode": "stateful",
-            "stateful_input": {
-                "portfolio_id": "DEMO_DPM_EUR_001",
-                "as_of_date": "2026-01-06",
-                "periods": [{"type": "YTD", "name": "YTD"}],
-                "attribution_options": {
-                    "attribution_types": ["ACTIVE_RISK"],
-                    "metrics": ["TRACKING_ERROR"],
-                    "grouping_dimensions": ["ISSUER"],
-                },
-            },
-        },
+def test_e2e_historical_attribution_stateful_issuer_active_risk_mode() -> None:
+    performance_client = build_stateful_attribution_returns_client()
+    performance_client.benchmark_exposure_context_payload = (
+        build_benchmark_exposure_context_response(grouping_dimension="ISSUER")
     )
 
-    assert response.status_code == 422
+    class _IssuerCoreClient(RecordingHistoricalAttributionCoreClient):
+        async def get_instrument_enrichment(
+            self,
+            *,
+            security_ids: list[str],
+            correlation_id: str | None,  # noqa: ARG002
+        ) -> dict[str, object]:
+            return {
+                "records": [
+                    {"security_id": "SEC_A", "issuer_id": "ISSUER_A", "issuer_name": "Issuer A"},
+                    {"security_id": "SEC_B", "issuer_id": "ISSUER_B", "issuer_name": "Issuer B"},
+                ]
+            }
+
+    with override_app_runtime(
+        lotus_performance_client=performance_client,
+        lotus_core_client=_IssuerCoreClient(),
+    ):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/historical-attribution",
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-06",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "attribution_options": {
+                        "attribution_types": ["ACTIVE_RISK"],
+                        "metrics": ["TRACKING_ERROR"],
+                        "grouping_dimensions": ["ISSUER"],
+                    },
+                },
+            },
+        )
+
+    assert response.status_code == 200
     body = response.json()
-    assert body["error"]["code"] == "INVALID_REQUEST"
-    detail_messages = [detail["msg"] for detail in body["error"]["details"]]
-    assert any("grouping_dimension=ISSUER" in message for message in detail_messages)
+    assert body["metadata"]["requested_grouping_dimensions"] == ["ISSUER"]
+    assert body["metadata"]["stateful_active_risk_gated_grouping_dimensions"] == []

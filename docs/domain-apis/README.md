@@ -37,7 +37,7 @@ This package documents the current `lotus-risk` API surface and evaluates it aga
 - `POST /analytics/risk/drawdown`
 - `POST /analytics/risk/concentration`
 - `POST /analytics/risk/rolling-metrics`
-- `POST /analytics/risk/historical-attribution` (stateless plus approved stateful scope implemented; stateful `ACTIVE_RISK + ISSUER` remains intentionally gated)
+- `POST /analytics/risk/historical-attribution` (stateless plus approved stateful scope implemented, including stateful `ACTIVE_RISK + ISSUER` through lotus-performance benchmark exposure context issuer groups)
 - `POST /analytics/risk/regime-scenario-pack/evaluate` (stateless governed CIO scenario-pack
   evaluation with optional reconciled per-security contribution rows)
 - `POST /analytics/risk/risk-event-cohorts/evaluate`

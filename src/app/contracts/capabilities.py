@@ -67,8 +67,8 @@ class CapabilityWorkflow(BaseModel):
         description="Deterministic implementation notes or support boundaries for this workflow.",
         json_schema_extra={
             "example": [
-                "stateful active-risk supports POSITION, SECTOR, and ASSET_CLASS",
-                "stateful active-risk ISSUER remains gated",
+                "stateful active-risk supports POSITION, SECTOR, ASSET_CLASS, and ISSUER",
+                "issuer active-risk consumes lotus-performance benchmark exposure context issuer groups",
             ]
         },
     )

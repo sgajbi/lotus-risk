@@ -59,7 +59,7 @@ This allows consumers to discover that:
 
 - concentration supports simulation
 - risk/calculate, drawdown, rolling, and historical attribution do not
-- historical attribution remains `partial` because stateful active-risk `ISSUER` is gated
+- historical attribution supports stateful active-risk `ISSUER` through lotus-performance benchmark exposure context issuer groups
 - historical-attribution response metadata is the authoritative active-risk support contract
 - risk snapshot VaR and expected shortfall are signed return-threshold metrics
 - historical attribution residual and `reconciled_sum` must be preserved with contributors
@@ -94,7 +94,7 @@ This allows consumers to discover that:
   - typed contract exists and is integration-tested.
   - vocabulary is centralized in constants to reduce drift.
   - workflow-level mode support is explicit enough for gateway and Workbench surfaces to avoid
-    unsupported simulation and issuer active-risk affordances.
+    unsupported simulation affordances and to expose issuer active-risk only through the governed risk contract.
   - risk calculation supportability is implementation-backed across `risk/calculate`, drawdown,
     rolling metrics, historical attribution, and concentration through
     `metadata.calculation_supportability` and `lotus_risk_calculation_supportability_total`, so
