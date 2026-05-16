@@ -27,7 +27,7 @@ The current runtime and contract already provide:
 
 Important current limits:
 
-1. stateful `ACTIVE_RISK + ISSUER` remains intentionally gated,
+1. broaden live portfolio-archetype validation for stateful `ACTIVE_RISK + ISSUER`,
 2. simulation remains concentration-only,
 3. enterprise live-validation breadth remains limited to the canonical portfolio baseline unless more seeded archetypes are registered with evidence,
 4. downstream consumers still need more cross-repo proof that they preserve the risk contract correctly.

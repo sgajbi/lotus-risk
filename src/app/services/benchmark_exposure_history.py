@@ -135,7 +135,7 @@ async def fetch_benchmark_exposure_history(
     correlation_id: str | None,
 ) -> list[ExposurePoint]:
     unsupported_groupings = sorted(
-        {dimension for dimension in grouping_dimensions if dimension in {"CUSTOM", "ISSUER"}}
+        {dimension for dimension in grouping_dimensions if dimension == "CUSTOM"}
     )
     if unsupported_groupings:
         raise ValueError(

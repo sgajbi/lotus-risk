@@ -143,19 +143,28 @@ def test_fetch_benchmark_exposure_history_follows_performance_pagination() -> No
     assert points
 
 
-def test_fetch_benchmark_exposure_history_rejects_issuer_grouping_until_semantics_exist() -> None:
-    with pytest.raises(ValueError, match="cannot source benchmark exposure history"):
-        asyncio.run(
-            fetch_benchmark_exposure_history(
-                performance_client=_performance_client(),
-                portfolio_id="DEMO_DPM_EUR_001",
-                as_of_date=date(2026, 1, 4),
-                start_date=date(2026, 1, 2),
-                reporting_currency=None,
-                grouping_dimensions=["ISSUER"],
-                correlation_id=None,
-            )
+def test_fetch_benchmark_exposure_history_accepts_issuer_grouping() -> None:
+    performance = _performance_client(
+        build_benchmark_exposure_context_response(grouping_dimension="ISSUER")
+    )
+
+    points = asyncio.run(
+        fetch_benchmark_exposure_history(
+            performance_client=performance,
+            portfolio_id="DEMO_DPM_EUR_001",
+            as_of_date=date(2026, 1, 4),
+            start_date=date(2026, 1, 2),
+            reporting_currency=None,
+            grouping_dimensions=["ISSUER"],
+            correlation_id=None,
         )
+    )
+
+    assert points
+    assert {point.grouping_dimension for point in points} == {"ISSUER"}
+    assert performance.benchmark_exposure_context_calls[0]["request_payload"][
+        "grouping_dimensions"
+    ] == ["ISSUER"]
 
 
 def test_fetch_benchmark_exposure_history_rejects_empty_performance_payload() -> None:

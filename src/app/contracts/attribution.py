@@ -38,11 +38,11 @@ def _default_groupings() -> list[GroupingDimension]:
 
 
 def _default_stateful_active_risk_supported_groupings() -> list[GroupingDimension]:
-    return ["POSITION", "SECTOR", "ASSET_CLASS"]
+    return ["POSITION", "SECTOR", "ASSET_CLASS", "ISSUER"]
 
 
 def _default_stateful_active_risk_gated_groupings() -> list[GroupingDimension]:
-    return ["ISSUER"]
+    return []
 
 
 class AttributionOptions(BaseModel):
@@ -265,15 +265,6 @@ class HistoricalAttributionStatefulInput(BaseModel):
                 "stateful historical-attribution does not support grouping_dimension=CUSTOM"
             )
 
-        requires_active = (
-            "ACTIVE_RISK" in self.attribution_options.attribution_types
-            or "TRACKING_ERROR" in self.attribution_options.metrics
-        )
-        if requires_active and "ISSUER" in grouping_dimensions:
-            raise ValueError(
-                "stateful ACTIVE_RISK/TRACKING_ERROR attribution does not support "
-                "grouping_dimension=ISSUER until benchmark issuer exposure semantics are available"
-            )
         return self
 
 
@@ -306,8 +297,8 @@ class HistoricalAttributionRequest(BaseModel):
         default=None,
         description=(
             "Stateful payload for returns/exposure sourcing through lotus-performance and lotus-core. "
-            "Stateful ACTIVE_RISK currently supports POSITION, SECTOR, and ASSET_CLASS; "
-            "ISSUER remains gated until benchmark issuer exposure semantics are available. "
+            "Stateful ACTIVE_RISK currently supports POSITION, SECTOR, ASSET_CLASS, and ISSUER; "
+            "ISSUER is supported through lotus-performance benchmark exposure context issuer groups. "
             "CUSTOM grouping is not supported in stateful mode."
         ),
         json_schema_extra={
@@ -519,17 +510,17 @@ class HistoricalAttributionMetadata(AuditMetadataFields):
     stateful_active_risk_supported_grouping_dimensions: list[GroupingDimension] = Field(
         default_factory=_default_stateful_active_risk_supported_groupings,
         description="Grouping dimensions currently supported for stateful ACTIVE_RISK attribution.",
-        json_schema_extra={"example": ["POSITION", "SECTOR", "ASSET_CLASS"]},
+        json_schema_extra={"example": ["POSITION", "SECTOR", "ASSET_CLASS", "ISSUER"]},
     )
     stateful_active_risk_gated_grouping_dimensions: list[GroupingDimension] = Field(
         default_factory=_default_stateful_active_risk_gated_groupings,
         description="Grouping dimensions intentionally gated for stateful ACTIVE_RISK attribution.",
-        json_schema_extra={"example": ["ISSUER"]},
+        json_schema_extra={"example": []},
     )
     stateful_active_risk_gate_reason: str = Field(
-        default="benchmark issuer exposure semantics unavailable",
+        default="none",
         description="Deterministic reason for any gated stateful ACTIVE_RISK grouping dimensions.",
-        json_schema_extra={"example": "benchmark issuer exposure semantics unavailable"},
+        json_schema_extra={"example": "none"},
     )
     calculation_supportability: RiskCalculationSupportability = Field(
         default_factory=lambda: RiskCalculationSupportability(
@@ -600,9 +591,10 @@ class HistoricalAttributionResponse(BaseModel):
                     "POSITION",
                     "SECTOR",
                     "ASSET_CLASS",
+                    "ISSUER",
                 ],
-                "stateful_active_risk_gated_grouping_dimensions": ["ISSUER"],
-                "stateful_active_risk_gate_reason": "benchmark issuer exposure semantics unavailable",
+                "stateful_active_risk_gated_grouping_dimensions": [],
+                "stateful_active_risk_gate_reason": "none",
             }
         },
     )
@@ -665,11 +657,10 @@ class HistoricalAttributionResponse(BaseModel):
                         "POSITION",
                         "SECTOR",
                         "ASSET_CLASS",
+                        "ISSUER",
                     ],
-                    "stateful_active_risk_gated_grouping_dimensions": ["ISSUER"],
-                    "stateful_active_risk_gate_reason": (
-                        "benchmark issuer exposure semantics unavailable"
-                    ),
+                    "stateful_active_risk_gated_grouping_dimensions": [],
+                    "stateful_active_risk_gate_reason": "none",
                 },
             }
         }

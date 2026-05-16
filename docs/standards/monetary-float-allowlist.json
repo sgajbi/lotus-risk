@@ -1,13 +1,13 @@
 {
   "description": "Approved baseline monetary-float findings. New findings fail CI.",
   "policy_version": "1.1.0",
-  "generated_at": "2026-04-30T06:29:12Z",
+  "generated_at": "2026-05-16T00:56:02Z",
   "allowlist": [
     {
-      "finding": "src/app/contracts/attribution.py:409:total_value: float | None = Field(",
+      "finding": "src/app/contracts/attribution.py:400:total_value: float | None = Field(",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
-      "review_by": "2026-10-27"
+      "review_by": "2026-11-12"
     },
     {
       "finding": "src/app/contracts/concentration.py:215:price: float | None = Field(",

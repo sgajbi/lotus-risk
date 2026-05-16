@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-05-15T12:12:55.855350+00:00",
+  "generatedAt": "2026-05-16T00:50:34.746380+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.affected_portfolios",
@@ -1489,8 +1489,8 @@
       "preferredName": "notes",
       "description": "Deterministic implementation notes or support boundaries for this workflow.",
       "example": [
-        "stateful active-risk supports POSITION, SECTOR, and ASSET_CLASS",
-        "stateful active-risk ISSUER remains gated"
+        "stateful active-risk supports POSITION, SECTOR, ASSET_CLASS, and ISSUER",
+        "issuer active-risk consumes lotus-performance benchmark exposure context issuer groups"
       ],
       "type": "array",
       "locations": [
@@ -2339,7 +2339,7 @@
       "canonicalTerm": "stateful_active_risk_gate_reason",
       "preferredName": "stateful_active_risk_gate_reason",
       "description": "Deterministic reason for any gated stateful ACTIVE_RISK grouping dimensions.",
-      "example": "benchmark issuer exposure semantics unavailable",
+      "example": "none",
       "type": "string",
       "locations": [
         "body"
@@ -2353,9 +2353,7 @@
       "canonicalTerm": "stateful_active_risk_gated_grouping_dimensions",
       "preferredName": "stateful_active_risk_gated_grouping_dimensions",
       "description": "Grouping dimensions intentionally gated for stateful ACTIVE_RISK attribution.",
-      "example": [
-        "ISSUER"
-      ],
+      "example": [],
       "type": "array",
       "locations": [
         "body"
@@ -2372,7 +2370,8 @@
       "example": [
         "POSITION",
         "SECTOR",
-        "ASSET_CLASS"
+        "ASSET_CLASS",
+        "ISSUER"
       ],
       "type": "array",
       "locations": [
@@ -2386,7 +2385,7 @@
       "semanticId": "lotus.stateful_input",
       "canonicalTerm": "stateful_input",
       "preferredName": "stateful_input",
-      "description": "Stateful payload for returns/exposure sourcing through lotus-performance and lotus-core. Stateful ACTIVE_RISK currently supports POSITION, SECTOR, and ASSET_CLASS; ISSUER remains gated until benchmark issuer exposure semantics are available. CUSTOM grouping is not supported in stateful mode.",
+      "description": "Stateful payload for returns/exposure sourcing through lotus-performance and lotus-core. Stateful ACTIVE_RISK currently supports POSITION, SECTOR, ASSET_CLASS, and ISSUER; ISSUER is supported through lotus-performance benchmark exposure context issuer groups. CUSTOM grouping is not supported in stateful mode.",
       "example": {
         "as_of_date": "2026-02-28",
         "attribution_options": {

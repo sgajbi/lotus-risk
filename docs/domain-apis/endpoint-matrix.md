@@ -22,7 +22,7 @@ Status meanings:
 | `POST /analytics/risk/calculate` | Domain analytics | portfolio risk metrics | `stateless`, `stateful` | full | stateful return sourcing via lotus-performance; source-backed risk-free returns from lotus-core via returns-series when Sharpe is requested | simulation is intentionally unsupported |
 | `POST /analytics/risk/drawdown` | Domain analytics | realized drawdown analytics | `stateless`, `stateful` | full | stateful return sourcing via lotus-performance | simulation is intentionally unsupported |
 | `POST /analytics/risk/rolling-metrics` | Domain analytics | rolling historical risk diagnostics | `stateless`, `stateful` | full | lotus-performance for portfolio/benchmark returns; lotus-core for risk-free series and reporting-currency resolution | simulation is intentionally unsupported; broader enterprise archetype coverage still requires additional seeded live portfolios beyond the canonical baseline |
-| `POST /analytics/risk/historical-attribution` | Domain analytics | historical risk and active-risk attribution decomposition | `stateless`, `stateful` | partial | stateless caller-supplied returns/exposures; stateful sourcing uses lotus-performance for portfolio/benchmark returns and benchmark exposure context, and lotus-core for portfolio exposure history and instrument enrichment | stateful `ACTIVE_RISK` supports `POSITION`, `SECTOR`, and `ASSET_CLASS`; `ISSUER` remains gated by benchmark issuer exposure semantics; simulation is intentionally unsupported |
+| `POST /analytics/risk/historical-attribution` | Domain analytics | historical risk and active-risk attribution decomposition | `stateless`, `stateful` | partial | stateless caller-supplied returns/exposures; stateful sourcing uses lotus-performance for portfolio/benchmark returns and benchmark exposure context, and lotus-core for portfolio exposure history and instrument enrichment | stateful `ACTIVE_RISK` supports `POSITION`, `SECTOR`, `ASSET_CLASS`, and `ISSUER`; simulation is intentionally unsupported |
 | `POST /analytics/risk/concentration` | Domain analytics | concentration analytics and HHI metrics | `stateless`, `stateful`, `simulation` | full | lotus-core snapshot and simulation session contracts | none |
 | `POST /analytics/risk/regime-scenario-pack/evaluate` | Domain analytics | governed CIO regime scenario-pack evaluation with optional per-security contribution evidence | `stateless` | full | caller-supplied exposure weights, optional reconciled exposure components, and risk-owned scenario-pack definitions | does not forecast market states, perform full repricing, or accept browser-owned scenario methodology |
 
@@ -39,18 +39,16 @@ Status meanings:
 
 ## Highest-Value Remaining Gap
 
-The only remaining material functional gap inside the approved API surface is:
+The previously material functional gap inside the approved API surface is now implemented:
 
 - stateful `ACTIVE_RISK` historical attribution with `grouping_dimension=ISSUER`
 
 Current handling is intentional and explicit:
 
-- request validation rejects unsupported stateful issuer requests with HTTP `422`
-- `/integration/capabilities` marks historical attribution as `partial`
-- OpenAPI and domain docs describe the gate
-- live characterization proves:
-  - supported stateful `SECTOR` active-risk works
-  - upstream benchmark exposure context rejects `ISSUER`
+- request validation accepts issuer active-risk requests and rejects only `CUSTOM` stateful grouping
+- `/integration/capabilities` marks issuer active-risk as supported through workflow notes
+- response metadata publishes an empty `stateful_active_risk_gated_grouping_dimensions` list
+- live characterization should prove `POSITION`, `SECTOR`, `ASSET_CLASS`, and `ISSUER` stateful active-risk against governed upstreams before broader portfolio-archetype claims
 
 ## Live Validation Breadth
 
@@ -85,7 +83,7 @@ See `docs/domain-apis/risk-observability.md`.
 ## Product-Surface Alignment
 
 Downstream gateway, Workbench, reporting, and AI consumers must preserve signed VaR semantics,
-historical attribution reconciliation fields, issuer active-risk gating, concentration-only
+historical attribution reconciliation fields, issuer active-risk support metadata, concentration-only
 simulation support, and audit metadata. These rules are part of the risk contract because otherwise
 correct calculations can become misleading at the product surface.
 

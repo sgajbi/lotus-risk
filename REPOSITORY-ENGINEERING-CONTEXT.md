@@ -144,7 +144,7 @@ Boundary rules:
 2. gateway and UI should not duplicate risk logic or narrative improperly,
 3. monetary-float governance applies only where money-bearing identifiers require it, not generic analytics terms,
 4. supportability and evidence posture should remain truthful and data-backed,
-5. downstream consumers must preserve signed VaR semantics, attribution reconciliation fields, issuer active-risk gating, concentration-only simulation support, and audit lineage metadata as documented in `docs/domain-apis/risk-product-surface-alignment.md`,
+5. downstream consumers must preserve signed VaR semantics, attribution reconciliation fields, issuer active-risk support metadata, concentration-only simulation support, and audit lineage metadata as documented in `docs/domain-apis/risk-product-surface-alignment.md`,
 6. `lotus-core` must be consumed as a governed source-data, analytics-input, snapshot/simulation, and support-metadata authority, while `lotus-performance` remains the authority for performance return and benchmark exposure context inputs.
 7. RFC-0108 calculation supportability is source-owned in this repository across `risk/calculate`,
    drawdown, rolling metrics, historical attribution, and concentration through
@@ -215,7 +215,7 @@ Most relevant current governance:
 3. risk evidence and supportability posture must remain data-backed, not decorative or speculative,
 4. when risk review flows change in Workbench or Gateway, this repo’s context should be checked for alignment,
 5. live validation defaults to `PB_SG_GLOBAL_BAL_001`; do not claim broader enterprise portfolio-archetype coverage until `docs/operations/live-risk-validation-matrix.md` has real seeded portfolio IDs and evidence,
-6. stateful historical attribution `ACTIVE_RISK + ISSUER` is intentionally gated until benchmark issuer exposure semantics are approved,
+6. stateful historical attribution `ACTIVE_RISK + ISSUER` is supported through lotus-performance benchmark exposure context issuer groups introduced in lotus-performance PR #165,
 7. transport optimization across upstream services should start with contract and retrieval-shape evidence before any gRPC proposal,
 8. `wiki/` inside the repository is the authored documentation source if a GitHub wiki is published later,
 9. RFC-0087 preparation should reuse repo-owned readiness, observability, and lineage signals before introducing any new trust publication surface.

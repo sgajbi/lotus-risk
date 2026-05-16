@@ -77,7 +77,7 @@ Current branch reality:
 1. Define the enterprise-readiness target state for `lotus-risk`.
 2. Preserve the current live-validated analytics baseline with concrete evidence expectations.
 3. Make trading-day calculations a permanent methodology requirement.
-4. Keep `ACTIVE_RISK + ISSUER` intentionally unsupported until benchmark issuer exposure semantics exist.
+4. Keep `ACTIVE_RISK + ISSUER` backed by explicit benchmark issuer exposure semantics.
 5. Define implementation slices with clear acceptance criteria.
 6. Require documentation, agent context, skills guidance assessment, and branch hygiene as a final slice.
 7. Make GitHub-backed asynchronous validation part of the implementation posture.
@@ -88,7 +88,7 @@ Current branch reality:
 2. Claim regulatory market-risk capital model approval.
 3. Move benchmark, portfolio, issuer, risk-free, or performance data ownership into `lotus-risk`.
 4. Require `lotus-core` or `lotus-performance` changes in the first implementation slice.
-5. Support `ACTIVE_RISK + ISSUER` without a separate approved issuer benchmark exposure contract.
+5. Support `ACTIVE_RISK + ISSUER` without an approved issuer benchmark exposure contract.
 6. Approve unrestricted production rollout by publishing this RFC.
 
 ## Decision
@@ -206,9 +206,10 @@ For active-risk attribution:
 
 A material residual can be valid and must not be hidden.
 
-## Intentional Limitation: ACTIVE_RISK + ISSUER
+## Implemented Issuer Active-Risk Path: ACTIVE_RISK + ISSUER
 
-`historical-attribution` stateful `ACTIVE_RISK + ISSUER` is intentionally unsupported.
+`historical-attribution` stateful `ACTIVE_RISK + ISSUER` is supported through lotus-performance
+benchmark exposure context issuer groups.
 
 This limitation is part of the contract, not an accidental bug.
 
@@ -233,7 +234,7 @@ Unsupported active-risk grouping dimension:
 
 Required behavior:
 
-1. reject `ACTIVE_RISK + ISSUER` at request validation or deterministic contract boundary,
+1. accept `ACTIVE_RISK + ISSUER` only through lotus-performance benchmark exposure context issuer rows,
 2. document the limitation in OpenAPI, domain docs, and product guidance,
 3. prevent gateway and Workbench from exposing issuer active-risk controls,
 4. require a future RFC or approved slice before enabling issuer support.
@@ -246,7 +247,7 @@ Required behavior:
 | `drawdown` | Supported | Supported | Unsupported | Historical realized drawdown only. |
 | `concentration` | Supported | Supported | Supported | Simulation is valid for projected holdings/exposures. |
 | `rolling-metrics` | Supported | Supported | Unsupported | Historical rolling diagnostics only. |
-| `historical-attribution` | Supported | Supported | Unsupported | Historical attribution only; stateful issuer active-risk unsupported. |
+| `historical-attribution` | Supported | Supported | Unsupported | Historical attribution only; stateful issuer active-risk supported. |
 
 ## Upstream Ownership Model
 
@@ -424,7 +425,7 @@ Scope:
 2. Workbench risk panels,
 3. signed VaR labels,
 4. attribution residual display,
-5. unsupported issuer active-risk affordances,
+5. issuer active-risk affordances outside the governed risk contract,
 6. simulation mode affordances.
 
 Acceptance criteria:
@@ -438,7 +439,7 @@ Acceptance criteria:
 Implementation evidence:
 
 1. `docs/domain-apis/risk-product-surface-alignment.md` now defines the risk-owned downstream
-   contract for signed VaR, expected shortfall, attribution residuals, issuer active-risk gating,
+   contract for signed VaR, expected shortfall, attribution residuals, issuer active-risk support metadata,
    concentration-only simulation, and audit metadata preservation.
 2. `docs/domain-apis/integration-capabilities.md` and
    `docs/domain-apis/endpoint-matrix.md` link the downstream alignment contract and clarify that
@@ -551,7 +552,7 @@ This evidence proves the current analytics baseline and completes the `lotus-ris
 This RFC is done for the `lotus-risk`-owned implementation when:
 
 1. all seven implementation slices are complete,
-2. the intentional `ACTIVE_RISK + ISSUER` limitation remains documented unless superseded by a future approved issuer-exposure contract,
+2. `ACTIVE_RISK + ISSUER` remains documented as supported through the approved issuer-exposure contract,
 3. local repo-native checks pass,
 4. GitHub feature-lane and PR checks pass,
 5. live validation matrix evidence is current,
@@ -575,7 +576,7 @@ The implementation now satisfies items 1, 2, 3, 5, and 6 locally. Items 4 and 7 
 ## Open Questions
 
 1. Which additional seeded portfolios should become canonical for the live validation matrix?
-2. Should issuer active-risk remain permanently unsupported, or should a future RFC define benchmark issuer exposure semantics?
+2. What additional portfolio archetypes should be live-proven for issuer active-risk?
 3. Which service should persist calculation lineage for downstream audit evidence: `lotus-risk`, `lotus-gateway`, or reporting workflows?
 4. What endpoint-level latency SLOs should apply to private-banking risk analytics?
 5. Should platform context define canonical direct service ports for all live characterization tests, or should that remain repository-local?
@@ -588,4 +589,4 @@ The RFC-0008 `lotus-risk`-owned implementation is done, but the service is not y
 
 The remaining approval path is explicit: green GitHub merge governance, downstream gateway/Workbench proof against the product-surface contract, broader seeded live portfolio archetype evidence, and final branch hygiene.
 
-The `ACTIVE_RISK + ISSUER` limitation remains intentional and must stay documented until benchmark issuer exposure semantics are explicitly defined and approved.
+The `ACTIVE_RISK + ISSUER` path remains governed by benchmark issuer exposure semantics from lotus-performance and must not be locally recomputed in downstream consumers.

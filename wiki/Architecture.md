@@ -72,7 +72,7 @@ The important rule is that support is workflow-specific, not service-wide:
 
 1. concentration supports all three,
 2. risk/calculate, drawdown, and rolling support stateless and stateful only,
-3. historical attribution supports stateless and stateful, but stateful active-risk remains partially gated.
+3. historical attribution supports stateless and stateful active-risk, including issuer grouping.
 
 ## Upstream Dependency Model
 
@@ -91,7 +91,7 @@ semantic preservation:
 
 1. signed VaR must stay signed,
 2. attribution residual and reconciled sum must stay attached to contributors,
-3. unsupported issuer active-risk must remain visibly gated,
+3. issuer active-risk must remain backed by lotus-performance benchmark exposure context issuer groups,
 4. simulation must remain concentration-only,
 5. lineage and upstream fingerprint metadata must survive downstream shaping.
 

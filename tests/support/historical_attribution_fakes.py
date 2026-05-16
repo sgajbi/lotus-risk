@@ -28,7 +28,58 @@ def build_benchmark_exposure_context_response(
     *,
     grouping_dimension: str = "SECTOR",
 ) -> dict[str, object]:
-    if grouping_dimension == "ASSET_CLASS":
+    if grouping_dimension == "ISSUER":
+        rows = [
+            {
+                "valuation_date": "2026-01-02",
+                "component_id": None,
+                "grouping_dimension": "ISSUER",
+                "group_key": "ISSUER_A",
+                "group_label": "Issuer A",
+                "weight": "0.55",
+            },
+            {
+                "valuation_date": "2026-01-02",
+                "component_id": None,
+                "grouping_dimension": "ISSUER",
+                "group_key": "ISSUER_B",
+                "group_label": "Issuer B",
+                "weight": "0.45",
+            },
+            {
+                "valuation_date": "2026-01-05",
+                "component_id": None,
+                "grouping_dimension": "ISSUER",
+                "group_key": "ISSUER_A",
+                "group_label": "Issuer A",
+                "weight": "0.56",
+            },
+            {
+                "valuation_date": "2026-01-05",
+                "component_id": None,
+                "grouping_dimension": "ISSUER",
+                "group_key": "ISSUER_B",
+                "group_label": "Issuer B",
+                "weight": "0.44",
+            },
+            {
+                "valuation_date": "2026-01-06",
+                "component_id": None,
+                "grouping_dimension": "ISSUER",
+                "group_key": "ISSUER_A",
+                "group_label": "Issuer A",
+                "weight": "0.54",
+            },
+            {
+                "valuation_date": "2026-01-06",
+                "component_id": None,
+                "grouping_dimension": "ISSUER",
+                "group_key": "ISSUER_B",
+                "group_label": "Issuer B",
+                "weight": "0.46",
+            },
+        ]
+    elif grouping_dimension == "ASSET_CLASS":
         rows = [
             {
                 "valuation_date": "2026-01-02",

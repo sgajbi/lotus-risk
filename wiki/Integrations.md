@@ -39,7 +39,7 @@ This matters because:
 5. regime scenario-pack evaluation is stateless and source-owned by `lotus-risk`,
 6. per-security regime scenario contribution rows are available when callers supply reconciled
    exposure components,
-7. one remaining functional gap inside the approved analytics surface is stateful `ACTIVE_RISK + ISSUER`.
+7. stateful `ACTIVE_RISK + ISSUER` is supported through lotus-performance benchmark exposure context issuer groups.
 
 ## Downstream Preservation Rules
 
@@ -47,7 +47,7 @@ Gateway, Workbench, reporting, and AI consumers must preserve:
 
 1. signed VaR semantics,
 2. attribution `total_value`, `reconciled_sum`, `residual`, and contributor fields,
-3. issuer active-risk gating,
+3. issuer active-risk support metadata,
 4. concentration-only simulation support,
 5. regime scenario-pack evaluation reason codes and threshold-breach posture,
 6. regime scenario-pack per-security contribution rows when present,

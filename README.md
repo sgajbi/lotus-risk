@@ -54,7 +54,7 @@ Important posture limits:
 3. risk-event affected-cohort evaluation is stateless and consumes caller-supplied candidate
    portfolios and source-supplied exposure weights against risk-owned event definitions; it does
    not create rebalance waves or own campaign approval workflow,
-4. stateful historical attribution remains `partial` because `ACTIVE_RISK + ISSUER` is intentionally gated,
+4. stateful historical attribution supports `ACTIVE_RISK + ISSUER` through lotus-performance benchmark exposure context issuer groups,
 5. live validation defaults to canonical portfolio `PB_SG_GLOBAL_BAL_001`,
 6. broader enterprise-bank claims require more seeded archetypes and attached evidence.
 
@@ -176,7 +176,7 @@ Important integration truths:
 1. `GET /integration/capabilities` is the source of truth for workflow support and mode support,
 2. concentration is the only supported simulation workflow,
 3. historical attribution support is intentionally `partial`,
-4. signed VaR semantics, attribution reconciliation fields, issuer gating, concentration-only simulation support, and audit lineage metadata must be preserved downstream,
+4. signed VaR semantics, attribution reconciliation fields, issuer active-risk support metadata, concentration-only simulation support, and audit lineage metadata must be preserved downstream,
 5. downstream consumers should derive affordances from the capability response and endpoint matrix rather than infer support from one successful endpoint call.
 
 The main integration references are:

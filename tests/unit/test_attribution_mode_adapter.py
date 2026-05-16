@@ -311,22 +311,49 @@ def test_stateful_attribution_rejects_active_risk_when_benchmark_returns_missing
         )
 
 
-def test_stateful_attribution_rejects_active_risk_issuer_grouping_until_benchmark_mapping_exists() -> (
-    None
-):
-    with pytest.raises(ValueError, match="grouping_dimension=ISSUER"):
-        asyncio.run(
-            calculate_historical_attribution_stateful(
-                _stateful_input(
-                    grouping_dimensions=["ISSUER"],
-                    attribution_types=["ACTIVE_RISK"],
-                    metrics=["TRACKING_ERROR"],
-                ),
-                performance_client=_StubPerformanceClient(),
-                core_client=_StubCoreClient(),
-                correlation_id="corr-attr",
+def test_stateful_attribution_supports_active_risk_issuer_grouping() -> None:
+    class _IssuerBenchmarkPerformanceClient(_StubPerformanceClient):
+        async def get_benchmark_exposure_context(
+            self,
+            *,
+            request_payload: dict[str, object],
+            correlation_id: str | None,
+        ) -> dict[str, object]:
+            self._client.benchmark_exposure_context_calls.append(
+                {"request_payload": request_payload, "correlation_id": correlation_id}
             )
+            return build_benchmark_exposure_context_response(grouping_dimension="ISSUER")
+
+    performance_client = _IssuerBenchmarkPerformanceClient()
+    core_client = _StubCoreClient()
+
+    response = asyncio.run(
+        calculate_historical_attribution_stateful(
+            _stateful_input(
+                grouping_dimensions=["ISSUER"],
+                attribution_types=["ACTIVE_RISK"],
+                metrics=["TRACKING_ERROR"],
+            ),
+            performance_client=performance_client,
+            core_client=core_client,
+            correlation_id="corr-attr",
         )
+    )
+
+    assert response.metadata.requested_grouping_dimensions == ["ISSUER"]
+    assert response.metadata.stateful_active_risk_supported_grouping_dimensions == [
+        "POSITION",
+        "SECTOR",
+        "ASSET_CLASS",
+        "ISSUER",
+    ]
+    assert response.metadata.stateful_active_risk_gated_grouping_dimensions == []
+    assert core_client.enrichment_calls == [["SEC_A", "SEC_B"]]
+    benchmark_context_request = performance_client.benchmark_exposure_context_calls[0][
+        "request_payload"
+    ]
+    assert isinstance(benchmark_context_request, dict)
+    assert benchmark_context_request["grouping_dimensions"] == ["ISSUER"]
 
 
 def test_stateful_attribution_rejects_benchmark_exposure_date_misalignment() -> None:

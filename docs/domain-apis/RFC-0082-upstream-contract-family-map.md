@@ -73,7 +73,7 @@ stateful mode is requested.
 3. canonical portfolio, instrument, simulation, and reference-data authority stays in `lotus-core`;
 4. stateful risk workflows consume governed REST/OpenAPI contracts, not direct databases or inferred private contracts;
 5. upstream failures remain mapped to deterministic Lotus error codes and structured categories;
-6. signed VaR semantics, attribution reconciliation fields, issuer active-risk gating, concentration-only simulation support, and audit lineage metadata remain preserved for downstream consumers;
+6. signed VaR semantics, attribution reconciliation fields, issuer active-risk support metadata, concentration-only simulation support, and audit lineage metadata remain preserved for downstream consumers;
 7. watchlist routes from `lotus-core` require explicit RFC-0082 review before their semantics are expanded.
 
 Route-specific downstream interpretations that must stay truthful:
@@ -108,7 +108,7 @@ Current test and implementation evidence:
 
 ## Current Gap Register
 
-1. Stateful `ACTIVE_RISK + ISSUER` remains intentionally gated until benchmark issuer exposure semantics are approved.
+1. Stateful `ACTIVE_RISK + ISSUER` is supported through lotus-performance benchmark exposure context issuer groups.
 2. Risk-free coverage remains data-dependent by currency and window; unsupported windows must fail or degrade explicitly rather than fabricating Sharpe inputs.
 3. Transport optimization is deferred. The current concern is contract correctness and data authority, not gRPC adoption.
 4. Any future direct `lotus-core` source-data expansion must be checked against the `lotus-core` RFC-0082 contract-family inventory first.

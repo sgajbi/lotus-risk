@@ -207,12 +207,10 @@ def test_historical_attribution_stateless_happy_path() -> None:
         "POSITION",
         "SECTOR",
         "ASSET_CLASS",
+        "ISSUER",
     ]
-    assert body["metadata"]["stateful_active_risk_gated_grouping_dimensions"] == ["ISSUER"]
-    assert (
-        body["metadata"]["stateful_active_risk_gate_reason"]
-        == "benchmark issuer exposure semantics unavailable"
-    )
+    assert body["metadata"]["stateful_active_risk_gated_grouping_dimensions"] == []
+    assert body["metadata"]["stateful_active_risk_gate_reason"] == "none"
     assert body["metadata"]["calculation_supportability"] == {
         "state": "ready",
         "reason": "calculation_complete",
@@ -489,9 +487,27 @@ def test_historical_attribution_stateful_active_risk_asset_class_contract() -> N
     assert not hasattr(core_client, "get_benchmark_market_series")
 
 
-def test_historical_attribution_stateful_active_risk_issuer_is_explicitly_gated() -> None:
+def test_historical_attribution_stateful_active_risk_issuer_uses_benchmark_context() -> None:
     performance_client = build_stateful_attribution_returns_client()
-    core_client = RecordingHistoricalAttributionCoreClient()
+    performance_client.benchmark_exposure_context_payload = (
+        build_benchmark_exposure_context_response(grouping_dimension="ISSUER")
+    )
+
+    class _IssuerCoreClient(RecordingHistoricalAttributionCoreClient):
+        async def get_instrument_enrichment(
+            self,
+            *,
+            security_ids: list[str],
+            correlation_id: str | None,  # noqa: ARG002
+        ) -> dict[str, object]:
+            return {
+                "records": [
+                    {"security_id": "SEC_A", "issuer_id": "ISSUER_A", "issuer_name": "Issuer A"},
+                    {"security_id": "SEC_B", "issuer_id": "ISSUER_B", "issuer_name": "Issuer B"},
+                ]
+            }
+
+    core_client = _IssuerCoreClient()
 
     with override_app_runtime(
         lotus_performance_client=performance_client,
@@ -516,12 +532,14 @@ def test_historical_attribution_stateful_active_risk_issuer_is_explicitly_gated(
             },
         )
 
-    assert response.status_code == 422
-    body = response.json()["error"]
-    assert body["code"] == "INVALID_REQUEST"
-    assert body["message"] == "Request validation failed"
-    assert any("grouping_dimension=ISSUER" in detail["msg"] for detail in body["details"])
-    assert body["correlation_id"] == "corr-attr-active-issuer"
+    assert response.status_code == 200
+    body = response.json()
+    assert body["input_mode"] == "stateful"
+    assert body["metadata"]["requested_grouping_dimensions"] == ["ISSUER"]
+    assert body["metadata"]["stateful_active_risk_gated_grouping_dimensions"] == []
+    assert performance_client.benchmark_exposure_context_calls[0]["request_payload"][
+        "grouping_dimensions"
+    ] == ["ISSUER"]
 
 
 def test_historical_attribution_stateful_custom_grouping_is_explicitly_gated() -> None:
