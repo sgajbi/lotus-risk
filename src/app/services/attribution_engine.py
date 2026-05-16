@@ -23,6 +23,7 @@ from app.contracts.risk import ReturnPoint, RiskRequestPeriod
 from app.services.audit_lineage import fingerprint_model
 from app.services.calculation_supportability import (
     record_operation_supportability,
+    supportability_from_attribution_results,
     supportability_from_period_results,
 )
 from app.services.risk_engine import _resolve_period
@@ -369,7 +370,7 @@ def calculate_historical_attribution(
             error=None,
         )
 
-    calculation_supportability = supportability_from_period_results(
+    calculation_supportability = supportability_from_attribution_results(
         returns=request.returns,
         as_of_date=request.scope.as_of_date,
         results=results,

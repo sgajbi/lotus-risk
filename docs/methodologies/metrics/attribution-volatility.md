@@ -43,6 +43,10 @@
 - Insufficient observations produce empty contributors and diagnostics.
 - Weight-sum deviations add quality flags.
 - Unsupported attribution combinations return quality flags.
+- Any emitted attribution-set quality flag degrades
+  `metadata.calculation_supportability` with reason `calculation_quality_issue`; downstream
+  services must preserve the source-owned supportability posture instead of treating flagged
+  attribution as fully ready.
 
 ## Configuration Options
 - `attribution_options.grouping_dimensions`

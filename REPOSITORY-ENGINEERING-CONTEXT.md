@@ -152,7 +152,10 @@ Boundary rules:
    `lotus_risk_calculation_supportability_total` labels. The supportability contract publishes
    explicit `metric_labels`, and tests prove the Prometheus labels remain bounded to `operation`,
    `supportability_state`, `reason`, and `freshness_bucket` without portfolio, client,
-   correlation, trace, security, request-body, or response-body label fields.
+   correlation, trace, security, request-body, or response-body label fields. Historical
+   attribution now degrades response-level calculation supportability whenever any source-owned
+   attribution set emits quality flags, so downstream consumers do not treat missing grouping data,
+   empty active-risk alignment, or unsupported attribution combinations as fully ready analytics.
 
 Canonical direct local validation ports:
 

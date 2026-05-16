@@ -257,3 +257,6 @@ def test_attribution_engine_sets_quality_flag_for_missing_grouping_data() -> Non
     response = calculate_historical_attribution(request, input_mode=AttributionInputMode.STATELESS)
     attribution_set = response.results["YTD"].attribution_sets[0]
     assert "grouping:SECTOR:no_exposure_data" in attribution_set.quality_flags
+    assert response.metadata.calculation_supportability.state == "degraded"
+    assert response.metadata.calculation_supportability.reason == "calculation_quality_issue"
+    assert response.metadata.calculation_supportability.degraded_metric_count == 1

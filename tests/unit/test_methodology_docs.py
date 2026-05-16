@@ -53,6 +53,12 @@ RISK_TRACKING_ERROR_DOC = (
 RISK_INFORMATION_RATIO_DOC = (
     REPO_ROOT / "docs" / "methodologies" / "metrics" / "risk-information-ratio.md"
 )
+ATTRIBUTION_VOLATILITY_DOC = (
+    REPO_ROOT / "docs" / "methodologies" / "metrics" / "attribution-volatility.md"
+)
+ATTRIBUTION_TRACKING_ERROR_DOC = (
+    REPO_ROOT / "docs" / "methodologies" / "metrics" / "attribution-tracking-error.md"
+)
 
 
 EXPECTED_V3_SECTIONS = [
@@ -74,6 +80,15 @@ EXPECTED_V3_SECTIONS = [
 def _assert_v3_section_order(text: str) -> None:
     section_positions = [text.index(section) for section in EXPECTED_V3_SECTIONS]
     assert section_positions == sorted(section_positions)
+
+
+def test_historical_attribution_methodologies_record_quality_flag_supportability() -> None:
+    for doc_path in (ATTRIBUTION_VOLATILITY_DOC, ATTRIBUTION_TRACKING_ERROR_DOC):
+        text = doc_path.read_text(encoding="utf-8")
+        _assert_v3_section_order(text)
+        assert "metadata.calculation_supportability" in text
+        assert "calculation_quality_issue" in text
+        assert "quality flag" in text
 
 
 def test_rolling_volatility_methodology_is_auditable_against_engine_contract() -> None:

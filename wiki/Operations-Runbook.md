@@ -75,6 +75,8 @@ For risk analytics responses, `metadata.calculation_supportability` is emitted b
 drawdown, rolling metrics, historical attribution, and concentration. Use it before inferring UI
 state from individual metric values, period errors, issuer coverage, or stale returns. It reports
 bounded `ready`, `stale`, `degraded`, or `empty` posture, a bounded reason, and a freshness bucket.
+Historical attribution responses are degraded when any attribution set emits quality flags such as
+missing grouping data, empty active-risk alignment, or unsupported attribution combinations.
 The matching Prometheus counter is
 `lotus_risk_calculation_supportability_total` with only bounded labels: `operation`,
 `supportability_state`, `reason`, and `freshness_bucket`.
