@@ -44,6 +44,10 @@
 - Missing benchmark exposure history blocks active-risk attribution.
 - Alignment-empty joins emit quality flags with no contributors.
 - Near-zero denominators result in diagnostic/unsupported flags.
+- Any emitted attribution-set quality flag degrades
+  `metadata.calculation_supportability` with reason `calculation_quality_issue`; downstream
+  services must preserve the source-owned supportability posture instead of treating flagged
+  active-risk attribution as fully ready.
 
 ## Configuration Options
 - `attribution_options.grouping_dimensions`

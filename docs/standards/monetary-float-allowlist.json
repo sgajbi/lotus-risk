@@ -1,7 +1,7 @@
 {
   "description": "Approved baseline monetary-float findings. New findings fail CI.",
   "policy_version": "1.1.0",
-  "generated_at": "2026-05-16T00:56:02Z",
+  "generated_at": "2026-05-16T06:58:14Z",
   "allowlist": [
     {
       "finding": "src/app/contracts/attribution.py:400:total_value: float | None = Field(",
@@ -34,31 +34,31 @@
       "review_by": "2026-10-27"
     },
     {
-      "finding": "src/app/services/attribution_engine.py:107:total_value: float,",
+      "finding": "src/app/services/attribution_engine.py:108:total_value: float,",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
       "review_by": "2026-10-27"
     },
     {
-      "finding": "src/app/services/attribution_engine.py:128:percent = float(component / total_value) if not np.isclose(total_value, 0.0) else None",
+      "finding": "src/app/services/attribution_engine.py:129:percent = float(component / total_value) if not np.isclose(total_value, 0.0) else None",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
       "review_by": "2026-10-27"
     },
     {
-      "finding": "src/app/services/attribution_engine.py:183:total_value = float(metric_series.std(ddof=1) * sqrt(annualization_basis))",
+      "finding": "src/app/services/attribution_engine.py:184:total_value = float(metric_series.std(ddof=1) * sqrt(annualization_basis))",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
       "review_by": "2026-10-27"
     },
     {
-      "finding": "src/app/services/attribution_engine.py:211:total_value = float(metric_series.std(ddof=1) * sqrt(annualization_basis))",
+      "finding": "src/app/services/attribution_engine.py:212:total_value = float(metric_series.std(ddof=1) * sqrt(annualization_basis))",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
       "review_by": "2026-10-27"
     },
     {
-      "finding": "src/app/services/attribution_engine.py:243:residual = float(total_value - reconciled_sum)",
+      "finding": "src/app/services/attribution_engine.py:244:residual = float(total_value - reconciled_sum)",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
       "review_by": "2026-10-27"

@@ -144,6 +144,9 @@ Audience notes:
 - Developers and downstream services must preserve `RiskMetricsReport:v1` volatility, drawdown,
   Sharpe, Sortino, VaR, beta, tracking-error, and information-ratio values and supportability metadata rather than
   recomputing period risk metrics locally.
+- Developers and downstream services must preserve `HistoricalRiskAttributionReport:v1`
+  attribution-set quality flags and response-level calculation supportability; flagged
+  attribution sets are degraded source-owned analytics, not ready values for local promotion.
 - Developers and downstream services must preserve `ConcentrationRiskReport:v1` position HHI,
   issuer HHI, top issuer weight, and related concentration outputs rather than recomputing
   concentration locally.

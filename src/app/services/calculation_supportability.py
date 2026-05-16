@@ -156,6 +156,44 @@ def supportability_from_period_results(
     )
 
 
+def supportability_from_attribution_results(
+    *,
+    returns: Sequence[ReturnPoint],
+    as_of_date: dt.date,
+    results: Mapping[str, Any],
+) -> RiskCalculationSupportability:
+    supportability = supportability_from_period_results(
+        returns=returns,
+        as_of_date=as_of_date,
+        results=results,
+    )
+    if supportability.state == "empty":
+        return supportability
+
+    degraded_set_count = 0
+    for period_result in results.values():
+        attribution_sets = getattr(period_result, "attribution_sets", ())
+        if not isinstance(attribution_sets, Sequence):
+            continue
+        for attribution_set in attribution_sets:
+            quality_flags = getattr(attribution_set, "quality_flags", ())
+            if isinstance(quality_flags, Sequence) and quality_flags:
+                degraded_set_count += 1
+
+    if degraded_set_count == 0:
+        return supportability
+
+    freshness_bucket = freshness_bucket_from_returns(returns, as_of_date=as_of_date)
+    return RiskCalculationSupportability(
+        state="degraded",
+        reason="calculation_quality_issue",
+        freshness_bucket=freshness_bucket,
+        degraded_metric_count=degraded_set_count,
+        empty_period_count=supportability.empty_period_count,
+        evaluated_period_count=len(results),
+    )
+
+
 def supportability_from_risk_metric_results(
     *,
     returns: Sequence[ReturnPoint],

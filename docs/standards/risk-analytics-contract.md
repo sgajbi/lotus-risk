@@ -70,8 +70,9 @@
 - Metrics and response metadata must not expose portfolio, client, account, position, transaction,
   security, trace, correlation, request-body, response-body, or raw request identifiers.
 - Endpoint-specific supportability must be source-backed: return-series endpoints derive freshness
-  and empty/degraded posture from period results, while concentration derives degraded posture from
-  issuer coverage and empty universe support.
+  and empty/degraded posture from period results, historical-attribution also degrades when any
+  attribution set emits quality flags, and concentration derives degraded posture from issuer
+  coverage and empty universe support.
 
 ## Risk Calculate Mode Support
 - `stateless`: caller supplies full return series.
