@@ -65,6 +65,9 @@ This index provides one methodology document per Lotus-Risk metric with formulas
 - [ATTRIBUTION_VOLATILITY](./metrics/attribution-volatility.md)
 - [ATTRIBUTION_TRACKING_ERROR](./metrics/attribution-tracking-error.md)
 
+## Regime Scenario Pack Evaluation (`/analytics/risk/regime-scenario-pack/evaluate`)
+- [RegimeScenarioPackEvaluation](./metrics/regime-scenario-pack-evaluation.md)
+
 ## Notes
 - Stateful active tracking-error attribution is currently partial/pending benchmark exposure-history upstream contract.
 - All docs are aligned to current implementation in `main`.

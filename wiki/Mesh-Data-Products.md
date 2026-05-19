@@ -90,7 +90,9 @@ loss. When callers provide reconciled `exposure_components`, the product emits p
 scenario contribution rows alongside worst-case loss, threshold-breach posture, lineage, and
 bounded reason codes. The rows are contribution evidence for governed CIO shocks, not full
 instrument repricing, and downstream proof packs must preserve them instead of rebuilding scenario
-logic outside `lotus-risk`.
+logic outside `lotus-risk`. The auditable methodology is pinned in
+`docs/methodologies/metrics/regime-scenario-pack-evaluation.md`, including formulas, validation and
+failure behavior, deterministic ordering, and a worked contribution example.
 
 ```mermaid
 flowchart LR

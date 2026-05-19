@@ -45,6 +45,9 @@ When `exposure_components` is supplied:
 
 ## Calculation Method
 
+The full auditable methodology is pinned in
+[`docs/methodologies/metrics/regime-scenario-pack-evaluation.md`](../methodologies/metrics/regime-scenario-pack-evaluation.md).
+
 For each governed scenario in the pack:
 
 1. normalize each requested exposure bucket to uppercase,
