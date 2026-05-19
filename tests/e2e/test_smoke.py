@@ -322,6 +322,44 @@ def test_e2e_risk_calculate_accepts_canonical_rolling_periods() -> None:
     assert body["results"]["3Y"]["metrics"]["VAR"]["value"] is not None
 
 
+def test_e2e_regime_scenario_pack_preserves_governance_evidence() -> None:
+    client = TestClient(app)
+
+    response = client.post(
+        "/analytics/risk/regime-scenario-pack/evaluate",
+        headers={"X-Correlation-Id": "corr-e2e-scenario-governance"},
+        json={
+            "scenario_pack_id": "CIO_REGIME_2026_Q2",
+            "portfolio_id": "PB_SG_GLOBAL_BAL_001",
+            "as_of_date": "2026-04-30",
+            "maximum_allowed_loss_pct": 0.12,
+            "exposures": [
+                {"bucket": "EQUITY", "weight": 0.55},
+                {"bucket": "FIXED_INCOME", "weight": 0.35},
+                {"bucket": "CASH", "weight": 0.10},
+            ],
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["metadata"]["calculation_supportability"] == "ready"
+    assert body["reason_codes"] == ["REGIME_SCENARIO_PACK_READY"]
+    assert body["governance_evidence"] == {
+        "cio_approval_status": "approved",
+        "cio_approval_ref": "CIO-REGIME-2026-Q2-APPROVAL",
+        "approved_by": "CIO Risk Committee",
+        "approved_at": "2026-04-15T09:00:00Z",
+        "effective_from": "2026-04-01",
+        "effective_to": "2026-06-30",
+        "effective_period_status": "active",
+        "applicability_status": "applicable",
+        "applicability_scope": ["DISCRETIONARY_PRIVATE_BANKING_BALANCED"],
+        "portfolio_applicability_ref": ("CIO-REGIME-2026-Q2-APPROVAL-APP-PB_SG_GLOBAL_BAL_001"),
+        "methodology_ref": "docs/methodologies/metrics/regime-scenario-pack-evaluation.md",
+    }
+
+
 def test_e2e_risk_calculate_stateful_mode() -> None:
     performance_client = RecordingLotusPerformanceClient(
         response_payload=build_returns_series_response(

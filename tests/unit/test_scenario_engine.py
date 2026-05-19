@@ -33,6 +33,12 @@ def test_regime_scenario_pack_evaluation_returns_source_owned_worst_case_loss() 
     assert response.worst_case_loss_pct == 0.106
     assert response.breach is False
     assert response.reason_codes == ["REGIME_SCENARIO_PACK_READY"]
+    assert response.governance_evidence.cio_approval_status == "approved"
+    assert response.governance_evidence.effective_period_status == "active"
+    assert response.governance_evidence.applicability_status == "applicable"
+    assert response.governance_evidence.portfolio_applicability_ref == (
+        "CIO-REGIME-2026-Q2-APPROVAL-APP-PB_SG_GLOBAL_BAL_001"
+    )
     assert response.metadata.request_fingerprint.startswith("sha256:")
     assert all(not scenario.position_contributions for scenario in response.scenario_results)
 
@@ -111,6 +117,34 @@ def test_regime_scenario_pack_evaluation_flags_threshold_breach() -> None:
         response.metadata.calculation_supportability == ScenarioSupportabilityState.PENDING_REVIEW
     )
     assert "REGIME_SCENARIO_POLICY_THRESHOLD_BREACH" in response.reason_codes
+
+
+def test_regime_scenario_pack_evaluation_degrades_for_effective_period_exception() -> None:
+    response = evaluate_regime_scenario_pack(_request(as_of_date="2026-07-01"))
+
+    assert response.metadata.calculation_supportability == ScenarioSupportabilityState.DEGRADED
+    assert response.governance_evidence.effective_period_status == "expired"
+    assert "REGIME_SCENARIO_EFFECTIVE_PERIOD_EXCEPTION" in response.reason_codes
+
+
+def test_regime_scenario_pack_evaluation_pending_review_without_portfolio_scope() -> None:
+    response = evaluate_regime_scenario_pack(_request(portfolio_id=None))
+
+    assert (
+        response.metadata.calculation_supportability == ScenarioSupportabilityState.PENDING_REVIEW
+    )
+    assert response.governance_evidence.applicability_status == "pending_review"
+    assert response.governance_evidence.portfolio_applicability_ref is None
+    assert "REGIME_SCENARIO_PORTFOLIO_APPLICABILITY_NOT_CONFIRMED" in response.reason_codes
+
+
+def test_regime_scenario_pack_evaluation_blocks_non_applicable_portfolio() -> None:
+    response = evaluate_regime_scenario_pack(_request(portfolio_id="PB_OTHER"))
+
+    assert response.metadata.calculation_supportability == ScenarioSupportabilityState.BLOCKED
+    assert response.governance_evidence.applicability_status == "not_applicable"
+    assert response.governance_evidence.portfolio_applicability_ref is None
+    assert "REGIME_SCENARIO_PORTFOLIO_NOT_APPLICABLE" in response.reason_codes
 
 
 def test_regime_scenario_pack_evaluation_degrades_for_unsupported_exposure_bucket() -> None:

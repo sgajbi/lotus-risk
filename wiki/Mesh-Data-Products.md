@@ -88,11 +88,13 @@ boundaries, and issuer-enrichment isolation from `risk_proxy.hhi_*`,
 `RegimeScenarioPackEvaluation:v1` now carries source-owned scenario-pack evidence beyond aggregate
 loss. When callers provide reconciled `exposure_components`, the product emits per-security
 scenario contribution rows alongside worst-case loss, threshold-breach posture, lineage, and
-bounded reason codes. The rows are contribution evidence for governed CIO shocks, not full
-instrument repricing, and downstream proof packs must preserve them instead of rebuilding scenario
-logic outside `lotus-risk`. The auditable methodology is pinned in
+bounded reason codes. It also emits bounded source-owned CIO approval, effective-period, and
+portfolio-applicability posture so downstream proof packs do not invent those checks locally. The
+rows are contribution evidence for governed CIO shocks, not full instrument repricing, and
+downstream proof packs must preserve them instead of rebuilding scenario logic outside
+`lotus-risk`. The auditable methodology is pinned in
 `docs/methodologies/metrics/regime-scenario-pack-evaluation.md`, including formulas, validation and
-failure behavior, deterministic ordering, and a worked contribution example.
+failure behavior, deterministic ordering, governance posture, and a worked contribution example.
 
 ```mermaid
 flowchart LR

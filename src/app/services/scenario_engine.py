@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime as dt
 import hashlib
 import json
 from dataclasses import dataclass
@@ -9,6 +10,10 @@ from app.contracts.scenario import (
     RegimeScenarioPackResponse,
     ScenarioEvaluationMetadata,
     ScenarioExposureComponent,
+    ScenarioPackApplicabilityStatus,
+    ScenarioPackApprovalStatus,
+    ScenarioPackEffectivePeriodStatus,
+    ScenarioPackGovernanceEvidence,
     ScenarioPositionContribution,
     ScenarioResult,
     ScenarioSupportabilityState,
@@ -20,6 +25,19 @@ class ScenarioDefinition:
     scenario_id: str
     display_name: str
     shock_by_bucket: dict[str, float]
+
+
+@dataclass(frozen=True)
+class ScenarioPackGovernanceDefinition:
+    cio_approval_status: ScenarioPackApprovalStatus
+    cio_approval_ref: str
+    approved_by: str
+    approved_at: dt.datetime
+    effective_from: dt.date
+    effective_to: dt.date
+    applicability_scope: tuple[str, ...]
+    applicable_portfolio_ids: frozenset[str]
+    methodology_ref: str
 
 
 SCENARIO_PACKS: dict[str, tuple[ScenarioDefinition, ...]] = {
@@ -57,6 +75,19 @@ SCENARIO_PACKS: dict[str, tuple[ScenarioDefinition, ...]] = {
     )
 }
 SUPPORTED_BUCKETS = frozenset({"EQUITY", "FIXED_INCOME", "ALTERNATIVES", "CASH"})
+SCENARIO_PACK_GOVERNANCE: dict[str, ScenarioPackGovernanceDefinition] = {
+    "CIO_REGIME_2026_Q2": ScenarioPackGovernanceDefinition(
+        cio_approval_status=ScenarioPackApprovalStatus.APPROVED,
+        cio_approval_ref="CIO-REGIME-2026-Q2-APPROVAL",
+        approved_by="CIO Risk Committee",
+        approved_at=dt.datetime(2026, 4, 15, 9, 0, tzinfo=dt.UTC),
+        effective_from=dt.date(2026, 4, 1),
+        effective_to=dt.date(2026, 6, 30),
+        applicability_scope=("DISCRETIONARY_PRIVATE_BANKING_BALANCED",),
+        applicable_portfolio_ids=frozenset({"PB_SG_GLOBAL_BAL_001"}),
+        methodology_ref="docs/methodologies/metrics/regime-scenario-pack-evaluation.md",
+    )
+}
 
 
 def evaluate_regime_scenario_pack(
@@ -75,6 +106,13 @@ def evaluate_regime_scenario_pack(
         if unsupported_buckets
         else ScenarioSupportabilityState.READY
     )
+    governance_evidence, governance_reason_codes, governance_supportability = (
+        _evaluate_governance_evidence(request)
+    )
+    supportability = _most_severe_supportability(
+        supportability,
+        governance_supportability,
+    )
     scenario_results = [
         _evaluate_scenario(
             scenario=scenario,
@@ -91,6 +129,7 @@ def evaluate_regime_scenario_pack(
     reason_codes = ["REGIME_SCENARIO_PACK_READY"]
     if unsupported_buckets:
         reason_codes.append("REGIME_SCENARIO_UNSUPPORTED_EXPOSURE_BUCKET")
+    reason_codes.extend(governance_reason_codes)
     if breach:
         reason_codes.append("REGIME_SCENARIO_POLICY_THRESHOLD_BREACH")
         if supportability == ScenarioSupportabilityState.READY:
@@ -104,12 +143,88 @@ def evaluate_regime_scenario_pack(
         maximum_allowed_loss_pct=request.maximum_allowed_loss_pct,
         breach=breach,
         scenario_results=scenario_results,
+        governance_evidence=governance_evidence,
         reason_codes=sorted(set(reason_codes)),
         metadata=ScenarioEvaluationMetadata(
             request_fingerprint=_request_fingerprint(request),
             calculation_supportability=supportability,
         ),
     )
+
+
+def _evaluate_governance_evidence(
+    request: RegimeScenarioPackRequest,
+) -> tuple[ScenarioPackGovernanceEvidence, list[str], ScenarioSupportabilityState]:
+    governance = SCENARIO_PACK_GOVERNANCE[request.scenario_pack_id]
+    reason_codes: list[str] = []
+    supportability = ScenarioSupportabilityState.READY
+
+    if governance.cio_approval_status != ScenarioPackApprovalStatus.APPROVED:
+        reason_codes.append("REGIME_SCENARIO_CIO_APPROVAL_NOT_CONFIRMED")
+        supportability = ScenarioSupportabilityState.BLOCKED
+
+    effective_period_status = ScenarioPackEffectivePeriodStatus.ACTIVE
+    if request.as_of_date < governance.effective_from:
+        effective_period_status = ScenarioPackEffectivePeriodStatus.NOT_YET_EFFECTIVE
+        reason_codes.append("REGIME_SCENARIO_EFFECTIVE_PERIOD_EXCEPTION")
+        supportability = _most_severe_supportability(
+            supportability,
+            ScenarioSupportabilityState.DEGRADED,
+        )
+    elif request.as_of_date > governance.effective_to:
+        effective_period_status = ScenarioPackEffectivePeriodStatus.EXPIRED
+        reason_codes.append("REGIME_SCENARIO_EFFECTIVE_PERIOD_EXCEPTION")
+        supportability = _most_severe_supportability(
+            supportability,
+            ScenarioSupportabilityState.DEGRADED,
+        )
+
+    applicability_status = ScenarioPackApplicabilityStatus.APPLICABLE
+    portfolio_applicability_ref: str | None = None
+    if request.portfolio_id is None:
+        applicability_status = ScenarioPackApplicabilityStatus.PENDING_REVIEW
+        reason_codes.append("REGIME_SCENARIO_PORTFOLIO_APPLICABILITY_NOT_CONFIRMED")
+        supportability = _most_severe_supportability(
+            supportability,
+            ScenarioSupportabilityState.PENDING_REVIEW,
+        )
+    elif request.portfolio_id in governance.applicable_portfolio_ids:
+        portfolio_applicability_ref = f"{governance.cio_approval_ref}-APP-{request.portfolio_id}"
+    else:
+        applicability_status = ScenarioPackApplicabilityStatus.NOT_APPLICABLE
+        reason_codes.append("REGIME_SCENARIO_PORTFOLIO_NOT_APPLICABLE")
+        supportability = ScenarioSupportabilityState.BLOCKED
+
+    return (
+        ScenarioPackGovernanceEvidence(
+            cio_approval_status=governance.cio_approval_status,
+            cio_approval_ref=governance.cio_approval_ref,
+            approved_by=governance.approved_by,
+            approved_at=governance.approved_at,
+            effective_from=governance.effective_from,
+            effective_to=governance.effective_to,
+            effective_period_status=effective_period_status,
+            applicability_status=applicability_status,
+            applicability_scope=list(governance.applicability_scope),
+            portfolio_applicability_ref=portfolio_applicability_ref,
+            methodology_ref=governance.methodology_ref,
+        ),
+        reason_codes,
+        supportability,
+    )
+
+
+def _most_severe_supportability(
+    left: ScenarioSupportabilityState,
+    right: ScenarioSupportabilityState,
+) -> ScenarioSupportabilityState:
+    severity = {
+        ScenarioSupportabilityState.READY: 0,
+        ScenarioSupportabilityState.PENDING_REVIEW: 1,
+        ScenarioSupportabilityState.DEGRADED: 2,
+        ScenarioSupportabilityState.BLOCKED: 3,
+    }
+    return left if severity[left] >= severity[right] else right
 
 
 def _evaluate_scenario(

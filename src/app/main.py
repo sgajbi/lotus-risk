@@ -595,7 +595,7 @@ async def integration_capabilities() -> IntegrationCapabilitiesResponse:
                 support_status="full",
                 notes=[
                     "evaluates caller-supplied exposure weights against governed CIO scenario packs",
-                    "returns source-owned worst-case loss, per-security contribution rows when supplied, policy breach posture, and lineage",
+                    "returns source-owned worst-case loss, per-security contribution rows when supplied, CIO approval/effective-period/applicability posture, policy breach posture, and lineage",
                     "does not forecast market states or accept browser-owned scenario methodology",
                 ],
             ),
@@ -640,7 +640,8 @@ async def metrics() -> Response:
     description=(
         "Evaluates caller-supplied portfolio exposure weights against a governed CIO regime "
         "scenario pack and returns source-owned worst-case loss, policy-threshold breach posture, "
-        "optional per-security contribution rows, bounded reason codes, and lineage metadata. "
+        "optional per-security contribution rows, CIO approval/effective-period/applicability "
+        "posture, bounded reason codes, and lineage metadata. "
         "Consumers must not reconstruct scenario methodology outside lotus-risk."
     ),
 )

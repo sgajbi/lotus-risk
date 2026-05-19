@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-05-16T00:50:34.746380+00:00",
+  "generatedAt": "2026-05-19T12:42:33.039494+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.affected_portfolios",
@@ -100,6 +100,36 @@
       ]
     },
     {
+      "semanticId": "lotus.applicability_scope",
+      "canonicalTerm": "applicability_scope",
+      "preferredName": "applicability_scope",
+      "description": "Governed portfolio or mandate scope labels for which this pack is approved.",
+      "example": [
+        "DISCRETIONARY_PRIVATE_BANKING_BALANCED"
+      ],
+      "type": "array",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "array"
+      ]
+    },
+    {
+      "semanticId": "lotus.applicability_status",
+      "canonicalTerm": "applicability_status",
+      "preferredName": "applicability_status",
+      "description": "Canonical applicability status used by lotus-risk APIs.",
+      "example": "applicable",
+      "type": "ScenarioPackApplicabilityStatus",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "ScenarioPackApplicabilityStatus"
+      ]
+    },
+    {
       "semanticId": "lotus.applied",
       "canonicalTerm": "applied",
       "preferredName": "applied",
@@ -111,6 +141,34 @@
       ],
       "observedTypes": [
         "boolean"
+      ]
+    },
+    {
+      "semanticId": "lotus.approved_at",
+      "canonicalTerm": "approved_at",
+      "preferredName": "approved_at",
+      "description": "Timestamp when the scenario pack was approved.",
+      "example": "2026-04-15T09:00:00Z",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.approved_by",
+      "canonicalTerm": "approved_by",
+      "preferredName": "approved_by",
+      "description": "Approving CIO or risk-governance body.",
+      "example": "CIO Risk Committee",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
       ]
     },
     {
@@ -307,6 +365,34 @@
       ],
       "observedTypes": [
         "OpsChecks"
+      ]
+    },
+    {
+      "semanticId": "lotus.cio_approval_ref",
+      "canonicalTerm": "cio_approval_ref",
+      "preferredName": "cio_approval_ref",
+      "description": "Source-owned approval reference for the governed scenario pack.",
+      "example": "CIO-REGIME-2026-Q2-APPROVAL",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.cio_approval_status",
+      "canonicalTerm": "cio_approval_status",
+      "preferredName": "cio_approval_status",
+      "description": "Canonical cio approval status used by lotus-risk APIs.",
+      "example": "approved",
+      "type": "ScenarioPackApprovalStatus",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "ScenarioPackApprovalStatus"
       ]
     },
     {
@@ -743,6 +829,48 @@
       ]
     },
     {
+      "semanticId": "lotus.effective_from",
+      "canonicalTerm": "effective_from",
+      "preferredName": "effective_from",
+      "description": "First as-of date for which the scenario pack is effective.",
+      "example": "2026-04-01",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.effective_period_status",
+      "canonicalTerm": "effective_period_status",
+      "preferredName": "effective_period_status",
+      "description": "Canonical effective period status used by lotus-risk APIs.",
+      "example": "active",
+      "type": "ScenarioPackEffectivePeriodStatus",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "ScenarioPackEffectivePeriodStatus"
+      ]
+    },
+    {
+      "semanticId": "lotus.effective_to",
+      "canonicalTerm": "effective_to",
+      "preferredName": "effective_to",
+      "description": "Last as-of date for which the scenario pack is effective.",
+      "example": "2026-06-30",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
       "semanticId": "lotus.emitted_at",
       "canonicalTerm": "emitted_at",
       "preferredName": "emitted_at",
@@ -993,6 +1121,22 @@
       ],
       "observedTypes": [
         "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.governance_evidence",
+      "canonicalTerm": "governance_evidence",
+      "preferredName": "governance_evidence",
+      "description": "Canonical governance evidence used by lotus-risk APIs.",
+      "example": {
+        "key": "value"
+      },
+      "type": "ScenarioPackGovernanceEvidence",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "ScenarioPackGovernanceEvidence"
       ]
     },
     {
@@ -1338,6 +1482,20 @@
       ]
     },
     {
+      "semanticId": "lotus.methodology_ref",
+      "canonicalTerm": "methodology_ref",
+      "preferredName": "methodology_ref",
+      "description": "Methodology document or lineage reference for scenario and governance posture.",
+      "example": "docs/methodologies/metrics/regime-scenario-pack-evaluation.md",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
       "semanticId": "lotus.methodology_version",
       "canonicalTerm": "methodology_version",
       "preferredName": "methodology_version",
@@ -1540,6 +1698,20 @@
       ],
       "observedTypes": [
         "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.portfolio_applicability_ref",
+      "canonicalTerm": "portfolio_applicability_ref",
+      "preferredName": "portfolio_applicability_ref",
+      "description": "Source-owned reference proving the requested portfolio is in scope when known.",
+      "example": "CIO-REGIME-2026-Q2-APP-PB_SG_GLOBAL_BAL_001",
+      "type": "object",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "object"
       ]
     },
     {
@@ -4140,6 +4312,102 @@
             "type": "number",
             "semanticId": "lotus.contribution_loss_pct",
             "attributeRef": "#/attributeCatalog/lotus.contribution_loss_pct"
+          },
+          {
+            "name": "governance_evidence",
+            "location": "body",
+            "required": true,
+            "type": "ScenarioPackGovernanceEvidence",
+            "semanticId": "lotus.governance_evidence",
+            "attributeRef": "#/attributeCatalog/lotus.governance_evidence"
+          },
+          {
+            "name": "governance_evidence.cio_approval_status",
+            "location": "body",
+            "required": true,
+            "type": "ScenarioPackApprovalStatus",
+            "semanticId": "lotus.cio_approval_status",
+            "attributeRef": "#/attributeCatalog/lotus.cio_approval_status"
+          },
+          {
+            "name": "governance_evidence.cio_approval_ref",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.cio_approval_ref",
+            "attributeRef": "#/attributeCatalog/lotus.cio_approval_ref"
+          },
+          {
+            "name": "governance_evidence.approved_by",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.approved_by",
+            "attributeRef": "#/attributeCatalog/lotus.approved_by"
+          },
+          {
+            "name": "governance_evidence.approved_at",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.approved_at",
+            "attributeRef": "#/attributeCatalog/lotus.approved_at"
+          },
+          {
+            "name": "governance_evidence.effective_from",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.effective_from",
+            "attributeRef": "#/attributeCatalog/lotus.effective_from"
+          },
+          {
+            "name": "governance_evidence.effective_to",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.effective_to",
+            "attributeRef": "#/attributeCatalog/lotus.effective_to"
+          },
+          {
+            "name": "governance_evidence.effective_period_status",
+            "location": "body",
+            "required": true,
+            "type": "ScenarioPackEffectivePeriodStatus",
+            "semanticId": "lotus.effective_period_status",
+            "attributeRef": "#/attributeCatalog/lotus.effective_period_status"
+          },
+          {
+            "name": "governance_evidence.applicability_status",
+            "location": "body",
+            "required": true,
+            "type": "ScenarioPackApplicabilityStatus",
+            "semanticId": "lotus.applicability_status",
+            "attributeRef": "#/attributeCatalog/lotus.applicability_status"
+          },
+          {
+            "name": "governance_evidence.applicability_scope",
+            "location": "body",
+            "required": true,
+            "type": "array",
+            "semanticId": "lotus.applicability_scope",
+            "attributeRef": "#/attributeCatalog/lotus.applicability_scope"
+          },
+          {
+            "name": "governance_evidence.portfolio_applicability_ref",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.portfolio_applicability_ref",
+            "attributeRef": "#/attributeCatalog/lotus.portfolio_applicability_ref"
+          },
+          {
+            "name": "governance_evidence.methodology_ref",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.methodology_ref",
+            "attributeRef": "#/attributeCatalog/lotus.methodology_ref"
           },
           {
             "name": "reason_codes",
