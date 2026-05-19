@@ -59,6 +59,9 @@ ATTRIBUTION_VOLATILITY_DOC = (
 ATTRIBUTION_TRACKING_ERROR_DOC = (
     REPO_ROOT / "docs" / "methodologies" / "metrics" / "attribution-tracking-error.md"
 )
+REGIME_SCENARIO_PACK_DOC = (
+    REPO_ROOT / "docs" / "methodologies" / "metrics" / "regime-scenario-pack-evaluation.md"
+)
 
 
 EXPECTED_V3_SECTIONS = [
@@ -89,6 +92,32 @@ def test_historical_attribution_methodologies_record_quality_flag_supportability
         assert "metadata.calculation_supportability" in text
         assert "calculation_quality_issue" in text
         assert "quality flag" in text
+
+
+def test_regime_scenario_pack_methodology_is_auditable_against_engine_contract() -> None:
+    text = REGIME_SCENARIO_PACK_DOC.read_text(encoding="utf-8")
+
+    _assert_v3_section_order(text)
+
+    required_truth = [
+        "product_name: RegimeScenarioPackEvaluation",
+        "methodology_version: risk-regime-scenario-pack-evaluation.v1",
+        "/analytics/risk/regime-scenario-pack/evaluate",
+        "CIO_REGIME_2026_Q2",
+        "contribution_{S,i} = max(-(q_{i,b} * shock_{S,b}), 0.0)",
+        "component weights must reconcile to the matching exposure bucket within `0.000001`",
+        "REGIME_SCENARIO_UNSUPPORTED_EXPOSURE_BUCKET",
+        "REGIME_SCENARIO_POLICY_THRESHOLD_BREACH",
+        "metadata.calculation_supportability = ready",
+        "scenario_results[].expected_loss_pct = 0.0660 + 0.0105 + 0.0000 = 0.0765",
+        "worst_case_loss_pct = 0.1060",
+        "FO_EQ_AAPL_US",
+        "0.0360",
+        "not a market forecast, full instrument repricing model",
+    ]
+
+    for phrase in required_truth:
+        assert phrase in text
 
 
 def test_rolling_volatility_methodology_is_auditable_against_engine_contract() -> None:
