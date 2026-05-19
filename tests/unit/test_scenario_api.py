@@ -56,6 +56,12 @@ def test_regime_scenario_pack_endpoint_returns_evaluation_contract() -> None:
     assert body["worst_case_loss_pct"] == 0.106
     assert body["metadata"]["product_name"] == "RegimeScenarioPackEvaluation"
     assert body["metadata"]["calculation_supportability"] == "ready"
+    assert body["governance_evidence"]["cio_approval_status"] == "approved"
+    assert body["governance_evidence"]["effective_period_status"] == "active"
+    assert body["governance_evidence"]["applicability_status"] == "applicable"
+    assert body["governance_evidence"]["portfolio_applicability_ref"] == (
+        "CIO-REGIME-2026-Q2-APPROVAL-APP-PB_SG_GLOBAL_BAL_001"
+    )
     assert body["reason_codes"] == ["REGIME_SCENARIO_PACK_READY"]
     growth_slowdown = next(
         scenario
@@ -84,7 +90,7 @@ def test_capabilities_include_regime_scenario_pack_workflow() -> None:
     )
     assert workflows["regime_scenario_pack_evaluation"]["support_status"] == "full"
     assert (
-        "returns source-owned worst-case loss, per-security contribution rows when supplied, policy breach posture, and lineage"
+        "returns source-owned worst-case loss, per-security contribution rows when supplied, CIO approval/effective-period/applicability posture, policy breach posture, and lineage"
         in workflows["regime_scenario_pack_evaluation"]["notes"]
     )
 
@@ -107,4 +113,10 @@ def test_openapi_documents_regime_scenario_pack_component_rows() -> None:
     assert (
         "not a full repricing model"
         in result_schema["properties"]["position_contributions"]["description"]
+    )
+    response_schema = components["RegimeScenarioPackResponse"]
+    assert "governance_evidence" in response_schema["properties"]
+    assert (
+        "CIO approval, effective-period, and portfolio-applicability evidence"
+        in response_schema["properties"]["governance_evidence"]["description"]
     )

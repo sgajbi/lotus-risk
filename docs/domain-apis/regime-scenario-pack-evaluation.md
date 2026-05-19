@@ -18,7 +18,8 @@
 This endpoint evaluates a portfolio exposure profile against a governed CIO scenario pack. It gives
 portfolio construction, advisory oversight, and proof-pack workflows a source-owned stress posture:
 worst-case loss, threshold breach state, scenario-by-scenario loss, bounded reason codes, lineage,
-and optional per-security contribution rows.
+optional per-security contribution rows, and bounded CIO approval/effective-period/portfolio
+applicability posture.
 
 The endpoint is not a forecasting engine and is not a full instrument repricing model. It applies
 risk-owned scenario shocks to caller-supplied exposure weights and, when supplied, reconciled
@@ -55,7 +56,9 @@ For each governed scenario in the pack:
 3. compute bucket loss as `max(-(weight * shock), 0.0)`,
 4. sum bucket losses into `expected_loss_pct`,
 5. compute `worst_case_loss_pct` as the maximum expected loss across scenarios,
-6. set `breach` when `worst_case_loss_pct > maximum_allowed_loss_pct`.
+6. emit source-owned `governance_evidence` for CIO approval, effective-period, and portfolio
+   applicability,
+7. set `breach` when `worst_case_loss_pct > maximum_allowed_loss_pct`.
 
 When component rows are present, each component receives the shock for its bucket and returns:
 
@@ -103,6 +106,12 @@ For the `growth_slowdown` scenario, the expected contribution rows include:
 
 - Unknown scenario packs raise a deterministic validation failure.
 - Unsupported exposure buckets produce a degraded supportability state and bounded reason codes.
+- Requests outside the source-owned effective period are degraded with
+  `REGIME_SCENARIO_EFFECTIVE_PERIOD_EXCEPTION`.
+- Requests without portfolio applicability evidence are pending review with
+  `REGIME_SCENARIO_PORTFOLIO_APPLICABILITY_NOT_CONFIRMED`.
+- Requests for portfolios outside the source-owned applicability registry are blocked with
+  `REGIME_SCENARIO_PORTFOLIO_NOT_APPLICABLE`.
 - Reconciled component rows are optional; bucket-only requests continue to return no position rows.
 - The response includes deterministic request fingerprinting for audit replay.
 
@@ -111,4 +120,5 @@ For the `growth_slowdown` scenario, the expected contribution rows include:
 Downstream services may format or filter the rows for a user interface, but they must not derive a
 different scenario methodology or replace the risk-owned contribution calculation. Stored proof
 packs should retain `scenario_results`, `position_contributions`, `reason_codes`, and `metadata` as
-source-owned evidence.
+source-owned evidence. They should also retain `governance_evidence` instead of validating CIO
+approval, effective period, or portfolio applicability locally.

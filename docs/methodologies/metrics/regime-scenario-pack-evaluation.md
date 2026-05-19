@@ -10,7 +10,8 @@
 
 This product evaluates caller-supplied portfolio exposure weights against a risk-owned CIO
 scenario pack. It returns scenario-level expected loss, worst-case loss, policy-threshold posture,
-source-owned supportability, deterministic lineage, and optional per-security contribution rows.
+source-owned CIO approval, effective-period and portfolio-applicability posture, source-owned
+supportability, deterministic lineage, and optional per-security contribution rows.
 
 ## Endpoint and Mode Coverage
 
@@ -20,9 +21,12 @@ source-owned supportability, deterministic lineage, and optional per-security co
 - response contract: `RegimeScenarioPackResponse`
 - downstream consumers must preserve the returned `scenario_results` and
   `scenario_results[].position_contributions` instead of recalculating scenario methodology.
+- downstream consumers must preserve `governance_evidence` instead of substituting local CIO
+  approval, effective-period, or applicability checks.
 
 The endpoint is not a market forecast, full instrument repricing model, client suitability engine,
-CIO approval workflow validator, mandate-applicability calculator, or execution/OMS product.
+client suitability approval, mandate recommendation, or execution/OMS product. It validates only
+the bounded scenario-pack governance fields owned by this source product.
 
 ## Inputs
 
@@ -40,8 +44,10 @@ CIO approval workflow validator, mandate-applicability calculator, or execution/
 - The caller supplies exposure weights and optional reconciled position components.
 - `lotus-risk` owns the scenario pack definitions, scenario identifiers, display names, and
   scenario shocks by bucket.
-- The current implementation does not fetch holdings, market prices, factor models, CIO approval
-  workflow state, mandate-applicability evidence, OMS acknowledgements, fills, or settlement data.
+- `lotus-risk` owns the bounded scenario-pack governance registry used to emit CIO approval,
+  effective-period, and portfolio-applicability posture for the current pack.
+- The current implementation does not fetch holdings, market prices, factor models, client
+  suitability state, mandate recommendation state, OMS acknowledgements, fills, or settlement data.
 
 ## Unit Conventions
 
@@ -67,6 +73,9 @@ CIO approval workflow validator, mandate-applicability calculator, or execution/
 | `L_S` | `scenario_results[].expected_loss_pct` | Total expected loss under scenario `S`. |
 | `L_worst` | `worst_case_loss_pct` | Maximum expected loss across scenarios. |
 | `T` | `maximum_allowed_loss_pct` | Consumer policy threshold. |
+| `A_P` | `governance_evidence.cio_approval_status` | Source-owned CIO approval status for pack `P`. |
+| `E_P` | `governance_evidence.effective_period_status` | Source-owned effective-period posture for `as_of_date`. |
+| `G_P` | `governance_evidence.applicability_status` | Source-owned portfolio-applicability posture. |
 
 ## Methodology and Formulas
 
@@ -98,23 +107,38 @@ contribution_{S,i} = max(-(q_{i,b} * shock_{S,b}), 0.0)
 Contribution rows are sorted deterministically by descending `contribution_loss_pct`, then `bucket`,
 then `security_id`.
 
+Governance posture:
+
+```text
+A_P = approved when the pack registry marks P approved
+E_P = active when effective_from <= as_of_date <= effective_to
+G_P = applicable when portfolio_id is in the pack applicability registry
+```
+
+The current pack is approved by `CIO Risk Committee`, effective from `2026-04-01` through
+`2026-06-30`, and applicable to `PB_SG_GLOBAL_BAL_001` under
+`DISCRETIONARY_PRIVATE_BANKING_BALANCED` scope.
+
 ## Step-by-Step Computation
 
 1. Look up `scenario_pack_id` in the risk-owned `SCENARIO_PACKS` registry.
 2. Normalize `exposures[].bucket` to uppercase and build `exposure_by_bucket`.
 3. Compare requested buckets with `SUPPORTED_BUCKETS`.
-4. Validate optional `exposure_components[]` at request-model level:
+4. Look up source-owned scenario-pack governance in `SCENARIO_PACK_GOVERNANCE`.
+5. Validate optional `exposure_components[]` at request-model level:
    - every component bucket must be present in `exposures[]`,
    - component weights must reconcile to the matching exposure bucket within `0.000001`.
-5. For each scenario in the pack:
+6. For each scenario in the pack:
    - get `shock_by_bucket[b]`, defaulting to `0.0` for unsupported requested buckets,
    - compute bucket losses,
    - sum bucket losses into `expected_loss_pct`,
    - compute optional position contribution rows from component weights and bucket shocks.
-6. Set `worst_case_loss_pct` to the maximum scenario `expected_loss_pct`.
-7. Set `breach` when `worst_case_loss_pct > maximum_allowed_loss_pct`.
-8. Emit sorted bounded `reason_codes`.
-9. Emit `metadata.request_fingerprint` as a deterministic SHA-256 hash of the canonical request.
+7. Emit `governance_evidence` from source-owned approval, effective-period, and applicability
+   posture.
+8. Set `worst_case_loss_pct` to the maximum scenario `expected_loss_pct`.
+9. Set `breach` when `worst_case_loss_pct > maximum_allowed_loss_pct`.
+10. Emit sorted bounded `reason_codes`.
+11. Emit `metadata.request_fingerprint` as a deterministic SHA-256 hash of the canonical request.
 
 ## Validation and Failure Behavior
 
@@ -129,6 +153,15 @@ then `security_id`.
   `REGIME_SCENARIO_UNSUPPORTED_EXPOSURE_BUCKET`.
 - Threshold breaches produce `REGIME_SCENARIO_POLICY_THRESHOLD_BREACH`; when no other degraded
   posture exists, supportability becomes `pending_review`.
+- A request outside the source-owned effective period produces
+  `REGIME_SCENARIO_EFFECTIVE_PERIOD_EXCEPTION` and
+  `metadata.calculation_supportability = degraded`.
+- A request without `portfolio_id` produces
+  `REGIME_SCENARIO_PORTFOLIO_APPLICABILITY_NOT_CONFIRMED` and
+  `metadata.calculation_supportability = pending_review`.
+- A request for a portfolio outside the source-owned applicability registry produces
+  `REGIME_SCENARIO_PORTFOLIO_NOT_APPLICABLE` and
+  `metadata.calculation_supportability = blocked`.
 - Bucket-only requests return empty `position_contributions[]`.
 
 ## Configuration Options
@@ -142,7 +175,7 @@ The current source-owned scenario pack registry is code-defined:
 Current supported buckets are `EQUITY`, `FIXED_INCOME`, `ALTERNATIVES`, and `CASH`.
 
 No runtime caller option can override shocks, scenario ids, contribution formula, supportability
-classification, sorting, or request fingerprinting.
+classification, governance posture, sorting, or request fingerprinting.
 
 ## Outputs
 
@@ -151,10 +184,11 @@ classification, sorting, or request fingerprinting.
 | `scenario_results[].expected_loss_pct` | Scenario-level decimal expected loss after six-decimal rounding. |
 | `scenario_results[].shock_by_bucket` | Risk-owned shock definitions for the scenario. |
 | `scenario_results[].position_contributions[]` | Optional source-owned component contribution rows. |
+| `governance_evidence` | Source-owned CIO approval, effective-period, and portfolio-applicability evidence. |
 | `worst_case_loss_pct` | Maximum scenario expected loss after six-decimal rounding. |
 | `breach` | Whether `worst_case_loss_pct > maximum_allowed_loss_pct`. |
 | `reason_codes[]` | Bounded calculation and policy posture reason codes. |
-| `metadata.calculation_supportability` | `ready`, `degraded`, or `pending_review` for current implementation paths. |
+| `metadata.calculation_supportability` | `ready`, `pending_review`, `degraded`, or `blocked` for current implementation paths. |
 | `metadata.request_fingerprint` | Deterministic request hash for replay and audit. |
 
 ## Worked Example
@@ -196,6 +230,9 @@ worst_case_loss_pct = 0.1060
 breach = false
 metadata.calculation_supportability = ready
 reason_codes = ["REGIME_SCENARIO_PACK_READY"]
+governance_evidence.cio_approval_status = approved
+governance_evidence.effective_period_status = active
+governance_evidence.applicability_status = applicable
 ```
 
 When the equity exposure is split into `FO_EQ_AAPL_US = 0.30` and `FO_EQ_MSFT_US = 0.25`, the
