@@ -35,6 +35,7 @@
   - `risk.analytics.concentration`
   - `risk.analytics.rolling_metrics`
   - `risk.analytics.historical_attribution`
+  - `risk.analytics.mandate_risk_health_context`
   - `risk.analytics.regime_scenario_pack`
   - `risk.analytics.risk_event_affected_cohort`
   - `risk.analytics.metrics`
@@ -45,6 +46,7 @@
   - `concentration_risk`
   - `rolling_risk_analytics`
   - `historical_risk_attribution`
+  - `mandate_risk_health_context`
   - `regime_scenario_pack_evaluation`
   - `risk_event_affected_cohort`
 
@@ -63,6 +65,9 @@ This allows consumers to discover that:
 - historical-attribution response metadata is the authoritative active-risk support contract
 - risk snapshot VaR and expected shortfall are signed return-threshold metrics
 - historical attribution residual and `reconciled_sum` must be preserved with contributors
+- mandate risk health context is a stateless source-owned workflow that derives bounded
+  tracking-error health posture from lotus-risk methodology and returns threshold posture,
+  lineage, and non-claim reason codes for Manage consumption
 - regime scenario-pack evaluation is a stateless source-owned workflow that returns worst-case loss,
   optional per-security contribution rows when reconciled exposure components are supplied,
   policy-threshold breach posture, lineage, and bounded reason codes from risk-owned CIO scenario
@@ -82,7 +87,8 @@ This allows consumers to discover that:
 - Downstream consumers:
   - `lotus-gateway` capability aggregation (`/api/v1/platform/capabilities`).
   - `lotus-manage` future RFC40 scenario proof-pack and RFC41 wave trigger consumption for
-    source-owned scenario and risk-event evidence.
+    source-owned scenario and risk-event evidence, plus RFC38 mandate-health risk context
+    consumption.
   - downstream cleanup for undeclared risk capability query params is tracked in
     `sgajbi/lotus-gateway#113`.
 - Upstream dependencies:

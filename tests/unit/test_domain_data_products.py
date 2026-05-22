@@ -24,6 +24,7 @@ def test_list_declared_products_matches_expected_wave() -> None:
         "RollingRiskMetricsReport",
         "HistoricalRiskAttributionReport",
         "ConcentrationRiskReport",
+        "MandateRiskHealthContext",
         "RegimeScenarioPackEvaluation",
         "RiskEventAffectedCohort",
     ]
@@ -47,6 +48,20 @@ def test_regime_scenario_pack_declaration_tracks_position_identifiers() -> None:
 
     assert product["approved_consumers"] == ["lotus-gateway", "lotus-manage"]
     assert product["identifier_refs"] == ["portfolio_id", "instrument_id"]
+
+
+def test_mandate_risk_health_context_declaration_is_manage_consumable() -> None:
+    product = get_declared_product(
+        product_name="MandateRiskHealthContext",
+        product_version="v1",
+    )
+
+    assert product["current_routes"] == ["/analytics/risk/mandate-health-context"]
+    assert product["approved_consumers"] == ["lotus-gateway", "lotus-manage"]
+    assert product["completeness_policy"] == {
+        "default_status": "partial",
+        "partial_allowed": True,
+    }
 
 
 def test_get_declared_product_rejects_unknown_product() -> None:
