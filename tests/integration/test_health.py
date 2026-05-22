@@ -43,6 +43,7 @@ def test_integration_capabilities_contract() -> None:
         "risk.analytics.drawdown",
         "risk.analytics.rolling_metrics",
         "risk.analytics.historical_attribution",
+        "risk.analytics.mandate_risk_health_context",
         "risk.analytics.regime_scenario_pack",
         "risk.analytics.risk_event_affected_cohort",
         "risk.analytics.metrics",
@@ -55,6 +56,7 @@ def test_integration_capabilities_contract() -> None:
         "drawdown_analytics",
         "rolling_risk_analytics",
         "historical_risk_attribution",
+        "mandate_risk_health_context",
         "regime_scenario_pack_evaluation",
         "risk_event_affected_cohort",
     }
@@ -69,6 +71,11 @@ def test_integration_capabilities_contract() -> None:
         "simulation",
     ]
     assert workflow_by_key["historical_risk_attribution"]["support_status"] == "partial"
+    assert workflow_by_key["mandate_risk_health_context"]["endpoint_path"] == (
+        "/analytics/risk/mandate-health-context"
+    )
+    assert workflow_by_key["mandate_risk_health_context"]["supported_input_modes"] == ["stateless"]
+    assert workflow_by_key["mandate_risk_health_context"]["support_status"] == "partial"
     assert workflow_by_key["regime_scenario_pack_evaluation"]["endpoint_path"] == (
         "/analytics/risk/regime-scenario-pack/evaluate"
     )
@@ -218,7 +225,7 @@ def test_metadata_and_ops_contract_shape() -> None:
         == "lotus-performance"
     )
     assert trust_telemetry_body["declared_dependencies"][0]["runtime_status"] == "ok"
-    assert trust_telemetry_body["summary"]["declared_product_count"] == 7
+    assert trust_telemetry_body["summary"]["declared_product_count"] == 8
     assert trust_telemetry_body["summary"]["declared_dependency_count"] == 6
     assert trust_telemetry_body["summary"]["degraded_dependency_count"] == 0
     assert trust_telemetry_body["summary"]["unavailable_dependency_count"] == 0
@@ -229,6 +236,7 @@ def test_metadata_and_ops_contract_shape() -> None:
         "RollingRiskMetricsReport",
         "HistoricalRiskAttributionReport",
         "ConcentrationRiskReport",
+        "MandateRiskHealthContext",
         "RegimeScenarioPackEvaluation",
         "RiskEventAffectedCohort",
     ]

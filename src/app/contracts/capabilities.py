@@ -10,6 +10,7 @@ CAPABILITY_FEATURE_KEYS: tuple[str, ...] = (
     "risk.analytics.drawdown",
     "risk.analytics.rolling_metrics",
     "risk.analytics.historical_attribution",
+    "risk.analytics.mandate_risk_health_context",
     "risk.analytics.regime_scenario_pack",
     "risk.analytics.risk_event_affected_cohort",
     "risk.analytics.metrics",
@@ -21,6 +22,7 @@ CAPABILITY_WORKFLOW_KEYS: tuple[str, ...] = (
     "drawdown_analytics",
     "rolling_risk_analytics",
     "historical_risk_attribution",
+    "mandate_risk_health_context",
     "regime_scenario_pack_evaluation",
     "risk_event_affected_cohort",
 )

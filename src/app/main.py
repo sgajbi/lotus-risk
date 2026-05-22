@@ -27,6 +27,10 @@ from app.contracts.drawdown import (
     DrawdownResponse,
 )
 from app.contracts.error import ErrorResponse
+from app.contracts.mandate_health import (
+    MandateRiskHealthContextRequest,
+    MandateRiskHealthContextResponse,
+)
 from app.contracts.ops import DependencyStatus, OpsChecks, OpsResponse
 from app.contracts.rolling import (
     RollingAnalyticsRequest,
@@ -54,6 +58,7 @@ from app.services.attribution_engine import calculate_historical_attribution
 from app.services.attribution_mode_adapter import calculate_historical_attribution_stateful
 from app.services.drawdown_engine import calculate_drawdown
 from app.services.drawdown_mode_adapter import calculate_drawdown_stateful
+from app.services.mandate_health_context import evaluate_mandate_risk_health_context
 from app.services.rolling_engine import calculate_rolling_metrics
 from app.services.rolling_mode_adapter import calculate_rolling_metrics_stateful
 from app.services.risk_engine import calculate_risk
@@ -589,6 +594,17 @@ async def integration_capabilities() -> IntegrationCapabilitiesResponse:
                 ],
             ),
             CapabilityWorkflow(
+                workflow_key="mandate_risk_health_context",
+                endpoint_path="/analytics/risk/mandate-health-context",
+                supported_input_modes=["stateless"],
+                support_status="partial",
+                notes=[
+                    "derives bounded mandate risk health from source-owned tracking-error methodology",
+                    "returns threshold posture, lineage, and non-claim reason codes for Manage consumption",
+                    "does not create mandate actions, rebalance waves, or client communication",
+                ],
+            ),
+            CapabilityWorkflow(
                 workflow_key="regime_scenario_pack_evaluation",
                 endpoint_path="/analytics/risk/regime-scenario-pack/evaluate",
                 supported_input_modes=["stateless"],
@@ -629,6 +645,29 @@ async def integration_capabilities() -> IntegrationCapabilitiesResponse:
 )
 async def metrics() -> Response:
     return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
+@app.post(
+    "/analytics/risk/mandate-health-context",
+    response_model=MandateRiskHealthContextResponse,
+    responses=STANDARD_ERROR_RESPONSES,
+    summary="Evaluate source-owned mandate risk health context",
+    tags=["risk-analytics"],
+    description=(
+        "Evaluates a bounded mandate risk health context using lotus-risk source-owned "
+        "tracking-error methodology. The response preserves threshold posture, lineage, "
+        "methodology ownership, and reason codes for downstream consumers such as lotus-manage "
+        "without creating mandate actions, rebalance waves, client communications, or execution."
+    ),
+)
+async def analytics_risk_mandate_health_context(
+    request_payload: MandateRiskHealthContextRequest,
+) -> MandateRiskHealthContextResponse:
+    return await _observed_endpoint(
+        endpoint="mandate-risk-health-context",
+        input_mode="stateless",
+        operation=lambda: evaluate_mandate_risk_health_context(request_payload),
+    )
 
 
 @app.post(

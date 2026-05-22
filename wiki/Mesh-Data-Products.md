@@ -12,11 +12,13 @@
   - `lotus-risk:RollingRiskMetricsReport:v1`
   - `lotus-risk:HistoricalRiskAttributionReport:v1`
   - `lotus-risk:ConcentrationRiskReport:v1`
+  - `lotus-risk:MandateRiskHealthContext:v1`
   - `lotus-risk:RegimeScenarioPackEvaluation:v1`
   - `lotus-risk:RiskEventAffectedCohort:v1`
-- Product role: governed risk analytics reports, scenario-pack evaluation outputs, and risk-event
-  affected-cohort membership for advisory, reporting, gateway, Workbench discovery, manage
-  construction-supportability, and future rebalance-wave trigger flows
+- Product role: governed risk analytics reports, mandate risk health context, scenario-pack
+  evaluation outputs, and risk-event affected-cohort membership for advisory, reporting, gateway,
+  Workbench discovery, manage construction-supportability, mandate supportability, and future
+  rebalance-wave trigger flows
 - Source declaration: `contracts/domain-data-products/`
 - Trust telemetry: `contracts/trust-telemetry/`
 
@@ -96,6 +98,13 @@ downstream proof packs must preserve them instead of rebuilding scenario logic o
 `docs/methodologies/metrics/regime-scenario-pack-evaluation.md`, including formulas, validation and
 failure behavior, deterministic ordering, governance posture, and a worked contribution example.
 
+`MandateRiskHealthContext:v1` is a bounded first-wave source product for DPM mandate health
+consumption. It derives `ready`, `attention`, or `unavailable` posture from source-owned
+tracking-error methodology, returns the applied annualized tracking-error threshold, preserves the
+underlying `RiskMetricsReport:v1` source route and request fingerprints, and emits bounded reason
+codes. It does not create mandate actions, rebalance waves, client communications, orders, or
+execution instructions.
+
 ```mermaid
 flowchart LR
     PERF[lotus-performance<br/>portfolio + benchmark returns]
@@ -104,12 +113,14 @@ flowchart LR
     WB[lotus-workbench<br/>risk workspace]
     MANAGE[lotus-manage<br/>realized outcome source adapter]
     COHORT[lotus-risk<br/>RiskEventAffectedCohort:v1]
+    HEALTH[lotus-risk<br/>MandateRiskHealthContext:v1]
 
     PERF -->|dated return series| RISK
     RISK -->|rolling active-risk metrics + lineage| GW
     GW --> WB
     RISK -->|source-owned scalar + scenario contribution evidence| MANAGE
     COHORT -->|affected portfolios + source refs| MANAGE
+    HEALTH -->|tracking-error health posture + lineage| MANAGE
 ```
 
 Audience notes:
@@ -157,6 +168,9 @@ Audience notes:
 - Developers and downstream services must preserve `RiskEventAffectedCohort:v1` membership,
   exclusions, source refs, and impact scores rather than reconstructing risk-event cohort
   membership locally.
+- Developers and downstream services must preserve `MandateRiskHealthContext:v1` threshold posture,
+  source metric evidence, methodology posture, fingerprints, and reason codes rather than
+  recomputing mandate risk health locally.
 - Developers and downstream services must preserve `RegimeScenarioPackEvaluation:v1` scenario
   results, per-security contribution rows, reason codes, and lineage rather than applying local
   scenario methodology in gateway, Workbench, reporting, or manage proof packs.

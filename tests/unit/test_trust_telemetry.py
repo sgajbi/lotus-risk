@@ -205,7 +205,7 @@ def test_build_declared_product_trust_telemetry_snapshot_uses_repo_native_catalo
     assert snapshot.declared_dependencies[2].runtime_status == "degraded"
     assert snapshot.declared_dependencies[2].runtime_category == "data_gap"
     assert snapshot.declared_dependencies[2].runtime_issue_code == "RISK_FREE_SERIES_STALE"
-    assert snapshot.summary.declared_product_count == 7
+    assert snapshot.summary.declared_product_count == 8
     assert snapshot.summary.declared_dependency_count == 6
     assert snapshot.summary.degraded_dependency_count == 4
     assert snapshot.summary.unavailable_dependency_count == 0
@@ -224,6 +224,7 @@ def test_build_declared_product_trust_telemetry_snapshot_uses_repo_native_catalo
         "RollingRiskMetricsReport",
         "HistoricalRiskAttributionReport",
         "ConcentrationRiskReport",
+        "MandateRiskHealthContext",
         "RegimeScenarioPackEvaluation",
         "RiskEventAffectedCohort",
     ]

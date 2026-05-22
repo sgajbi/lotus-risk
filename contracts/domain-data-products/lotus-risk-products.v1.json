@@ -290,6 +290,62 @@
       "temporal_semantics_ref": "as_of_date"
     },
     {
+      "product_name": "MandateRiskHealthContext",
+      "product_version": "v1",
+      "owner_repository": "lotus-risk",
+      "product_family": "analytics_output",
+      "authoritative_domain": "risk_analytics",
+      "lifecycle_status": "active",
+      "request_scope": {
+        "scope_level": "portfolio",
+        "supports_bulk": false
+      },
+      "temporal_scope": {
+        "primary_time_field": "as_of_date",
+        "freshness_basis": "as_of_date",
+        "supports_restatement": true
+      },
+      "required_trust_metadata": [
+        "product_name",
+        "product_version",
+        "as_of_date",
+        "lineage_version",
+        "request_fingerprint",
+        "source_services",
+        "upstream_request_fingerprints",
+        "benchmark_context"
+      ],
+      "current_routes": [
+        "/analytics/risk/mandate-health-context"
+      ],
+      "freshness_policy": {
+        "freshness_class": "daily",
+        "max_allowed_age_description": "Mandate risk health context must reflect source-owned tracking-error methodology, the requested as-of date, and the supplied portfolio and benchmark return observations."
+      },
+      "completeness_policy": {
+        "default_status": "partial",
+        "partial_allowed": true
+      },
+      "lineage_policy": {
+        "lineage_required": true,
+        "evidence_bundle_required": false,
+        "evidence_access_class_ref": "customer_consumable"
+      },
+      "security_profile_ref": "business_consumer_access:client_confidential:retain_for_client_record:audit_read_and_export",
+      "approved_consumers": [
+        "lotus-gateway",
+        "lotus-manage"
+      ],
+      "deprecation_policy": {
+        "state": "not_deprecated",
+        "successor_product": null
+      },
+      "identifier_refs": [
+        "portfolio_id"
+      ],
+      "temporal_semantics_ref": "as_of_date"
+    },
+    {
       "product_name": "RegimeScenarioPackEvaluation",
       "product_version": "v1",
       "owner_repository": "lotus-risk",

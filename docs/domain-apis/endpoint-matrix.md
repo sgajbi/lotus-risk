@@ -24,6 +24,7 @@ Status meanings:
 | `POST /analytics/risk/rolling-metrics` | Domain analytics | rolling historical risk diagnostics | `stateless`, `stateful` | full | lotus-performance for portfolio/benchmark returns; lotus-core for risk-free series and reporting-currency resolution | simulation is intentionally unsupported; broader enterprise archetype coverage still requires additional seeded live portfolios beyond the canonical baseline |
 | `POST /analytics/risk/historical-attribution` | Domain analytics | historical risk and active-risk attribution decomposition | `stateless`, `stateful` | partial | stateless caller-supplied returns/exposures; stateful sourcing uses lotus-performance for portfolio/benchmark returns and benchmark exposure context, and lotus-core for portfolio exposure history and instrument enrichment | stateful `ACTIVE_RISK` supports `POSITION`, `SECTOR`, `ASSET_CLASS`, and `ISSUER`; simulation is intentionally unsupported |
 | `POST /analytics/risk/concentration` | Domain analytics | concentration analytics and HHI metrics | `stateless`, `stateful`, `simulation` | full | lotus-core snapshot and simulation session contracts | none |
+| `POST /analytics/risk/mandate-health-context` | Domain analytics | source-owned mandate risk health context derived from tracking-error methodology | `stateless` | partial | caller-supplied portfolio and benchmark return observations | bounded first-wave context only; does not create mandate actions, rebalance waves, client communication, or execution |
 | `POST /analytics/risk/regime-scenario-pack/evaluate` | Domain analytics | governed CIO regime scenario-pack evaluation with optional per-security contribution evidence | `stateless` | full | caller-supplied exposure weights, optional reconciled exposure components, and risk-owned scenario-pack definitions | does not forecast market states, perform full repricing, or accept browser-owned scenario methodology |
 
 ## Mode Support Detail
@@ -35,6 +36,7 @@ Status meanings:
 | `POST /analytics/risk/rolling-metrics` | full | full | unsupported by contract |
 | `POST /analytics/risk/historical-attribution` | full | partial | unsupported by contract |
 | `POST /analytics/risk/concentration` | full | full | full |
+| `POST /analytics/risk/mandate-health-context` | partial | unsupported by contract | unsupported by contract |
 | `POST /analytics/risk/regime-scenario-pack/evaluate` | full | unsupported by contract | unsupported by contract |
 
 ## Highest-Value Remaining Gap
@@ -97,4 +99,5 @@ See `docs/domain-apis/risk-product-surface-alignment.md`.
 - [risk-rolling-metrics.md](C:\Users\Sandeep\projects\lotus-risk\docs\domain-apis\risk-rolling-metrics.md)
 - [risk-historical-attribution.md](C:\Users\Sandeep\projects\lotus-risk\docs\domain-apis\risk-historical-attribution.md)
 - [risk-concentration.md](C:\Users\Sandeep\projects\lotus-risk\docs\domain-apis\risk-concentration.md)
+- [risk-mandate-health-context.md](C:\Users\Sandeep\projects\lotus-risk\docs\domain-apis\risk-mandate-health-context.md)
 - [risk-product-surface-alignment.md](C:\Users\Sandeep\projects\lotus-risk\docs\domain-apis\risk-product-surface-alignment.md)
