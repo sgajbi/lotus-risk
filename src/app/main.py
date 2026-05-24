@@ -4,7 +4,6 @@ from typing import Any, TypeVar, cast
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
-from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel, Field
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -52,7 +51,7 @@ from app.integrations.lotus_core_client import LotusCoreClient
 from app.integrations.lotus_performance_client import LotusPerformanceClient
 from app.middleware.correlation import CorrelationIdMiddleware
 from app.ops_runtime import resolve_ops_status, resolve_readiness_status
-from app.observability import observation_start, record_endpoint_execution
+from app.observability import observation_start, record_endpoint_execution, record_http_request
 from app.services.concentration_engine import calculate_concentration
 from app.services.attribution_engine import calculate_historical_attribution
 from app.services.attribution_mode_adapter import calculate_historical_attribution_stateful
@@ -81,7 +80,24 @@ app = FastAPI(title=SERVICE_NAME, version=SERVICE_VERSION)
 app.add_middleware(CorrelationIdMiddleware, service_name=SERVICE_NAME)
 validate_enterprise_runtime_config()
 app.middleware("http")(build_enterprise_audit_middleware())
-Instrumentator().instrument(app)
+
+
+@app.middleware("http")
+async def observe_http_request(
+    request: Request,
+    call_next: Callable[[Request], Awaitable[Response]],
+) -> Response:
+    try:
+        response = await call_next(request)
+    except Exception:
+        route = request.scope.get("route")
+        handler = getattr(route, "path", request.url.path)
+        record_http_request(handler=handler, method=request.method, status_code=500)
+        raise
+    route = request.scope.get("route")
+    handler = getattr(route, "path", request.url.path)
+    record_http_request(handler=handler, method=request.method, status_code=response.status_code)
+    return response
 
 
 class HealthResponse(BaseModel):

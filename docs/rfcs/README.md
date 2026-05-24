@@ -7,3 +7,4 @@
 - [RFC-0006 - Historical Risk Attribution Analytics (Industry-Grade, Historical-Only)](RFC-0006-historical-risk-attribution-analytics.md)
 - [RFC-0007 - Final Production Readiness and Integration Hardening for lotus-risk](RFC-0007-final-production-readiness-and-integration-hardening.md)
 - [RFC-0008 - Enterprise Bank Readiness and Live Risk Validation Baseline](RFC-0008-enterprise-bank-readiness-and-live-risk-validation-baseline.md)
+- [RFC-0009 - Enterprise Risk Intelligence Operating Layer](RFC-0009-enterprise-risk-intelligence-operating-layer.md)
