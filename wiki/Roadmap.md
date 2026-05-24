@@ -41,6 +41,25 @@ The next meaningful work is:
 3. keeping upstream family boundaries explicit under RFC-0082,
 4. closing any remaining supportability gaps without weakening contract discipline.
 
+## Enterprise Product Direction
+
+`RFC-0009` defines the next bank-buyable product program for `lotus-risk`: an Enterprise Risk
+Intelligence Operating Layer with Advisor Brief Risk Lens, Risk Watchtower, CIO Scenario Lab,
+risk evidence packets, grounded AI commentary, Manage handoff, report/archive evidence, and
+model-risk governance.
+
+It also makes `lotus-risk` a stronger governed data product: RFC-0009 requires mesh declarations,
+trust telemetry, SLO/access/evidence posture, platform automation improvements, API certification,
+Swagger quality, security hardening, CI proof, and same-RFC downstream consumer migration.
+
+This is a planned implementation program, not current runtime support. Until RFC-0009 slices are
+implemented and validated, the current supported enterprise baseline remains RFC-0008 plus the
+capabilities published by `/integration/capabilities`.
+
+RFC-0009 is intentionally not a first wave followed by a second wave. Required upstream,
+downstream, platform, documentation, data-product, CI, and security work must be completed inside
+the RFC or the supported product claim must be narrowed.
+
 ## Evidence Expansion Priority
 
 The current live validation matrix still needs real seeded coverage for archetypes such as:
@@ -60,6 +79,7 @@ truthfully say about enterprise readiness.
 
 - `docs/rfcs/README.md`
 - `docs/rfcs/RFC-0008-enterprise-bank-readiness-and-live-risk-validation-baseline.md`
+- `docs/rfcs/RFC-0009-enterprise-risk-intelligence-operating-layer.md`
 - `docs/operations/live-risk-validation-matrix.md`
 - `docs/domain-apis/endpoint-matrix.md`
 
