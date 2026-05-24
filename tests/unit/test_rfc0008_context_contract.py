@@ -45,10 +45,7 @@ def test_risk_analytics_contract_records_final_simulation_mode_decisions() -> No
 
 def test_rfc0009_records_enterprise_risk_intelligence_plan() -> None:
     rfc = (
-        REPO_ROOT
-        / "docs"
-        / "rfcs"
-        / "RFC-0009-enterprise-risk-intelligence-operating-layer.md"
+        REPO_ROOT / "docs" / "rfcs" / "RFC-0009-enterprise-risk-intelligence-operating-layer.md"
     ).read_text(encoding="utf-8")
 
     assert "Status** | DRAFT - GOLD-STANDARD IMPLEMENTATION PLAN" in rfc
@@ -64,7 +61,9 @@ def test_rfc0009_records_enterprise_risk_intelligence_plan() -> None:
     assert "Slice 9: Grounded AI Risk Commentary and Guardrails" in rfc
     assert "Slice 10: Data Product and Platform Hardening" in rfc
     assert "Slice 14: Model-Risk Governance Evidence Center" in rfc
-    assert "Slice 16: Implementation Proof, Live Validation, and Portfolio Archetype Expansion" in rfc
+    assert (
+        "Slice 16: Implementation Proof, Live Validation, and Portfolio Archetype Expansion" in rfc
+    )
     assert "Slice 18: Second-Last Hardening and Review" in rfc
     assert "Slice 19: Final Closure, Mainline Truth, Documentation, and Branch Hygiene" in rfc
     assert "Slice 20: Post-Completion Communication" in rfc
