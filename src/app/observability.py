@@ -39,6 +39,11 @@ ANALYTICS_FRESHNESS_BUCKET_TOTAL = Counter(
     "Backend analytics freshness and supportability posture by service, operation, and bounded freshness bucket.",
     RISK_ANALYTICS_FRESHNESS_METRIC_LABELS,
 )
+HTTP_REQUESTS_TOTAL = Counter(
+    "http_requests_total",
+    "HTTP requests by route handler, method, and status class.",
+    ["handler", "method", "status"],
+)
 
 
 def observation_start() -> float:
@@ -115,3 +120,8 @@ def record_analytics_freshness_bucket(
         freshness_bucket=freshness_bucket,
         supportability_state=supportability_state,
     ).inc()
+
+
+def record_http_request(*, handler: str, method: str, status_code: int) -> None:
+    status_class = f"{status_code // 100}xx"
+    HTTP_REQUESTS_TOTAL.labels(handler=handler, method=method.upper(), status=status_class).inc()
