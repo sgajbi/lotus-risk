@@ -49,6 +49,39 @@ def _default_stateful_active_risk_gated_groupings() -> list[GroupingDimension]:
     return []
 
 
+def _validate_unique_period_names(periods: list[RiskRequestPeriod]) -> None:
+    resolved_names = [period.name or period.type for period in periods]
+    duplicates = sorted({name for name in resolved_names if resolved_names.count(name) > 1})
+    if duplicates:
+        raise ValueError(
+            "Duplicate period names resolved in request: "
+            + ", ".join(duplicates)
+            + ". Each period name (or type fallback) must be unique."
+        )
+
+
+def _requires_active_attribution(options: "AttributionOptions") -> bool:
+    return "ACTIVE_RISK" in options.attribution_types or "TRACKING_ERROR" in options.metrics
+
+
+def _validate_active_attribution_inputs(
+    *,
+    attribution_options: "AttributionOptions",
+    benchmark_returns: list[ReturnPoint],
+    benchmark_exposure_history: list["ExposurePoint"],
+) -> None:
+    if not _requires_active_attribution(attribution_options):
+        return
+    if not benchmark_returns:
+        raise ValueError(
+            "benchmark_returns are required when requesting ACTIVE_RISK or TRACKING_ERROR attribution"
+        )
+    if not benchmark_exposure_history:
+        raise ValueError(
+            "benchmark_exposure_history are required when requesting ACTIVE_RISK or TRACKING_ERROR attribution"
+        )
+
+
 class AttributionOptions(BaseModel):
     attribution_types: list[AttributionType] = Field(
         default_factory=_default_attribution_types,
@@ -187,28 +220,12 @@ class HistoricalAttributionStatelessInput(BaseModel):
 
     @model_validator(mode="after")
     def validate_semantics(self) -> "HistoricalAttributionStatelessInput":
-        resolved_names = [period.name or period.type for period in self.periods]
-        duplicates = sorted({name for name in resolved_names if resolved_names.count(name) > 1})
-        if duplicates:
-            raise ValueError(
-                "Duplicate period names resolved in request: "
-                + ", ".join(duplicates)
-                + ". Each period name (or type fallback) must be unique."
-            )
-
-        requires_active = (
-            "ACTIVE_RISK" in self.attribution_options.attribution_types
-            or "TRACKING_ERROR" in self.attribution_options.metrics
+        _validate_unique_period_names(self.periods)
+        _validate_active_attribution_inputs(
+            attribution_options=self.attribution_options,
+            benchmark_returns=self.benchmark_returns,
+            benchmark_exposure_history=self.benchmark_exposure_history,
         )
-        if requires_active:
-            if not self.benchmark_returns:
-                raise ValueError(
-                    "benchmark_returns are required when requesting ACTIVE_RISK or TRACKING_ERROR attribution"
-                )
-            if not self.benchmark_exposure_history:
-                raise ValueError(
-                    "benchmark_exposure_history are required when requesting ACTIVE_RISK or TRACKING_ERROR attribution"
-                )
         return self
 
 
@@ -254,14 +271,7 @@ class HistoricalAttributionStatefulInput(BaseModel):
 
     @model_validator(mode="after")
     def validate_semantics(self) -> "HistoricalAttributionStatefulInput":
-        resolved_names = [period.name or period.type for period in self.periods]
-        duplicates = sorted({name for name in resolved_names if resolved_names.count(name) > 1})
-        if duplicates:
-            raise ValueError(
-                "Duplicate period names resolved in request: "
-                + ", ".join(duplicates)
-                + ". Each period name (or type fallback) must be unique."
-            )
+        _validate_unique_period_names(self.periods)
 
         grouping_dimensions = self.attribution_options.grouping_dimensions
         if "CUSTOM" in grouping_dimensions:
