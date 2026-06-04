@@ -21,7 +21,8 @@ from app.services.core_risk_free_series import (
     build_risk_free_series_request,
     to_risk_free_return_points,
 )
-from app.services.rolling_engine import ROLLING_SHARPE_METRIC, calculate_rolling_metrics
+from app.services.rolling_engine import calculate_rolling_metrics
+from app.services.rolling_metric_series import ROLLING_SHARPE_METRIC
 from app.services.stateful_returns_request import build_stateful_returns_series_request
 from app.services.stateful_returns_series_parser import (
     extract_required_portfolio_returns,
