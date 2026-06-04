@@ -59,6 +59,37 @@ def test_mandate_risk_health_context_uses_source_tracking_error_methodology() ->
     assert "MANDATE_RISK_HEALTH_TRACKING_ERROR_THRESHOLD_BREACHED" in response.reason_codes
 
 
+def test_mandate_risk_health_context_marks_ready_below_threshold() -> None:
+    payload = _request_payload()
+    payload["tracking_error_attention_threshold"] = "1.00"
+
+    response = evaluate_mandate_risk_health_context(
+        MandateRiskHealthContextRequest.model_validate(payload)
+    )
+
+    assert response.health_state == "ready"
+    assert response.threshold_breached is False
+    assert "MANDATE_RISK_HEALTH_TRACKING_ERROR_SOURCE_READY" in response.reason_codes
+    assert "MANDATE_RISK_HEALTH_TRACKING_ERROR_THRESHOLD_BREACHED" not in response.reason_codes
+
+
+def test_mandate_risk_health_context_marks_unavailable_when_tracking_error_unavailable() -> None:
+    payload = _request_payload()
+    payload["benchmark_returns"] = [
+        {"date": "2025-12-20", "value": 0.10},
+        {"date": "2025-12-21", "value": 0.12},
+    ]
+
+    response = evaluate_mandate_risk_health_context(
+        MandateRiskHealthContextRequest.model_validate(payload)
+    )
+
+    assert response.health_state == "unavailable"
+    assert response.threshold_breached is None
+    assert response.source_metric.annualized_tracking_error is None
+    assert "MANDATE_RISK_HEALTH_TRACKING_ERROR_UNAVAILABLE" in response.reason_codes
+
+
 def test_mandate_risk_health_context_endpoint_returns_source_product() -> None:
     client = TestClient(app)
 

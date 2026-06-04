@@ -1,4 +1,5 @@
 import asyncio
+from datetime import date
 from typing import Any, cast
 
 import pytest
@@ -6,6 +7,8 @@ import pytest
 from app.contracts.rolling import RollingStatefulInput
 from app.services.rolling_mode_adapter import (
     _build_stateful_source_request,
+    _explicit_window_bounds,
+    _get_risk_free_coverage_details,
     calculate_rolling_metrics_stateful,
 )
 from app.upstream_errors import UpstreamServiceError
@@ -220,6 +223,45 @@ def test_stateful_adapter_ignores_coverage_probe_failures_for_missing_risk_free(
 
     assert exc_info.value.details["risk_free_currency"] == "USD"
     assert "risk_free_total_points" not in exc_info.value.details
+
+
+def test_stateful_adapter_enriches_risk_free_coverage_details() -> None:
+    core_client = RecordingLotusCoreReferenceClient(
+        risk_free_coverage_response={
+            "total_points": 2,
+            "missing_dates_count": 1,
+            "observed_start_date": "2026-01-02",
+            "observed_end_date": "2026-01-05",
+            "request_fingerprint": "sha256:coverage",
+            "missing_dates_sample": ["2026-01-03", 42, None],
+        }
+    )
+
+    details = asyncio.run(
+        _get_risk_free_coverage_details(
+            core_client=core_client,
+            currency="CHF",
+            start_date=date(2026, 1, 2),
+            end_date=date(2026, 1, 5),
+            correlation_id="corr-coverage",
+        )
+    )
+
+    assert details == {
+        "risk_free_currency": "CHF",
+        "risk_free_total_points": 2,
+        "risk_free_missing_dates_count": 1,
+        "risk_free_observed_start_date": "2026-01-02",
+        "risk_free_observed_end_date": "2026-01-05",
+        "risk_free_coverage_request_fingerprint": "sha256:coverage",
+        "risk_free_missing_dates_sample": ["2026-01-03"],
+    }
+
+
+def test_explicit_window_bounds_rejects_non_explicit_or_malformed_windows() -> None:
+    assert _explicit_window_bounds({}) is None
+    assert _explicit_window_bounds({"window": {"mode": "RELATIVE"}}) is None
+    assert _explicit_window_bounds({"window": {"mode": "EXPLICIT", "from_date": None}}) is None
 
 
 def test_stateful_adapter_rejects_invalid_return_value() -> None:

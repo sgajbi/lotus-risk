@@ -188,9 +188,18 @@ def test_fetch_benchmark_exposure_history_rejects_bad_performance_contract_shape
     base_response = build_benchmark_exposure_context_response()
     cases = [
         ({**base_response, "source_service": "lotus-core"}, "source_service=lotus-performance"),
+        ({**base_response, "contract_version": "v2"}, "contract_version=v1"),
+        ({**base_response, "metadata": "bad"}, "payload missing metadata object"),
         (
             {**base_response, "metadata": {"source_system": "lotus-performance"}},
             "lotus-core lineage",
+        ),
+        (
+            {
+                **base_response,
+                "metadata": {"source_system": "lotus-core", "served_by": "lotus-core"},
+            },
+            "served_by=lotus-performance",
         ),
         ({**base_response, "rows": "bad"}, "payload missing 'rows' list"),
     ]
@@ -221,4 +230,19 @@ def test_rows_to_exposure_points_rejects_invalid_weight() -> None:
                     "weight": "bad",
                 }
             ]
+        )
+
+
+def test_fetch_benchmark_exposure_history_rejects_custom_grouping() -> None:
+    with pytest.raises(ValueError, match="cannot source benchmark exposure history"):
+        asyncio.run(
+            fetch_benchmark_exposure_history(
+                performance_client=_performance_client(),
+                portfolio_id="DEMO_DPM_EUR_001",
+                as_of_date=date(2026, 1, 4),
+                start_date=date(2026, 1, 2),
+                reporting_currency=None,
+                grouping_dimensions=["CUSTOM"],
+                correlation_id=None,
+            )
         )

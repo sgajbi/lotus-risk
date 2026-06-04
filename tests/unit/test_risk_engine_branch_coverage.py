@@ -238,6 +238,29 @@ def test_risk_metrics_return_domain_errors_for_insufficient_data() -> None:
             assert metric.details["error"] == expected_error
 
 
+def test_benchmark_metrics_report_zero_benchmark_variance_as_domain_error() -> None:
+    payload = {
+        "scope": {"as_of_date": "2025-03-31", "net_or_gross": "NET"},
+        "portfolio_open_date": "2024-01-01",
+        "periods": [{"type": "YTD", "name": "YTD"}],
+        "metrics": ["BETA"],
+        "returns": [
+            {"date": "2025-01-02", "value": 0.5},
+            {"date": "2025-01-03", "value": 0.7},
+        ],
+        "benchmark_returns": [
+            {"date": "2025-01-02", "value": 0.4},
+            {"date": "2025-01-03", "value": 0.4},
+        ],
+    }
+
+    response = risk_engine.calculate_risk(RiskCalculationRequest.model_validate(payload))
+
+    beta = response.results["YTD"].metrics["BETA"]
+    assert beta.value is None
+    assert beta.details == {"error": "Benchmark variance is zero"}
+
+
 def test_risk_calculation_supportability_reports_empty_when_no_returns() -> None:
     payload = {
         "scope": {"as_of_date": "2025-03-31", "net_or_gross": "NET"},
