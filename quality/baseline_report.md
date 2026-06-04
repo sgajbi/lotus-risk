@@ -10,9 +10,9 @@ documentation posture, and validation gates. It is not a completion claim.
 
 ## Code Size Baseline
 
-- Python source files under `src/`: 49
+- Python source files under `src/`: 52
 - Python test files under `tests/`: 77
-- API entry point route/middleware/handler decorators in `src/app/main.py`: 17
+- API entry point route/middleware/handler decorators in `src/app/main.py`: 9
 
 ### Largest Python Files
 
@@ -27,7 +27,6 @@ documentation posture, and validation gates. It is not a completion claim.
 | src/app/contracts/drawdown.py | 816 | 32701 |
 | tests/e2e/test_smoke.py | 750 | 28373 |
 | tests/integration/test_historical_attribution_endpoint.py | 747 | 29645 |
-| src/app/main.py | 740 | 29234 |
 | src/app/contracts/attribution.py | 667 | 26911 |
 | src/app/services/risk_engine.py | 622 | 26133 |
 | tests/unit/test_attribution_mode_adapter.py | 600 | 21872 |
@@ -36,6 +35,7 @@ documentation posture, and validation gates. It is not a completion claim.
 | tests/integration/test_rolling_metrics_endpoint.py | 566 | 22142 |
 | src/app/trust_telemetry.py | 476 | 20809 |
 | tests/unit/test_lotus_performance_client.py | 472 | 17446 |
+| src/app/main.py | 434 | 17660 |
 | tests/unit/test_drawdown_engine.py | 422 | 16234 |
 | tests/integration/test_rolling_live_characterization.py | 418 | 16694 |
 
@@ -77,12 +77,14 @@ documentation posture, and validation gates. It is not a completion claim.
 
 ## Current Architectural Findings
 
-1. `src/app/main.py` remains a large API composition module. It owns app construction, middleware
-   registration, operational endpoints, capability publication, metrics, and risk analytics route
-   orchestration. Standard OpenAPI error metadata and exception-handler registration now live in
-   `src/app/api_errors.py`.
-2. Routers are not yet split into route modules; this keeps OpenAPI metadata and dependency
-   resolution coupled to the FastAPI app instance.
+1. `src/app/main.py` remains the risk analytics API composition module. It owns app construction,
+   middleware registration, and risk analytics route orchestration. Standard OpenAPI error metadata
+   and exception-handler registration now live in `src/app/api_errors.py`; health, readiness,
+   metrics, operational diagnostics, trust telemetry, and capability publication now live in
+   `src/app/routers/operational.py`.
+2. Operational and capability routes are split into a router module. Risk analytics routes are not
+   yet split into route modules; their OpenAPI metadata and dependency resolution remain coupled to
+   the FastAPI app instance.
 3. Business calculations already live mostly under `src/app/services`, which gives the next slices
    a workable extraction boundary.
 4. Infrastructure clients already sit under `src/app/integrations`, but route handlers still
@@ -142,7 +144,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-369 tests collected in 2.00s
+369 tests collected in 1.55s
 ```
 - Import-linter report-only: reported exit 127
 

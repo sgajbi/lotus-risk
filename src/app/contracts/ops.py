@@ -33,6 +33,59 @@ class DependencyStatus(BaseModel):
     )
 
 
+class HealthResponse(BaseModel):
+    status: str = Field(
+        description="Health status indicator.",
+        json_schema_extra={"example": "ok"},
+    )
+    service: str = Field(
+        description="Service identifier.",
+        json_schema_extra={"example": "lotus-risk"},
+    )
+
+
+class LivenessResponse(BaseModel):
+    status: str = Field(
+        description="Liveness status indicator.",
+        json_schema_extra={"example": "live"},
+    )
+
+
+class ReadinessResponse(BaseModel):
+    status: str = Field(
+        description="Readiness state.",
+        json_schema_extra={"example": "ready"},
+    )
+    dependencies: list[DependencyStatus] = Field(
+        description="Dependency runtime states used to determine readiness.",
+        json_schema_extra={
+            "example": [
+                {
+                    "service": "lotus-performance",
+                    "base_url": "http://performance.dev.lotus",
+                    "status": "ok",
+                    "detail": "configured",
+                }
+            ]
+        },
+    )
+
+
+class MetadataResponse(BaseModel):
+    service: str = Field(
+        description="Service identifier.",
+        json_schema_extra={"example": "lotus-risk"},
+    )
+    version: str = Field(
+        description="Service version string.",
+        json_schema_extra={"example": "0.1.0"},
+    )
+    rounding_policy_version: str = Field(
+        description="Rounding policy revision used by risk outputs.",
+        json_schema_extra={"example": "v1"},
+    )
+
+
 class OpsChecks(BaseModel):
     live: bool = Field(
         description="Liveness check status.",
