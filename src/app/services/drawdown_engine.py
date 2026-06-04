@@ -558,24 +558,13 @@ def _calculate_period_result(
     )
 
 
-def calculate_drawdown(
-    request: DrawdownStatelessInput,
+def _drawdown_period_results(
     *,
-    input_mode: DrawdownInputMode,
+    request: DrawdownStatelessInput,
+    frames: _DrawdownInputFrames,
     analysis_options: DrawdownAnalysisOptions,
-    include_benchmark: bool | None = None,
-    missing_benchmark_policy: Literal["IGNORE", "REQUIRE"] | None = None,
-) -> DrawdownResponse:
-    frames = _build_input_frames(request)
-    if frames.portfolio.empty:
-        return _empty_response(
-            request,
-            input_mode=input_mode,
-            analysis_options=analysis_options,
-            include_benchmark=include_benchmark,
-            missing_benchmark_policy=missing_benchmark_policy,
-        )
-
+    include_benchmark: bool | None,
+) -> dict[str, DrawdownPeriodResult]:
     open_date = cast(pd.Timestamp, frames.portfolio.index.min()).date()
     results: dict[str, DrawdownPeriodResult] = {}
     for period in request.periods:
@@ -590,7 +579,18 @@ def calculate_drawdown(
             analysis_options=analysis_options,
             include_benchmark=include_benchmark,
         )
+    return results
 
+
+def _drawdown_response(
+    *,
+    request: DrawdownStatelessInput,
+    input_mode: DrawdownInputMode,
+    analysis_options: DrawdownAnalysisOptions,
+    include_benchmark: bool | None,
+    missing_benchmark_policy: Literal["IGNORE", "REQUIRE"] | None,
+    results: dict[str, DrawdownPeriodResult],
+) -> DrawdownResponse:
     calculation_supportability = supportability_from_period_results(
         returns=request.returns,
         as_of_date=request.scope.as_of_date,
@@ -610,5 +610,38 @@ def calculate_drawdown(
             include_benchmark=include_benchmark,
             missing_benchmark_policy=missing_benchmark_policy,
             calculation_supportability=calculation_supportability,
+        ),
+    )
+
+
+def calculate_drawdown(
+    request: DrawdownStatelessInput,
+    *,
+    input_mode: DrawdownInputMode,
+    analysis_options: DrawdownAnalysisOptions,
+    include_benchmark: bool | None = None,
+    missing_benchmark_policy: Literal["IGNORE", "REQUIRE"] | None = None,
+) -> DrawdownResponse:
+    frames = _build_input_frames(request)
+    if frames.portfolio.empty:
+        return _empty_response(
+            request,
+            input_mode=input_mode,
+            analysis_options=analysis_options,
+            include_benchmark=include_benchmark,
+            missing_benchmark_policy=missing_benchmark_policy,
+        )
+
+    return _drawdown_response(
+        request=request,
+        input_mode=input_mode,
+        analysis_options=analysis_options,
+        include_benchmark=include_benchmark,
+        missing_benchmark_policy=missing_benchmark_policy,
+        results=_drawdown_period_results(
+            request=request,
+            frames=frames,
+            analysis_options=analysis_options,
+            include_benchmark=include_benchmark,
         ),
     )
