@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Callable
 from collections.abc import Sequence
 
@@ -34,6 +35,14 @@ from prometheus_client import Histogram
 
 BENCHMARK_METRICS = risk_helpers.BENCHMARK_METRICS
 RISK_FREE_METRICS = risk_helpers.RISK_METRICS_REQUIRING_RISK_FREE
+
+
+@dataclass(frozen=True)
+class _RiskPeriodWindow:
+    name: str
+    start: pd.Timestamp
+    end: pd.Timestamp
+    returns: pd.Series
 
 
 def derive_annualization_factor(request: RiskStatelessCalculationInput) -> int:
@@ -339,6 +348,32 @@ def _calculate_period_metrics(
     return metric_map, benchmark_context, aligned_count, benchmark_observation_count
 
 
+def _risk_period_window(
+    *,
+    request: RiskStatelessCalculationInput,
+    period_index: int,
+    returns_df: pd.DataFrame,
+) -> _RiskPeriodWindow:
+    period = request.periods[period_index]
+    start, end = risk_helpers._resolve_period(
+        period.type,
+        request.scope.as_of_date,
+        request.portfolio_open_date,
+        year=period.year,
+        from_date=period.from_date,
+        to_date=period.to_date,
+    )
+    start_timestamp = pd.Timestamp(start)
+    end_timestamp = pd.Timestamp(end)
+    period_mask = (returns_df.index >= start_timestamp) & (returns_df.index <= end_timestamp)
+    return _RiskPeriodWindow(
+        name=period.name or period.type,
+        start=start_timestamp,
+        end=end_timestamp,
+        returns=returns_df.loc[period_mask, "value"],
+    )
+
+
 def build_period_results(
     request: RiskStatelessCalculationInput,
     *,
@@ -354,41 +389,31 @@ def build_period_results(
     ]
 
     results: dict[str, RiskPeriodResult] = {}
-    for period in request.periods:
-        start, end = risk_helpers._resolve_period(
-            period.type,
-            request.scope.as_of_date,
-            request.portfolio_open_date,
-            year=period.year,
-            from_date=period.from_date,
-            to_date=period.to_date,
+    for period_index, _period in enumerate(request.periods):
+        period_window = _risk_period_window(
+            request=request,
+            period_index=period_index,
+            returns_df=returns_df,
         )
-        period_name = period.name or period.type
-
-        period_mask = (returns_df.index >= pd.Timestamp(start)) & (
-            returns_df.index <= pd.Timestamp(end)
-        )
-        period_returns = returns_df.loc[period_mask, "value"]
-
         metric_map, benchmark_context, aligned_count, benchmark_observation_count = (
             _calculate_period_metrics(
                 request,
-                start=pd.Timestamp(start),
-                end=pd.Timestamp(end),
+                start=period_window.start,
+                end=period_window.end,
                 annual_factor=annual_factor,
                 periodic_rf=periodic_rf,
                 periodic_mar=periodic_mar,
-                period_returns=period_returns,
+                period_returns=period_window.returns,
                 benchmark_df=benchmark_df,
                 benchmark_metrics=benchmark_metrics_for_request,
                 duration_seconds=duration_seconds,
             )
         )
 
-        results[period_name] = RiskPeriodResult(
-            start_date=start,
-            end_date=end,
-            portfolio_observation_count=len(period_returns),
+        results[period_window.name] = RiskPeriodResult(
+            start_date=period_window.start.date(),
+            end_date=period_window.end.date(),
+            portfolio_observation_count=len(period_window.returns),
             benchmark_observation_count=(
                 benchmark_observation_count
                 if (not benchmark_df.empty and benchmark_context is not None)
