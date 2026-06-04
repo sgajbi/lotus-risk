@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from math import sqrt
 from typing import TypedDict, cast
 
@@ -35,6 +36,13 @@ class DecompositionRow(TypedDict):
     marginal_contribution: float | None
     component_contribution: float | None
     percent_contribution: float | None
+
+
+@dataclass(frozen=True)
+class _AttributionCalculationInputs:
+    metric_series: pd.Series
+    group_matrix: pd.DataFrame
+    risk_total: float
 
 
 def _period_name(period: RiskRequestPeriod) -> str:
@@ -139,6 +147,96 @@ def _component_decomposition(
     return decomposition
 
 
+def _empty_attribution_set(
+    *,
+    attribution_type: AttributionType,
+    metric: AttributionMetric,
+    grouping_dimension: GroupingDimension,
+    quality_flags: list[str],
+) -> AttributionSetResult:
+    return AttributionSetResult(
+        attribution_type=attribution_type,
+        metric=metric,
+        grouping_dimension=grouping_dimension,
+        total_value=None,
+        reconciled_sum=None,
+        residual=None,
+        contributors=[],
+        quality_flags=quality_flags,
+    )
+
+
+def _unsupported_metric_set(
+    *,
+    attribution_type: AttributionType,
+    metric: AttributionMetric,
+    grouping_dimension: GroupingDimension,
+    base_flags: list[str],
+) -> AttributionSetResult | None:
+    if attribution_type == "TOTAL_RISK" and metric != "VOLATILITY":
+        return _empty_attribution_set(
+            attribution_type=attribution_type,
+            metric=metric,
+            grouping_dimension=grouping_dimension,
+            quality_flags=base_flags + [f"metric:{metric}:unsupported_for_total_risk"],
+        )
+    if attribution_type == "ACTIVE_RISK" and metric != "TRACKING_ERROR":
+        return _empty_attribution_set(
+            attribution_type=attribution_type,
+            metric=metric,
+            grouping_dimension=grouping_dimension,
+            quality_flags=base_flags + [f"metric:{metric}:unsupported_for_active_risk"],
+        )
+    return None
+
+
+def _total_risk_inputs(
+    *,
+    returns_series: pd.Series,
+    exposure_weights: pd.DataFrame,
+    annualization_basis: int,
+) -> _AttributionCalculationInputs:
+    metric_series = returns_series
+    aligned_weights = exposure_weights.reindex(index=metric_series.index, fill_value=0.0)
+    return _AttributionCalculationInputs(
+        metric_series=metric_series,
+        group_matrix=aligned_weights.mul(metric_series, axis=0),
+        risk_total=float(metric_series.std(ddof=1) * sqrt(annualization_basis)),
+    )
+
+
+def _active_risk_inputs(
+    *,
+    returns_series: pd.Series,
+    benchmark_series: pd.Series,
+    exposure_weights: pd.DataFrame,
+    benchmark_weights: pd.DataFrame,
+    annualization_basis: int,
+) -> _AttributionCalculationInputs | None:
+    aligned = pd.merge(
+        returns_series.to_frame("portfolio"),
+        benchmark_series.to_frame("benchmark"),
+        left_index=True,
+        right_index=True,
+        how="inner",
+    )
+    if aligned.empty:
+        return None
+
+    metric_series = aligned["portfolio"] - aligned["benchmark"]
+    common_cols = sorted(set(exposure_weights.columns).union(set(benchmark_weights.columns)))
+    p_w = exposure_weights.reindex(columns=common_cols, fill_value=0.0)
+    b_w = benchmark_weights.reindex(columns=common_cols, fill_value=0.0)
+    p_w = p_w.reindex(index=metric_series.index, fill_value=0.0)
+    b_w = b_w.reindex(index=metric_series.index, fill_value=0.0)
+    active_w = p_w - b_w
+    return _AttributionCalculationInputs(
+        metric_series=metric_series,
+        group_matrix=active_w.mul(metric_series, axis=0),
+        risk_total=float(metric_series.std(ddof=1) * sqrt(annualization_basis)),
+    )
+
+
 def _build_attribution_set(
     *,
     attribution_type: AttributionType,
@@ -154,79 +252,50 @@ def _build_attribution_set(
 ) -> AttributionSetResult:
     flags = list(base_flags)
 
-    if attribution_type == "TOTAL_RISK" and metric != "VOLATILITY":
-        return AttributionSetResult(
-            attribution_type=attribution_type,
-            metric=metric,
-            grouping_dimension=grouping_dimension,
-            total_value=None,
-            reconciled_sum=None,
-            residual=None,
-            contributors=[],
-            quality_flags=flags + [f"metric:{metric}:unsupported_for_total_risk"],
-        )
-    if attribution_type == "ACTIVE_RISK" and metric != "TRACKING_ERROR":
-        return AttributionSetResult(
-            attribution_type=attribution_type,
-            metric=metric,
-            grouping_dimension=grouping_dimension,
-            total_value=None,
-            reconciled_sum=None,
-            residual=None,
-            contributors=[],
-            quality_flags=flags + [f"metric:{metric}:unsupported_for_active_risk"],
-        )
+    unsupported = _unsupported_metric_set(
+        attribution_type=attribution_type,
+        metric=metric,
+        grouping_dimension=grouping_dimension,
+        base_flags=flags,
+    )
+    if unsupported is not None:
+        return unsupported
 
     if attribution_type == "TOTAL_RISK":
-        metric_series = returns_series
-        aligned_weights = exposure_weights.reindex(index=metric_series.index, fill_value=0.0)
-        group_matrix = aligned_weights.mul(metric_series, axis=0)
-        total_value = float(metric_series.std(ddof=1) * sqrt(annualization_basis))
-    else:
-        aligned = pd.merge(
-            returns_series.to_frame("portfolio"),
-            benchmark_series.to_frame("benchmark"),
-            left_index=True,
-            right_index=True,
-            how="inner",
+        calculation_inputs = _total_risk_inputs(
+            returns_series=returns_series,
+            exposure_weights=exposure_weights,
+            annualization_basis=annualization_basis,
         )
-        if aligned.empty:
-            return AttributionSetResult(
+    else:
+        active_inputs = _active_risk_inputs(
+            returns_series=returns_series,
+            benchmark_series=benchmark_series,
+            exposure_weights=exposure_weights,
+            benchmark_weights=benchmark_weights,
+            annualization_basis=annualization_basis,
+        )
+        if active_inputs is None:
+            return _empty_attribution_set(
                 attribution_type=attribution_type,
                 metric=metric,
                 grouping_dimension=grouping_dimension,
-                total_value=None,
-                reconciled_sum=None,
-                residual=None,
-                contributors=[],
                 quality_flags=flags + ["active_risk:alignment_empty"],
             )
-        metric_series = aligned["portfolio"] - aligned["benchmark"]
-        common_cols = sorted(set(exposure_weights.columns).union(set(benchmark_weights.columns)))
-        p_w = exposure_weights.reindex(columns=common_cols, fill_value=0.0)
-        b_w = benchmark_weights.reindex(columns=common_cols, fill_value=0.0)
-        p_w = p_w.reindex(index=metric_series.index, fill_value=0.0)
-        b_w = b_w.reindex(index=metric_series.index, fill_value=0.0)
-        active_w = p_w - b_w
-        group_matrix = active_w.mul(metric_series, axis=0)
-        total_value = float(metric_series.std(ddof=1) * sqrt(annualization_basis))
+        calculation_inputs = active_inputs
 
-    if len(metric_series.dropna()) < 2:
-        return AttributionSetResult(
+    if len(calculation_inputs.metric_series.dropna()) < 2:
+        return _empty_attribution_set(
             attribution_type=attribution_type,
             metric=metric,
             grouping_dimension=grouping_dimension,
-            total_value=None,
-            reconciled_sum=None,
-            residual=None,
-            contributors=[],
             quality_flags=flags + ["series:insufficient_observations"],
         )
 
     rows = _component_decomposition(
-        group_matrix=group_matrix,
-        metric_series=metric_series,
-        total_value=total_value,
+        group_matrix=calculation_inputs.group_matrix,
+        metric_series=calculation_inputs.metric_series,
+        total_value=calculation_inputs.risk_total,
         annualization_basis=annualization_basis,
     )
     contributors = [
@@ -241,13 +310,13 @@ def _build_attribution_set(
         for row in rows
     ]
     reconciled_sum = float(sum(c.component_contribution or 0.0 for c in contributors))
-    residual = float(total_value - reconciled_sum)
+    residual = float(calculation_inputs.risk_total - reconciled_sum)
 
     return AttributionSetResult(
         attribution_type=attribution_type,
         metric=metric,
         grouping_dimension=grouping_dimension,
-        total_value=total_value,
+        total_value=calculation_inputs.risk_total,
         reconciled_sum=reconciled_sum,
         residual=residual,
         contributors=contributors,

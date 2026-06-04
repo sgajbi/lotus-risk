@@ -37,8 +37,8 @@ documentation posture, and validation gates. It is not a completion claim.
 | src/app/services/drawdown_engine.py | 530 | 18443 |
 | src/app/services/rolling_mode_adapter.py | 497 | 17121 |
 | src/app/trust_telemetry.py | 476 | 20809 |
+| src/app/services/attribution_engine.py | 465 | 16687 |
 | tests/unit/test_rolling_mode_adapter.py | 444 | 16926 |
-| tests/unit/test_drawdown_engine.py | 422 | 16234 |
 
 ### Largest Functions And Classes
 
@@ -56,7 +56,6 @@ documentation posture, and validation gates. It is not a completion claim.
 | src/app/contracts/attribution.py | HistoricalAttributionResponse | ClassDef | 123 |
 | src/app/services/concentration/response_builder.py | _build_response | FunctionDef | 122 |
 | src/app/services/attribution_mode_adapter.py | calculate_historical_attribution_stateful | AsyncFunctionDef | 118 |
-| src/app/services/attribution_engine.py | _build_attribution_set | FunctionDef | 114 |
 | src/app/trust_telemetry.py | DeclaredProductTrustTelemetrySnapshot | ClassDef | 111 |
 | src/app/contracts/concentration.py | IssuerConcentration | ClassDef | 97 |
 | src/app/contracts/risk.py | RiskResponseMetadata | ClassDef | 96 |
@@ -64,6 +63,7 @@ documentation posture, and validation gates. It is not a completion claim.
 | src/app/contracts/attribution.py | HistoricalAttributionStatelessInput | ClassDef | 93 |
 | src/app/integrations/lotus_performance_client.py | _poll_returns_series_result | AsyncFunctionDef | 93 |
 | src/app/routers/operational.py | integration_capabilities | AsyncFunctionDef | 93 |
+| src/app/contracts/rolling.py | RollingPeriodResult | ClassDef | 90 |
 
 ## Tool Baseline
 
@@ -105,10 +105,10 @@ Success: no issues found in 163 source files
 ...
 src\app\upstream_errors.py                              55      0     20      3    96%   181->194, 187->189, 192->194
 ------------------------------------------------------------------------------------------------
-TOTAL                                                 4218     83    998     86    97%
+TOTAL                                                 4236     84   1002     87    97%
 
 45 files skipped due to complete coverage.
-431 passed in 9.24s
+431 passed in 8.46s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -247,7 +247,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-431 tests collected in 1.55s
+431 tests collected in 1.75s
 ```
 - Import-linter report-only: passed
 
