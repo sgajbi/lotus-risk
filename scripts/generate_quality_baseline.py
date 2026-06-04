@@ -148,18 +148,19 @@ documentation posture, and validation gates. It is not a completion claim.
 
 ## Current Architectural Findings
 
-1. `src/app/main.py` remains the risk analytics API composition module. It owns app construction,
-   middleware registration, and risk analytics route orchestration. Standard OpenAPI error metadata
+1. `src/app/main.py` is now the FastAPI app composition module. It owns app construction,
+   middleware registration, and router registration only. Standard OpenAPI error metadata
    and exception-handler registration now live in `src/app/api_errors.py`; health, readiness,
    metrics, operational diagnostics, trust telemetry, and capability publication now live in
    `src/app/routers/operational.py`; stateless source-product endpoints now live in
    `src/app/routers/source_products.py`; the primary risk calculation endpoint now lives in
    `src/app/routers/risk_calculation.py`; drawdown analytics now lives in
    `src/app/routers/drawdown.py`; rolling metrics now lives in `src/app/routers/rolling.py`;
-   concentration analytics now lives in `src/app/routers/concentration.py`.
-2. Operational, capability, and stateless source-product routes are split into router modules.
-   Remaining core calculation routes are not yet split into route modules; their OpenAPI metadata
-   and dependency resolution remain coupled to the FastAPI app instance.
+   concentration analytics now lives in `src/app/routers/concentration.py`; historical
+   attribution analytics now lives in `src/app/routers/historical_attribution.py`.
+2. Operational, capability, stateless source-product, and core calculation routes are split into
+   router modules. Client dependency fallback remains owned by router boundaries while shared test
+   overrides preserve deterministic stateful execution.
 3. Business calculations already live mostly under `src/app/services`, which gives the next slices
    a workable extraction boundary.
 4. Infrastructure clients already sit under `src/app/integrations`, but route handlers still

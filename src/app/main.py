@@ -1,24 +1,15 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 
-from app.api_errors import (
-    STANDARD_ERROR_RESPONSES,
-    register_exception_handlers,
-)
-from app.contracts.attribution import (
-    AttributionInputMode,
-    HistoricalAttributionRequest,
-    HistoricalAttributionResponse,
-)
+from app.api_errors import register_exception_handlers
 from app.enterprise_readiness import (
     build_enterprise_audit_middleware,
     validate_enterprise_runtime_config,
 )
-from app.integrations.lotus_core_client import LotusCoreClient
-from app.integrations.lotus_performance_client import LotusPerformanceClient
 from app.middleware.correlation import CorrelationIdMiddleware
 from app.middleware.http_observation import build_http_observation_middleware
 from app.routers.concentration import router as concentration_router
 from app.routers.drawdown import router as drawdown_router
+from app.routers.historical_attribution import router as historical_attribution_router
 from app.routers.operational import router as operational_router
 from app.routers.risk_calculation import router as risk_calculation_router
 from app.routers.rolling import router as rolling_router
@@ -27,9 +18,6 @@ from app.service_metadata import (
     SERVICE_NAME as _SERVICE_NAME,
     SERVICE_VERSION as _SERVICE_VERSION,
 )
-from app.services.attribution_engine import calculate_historical_attribution
-from app.services.attribution_mode_adapter import calculate_historical_attribution_stateful
-from app.services.endpoint_observation import observed_endpoint
 
 SERVICE_NAME: str = _SERVICE_NAME
 SERVICE_VERSION: str = _SERVICE_VERSION
@@ -46,59 +34,4 @@ app.include_router(risk_calculation_router)
 app.include_router(drawdown_router)
 app.include_router(rolling_router)
 app.include_router(concentration_router)
-
-
-@app.post(
-    "/analytics/risk/historical-attribution",
-    response_model=HistoricalAttributionResponse,
-    responses=STANDARD_ERROR_RESPONSES,
-    summary="Calculate historical risk attribution analytics",
-    tags=["risk-analytics"],
-    description=(
-        "Calculates historical risk and active-risk attribution decompositions with contributor-level "
-        "component, marginal, and percent contributions plus reconciliation diagnostics. Supports "
-        "stateless execution and approved stateful execution. Stateful ACTIVE_RISK currently supports "
-        "POSITION, SECTOR, ASSET_CLASS, and ISSUER grouping dimensions through lotus-performance "
-        "benchmark exposure context. CUSTOM grouping is not supported in stateful mode."
-    ),
-)
-async def analytics_risk_historical_attribution(
-    request_payload: HistoricalAttributionRequest,
-    request: Request,
-) -> HistoricalAttributionResponse:
-    input_mode = request_payload.input_mode.value
-    if request_payload.input_mode == AttributionInputMode.STATELESS:
-        stateless_input = request_payload.stateless_input
-        assert stateless_input is not None
-        return await observed_endpoint(
-            endpoint="historical-attribution",
-            input_mode=input_mode,
-            operation=lambda: calculate_historical_attribution(
-                stateless_input,
-                input_mode=AttributionInputMode.STATELESS,
-            ),
-        )
-
-    if request_payload.input_mode == AttributionInputMode.STATEFUL:
-        stateful_input = request_payload.stateful_input
-        assert stateful_input is not None
-        performance_client = getattr(app.state, "lotus_performance_client", None)
-        if performance_client is None:
-            performance_client = LotusPerformanceClient()
-        core_client = getattr(app.state, "lotus_core_client", None)
-        if core_client is None:
-            core_client = LotusCoreClient()
-        return await observed_endpoint(
-            endpoint="historical-attribution",
-            input_mode=input_mode,
-            operation=lambda: calculate_historical_attribution_stateful(
-                stateful_input,
-                performance_client=performance_client,
-                core_client=core_client,
-                correlation_id=request.headers.get("X-Correlation-Id"),
-            ),
-        )
-
-    raise ValueError(
-        f"Unsupported input_mode={request_payload.input_mode.value} for /analytics/risk/historical-attribution"
-    )
+app.include_router(historical_attribution_router)
