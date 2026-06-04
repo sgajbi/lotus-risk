@@ -10,25 +10,25 @@
       "review_by": "2026-11-12"
     },
     {
-      "finding": "src/app/contracts/concentration.py:215:price: float | None = Field(",
+      "finding": "src/app/contracts/concentration.py:220:price: float | None = Field(",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
       "review_by": "2026-10-27"
     },
     {
-      "finding": "src/app/contracts/concentration.py:220:amount: float | None = Field(",
+      "finding": "src/app/contracts/concentration.py:225:amount: float | None = Field(",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
       "review_by": "2026-10-27"
     },
     {
-      "finding": "src/app/contracts/concentration.py:44:market_value_base: float | None = Field(",
+      "finding": "src/app/contracts/concentration.py:49:market_value_base: float | None = Field(",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
       "review_by": "2026-10-27"
     },
     {
-      "finding": "src/app/contracts/concentration.py:81:projected_market_value_base: float | None = Field(",
+      "finding": "src/app/contracts/concentration.py:86:projected_market_value_base: float | None = Field(",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
       "review_by": "2026-10-27"
