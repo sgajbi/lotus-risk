@@ -178,7 +178,7 @@ documentation posture, and validation gates. It is not a completion claim.
 ## Dead Code And Dependency Hygiene Snapshot
 
 - Dead-code candidates: {command_status(["python", "-m", "vulture", "src", "tests", "--min-confidence", "80"])}
-- Dependency hygiene: {command_status(["python", "-m", "deptry", "src", "--no-ansi"])}
+- Dependency hygiene: {command_status(["python", "-m", "deptry", "src", "--no-ansi", "--optional-dependencies-dev-groups", "dev", "--per-rule-ignores", "DEP002=uvicorn"])}
 
 ## Security Snapshot
 

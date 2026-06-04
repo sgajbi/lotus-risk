@@ -108,7 +108,7 @@ src\app\upstream_errors.py                            55      0     20      3   
 TOTAL                                               3912    155    954     99    94%
 
 34 files skipped due to complete coverage.
-387 passed in 9.18s
+387 passed in 13.21s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -151,22 +151,12 @@ src\app\services\__init__.py - A (100.00)
 ## Dead Code And Dependency Hygiene Snapshot
 
 - Dead-code candidates: passed
-- Dependency hygiene: reported exit 1
+- Dependency hygiene: passed
 
 ```text
 Scanning 65 files...
 
-pyproject.toml: DEP002 'uvicorn' defined as a dependency but not used in the codebase
-pyproject.toml: DEP002 'pydantic-settings' defined as a dependency but not used in the codebase
-pyproject.toml: DEP002 'ruff' defined as a dependency but not used in the codebase
-pyproject.toml: DEP002 'mypy' defined as a dependency but not used in the codebase
-...
-pyproject.toml: DEP002 'interrogate' defined as a dependency but not used in the codebase
-pyproject.toml: DEP002 'radon' defined as a dependency but not used in the codebase
-pyproject.toml: DEP002 'vulture' defined as a dependency but not used in the codebase
-Found 16 dependency issues.
-
-For more information, see the documentation: https://deptry.com/
+Success! No dependency issues found.
 ```
 
 ## Security Snapshot
@@ -174,7 +164,7 @@ For more information, see the documentation: https://deptry.com/
 - Bandit source scan: reported exit 1
 
 ```text
-Run started:2026-06-04 05:49:37.282249+00:00
+Run started:2026-06-04 05:55:07.089078+00:00
 
 Test results:
 >> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
@@ -283,7 +273,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-387 tests collected in 1.78s
+387 tests collected in 2.18s
 ```
 - Import-linter report-only: reported exit 127
 
