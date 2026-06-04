@@ -436,27 +436,61 @@ def _episode_models(
     ]
 
 
+def _relative_benchmark_context(
+    *,
+    include_benchmark: bool | None,
+    benchmark_available: bool,
+    aligned_observation_count: int | None = None,
+) -> RelativeDrawdownContext:
+    requested = include_benchmark is True
+    if aligned_observation_count is not None:
+        return RelativeDrawdownContext(
+            requested=requested,
+            applied=aligned_observation_count > 0,
+            reason="APPLIED" if aligned_observation_count > 0 else "NO_ALIGNED_OBSERVATIONS",
+            aligned_observation_count=aligned_observation_count,
+        )
+    return RelativeDrawdownContext(
+        requested=requested,
+        applied=False,
+        reason=(
+            "NO_ALIGNED_OBSERVATIONS"
+            if benchmark_available
+            else "NOT_REQUESTED"
+            if not requested
+            else "BENCHMARK_UNAVAILABLE"
+        ),
+        aligned_observation_count=0,
+    )
+
+
+def _relative_drawdown_summary(active_summary: DrawdownSummary) -> RelativeDrawdownSummary:
+    return RelativeDrawdownSummary(
+        max_drawdown=active_summary.max_drawdown,
+        max_drawdown_peak_date=active_summary.max_drawdown_peak_date,
+        max_drawdown_trough_date=active_summary.max_drawdown_trough_date,
+        max_drawdown_recovery_date=active_summary.max_drawdown_recovery_date,
+        is_recovered=active_summary.is_recovered,
+        days_to_trough=active_summary.days_to_trough,
+        days_to_recovery=active_summary.days_to_recovery,
+        time_under_water_days=active_summary.time_under_water_days or 0,
+    )
+
+
 def _relative_benchmark_result(
     period_series: _DrawdownPeriodSeries,
     *,
     include_benchmark: bool | None,
     analysis_options: DrawdownAnalysisOptions,
 ) -> _RelativeBenchmarkResult:
-    relative_context = RelativeDrawdownContext(
-        requested=include_benchmark is True,
-        applied=False,
-        reason="NOT_REQUESTED" if include_benchmark is not True else "BENCHMARK_UNAVAILABLE",
-        aligned_observation_count=0,
-    )
     if period_series.benchmark_returns.empty:
-        if period_series.benchmark_available:
-            relative_context = RelativeDrawdownContext(
-                requested=include_benchmark is True,
-                applied=False,
-                reason="NO_ALIGNED_OBSERVATIONS",
-                aligned_observation_count=0,
-            )
-        return _RelativeBenchmarkResult(summary=None, context=relative_context)
+        return _RelativeBenchmarkResult(
+            summary=None,
+            context=_relative_benchmark_context(
+                include_benchmark=include_benchmark,
+                benchmark_available=period_series.benchmark_available,
+            ),
+        )
 
     aligned = pd.merge(
         period_series.portfolio_returns.to_frame("portfolio"),
@@ -465,10 +499,9 @@ def _relative_benchmark_result(
         right_index=True,
         how="inner",
     )
-    relative_context = RelativeDrawdownContext(
-        requested=include_benchmark is True,
-        applied=not aligned.empty,
-        reason="APPLIED" if not aligned.empty else "NO_ALIGNED_OBSERVATIONS",
+    relative_context = _relative_benchmark_context(
+        include_benchmark=include_benchmark,
+        benchmark_available=period_series.benchmark_available,
         aligned_observation_count=len(aligned),
     )
     if aligned.empty:
@@ -481,16 +514,7 @@ def _relative_benchmark_result(
         duration_unit=analysis_options.duration_unit,
     )
     return _RelativeBenchmarkResult(
-        summary=RelativeDrawdownSummary(
-            max_drawdown=active_summary.max_drawdown,
-            max_drawdown_peak_date=active_summary.max_drawdown_peak_date,
-            max_drawdown_trough_date=active_summary.max_drawdown_trough_date,
-            max_drawdown_recovery_date=active_summary.max_drawdown_recovery_date,
-            is_recovered=active_summary.is_recovered,
-            days_to_trough=active_summary.days_to_trough,
-            days_to_recovery=active_summary.days_to_recovery,
-            time_under_water_days=active_summary.time_under_water_days or 0,
-        ),
+        summary=_relative_drawdown_summary(active_summary),
         context=relative_context,
     )
 
