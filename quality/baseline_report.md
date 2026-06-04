@@ -10,7 +10,7 @@ documentation posture, and validation gates. It is not a completion claim.
 
 ## Code Size Baseline
 
-- Python source files under `src/`: 84
+- Python source files under `src/`: 85
 - Python test files under `tests/`: 91
 - Python packages under `src/`: 9
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
@@ -26,7 +26,6 @@ documentation posture, and validation gates. It is not a completion claim.
 | src/app/contracts/risk.py | 752 | 27324 |
 | tests/e2e/test_smoke.py | 750 | 28373 |
 | tests/integration/test_historical_attribution_endpoint.py | 747 | 29645 |
-| src/app/services/concentration/resolvers.py | 707 | 24526 |
 | src/app/contracts/drawdown.py | 681 | 26302 |
 | src/app/services/drawdown_engine.py | 647 | 21288 |
 | src/app/services/attribution_engine.py | 645 | 21664 |
@@ -37,6 +36,7 @@ documentation posture, and validation gates. It is not a completion claim.
 | tests/integration/test_rolling_metrics_endpoint.py | 566 | 22142 |
 | src/app/services/attribution_mode_adapter.py | 533 | 19091 |
 | tests/unit/test_lotus_performance_client.py | 530 | 19686 |
+| src/app/services/concentration/resolvers.py | 513 | 17524 |
 | src/app/trust_telemetry.py | 511 | 21683 |
 | src/app/services/rolling_engine.py | 482 | 15804 |
 
@@ -89,12 +89,12 @@ All checks passed!
 - Ruff format check: passed
 
 ```text
-189 files already formatted
+190 files already formatted
 ```
 - Type checking: passed
 
 ```text
-Success: no issues found in 175 source files
+Success: no issues found in 176 source files
 ```
 - Unit coverage snapshot: passed
 
@@ -106,12 +106,12 @@ Success: no issues found in 175 source files
 ........................................................................ [ 80%]
 ........................................................................ [ 96%]
 ...
-src\app\upstream_errors.py                              55      0     20      3    96%   181->194, 187->189, 192->194
-------------------------------------------------------------------------------------------------
-TOTAL                                                 4593     84    986     85    97%
+src\app\upstream_errors.py                                55      0     20      3    96%   181->194, 187->189, 192->194
+--------------------------------------------------------------------------------------------------
+TOTAL                                                   4602     84    986     85    97%
 
 51 files skipped due to complete coverage.
-447 passed in 9.39s
+447 passed in 8.86s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -127,7 +127,7 @@ src\app\enterprise_readiness.py - A (31.78)
 src\app\error_response.py - A (68.27)
 src\app\main.py - A (100.00)
 ...
-src\app\services\concentration\response_builder.py - A (38.13)
+src\app\services\concentration\stateless_resolver.py - A (35.70)
 src\app\services\concentration\__init__.py - A (100.00)
 src\app\services\risk\calculation_orchestrator.py - A (32.29)
 src\app\services\risk\helpers.py - A (24.37)
@@ -141,7 +141,7 @@ src\app\services\risk\__init__.py - A (100.00)
 - Dependency hygiene: passed
 
 ```text
-Scanning 84 files...
+Scanning 85 files...
 
 Success! No dependency issues found.
 ```
@@ -240,7 +240,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-447 tests collected in 1.86s
+447 tests collected in 1.73s
 ```
 - Import-linter report-only: passed
 
