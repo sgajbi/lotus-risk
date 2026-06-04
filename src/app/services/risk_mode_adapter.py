@@ -12,6 +12,7 @@ from app.contracts.risk import (
 )
 from app.services.audit_lineage import ordered_source_services, upstream_request_fingerprint
 from app.services.risk_engine import calculate_risk
+from app.services.risk import helpers as risk_helpers
 from app.services.stateful_returns_request import build_stateful_returns_series_request
 from app.services.stateful_returns_series_parser import (
     extract_required_portfolio_returns,
@@ -29,8 +30,8 @@ class LotusPerformanceClientProtocol(Protocol):
     ) -> dict[str, Any]: ...
 
 
-_BENCHMARK_METRICS = {"BETA", "TRACKING_ERROR", "INFORMATION_RATIO"}
-_RISK_FREE_METRICS = {"SHARPE"}
+_BENCHMARK_METRICS = risk_helpers.BENCHMARK_METRICS
+_RISK_FREE_METRICS = risk_helpers.RISK_METRICS_REQUIRING_RISK_FREE
 
 
 def _portfolio_open_date(series_points: list[ReturnPoint], *, as_of_date: date) -> date:

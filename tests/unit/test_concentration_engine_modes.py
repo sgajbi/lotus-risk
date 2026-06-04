@@ -6,7 +6,7 @@ from typing import Any, cast
 import pytest
 
 from app.contracts.concentration import ConcentrationRequest
-from app.services import concentration_engine
+from app.services.concentration import parsing as concentration_parsing
 from app.services.concentration_engine import calculate_concentration
 
 
@@ -236,16 +236,16 @@ async def test_unsupported_mode_guard_branch() -> None:
 
 
 def test_helper_branches_for_type_conversion() -> None:
-    assert concentration_engine._extract_valuation_context(None) is None
-    assert concentration_engine._as_int("12") == 12
-    assert concentration_engine._as_datetime(None) is None
-    assert concentration_engine._as_datetime("not-a-date") is None
+    assert concentration_parsing._extract_valuation_context(None) is None
+    assert concentration_parsing._as_int("12") == 12
+    assert concentration_parsing._as_datetime(None) is None
+    assert concentration_parsing._as_datetime("not-a-date") is None
     mixed_positions: list[Any] = [
         None,
         {"security_id": "A", "market_value_base": "bad"},
         {"security_id": "B", "quantity": "7.5"},
     ]
-    values = concentration_engine._extract_values_from_snapshot_positions(
+    values = concentration_parsing._extract_values_from_snapshot_positions(
         cast(list[dict[str, Any]], mixed_positions)
     )
     assert values == [7.5]

@@ -9,15 +9,14 @@ from app.contracts.concentration import (
     IssuerGroupingLevel,
     IssuerMappingInput,
 )
-from app.services.concentration_engine import (
-    IssuerEntry,
-    IssuerIdentity,
-    PositionEntry,
-    _coverage_ratio,
-    _uncovered_count,
+from app.services.concentration.datamodels import IssuerEntry, IssuerIdentity, PositionEntry
+from app.services.concentration.parsing import (
     _caller_issuer_map,
     _extract_issuer_map,
     _extract_values_with_issuer_from_snapshot,
+)
+from app.services.concentration.math import _coverage_ratio, _uncovered_count
+from app.services.concentration_engine import (
     calculate_concentration,
 )
 

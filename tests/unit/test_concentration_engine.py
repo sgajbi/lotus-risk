@@ -1,6 +1,7 @@
 from app.contracts.concentration import ConcentrationRequest
 from app.observability_contracts import RISK_CALCULATION_SUPPORTABILITY_METRIC_LABELS
-from app.services.concentration_engine import _compute_hhi, calculate_concentration
+from app.services.concentration.math import _compute_hhi
+from app.services.concentration_engine import calculate_concentration
 import pytest
 from pydantic import ValidationError
 

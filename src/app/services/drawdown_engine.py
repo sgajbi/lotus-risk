@@ -28,7 +28,7 @@ from app.services.calculation_supportability import (
     record_operation_supportability,
     supportability_from_period_results,
 )
-from app.services.risk_engine import _resolve_period
+from app.services.risk import helpers as risk_helpers
 
 
 @dataclass
@@ -253,7 +253,7 @@ def calculate_drawdown(
     open_date = cast(pd.Timestamp, returns_df.index.min()).date()
     results: dict[str, DrawdownPeriodResult] = {}
     for period in request.periods:
-        start, end = _resolve_period(
+        start, end = risk_helpers._resolve_period(
             period.type,
             request.scope.as_of_date,
             open_date,

@@ -26,7 +26,7 @@ from app.services.calculation_supportability import (
     supportability_from_attribution_results,
     supportability_from_period_results,
 )
-from app.services.risk_engine import _resolve_period
+from app.services.risk import helpers as risk_helpers
 
 
 class DecompositionRow(TypedDict):
@@ -296,7 +296,7 @@ def calculate_historical_attribution(
 
     results: dict[str, HistoricalAttributionPeriodResult] = {}
     for period in request.periods:
-        start_date, end_date = _resolve_period(
+        start_date, end_date = risk_helpers._resolve_period(
             period.type,
             request.scope.as_of_date,
             open_date,

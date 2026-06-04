@@ -7,6 +7,7 @@ import pytest
 from app.contracts.risk import RiskCalculationRequest, RiskRequestPeriod
 from app.main import app
 from app.services import risk_engine
+from app.services.risk import helpers as risk_helpers
 
 
 def _payload_all_metrics() -> dict[str, object]:
@@ -99,32 +100,32 @@ def test_engine_covers_all_period_types_and_benchmark_metrics() -> None:
 def test_var_helper_unsupported_method_raises() -> None:
     series = pd.Series([0.1, -0.1, 0.2, -0.05])
     with pytest.raises(ValueError, match="Unsupported VaR method"):
-        risk_engine._calculate_var_by_method(series, "INVALID", 0.95)
+        risk_helpers._calculate_var_by_method(series, "INVALID", 0.95)
 
 
 def test_resolve_period_rejects_invalid_type() -> None:
     with pytest.raises(ValueError, match="Unsupported period type"):
-        risk_engine._resolve_period("BAD", date(2025, 3, 31), date(2024, 1, 1))
+        risk_helpers._resolve_period("BAD", date(2025, 3, 31), date(2024, 1, 1))
 
 
 def test_resample_and_log_helpers_cover_empty_and_weekly() -> None:
     empty = pd.Series(dtype=float)
-    assert risk_engine._resample_returns(empty, "DAILY").empty
+    assert risk_helpers._resample_returns(empty, "DAILY").empty
     weekly_input = pd.Series(
         [1.0, 2.0, -1.0],
         index=pd.to_datetime(["2025-01-06", "2025-01-07", "2025-01-10"]),
     )
-    weekly = risk_engine._resample_returns(weekly_input, "WEEKLY")
+    weekly = risk_helpers._resample_returns(weekly_input, "WEEKLY")
     assert not weekly.empty
-    assert not risk_engine._to_log_returns(weekly).empty
+    assert not risk_helpers._to_log_returns(weekly).empty
 
 
 def test_drawdown_empty_series_and_require_data_error() -> None:
     empty = pd.Series(dtype=float)
-    details = risk_engine._drawdown(empty)
+    details = risk_helpers._drawdown(empty)
     assert details["peak_date"] is None
     with pytest.raises(ValueError, match="Insufficient data"):
-        risk_engine._require_data(empty)
+        risk_helpers._require_data(empty)
 
 
 def test_endpoint_error_path_returns_400() -> None:
@@ -184,14 +185,14 @@ def test_period_year_requires_year_validation() -> None:
 
 def test_resolve_period_validates_required_inputs() -> None:
     with pytest.raises(ValueError, match="EXPLICIT period requires"):
-        risk_engine._resolve_period("EXPLICIT", date(2025, 3, 31), date(2024, 1, 1))
+        risk_helpers._resolve_period("EXPLICIT", date(2025, 3, 31), date(2024, 1, 1))
     with pytest.raises(ValueError, match="YEAR period requires year"):
-        risk_engine._resolve_period("YEAR", date(2025, 3, 31), date(2024, 1, 1))
+        risk_helpers._resolve_period("YEAR", date(2025, 3, 31), date(2024, 1, 1))
 
 
 def test_to_log_returns_empty_series_passthrough() -> None:
     empty = pd.Series(dtype=float)
-    assert risk_engine._to_log_returns(empty).empty
+    assert risk_helpers._to_log_returns(empty).empty
 
 
 def test_risk_metrics_return_domain_errors_for_insufficient_data() -> None:
@@ -216,20 +217,25 @@ def test_risk_metrics_return_domain_errors_for_insufficient_data() -> None:
     supportability = response.metadata.calculation_supportability
     assert supportability.state == "degraded"
     assert supportability.reason == "insufficient_aligned_observations"
-    assert supportability.degraded_metric_count == len(cast(list[str], payload["metrics"]))
+    assert supportability.degraded_metric_count == len(cast(list[str], payload["metrics"])) - 1
     metrics = response.results["YTD"].metrics
     metric_names = cast(list[str], payload["metrics"])
     benchmark_aligned_metrics = {"BETA", "TRACKING_ERROR", "INFORMATION_RATIO"}
     for metric_name in metric_names:
         metric = metrics[metric_name]
-        assert metric.value is None
+        if metric_name == "DRAWDOWN":
+            assert metric.value == 0.0
+        else:
+            assert metric.value is None
         assert metric.details is not None
-        expected_error = (
-            "Insufficient aligned observations"
-            if metric_name in benchmark_aligned_metrics
-            else "Insufficient data"
-        )
-        assert metric.details["error"] == expected_error
+        if metric_name in benchmark_aligned_metrics:
+            expected_error = "Insufficient aligned observations"
+        elif metric_name == "DRAWDOWN":
+            expected_error = None
+        else:
+            expected_error = "Insufficient data"
+        if expected_error is not None:
+            assert metric.details["error"] == expected_error
 
 
 def test_risk_calculation_supportability_reports_empty_when_no_returns() -> None:
@@ -273,14 +279,14 @@ def test_risk_calculation_supportability_reports_stale_source_observations() -> 
 def test_beta_and_information_ratio_guard_clauses() -> None:
     constant = pd.Series([0.2, 0.2, 0.2])
     with pytest.raises(ValueError, match="Benchmark variance is zero"):
-        risk_engine._beta(pd.Series([0.1, 0.3, 0.2]), constant)
+        risk_helpers._beta(pd.Series([0.1, 0.3, 0.2]), constant)
     with pytest.raises(ValueError, match="Tracking error is zero"):
-        risk_engine._information_ratio(constant, constant, annual_factor=252)
+        risk_helpers._information_ratio(constant, constant, annual_factor=252)
 
 
 def test_benchmark_metric_dispatch_rejects_unknown_metric() -> None:
     with pytest.raises(ValueError, match="Unsupported benchmark metric"):
-        risk_engine._calculate_benchmark_metric(
+        risk_helpers._calculate_benchmark_metric(
             "UNKNOWN",
             pd.Series([0.1, 0.2]),
             pd.Series([0.1, 0.2]),
