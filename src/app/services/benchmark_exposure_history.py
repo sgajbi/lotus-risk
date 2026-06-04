@@ -124,6 +124,59 @@ def _rows_to_exposure_points(rows: list[Any]) -> list[ExposurePoint]:
     return exposure_points
 
 
+async def _fetch_benchmark_exposure_page(
+    *,
+    performance_client: BenchmarkExposurePerformanceClientProtocol,
+    portfolio_id: str,
+    as_of_date: date,
+    start_date: date,
+    reporting_currency: str | None,
+    grouping_dimensions: list[GroupingDimension],
+    page_token: str | None,
+    correlation_id: str | None,
+) -> tuple[list[ExposurePoint], str | None]:
+    response = await performance_client.get_benchmark_exposure_context(
+        request_payload=_build_request_payload(
+            portfolio_id=portfolio_id,
+            as_of_date=as_of_date,
+            start_date=start_date,
+            reporting_currency=reporting_currency,
+            grouping_dimensions=grouping_dimensions,
+            page_token=page_token,
+        ),
+        correlation_id=correlation_id,
+    )
+    _validate_lineage(response)
+
+    rows = response.get("rows")
+    if not isinstance(rows, list):
+        raise invalid_upstream_payload(
+            service="lotus-performance",
+            operation="/integration/benchmarks/exposure-context",
+            message="lotus-performance benchmark exposure context payload missing 'rows' list",
+        )
+
+    page = response.get("page")
+    next_page_token = page.get("next_page_token") if isinstance(page, dict) else None
+    return (
+        _rows_to_exposure_points(rows),
+        next_page_token if isinstance(next_page_token, str) and next_page_token else None,
+    )
+
+
+def _validate_supported_grouping_dimensions(
+    grouping_dimensions: list[GroupingDimension],
+) -> None:
+    unsupported_groupings = sorted(
+        {dimension for dimension in grouping_dimensions if dimension == "CUSTOM"}
+    )
+    if unsupported_groupings:
+        raise ValueError(
+            "stateful ACTIVE_RISK/TRACKING_ERROR attribution cannot source benchmark "
+            "exposure history for grouping_dimensions=" + ", ".join(unsupported_groupings)
+        )
+
+
 async def fetch_benchmark_exposure_history(
     *,
     performance_client: BenchmarkExposurePerformanceClientProtocol,
@@ -134,43 +187,23 @@ async def fetch_benchmark_exposure_history(
     grouping_dimensions: list[GroupingDimension],
     correlation_id: str | None,
 ) -> list[ExposurePoint]:
-    unsupported_groupings = sorted(
-        {dimension for dimension in grouping_dimensions if dimension == "CUSTOM"}
-    )
-    if unsupported_groupings:
-        raise ValueError(
-            "stateful ACTIVE_RISK/TRACKING_ERROR attribution cannot source benchmark "
-            "exposure history for grouping_dimensions=" + ", ".join(unsupported_groupings)
-        )
+    _validate_supported_grouping_dimensions(grouping_dimensions)
 
     page_token: str | None = None
     benchmark_exposures: list[ExposurePoint] = []
     while True:
-        response = await performance_client.get_benchmark_exposure_context(
-            request_payload=_build_request_payload(
-                portfolio_id=portfolio_id,
-                as_of_date=as_of_date,
-                start_date=start_date,
-                reporting_currency=reporting_currency,
-                grouping_dimensions=grouping_dimensions,
-                page_token=page_token,
-            ),
+        exposure_points, next_page_token = await _fetch_benchmark_exposure_page(
+            performance_client=performance_client,
+            portfolio_id=portfolio_id,
+            as_of_date=as_of_date,
+            start_date=start_date,
+            reporting_currency=reporting_currency,
+            grouping_dimensions=grouping_dimensions,
+            page_token=page_token,
             correlation_id=correlation_id,
         )
-        _validate_lineage(response)
-
-        rows = response.get("rows")
-        if not isinstance(rows, list):
-            raise invalid_upstream_payload(
-                service="lotus-performance",
-                operation="/integration/benchmarks/exposure-context",
-                message="lotus-performance benchmark exposure context payload missing 'rows' list",
-            )
-        benchmark_exposures.extend(_rows_to_exposure_points(rows))
-
-        page = response.get("page")
-        next_page_token = page.get("next_page_token") if isinstance(page, dict) else None
-        if not isinstance(next_page_token, str) or not next_page_token:
+        benchmark_exposures.extend(exposure_points)
+        if next_page_token is None:
             break
         page_token = next_page_token
 
