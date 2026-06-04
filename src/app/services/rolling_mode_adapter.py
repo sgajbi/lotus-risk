@@ -207,9 +207,11 @@ async def calculate_rolling_metrics_stateful(
         )
 
     if include_risk_free and explicit_window is not None:
-        assert resolved_reporting_currency is not None
+        if resolved_reporting_currency is None:
+            raise ValueError("reporting currency is required for rolling risk-free sourcing")
         checked_core_client = core_client
-        assert checked_core_client is not None
+        if checked_core_client is None:
+            raise ValueError("lotus-core client is required for rolling risk-free sourcing")
         risk_free_request = build_risk_free_series_request(
             currency=resolved_reporting_currency,
             as_of_date=stateful.as_of_date,
@@ -249,8 +251,10 @@ async def calculate_rolling_metrics_stateful(
         )
 
     if include_risk_free and risk_free_response is None:
-        assert core_client is not None
-        assert resolved_reporting_currency is not None
+        if core_client is None:
+            raise ValueError("lotus-core client is required for rolling risk-free sourcing")
+        if resolved_reporting_currency is None:
+            raise ValueError("reporting currency is required for rolling risk-free sourcing")
         risk_free_request = build_risk_free_series_request(
             currency=resolved_reporting_currency,
             as_of_date=stateful.as_of_date,
@@ -271,8 +275,10 @@ async def calculate_rolling_metrics_stateful(
         else []
     )
     if include_risk_free and not risk_free_points:
-        assert core_client is not None
-        assert resolved_reporting_currency is not None
+        if core_client is None:
+            raise ValueError("lotus-core client is required for rolling risk-free sourcing")
+        if resolved_reporting_currency is None:
+            raise ValueError("reporting currency is required for rolling risk-free sourcing")
         coverage_details = await _get_risk_free_coverage_details(
             core_client=core_client,
             currency=resolved_reporting_currency,

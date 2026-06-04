@@ -37,7 +37,8 @@ async def analytics_risk_drawdown(
     input_mode = request_payload.input_mode.value
     if request_payload.input_mode == DrawdownInputMode.STATELESS:
         stateless_input = request_payload.stateless_input
-        assert stateless_input is not None
+        if stateless_input is None:
+            raise ValueError("stateless_input is required when input_mode=stateless")
         return await observed_endpoint(
             endpoint="drawdown",
             input_mode=input_mode,
@@ -52,7 +53,8 @@ async def analytics_risk_drawdown(
 
     if request_payload.input_mode == DrawdownInputMode.STATEFUL:
         stateful_input = request_payload.stateful_input
-        assert stateful_input is not None
+        if stateful_input is None:
+            raise ValueError("stateful_input is required when input_mode=stateful")
         performance_client = resolve_lotus_performance_client(request)
         return await observed_endpoint(
             endpoint="drawdown",

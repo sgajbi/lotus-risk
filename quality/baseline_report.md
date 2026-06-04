@@ -19,7 +19,7 @@ documentation posture, and validation gates. It is not a completion claim.
 
 | Path | Lines | Bytes |
 | --- | --- | --- |
-| src/app/services/concentration_engine.py | 981 | 37562 |
+| src/app/services/concentration_engine.py | 984 | 37764 |
 | src/app/contracts/concentration.py | 921 | 38075 |
 | src/app/contracts/rolling.py | 911 | 36547 |
 | src/app/contracts/risk.py | 885 | 33850 |
@@ -53,11 +53,11 @@ documentation posture, and validation gates. It is not a completion claim.
 | src/app/contracts/concentration.py | ConcentrationResponse | ClassDef | 181 |
 | src/app/services/drawdown_engine.py | calculate_drawdown | FunctionDef | 181 |
 | src/app/contracts/drawdown.py | DrawdownResponse | ClassDef | 159 |
-| src/app/services/concentration_engine.py | _resolve_simulation | AsyncFunctionDef | 150 |
+| src/app/services/concentration_engine.py | _resolve_simulation | AsyncFunctionDef | 152 |
 | src/app/contracts/drawdown.py | DrawdownAnalyticsRequest | ClassDef | 148 |
-| src/app/services/concentration_engine.py | calculate_concentration | AsyncFunctionDef | 144 |
+| src/app/services/rolling_mode_adapter.py | calculate_rolling_metrics_stateful | AsyncFunctionDef | 148 |
+| src/app/services/concentration_engine.py | calculate_concentration | AsyncFunctionDef | 145 |
 | src/app/contracts/concentration.py | ConcentrationRequest | ClassDef | 143 |
-| src/app/services/rolling_mode_adapter.py | calculate_rolling_metrics_stateful | AsyncFunctionDef | 142 |
 | src/app/services/attribution_engine.py | calculate_historical_attribution | FunctionDef | 139 |
 | src/app/contracts/attribution.py | HistoricalAttributionResponse | ClassDef | 123 |
 | src/app/services/concentration_engine.py | _build_response | FunctionDef | 121 |
@@ -105,10 +105,10 @@ Success: no issues found in 148 source files
 ...
 src\app\upstream_errors.py                            55      0     20      3    96%   181->194, 187->189, 192->194
 ----------------------------------------------------------------------------------------------
-TOTAL                                               3912    155    954     99    94%
+TOTAL                                               3930    173    990    110    93%
 
 34 files skipped due to complete coverage.
-387 passed in 13.21s
+387 passed in 8.75s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -140,7 +140,7 @@ src\app\enterprise_readiness.py - A (33.14)
 src\app\error_response.py - A (68.27)
 src\app\main.py - A (100.00)
 ...
-src\app\services\rolling_mode_adapter.py - A (26.04)
+src\app\services\rolling_mode_adapter.py - A (25.62)
 src\app\services\scenario_engine.py - A (35.03)
 src\app\services\source_window.py - A (69.45)
 src\app\services\stateful_returns_request.py - A (71.31)
@@ -161,23 +161,7 @@ Success! No dependency issues found.
 
 ## Security Snapshot
 
-- Bandit source scan: reported exit 1
-
-```text
-Run started:2026-06-04 05:55:07.089078+00:00
-
-Test results:
->> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
-   Severity: Low   Confidence: High
-   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
-...
-	Total issues (by confidence):
-		Undefined: 0
-		Low: 0
-		Medium: 0
-		High: 18
-Files skipped (0):
-```
+- Bandit source scan: passed
 - Dependency vulnerability audit: reported exit 1
 
 ```text
@@ -273,7 +257,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-387 tests collected in 2.18s
+387 tests collected in 1.91s
 ```
 - Import-linter report-only: reported exit 127
 

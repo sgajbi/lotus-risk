@@ -20,7 +20,6 @@ from app.contracts.concentration import (
     TopPositionDriver,
     IssuerMappingInput,
     SinglePositionConcentration,
-    SimulationConcentrationInput,
     StatelessConcentrationInput,
 )
 from app.services.audit_lineage import (
@@ -576,7 +575,8 @@ async def _resolve_stateful(
     correlation_id: str | None,
 ) -> ConcentrationComputationInput:
     stateful = request.stateful_input
-    assert stateful is not None
+    if stateful is None:
+        raise ValueError("stateful_input is required when input_mode=stateful")
 
     snapshot_payload: dict[str, Any] = {
         "as_of_date": stateful.as_of_date.isoformat(),
@@ -690,8 +690,9 @@ async def _resolve_simulation(
     correlation_id: str | None,
     actor_id: str | None,
 ) -> ConcentrationComputationInput:
-    simulation: SimulationConcentrationInput = request.simulation_input  # type: ignore[assignment]
-    assert simulation is not None
+    simulation = request.simulation_input
+    if simulation is None:
+        raise ValueError("simulation_input is required when input_mode=simulation")
 
     session_id = simulation.session_id
     session_version: int | None = None
@@ -717,7 +718,8 @@ async def _resolve_simulation(
         session_version = _as_int(session_record.get("version"))
         session_expires_at = _as_datetime(session_record.get("expires_at"))
 
-    assert session_id is not None
+    if session_id is None:
+        raise ValueError("simulation session_id could not be resolved")
 
     if simulation.simulation_changes:
         payload = [
@@ -844,7 +846,8 @@ async def calculate_concentration(
 ) -> ConcentrationResponse:
     if request.input_mode == ConcentrationInputMode.STATELESS:
         stateless_input = request.stateless_input
-        assert stateless_input is not None
+        if stateless_input is None:
+            raise ValueError("stateless_input is required when input_mode=stateless")
         current_rows, proposed_rows = _extract_values_from_stateless_payload(stateless_input)
 
         caller_issuer_map: dict[str, IssuerIdentity] = {}

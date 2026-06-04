@@ -41,7 +41,8 @@ async def analytics_risk_historical_attribution(
     input_mode = request_payload.input_mode.value
     if request_payload.input_mode == AttributionInputMode.STATELESS:
         stateless_input = request_payload.stateless_input
-        assert stateless_input is not None
+        if stateless_input is None:
+            raise ValueError("stateless_input is required when input_mode=stateless")
         return await observed_endpoint(
             endpoint="historical-attribution",
             input_mode=input_mode,
@@ -53,7 +54,8 @@ async def analytics_risk_historical_attribution(
 
     if request_payload.input_mode == AttributionInputMode.STATEFUL:
         stateful_input = request_payload.stateful_input
-        assert stateful_input is not None
+        if stateful_input is None:
+            raise ValueError("stateful_input is required when input_mode=stateful")
         performance_client = resolve_lotus_performance_client(request)
         core_client = resolve_lotus_core_client(request)
         return await observed_endpoint(
