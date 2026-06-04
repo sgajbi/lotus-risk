@@ -59,11 +59,11 @@ documentation posture, and validation gates. It is not a completion claim.
 | src/app/trust_telemetry.py | ProductTrustTelemetrySeed | ClassDef | 95 |
 | src/app/contracts/attribution.py | HistoricalAttributionStatelessInput | ClassDef | 93 |
 | src/app/contracts/rolling.py | RollingPeriodResult | ClassDef | 90 |
-| src/app/services/risk/calculation_orchestrator.py | _calculate_period_metrics | FunctionDef | 90 |
 | src/app/contracts/scenario.py | RegimeScenarioPackResponse | ClassDef | 89 |
 | src/app/contracts/rolling.py | RollingMetadata | ClassDef | 87 |
 | src/app/services/attribution_engine.py | _build_attribution_set | FunctionDef | 85 |
 | src/app/contracts/drawdown.py | DrawdownPeriodResult | ClassDef | 84 |
+| src/app/contracts/scenario.py | RegimeScenarioPackRequest | ClassDef | 84 |
 
 ## Tool Baseline
 
@@ -105,10 +105,10 @@ Success: no issues found in 163 source files
 ...
 src\app\upstream_errors.py                              55      0     20      3    96%   181->194, 187->189, 192->194
 ------------------------------------------------------------------------------------------------
-TOTAL                                                 4346     84    996     85    97%
+TOTAL                                                 4353     84    990     85    97%
 
 45 files skipped due to complete coverage.
-431 passed in 8.17s
+431 passed in 9.04s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -123,10 +123,10 @@ src\app\trust_telemetry.py
 src\app\contracts\attribution.py
     C 116:0 HistoricalAttributionStatelessInput - C (11)
 ...
+src\app\services\risk_event_cohort_engine.py
+    F 48:0 evaluate_risk_event_affected_cohort - C (12)
 src\app\services\concentration\parsing.py
     F 221:0 _apply_snapshot_display_names - C (13)
-src\app\services\risk\calculation_orchestrator.py
-    F 178:0 _calculate_period_metrics - C (13)
 src\app\services\risk\helpers.py
     F 21:0 _resolve_period - C (13)
 ```
@@ -142,7 +142,7 @@ src\app\main.py - A (100.00)
 ...
 src\app\services\concentration\response_builder.py - A (38.13)
 src\app\services\concentration\__init__.py - A (100.00)
-src\app\services\risk\calculation_orchestrator.py - A (33.35)
+src\app\services\risk\calculation_orchestrator.py - A (33.53)
 src\app\services\risk\helpers.py - A (24.30)
 src\app\services\risk\metric_calculators.py - A (39.28)
 src\app\services\risk\__init__.py - A (100.00)

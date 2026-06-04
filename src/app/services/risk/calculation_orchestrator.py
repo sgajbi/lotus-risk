@@ -175,6 +175,120 @@ def _build_non_benchmark_calculators(
     }
 
 
+def _calculate_requested_non_benchmark_metrics(
+    *,
+    request: RiskStatelessCalculationInput,
+    non_benchmark_calculators: dict[str, Callable[[], RiskValue]],
+    duration_seconds: Histogram,
+) -> dict[str, RiskValue]:
+    metric_map: dict[str, RiskValue] = {}
+    for metric_name, calculator in non_benchmark_calculators.items():
+        if metric_name not in request.metrics:
+            continue
+        with duration_seconds.labels(metric_name=metric_name).time():
+            try:
+                metric_map[metric_name] = calculator()
+            except ValueError as exc:
+                metric_map[metric_name] = metric_error(str(exc))
+    return metric_map
+
+
+def _benchmark_metric_errors(
+    *,
+    benchmark_metrics: Sequence[str],
+    message: str,
+) -> dict[str, RiskValue]:
+    return {metric_name: metric_error(message) for metric_name in benchmark_metrics}
+
+
+def _calculate_aligned_benchmark_metrics(
+    *,
+    metric_series: pd.Series,
+    benchmark_period: pd.Series,
+    benchmark_metrics: Sequence[str],
+    annual_factor: int,
+    duration_seconds: Histogram,
+) -> tuple[dict[str, RiskValue], int]:
+    aligned = resolve_aligned_benchmark_series(
+        metric_series=metric_series,
+        benchmark_series=benchmark_period,
+    )
+    aligned_count = int(len(aligned))
+    if aligned_count < 2:
+        return (
+            _benchmark_metric_errors(
+                benchmark_metrics=benchmark_metrics,
+                message="Insufficient aligned observations",
+            ),
+            aligned_count,
+        )
+
+    portfolio_series = pd.Series(aligned["portfolio"])
+    benchmark_aligned_series = pd.Series(aligned["benchmark"])
+    metric_map: dict[str, RiskValue] = {}
+    for metric_name in benchmark_metrics:
+        with duration_seconds.labels(metric_name=metric_name).time():
+            try:
+                metric_map[metric_name] = resolve_benchmark_metric_value(
+                    metric_name=metric_name,
+                    aligned_portfolio_series=portfolio_series,
+                    aligned_benchmark_series=benchmark_aligned_series,
+                    annual_factor=annual_factor,
+                )
+            except ValueError as exc:
+                metric_map[metric_name] = metric_error(str(exc))
+    return metric_map, aligned_count
+
+
+def _calculate_benchmark_metrics(
+    *,
+    request: RiskStatelessCalculationInput,
+    metric_series: pd.Series,
+    start: pd.Timestamp,
+    end: pd.Timestamp,
+    benchmark_df: pd.DataFrame,
+    benchmark_metrics: Sequence[str],
+    annual_factor: int,
+    duration_seconds: Histogram,
+) -> tuple[dict[str, RiskValue], dict[str, str | bool | int | list[str]], int, int]:
+    aligned_count = 0
+    benchmark_observation_count = 0
+    if benchmark_df.empty:
+        metric_map = _benchmark_metric_errors(
+            benchmark_metrics=benchmark_metrics,
+            message="Benchmark returns required for benchmark-dependent metric",
+        )
+    else:
+        benchmark_period = align_and_resample_benchmark(
+            benchmark_df=benchmark_df,
+            start=start.date(),
+            end=end.date(),
+            frequency=request.options.frequency,
+            use_log_returns=request.options.use_log_returns,
+        )
+        benchmark_observation_count = len(benchmark_period)
+        if benchmark_period.empty:
+            metric_map = _benchmark_metric_errors(
+                benchmark_metrics=benchmark_metrics,
+                message="Insufficient aligned observations",
+            )
+        else:
+            metric_map, aligned_count = _calculate_aligned_benchmark_metrics(
+                metric_series=metric_series,
+                benchmark_period=benchmark_period,
+                benchmark_metrics=benchmark_metrics,
+                annual_factor=annual_factor,
+                duration_seconds=duration_seconds,
+            )
+
+    benchmark_context = prepare_benchmark_context(
+        benchmark_df_empty=benchmark_df.empty,
+        aligned_count=aligned_count,
+        benchmark_metrics=list(benchmark_metrics),
+    )
+    return metric_map, benchmark_context, aligned_count, benchmark_observation_count
+
+
 def _calculate_period_metrics(
     request: RiskStatelessCalculationInput,
     *,
@@ -194,76 +308,34 @@ def _calculate_period_metrics(
     int,
 ]:
     metric_series = risk_helpers._resample_returns(period_returns, request.options.frequency)
-    drawdown_series = period_returns
-    metric_map: dict[str, RiskValue] = {}
-    non_benchmark_calculators = _build_non_benchmark_calculators(
-        period_returns=metric_series,
-        drawdown_series=drawdown_series,
+    metric_map = _calculate_requested_non_benchmark_metrics(
         request=request,
-        annual_factor=annual_factor,
-        periodic_rf=periodic_rf,
-        periodic_mar=periodic_mar,
+        non_benchmark_calculators=_build_non_benchmark_calculators(
+            period_returns=metric_series,
+            drawdown_series=period_returns,
+            request=request,
+            annual_factor=annual_factor,
+            periodic_rf=periodic_rf,
+            periodic_mar=periodic_mar,
+        ),
+        duration_seconds=duration_seconds,
     )
+    if not benchmark_metrics:
+        return metric_map, None, 0, 0
 
-    for metric_name, calculator in non_benchmark_calculators.items():
-        if metric_name not in request.metrics:
-            continue
-        with duration_seconds.labels(metric_name=metric_name).time():
-            try:
-                metric_map[metric_name] = calculator()
-            except ValueError as exc:
-                metric_map[metric_name] = metric_error(str(exc))
-
-    benchmark_context: dict[str, str | bool | int | list[str]] | None = None
-    aligned_count = 0
-    benchmark_observation_count = 0
-    if benchmark_metrics:
-        if benchmark_df.empty:
-            for metric_name in benchmark_metrics:
-                metric_map[metric_name] = metric_error(
-                    "Benchmark returns required for benchmark-dependent metric"
-                )
-        else:
-            benchmark_period = align_and_resample_benchmark(
-                benchmark_df=benchmark_df,
-                start=start.date(),
-                end=end.date(),
-                frequency=request.options.frequency,
-                use_log_returns=request.options.use_log_returns,
-            )
-            benchmark_observation_count = len(benchmark_period)
-            if benchmark_period.empty:
-                aligned_count = 0
-                for metric_name in benchmark_metrics:
-                    metric_map[metric_name] = metric_error("Insufficient aligned observations")
-            else:
-                aligned = resolve_aligned_benchmark_series(
-                    metric_series=metric_series,
-                    benchmark_series=benchmark_period,
-                )
-                aligned_count = int(len(aligned))
-                if aligned_count < 2:
-                    for metric_name in benchmark_metrics:
-                        metric_map[metric_name] = metric_error("Insufficient aligned observations")
-                else:
-                    portfolio_series = pd.Series(aligned["portfolio"])
-                    benchmark_aligned_series = pd.Series(aligned["benchmark"])
-                    for metric_name in benchmark_metrics:
-                        with duration_seconds.labels(metric_name=metric_name).time():
-                            try:
-                                metric_map[metric_name] = resolve_benchmark_metric_value(
-                                    metric_name=metric_name,
-                                    aligned_portfolio_series=portfolio_series,
-                                    aligned_benchmark_series=benchmark_aligned_series,
-                                    annual_factor=annual_factor,
-                                )
-                            except ValueError as exc:
-                                metric_map[metric_name] = metric_error(str(exc))
-        benchmark_context = prepare_benchmark_context(
-            benchmark_df_empty=benchmark_df.empty,
-            aligned_count=aligned_count,
-            benchmark_metrics=list(benchmark_metrics),
+    benchmark_map, benchmark_context, aligned_count, benchmark_observation_count = (
+        _calculate_benchmark_metrics(
+            request=request,
+            metric_series=metric_series,
+            start=start,
+            end=end,
+            benchmark_df=benchmark_df,
+            benchmark_metrics=benchmark_metrics,
+            annual_factor=annual_factor,
+            duration_seconds=duration_seconds,
         )
+    )
+    metric_map.update(benchmark_map)
     return metric_map, benchmark_context, aligned_count, benchmark_observation_count
 
 
