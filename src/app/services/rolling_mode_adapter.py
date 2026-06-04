@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import dataclass
 from datetime import date
 from typing import Any, Protocol
 
-from app.contracts.risk import RiskRequestScope
+from app.contracts.risk import ReturnPoint, RiskRequestScope
 from app.services.audit_lineage import (
     ordered_source_services,
     upstream_request_fingerprint,
@@ -63,6 +64,46 @@ class LotusCoreClientProtocol(Protocol):
     ) -> dict[str, Any]: ...
 
 
+@dataclass(frozen=True)
+class _StatefulSourceResponses:
+    source_payload: dict[str, Any]
+    source_response: dict[str, Any]
+    risk_free_request: dict[str, Any] | None
+    risk_free_response: dict[str, Any] | None
+
+
+def _copy_int_detail(
+    details: dict[str, Any],
+    *,
+    source: dict[str, Any],
+    source_key: str,
+    target_key: str,
+) -> None:
+    value = source.get(source_key)
+    if isinstance(value, int):
+        details[target_key] = value
+
+
+def _copy_str_detail(
+    details: dict[str, Any],
+    *,
+    source: dict[str, Any],
+    source_key: str,
+    target_key: str,
+) -> None:
+    value = source.get(source_key)
+    if isinstance(value, str) and value:
+        details[target_key] = value
+
+
+def _copy_missing_dates_sample(details: dict[str, Any], *, source: dict[str, Any]) -> None:
+    sample = source.get("missing_dates_sample")
+    if isinstance(sample, list) and sample:
+        details["risk_free_missing_dates_sample"] = [
+            value for value in sample if isinstance(value, str)
+        ]
+
+
 async def _get_risk_free_coverage_details(
     *,
     core_client: LotusCoreClientProtocol,
@@ -87,26 +128,37 @@ async def _get_risk_free_coverage_details(
         return details
     if not isinstance(coverage, dict):
         return details
-    total_points = coverage.get("total_points")
-    if isinstance(total_points, int):
-        details["risk_free_total_points"] = total_points
-    missing_dates_count = coverage.get("missing_dates_count")
-    if isinstance(missing_dates_count, int):
-        details["risk_free_missing_dates_count"] = missing_dates_count
-    observed_start = coverage.get("observed_start_date")
-    if isinstance(observed_start, str) and observed_start:
-        details["risk_free_observed_start_date"] = observed_start
-    observed_end = coverage.get("observed_end_date")
-    if isinstance(observed_end, str) and observed_end:
-        details["risk_free_observed_end_date"] = observed_end
-    request_fingerprint = coverage.get("request_fingerprint")
-    if isinstance(request_fingerprint, str) and request_fingerprint:
-        details["risk_free_coverage_request_fingerprint"] = request_fingerprint
-    sample = coverage.get("missing_dates_sample")
-    if isinstance(sample, list) and sample:
-        details["risk_free_missing_dates_sample"] = [
-            value for value in sample if isinstance(value, str)
-        ]
+    _copy_int_detail(
+        details,
+        source=coverage,
+        source_key="total_points",
+        target_key="risk_free_total_points",
+    )
+    _copy_int_detail(
+        details,
+        source=coverage,
+        source_key="missing_dates_count",
+        target_key="risk_free_missing_dates_count",
+    )
+    _copy_str_detail(
+        details,
+        source=coverage,
+        source_key="observed_start_date",
+        target_key="risk_free_observed_start_date",
+    )
+    _copy_str_detail(
+        details,
+        source=coverage,
+        source_key="observed_end_date",
+        target_key="risk_free_observed_end_date",
+    )
+    _copy_str_detail(
+        details,
+        source=coverage,
+        source_key="request_fingerprint",
+        target_key="risk_free_coverage_request_fingerprint",
+    )
+    _copy_missing_dates_sample(details, source=coverage)
     return details
 
 
@@ -179,27 +231,27 @@ async def _resolve_reporting_currency(
     return resolved_reporting_currency
 
 
-async def calculate_rolling_metrics_stateful(
+def _requires_risk_free(stateful: RollingStatefulInput) -> bool:
+    return ROLLING_SHARPE_METRIC in stateful.rolling_options.metrics
+
+
+def _requires_benchmark(stateful: RollingStatefulInput) -> bool:
+    return any(metric in ROLLING_BENCHMARK_METRICS for metric in stateful.rolling_options.metrics)
+
+
+async def _fetch_stateful_source_responses(
     stateful: RollingStatefulInput,
     *,
     performance_client: LotusPerformanceClientProtocol,
-    core_client: LotusCoreClientProtocol | None = None,
+    core_client: LotusCoreClientProtocol | None,
     correlation_id: str | None,
-) -> RollingResponse:
-    include_risk_free = ROLLING_SHARPE_METRIC in stateful.rolling_options.metrics
-    resolved_reporting_currency = await _resolve_reporting_currency(
-        stateful=stateful,
-        include_risk_free=include_risk_free,
-        core_client=core_client,
-        correlation_id=correlation_id,
-    )
-    if resolved_reporting_currency != stateful.reporting_currency:
-        stateful = stateful.model_copy(update={"reporting_currency": resolved_reporting_currency})
-
+    include_risk_free: bool,
+    reporting_currency: str | None,
+) -> _StatefulSourceResponses:
     source_payload = _build_stateful_source_request(stateful)
     explicit_window = _explicit_window_bounds(source_payload)
-    risk_free_response: dict[str, Any] | None = None
     risk_free_request: dict[str, Any] | None = None
+    risk_free_response: dict[str, Any] | None = None
 
     if include_risk_free and core_client is None:
         raise ValueError(
@@ -207,13 +259,13 @@ async def calculate_rolling_metrics_stateful(
         )
 
     if include_risk_free and explicit_window is not None:
-        if resolved_reporting_currency is None:
+        if reporting_currency is None:
             raise ValueError("reporting currency is required for rolling risk-free sourcing")
         checked_core_client = core_client
         if checked_core_client is None:
             raise ValueError("lotus-core client is required for rolling risk-free sourcing")
         risk_free_request = build_risk_free_series_request(
-            currency=resolved_reporting_currency,
+            currency=reporting_currency,
             as_of_date=stateful.as_of_date,
             start_date=explicit_window[0],
             end_date=explicit_window[1],
@@ -234,11 +286,19 @@ async def calculate_rolling_metrics_stateful(
             correlation_id=correlation_id,
         )
 
-    series, portfolio_points = extract_required_portfolio_returns(source_response)
-
-    include_benchmark = any(
-        metric in ROLLING_BENCHMARK_METRICS for metric in stateful.rolling_options.metrics
+    return _StatefulSourceResponses(
+        source_payload=source_payload,
+        source_response=source_response,
+        risk_free_request=risk_free_request,
+        risk_free_response=risk_free_response,
     )
+
+
+def _benchmark_points_or_raise(
+    series: dict[str, Any],
+    *,
+    include_benchmark: bool,
+) -> list[ReturnPoint]:
     benchmark_points = to_return_points(series.get("benchmark_returns"))
     if include_benchmark and not benchmark_points:
         raise missing_upstream_data(
@@ -249,54 +309,89 @@ async def calculate_rolling_metrics_stateful(
                 "requested rolling benchmark metrics"
             ),
         )
+    return benchmark_points
 
-    if include_risk_free and risk_free_response is None:
-        if core_client is None:
-            raise ValueError("lotus-core client is required for rolling risk-free sourcing")
-        if resolved_reporting_currency is None:
-            raise ValueError("reporting currency is required for rolling risk-free sourcing")
-        risk_free_request = build_risk_free_series_request(
-            currency=resolved_reporting_currency,
-            as_of_date=stateful.as_of_date,
-            start_date=min(point.date for point in portfolio_points),
-            end_date=max(point.date for point in portfolio_points),
-        )
-        risk_free_response = await core_client.get_risk_free_series(
-            request_payload=risk_free_request,
-            correlation_id=correlation_id,
-        )
 
+async def _risk_free_response_or_none(
+    *,
+    include_risk_free: bool,
+    risk_free_response: dict[str, Any] | None,
+    core_client: LotusCoreClientProtocol | None,
+    reporting_currency: str | None,
+    stateful: RollingStatefulInput,
+    portfolio_points: list[ReturnPoint],
+    correlation_id: str | None,
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    if not include_risk_free or risk_free_response is not None:
+        return risk_free_response, None
+    if core_client is None:
+        raise ValueError("lotus-core client is required for rolling risk-free sourcing")
+    if reporting_currency is None:
+        raise ValueError("reporting currency is required for rolling risk-free sourcing")
+
+    risk_free_request = build_risk_free_series_request(
+        currency=reporting_currency,
+        as_of_date=stateful.as_of_date,
+        start_date=min(point.date for point in portfolio_points),
+        end_date=max(point.date for point in portfolio_points),
+    )
+    fetched_response = await core_client.get_risk_free_series(
+        request_payload=risk_free_request,
+        correlation_id=correlation_id,
+    )
+    return fetched_response, risk_free_request
+
+
+async def _risk_free_points_or_raise(
+    *,
+    include_risk_free: bool,
+    risk_free_response: dict[str, Any] | None,
+    core_client: LotusCoreClientProtocol | None,
+    reporting_currency: str | None,
+    annualization_basis: int,
+    portfolio_points: list[ReturnPoint],
+    correlation_id: str | None,
+) -> list[ReturnPoint]:
     risk_free_points = (
         to_risk_free_return_points(
             risk_free_response,
-            annualization_basis=stateful.rolling_options.annualization_basis,
+            annualization_basis=annualization_basis,
         )
         if include_risk_free and risk_free_response is not None
         else []
     )
-    if include_risk_free and not risk_free_points:
-        if core_client is None:
-            raise ValueError("lotus-core client is required for rolling risk-free sourcing")
-        if resolved_reporting_currency is None:
-            raise ValueError("reporting currency is required for rolling risk-free sourcing")
-        coverage_details = await _get_risk_free_coverage_details(
-            core_client=core_client,
-            currency=resolved_reporting_currency,
-            start_date=min(point.date for point in portfolio_points),
-            end_date=max(point.date for point in portfolio_points),
-            correlation_id=correlation_id,
-        )
-        raise missing_upstream_data(
-            service="lotus-core",
-            operation="/integration/reference/risk-free-series",
-            message=(
-                "lotus-core risk-free-series returned no usable risk-free returns for "
-                "requested rolling Sharpe"
-            ),
-            details=coverage_details,
-        )
+    if not include_risk_free or risk_free_points:
+        return risk_free_points
+    if core_client is None:
+        raise ValueError("lotus-core client is required for rolling risk-free sourcing")
+    if reporting_currency is None:
+        raise ValueError("reporting currency is required for rolling risk-free sourcing")
+    coverage_details = await _get_risk_free_coverage_details(
+        core_client=core_client,
+        currency=reporting_currency,
+        start_date=min(point.date for point in portfolio_points),
+        end_date=max(point.date for point in portfolio_points),
+        correlation_id=correlation_id,
+    )
+    raise missing_upstream_data(
+        service="lotus-core",
+        operation="/integration/reference/risk-free-series",
+        message=(
+            "lotus-core risk-free-series returned no usable risk-free returns for "
+            "requested rolling Sharpe"
+        ),
+        details=coverage_details,
+    )
 
-    stateless = RollingStatelessInput(
+
+def _build_stateless_request(
+    stateful: RollingStatefulInput,
+    *,
+    portfolio_points: list[ReturnPoint],
+    benchmark_points: list[ReturnPoint],
+    risk_free_points: list[ReturnPoint],
+) -> RollingStatelessInput:
+    return RollingStatelessInput(
         scope=RiskRequestScope(
             as_of_date=stateful.as_of_date,
             reporting_currency=stateful.reporting_currency,
@@ -308,7 +403,15 @@ async def calculate_rolling_metrics_stateful(
         risk_free_returns=risk_free_points,
         rolling_options=stateful.rolling_options,
     )
-    response = calculate_rolling_metrics(stateless, input_mode=RollingInputMode.STATEFUL)
+
+
+def _attach_stateful_lineage(
+    response: RollingResponse,
+    *,
+    include_risk_free: bool,
+    source_payload: dict[str, Any],
+    risk_free_request: dict[str, Any] | None,
+) -> RollingResponse:
     dependency_services = ["lotus-performance"]
     if include_risk_free:
         dependency_services.append("lotus-core")
@@ -327,3 +430,68 @@ async def calculate_rolling_metrics_stateful(
             )
         )
     return response
+
+
+async def calculate_rolling_metrics_stateful(
+    stateful: RollingStatefulInput,
+    *,
+    performance_client: LotusPerformanceClientProtocol,
+    core_client: LotusCoreClientProtocol | None = None,
+    correlation_id: str | None,
+) -> RollingResponse:
+    include_risk_free = _requires_risk_free(stateful)
+    resolved_reporting_currency = await _resolve_reporting_currency(
+        stateful=stateful,
+        include_risk_free=include_risk_free,
+        core_client=core_client,
+        correlation_id=correlation_id,
+    )
+    if resolved_reporting_currency != stateful.reporting_currency:
+        stateful = stateful.model_copy(update={"reporting_currency": resolved_reporting_currency})
+
+    source_responses = await _fetch_stateful_source_responses(
+        stateful,
+        performance_client=performance_client,
+        core_client=core_client,
+        correlation_id=correlation_id,
+        include_risk_free=include_risk_free,
+        reporting_currency=resolved_reporting_currency,
+    )
+    series, portfolio_points = extract_required_portfolio_returns(source_responses.source_response)
+    benchmark_points = _benchmark_points_or_raise(
+        series,
+        include_benchmark=_requires_benchmark(stateful),
+    )
+    risk_free_response, fallback_risk_free_request = await _risk_free_response_or_none(
+        include_risk_free=include_risk_free,
+        risk_free_response=source_responses.risk_free_response,
+        core_client=core_client,
+        reporting_currency=resolved_reporting_currency,
+        stateful=stateful,
+        portfolio_points=portfolio_points,
+        correlation_id=correlation_id,
+    )
+    risk_free_request = source_responses.risk_free_request or fallback_risk_free_request
+    risk_free_points = await _risk_free_points_or_raise(
+        include_risk_free=include_risk_free,
+        risk_free_response=risk_free_response,
+        core_client=core_client,
+        reporting_currency=resolved_reporting_currency,
+        annualization_basis=stateful.rolling_options.annualization_basis,
+        portfolio_points=portfolio_points,
+        correlation_id=correlation_id,
+    )
+
+    stateless = _build_stateless_request(
+        stateful,
+        portfolio_points=portfolio_points,
+        benchmark_points=benchmark_points,
+        risk_free_points=risk_free_points,
+    )
+    response = calculate_rolling_metrics(stateless, input_mode=RollingInputMode.STATEFUL)
+    return _attach_stateful_lineage(
+        response,
+        include_risk_free=include_risk_free,
+        source_payload=source_responses.source_payload,
+        risk_free_request=risk_free_request,
+    )
