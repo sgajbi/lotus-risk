@@ -280,6 +280,50 @@ async def test_client_surfaces_async_execution_failure_without_message(
 
 
 @pytest.mark.asyncio
+async def test_client_rejects_null_async_result_payload(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(httpx, "AsyncClient", _FakeAsyncClient)
+    _FakeAsyncClient.requests = []
+
+    async def _no_sleep(*_: object) -> None:
+        return None
+
+    monkeypatch.setattr("app.integrations.lotus_performance_client.asyncio.sleep", _no_sleep)
+
+    responses = iter(
+        [
+            _ok_response(
+                {
+                    "result_path": "/integration/returns/series/results/calc-null",
+                },
+                status_code=202,
+                url="http://performance.local/integration/returns/series",
+            ),
+            httpx.Response(
+                200,
+                content="null",
+                request=httpx.Request(
+                    "GET",
+                    "http://performance.local/integration/returns/series/results/calc-null",
+                ),
+            ),
+        ]
+    )
+    _FakeAsyncClient.response_factory = lambda **_: next(responses)
+
+    client = LotusPerformanceClient(base_url="http://performance.local")
+    with pytest.raises(
+        UpstreamServiceError,
+        match="result returned no payload",
+    ) as exc_info:
+        await client.get_returns_series(
+            request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
+            correlation_id=None,
+        )
+    assert exc_info.value.code == "FAILED_DEPENDENCY"
+    assert [request["method"] for request in _FakeAsyncClient.requests] == ["POST", "GET"]
+
+
+@pytest.mark.asyncio
 async def test_client_rejects_invalid_async_accepted_payloads(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -464,3 +508,23 @@ def test_client_defaults_base_url_when_env_missing(monkeypatch: pytest.MonkeyPat
     monkeypatch.delenv("LOTUS_PERFORMANCE_BASE_URL", raising=False)
     client = LotusPerformanceClient()
     assert client._base_url == DEFAULT_LOTUS_PERFORMANCE_BASE_URL
+
+
+def test_client_reads_async_polling_controls_with_fallbacks(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("LOTUS_PERFORMANCE_ASYNC_POLL_INTERVAL_SECONDS", "2.5")
+    monkeypatch.setenv("LOTUS_PERFORMANCE_ASYNC_MAX_POLLS", "33")
+    client = LotusPerformanceClient(base_url="http://performance.local")
+    assert client._async_poll_interval_seconds == 2.5
+    assert client._async_max_polls == 33
+
+
+def test_client_uses_fallbacks_for_invalid_async_polling_controls(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("LOTUS_PERFORMANCE_ASYNC_POLL_INTERVAL_SECONDS", "invalid")
+    monkeypatch.setenv("LOTUS_PERFORMANCE_ASYNC_MAX_POLLS", "-7")
+    client = LotusPerformanceClient(base_url="http://performance.local")
+    assert client._async_poll_interval_seconds == 1.0
+    assert client._async_max_polls == 60
