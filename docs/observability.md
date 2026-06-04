@@ -17,3 +17,17 @@ supportability metrics, analytics freshness buckets, readiness state, and Promet
 
 Router extraction must preserve existing RFC-0108 supportability metrics and the corresponding
 unit tests.
+
+## Dashboard And Alert Evidence
+
+The governed monitoring contract lives at
+`contracts/observability/lotus-risk-monitoring.v1.json`. It defines:
+
+1. bounded Prometheus metric labels,
+2. the operator dashboard panels for endpoint, upstream, supportability, and HTTP status posture,
+3. alert definitions for endpoint failures, upstream dependency failures, degraded calculation
+   supportability, and HTTP 5xx responses,
+4. runbook anchors in `docs/runbooks/service-operations.md`.
+
+`make observability-contract-validate` verifies that declared metrics match the implementation,
+that dashboards and alerts reference implemented metrics, and that alert runbook anchors exist.

@@ -259,20 +259,23 @@ documentation posture, and validation gates. It is not a completion claim.
    `docs/security-threat-model.md`; final enterprise readiness still needs deployment identity
    enforcement decisions.
 
-## Observability Gaps
+## Observability Posture
 
 1. HTTP, endpoint execution, supportability, and freshness metrics exist.
 2. Metrics label bounds are tested for RFC-0108 supportability.
 3. Trace/correlation propagation exists through middleware, but route extraction should preserve
    the propagation contract in tests.
-4. Operational dashboards and alert contracts are documented locally only where previous RFCs
-   required them; this refactor program needs a consolidated observability page.
+4. Operational dashboard and alert contracts are documented in
+   `contracts/observability/lotus-risk-monitoring.v1.json`, validated by
+   `make observability-contract-validate`, and linked to runbook anchors in
+   `docs/runbooks/service-operations.md`.
 
-## Documentation Gaps
+## Documentation Posture
 
-The repository has deep domain-methodology documentation and domain API pages. The refactor program
-still needs consolidated enterprise pages for architecture, API governance, observability, security,
-operations, and supported features. Initial pages are added in this slice.
+The repository has domain-methodology documentation, domain API pages, and consolidated enterprise
+pages for architecture, API governance, observability, security, operations, and supported
+features. Final PR packaging still needs the merged evidence summary, risk register, and follow-up
+backlog.
 
 ## Validation Snapshot
 
@@ -307,7 +310,7 @@ evidence for PR readiness, not a completion claim.
 | OpenAPI governance | Operation IDs were not visibly standardized; route-level examples needed certification after router extraction | Operation IDs are explicit; JSON mutation request examples are modularized and enforced by `make openapi-gate` against the generated schema | OpenAPI metadata is easier to review, no longer buried in large contract classes, and now fails missing operation IDs/request examples in CI lanes | Standardize secondary Spectral lint artifact export before final PR |
 | Tests | 77 Python test files at initial baseline; repo-native coverage gate existed | {len(_python_files(TESTS_DIR))} Python test files; {unit_tests_collected} tests collected in the latest baseline; OpenAPI gate logic has focused regression tests | Focused unit/integration coverage protects router, client, contract, middleware, service, and OpenAPI-governance refactors | Add more negative/security contract certification tests |
 | Security | Enterprise audit middleware, redaction tests, and upstream error mapping existed; abuse-control evidence was still a gap | Authorization checks are decomposed and covered by enterprise-readiness tests; threat-model/abuse-control evidence is pinned in `docs/security-threat-model.md`; Bandit and pip-audit remain green in baseline | Security behavior and abuse controls are easier to inspect and test without changing enforcement semantics | Finalize deployment identity enforcement decisions before PR |
-| Observability | HTTP, endpoint execution, supportability, freshness metrics, and correlation existed but needed consolidated docs | Observability docs exist and endpoint/upstream metrics remain covered by tests and baseline validation | Metrics/correlation posture is preserved through router and client decomposition | Add dashboard/alert evidence or governed no-dashboard decision |
+| Observability | HTTP, endpoint execution, supportability, freshness metrics, and correlation existed but needed consolidated docs | Observability docs, dashboard panels, alert definitions, runbook anchors, and endpoint/upstream metrics are covered by tests and baseline validation | Metrics/correlation posture is preserved through router and client decomposition, and operator response evidence is now governed | Keep alert thresholds aligned with production telemetry after deployment |
 | Documentation and PR evidence | Baseline/reporting foundation was introduced with architecture, security, observability, runbook, wiki, and quality docs | `baseline_report.md`, `refactor_health_report.md`, and this scorecard are updated with current measured movement | Refactor progress is now auditable from generated reports and branch history | Final PR must summarize commands, CI, risks, and follow-up backlog |
 
 ## Current Gate Snapshot
@@ -366,8 +369,8 @@ after each pushed slice.
                 (
                     5,
                     "Observability operations evidence",
-                    "Metrics/correlation support and docs exist; dashboard/alert proof is still not final",
-                    "Add alert/dashboard evidence or a governed no-dashboard decision with runbook linkage",
+                    "Metrics/correlation support, dashboard panels, alert definitions, and runbook anchors are governed by the observability monitoring contract",
+                    "Keep alert thresholds aligned with production telemetry after deployment",
                 ),
             ],
         )
@@ -379,9 +382,10 @@ after each pushed slice.
 2. Fail only new regressions: partially active through lint, typecheck,
    architecture gate, monetary-float guard, OpenAPI gate, focused tests, and
    GitHub feature lane checks.
-3. Enforce agreed thresholds: not complete; complexity is clean and OpenAPI
-   generation is actively gated, but file-size, secondary Spectral lint,
-   security, and observability thresholds still need final policy.
+3. Enforce agreed thresholds: not complete; complexity is clean, OpenAPI
+   generation is actively gated, and observability operations evidence is
+   governed, but file-size, secondary Spectral lint, security deployment policy,
+   and production telemetry thresholds still need final policy.
 4. Enterprise-readiness gates: not complete; final PR still needs healthy CI,
    OpenAPI/security/observability certification evidence, risks, and follow-up
    backlog.

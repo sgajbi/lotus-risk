@@ -244,5 +244,38 @@
       ]
     }
   ],
-  "alerts": []
+  "alerts": [
+    {
+      "alert_id": "lotus-risk-endpoint-failure-rate",
+      "severity": "warning",
+      "metric": "lotus_risk_endpoint_executions_total",
+      "query": "sum by (endpoint) (rate(lotus_risk_endpoint_executions_total{outcome=\"failure\"}[5m])) > 0",
+      "condition": "Any risk analytics endpoint records failures for five minutes.",
+      "runbook": "docs/runbooks/service-operations.md#endpoint-failure-rate-alert"
+    },
+    {
+      "alert_id": "lotus-risk-upstream-dependency-failures",
+      "severity": "critical",
+      "metric": "lotus_risk_upstream_requests_total",
+      "query": "sum by (dependency, category) (rate(lotus_risk_upstream_requests_total{outcome=\"failure\"}[5m])) > 0",
+      "condition": "lotus-core or lotus-performance requests fail in a bounded upstream category.",
+      "runbook": "docs/runbooks/service-operations.md#upstream-dependency-failure-alert"
+    },
+    {
+      "alert_id": "lotus-risk-calculation-supportability-degraded",
+      "severity": "warning",
+      "metric": "lotus_risk_calculation_supportability_total",
+      "query": "sum by (operation, supportability_state, reason) (rate(lotus_risk_calculation_supportability_total{supportability_state=~\"degraded|error|permission_blocked\"}[5m])) > 0",
+      "condition": "Risk calculation supportability is degraded, errored, or permission-blocked.",
+      "runbook": "docs/runbooks/service-operations.md#calculation-supportability-alert"
+    },
+    {
+      "alert_id": "lotus-risk-http-5xx",
+      "severity": "critical",
+      "metric": "http_requests_total",
+      "query": "sum by (handler) (rate(http_requests_total{status=\"5xx\"}[5m])) > 0",
+      "condition": "The service emits HTTP 5xx responses by handler.",
+      "runbook": "docs/runbooks/service-operations.md#http-5xx-alert"
+    }
+  ]
 }
