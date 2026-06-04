@@ -28,8 +28,8 @@ documentation posture, and validation gates. It is not a completion claim.
 | tests/e2e/test_smoke.py | 750 | 28373 |
 | tests/integration/test_historical_attribution_endpoint.py | 747 | 29645 |
 | src/app/services/rolling_engine.py | 705 | 23750 |
+| src/app/services/concentration/resolvers.py | 675 | 23543 |
 | src/app/contracts/attribution.py | 667 | 26911 |
-| src/app/services/concentration/resolvers.py | 611 | 21617 |
 | tests/unit/test_attribution_mode_adapter.py | 600 | 21872 |
 | tests/integration/test_risk_calculate.py | 596 | 25093 |
 | src/app/services/attribution_engine.py | 570 | 19170 |
@@ -105,10 +105,10 @@ Success: no issues found in 163 source files
 ...
 src\app\upstream_errors.py                              55      0     20      3    96%   181->194, 187->189, 192->194
 ------------------------------------------------------------------------------------------------
-TOTAL                                                 4356     84    990     85    97%
+TOTAL                                                 4373     84    990     85    97%
 
 45 files skipped due to complete coverage.
-431 passed in 8.11s
+431 passed in 8.34s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -247,7 +247,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-431 tests collected in 1.63s
+431 tests collected in 1.62s
 ```
 - Import-linter report-only: passed
 
