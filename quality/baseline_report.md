@@ -10,9 +10,9 @@ documentation posture, and validation gates. It is not a completion claim.
 
 ## Code Size Baseline
 
-- Python source files under `src/`: 56
+- Python source files under `src/`: 57
 - Python test files under `tests/`: 77
-- API entry point route/middleware/handler decorators in `src/app/main.py`: 4
+- API entry point route/middleware/handler decorators in `src/app/main.py`: 3
 
 ### Largest Python Files
 
@@ -83,7 +83,8 @@ documentation posture, and validation gates. It is not a completion claim.
    metrics, operational diagnostics, trust telemetry, and capability publication now live in
    `src/app/routers/operational.py`; stateless source-product endpoints now live in
    `src/app/routers/source_products.py`; the primary risk calculation endpoint now lives in
-   `src/app/routers/risk_calculation.py`.
+   `src/app/routers/risk_calculation.py`; drawdown analytics now lives in
+   `src/app/routers/drawdown.py`.
 2. Operational, capability, and stateless source-product routes are split into router modules.
    Remaining core calculation routes are not yet split into route modules; their OpenAPI metadata
    and dependency resolution remain coupled to the FastAPI app instance.
@@ -146,7 +147,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-369 tests collected in 2.35s
+369 tests collected in 1.67s
 ```
 - Import-linter report-only: reported exit 127
 

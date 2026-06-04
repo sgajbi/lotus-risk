@@ -154,7 +154,8 @@ documentation posture, and validation gates. It is not a completion claim.
    metrics, operational diagnostics, trust telemetry, and capability publication now live in
    `src/app/routers/operational.py`; stateless source-product endpoints now live in
    `src/app/routers/source_products.py`; the primary risk calculation endpoint now lives in
-   `src/app/routers/risk_calculation.py`.
+   `src/app/routers/risk_calculation.py`; drawdown analytics now lives in
+   `src/app/routers/drawdown.py`.
 2. Operational, capability, and stateless source-product routes are split into router modules.
    Remaining core calculation routes are not yet split into route modules; their OpenAPI metadata
    and dependency resolution remain coupled to the FastAPI app instance.

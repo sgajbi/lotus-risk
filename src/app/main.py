@@ -10,11 +10,6 @@ from app.contracts.attribution import (
     HistoricalAttributionResponse,
 )
 from app.contracts.concentration import ConcentrationRequest, ConcentrationResponse
-from app.contracts.drawdown import (
-    DrawdownAnalyticsRequest,
-    DrawdownInputMode,
-    DrawdownResponse,
-)
 from app.contracts.rolling import (
     RollingAnalyticsRequest,
     RollingInputMode,
@@ -28,6 +23,7 @@ from app.integrations.lotus_core_client import LotusCoreClient
 from app.integrations.lotus_performance_client import LotusPerformanceClient
 from app.middleware.correlation import CorrelationIdMiddleware
 from app.middleware.http_observation import build_http_observation_middleware
+from app.routers.drawdown import router as drawdown_router
 from app.routers.operational import router as operational_router
 from app.routers.risk_calculation import router as risk_calculation_router
 from app.routers.source_products import router as source_products_router
@@ -38,8 +34,6 @@ from app.service_metadata import (
 from app.services.concentration_engine import calculate_concentration
 from app.services.attribution_engine import calculate_historical_attribution
 from app.services.attribution_mode_adapter import calculate_historical_attribution_stateful
-from app.services.drawdown_engine import calculate_drawdown
-from app.services.drawdown_mode_adapter import calculate_drawdown_stateful
 from app.services.endpoint_observation import observed_endpoint
 from app.services.rolling_engine import calculate_rolling_metrics
 from app.services.rolling_mode_adapter import calculate_rolling_metrics_stateful
@@ -56,6 +50,7 @@ register_exception_handlers(app)
 app.include_router(operational_router)
 app.include_router(source_products_router)
 app.include_router(risk_calculation_router)
+app.include_router(drawdown_router)
 
 
 @app.post(
@@ -143,61 +138,6 @@ async def analytics_risk_concentration(
             correlation_id=request.headers.get("X-Correlation-Id"),
             actor_id=request.headers.get("X-Actor-Id"),
         ),
-    )
-
-
-@app.post(
-    "/analytics/risk/drawdown",
-    response_model=DrawdownResponse,
-    responses=STANDARD_ERROR_RESPONSES,
-    summary="Calculate realized drawdown analytics",
-    tags=["risk-analytics"],
-    description=(
-        "Calculates realized drawdown analytics for stateless or stateful return histories, including "
-        "max drawdown, episode diagnostics, time-under-water, ulcer index, drawdown-at-risk, and "
-        "benchmark-relative drawdown timing. The response echoes applied analysis and benchmark policy "
-        "settings so downstream consumers can interpret results without reconstructing the request."
-    ),
-)
-async def analytics_risk_drawdown(
-    request_payload: DrawdownAnalyticsRequest,
-    request: Request,
-) -> DrawdownResponse:
-    input_mode = request_payload.input_mode.value
-    if request_payload.input_mode == DrawdownInputMode.STATELESS:
-        stateless_input = request_payload.stateless_input
-        assert stateless_input is not None
-        return await observed_endpoint(
-            endpoint="drawdown",
-            input_mode=input_mode,
-            operation=lambda: calculate_drawdown(
-                stateless_input,
-                input_mode=DrawdownInputMode.STATELESS,
-                analysis_options=request_payload.analysis_options,
-                include_benchmark=request_payload.benchmark_policy.include_benchmark,
-                missing_benchmark_policy=request_payload.benchmark_policy.missing_benchmark_policy,
-            ),
-        )
-
-    if request_payload.input_mode == DrawdownInputMode.STATEFUL:
-        stateful_input = request_payload.stateful_input
-        assert stateful_input is not None
-        performance_client = getattr(app.state, "lotus_performance_client", None)
-        if performance_client is None:
-            performance_client = LotusPerformanceClient()
-        return await observed_endpoint(
-            endpoint="drawdown",
-            input_mode=input_mode,
-            operation=lambda: calculate_drawdown_stateful(
-                stateful_input,
-                analysis_options=request_payload.analysis_options,
-                performance_client=performance_client,
-                correlation_id=request.headers.get("X-Correlation-Id"),
-            ),
-        )
-
-    raise ValueError(
-        f"Unsupported input_mode={request_payload.input_mode.value} for /analytics/risk/drawdown"
     )
 
 

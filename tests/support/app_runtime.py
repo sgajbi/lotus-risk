@@ -4,6 +4,7 @@ from contextlib import contextmanager
 from typing import Any, Iterator
 
 import app.main as main_module
+import app.routers.drawdown as drawdown_module
 import app.routers.risk_calculation as risk_calculation_module
 from app.main import app
 
@@ -24,6 +25,7 @@ def override_app_runtime(
     original_core_client = getattr(app.state, "lotus_core_client", None)
     original_dependency_statuses = getattr(app.state, "dependency_statuses", None)
     original_performance_class: Any = getattr(main_module, "LotusPerformanceClient")
+    original_drawdown_performance_class: Any = getattr(drawdown_module, "LotusPerformanceClient")
     original_risk_performance_class: Any = getattr(
         risk_calculation_module, "LotusPerformanceClient"
     )
@@ -36,6 +38,7 @@ def override_app_runtime(
             app.state.lotus_core_client = lotus_core_client
         if lotus_performance_class is not _UNSET:
             setattr(main_module, "LotusPerformanceClient", lotus_performance_class)
+            setattr(drawdown_module, "LotusPerformanceClient", lotus_performance_class)
             setattr(
                 risk_calculation_module,
                 "LotusPerformanceClient",
@@ -51,6 +54,7 @@ def override_app_runtime(
         app.state.lotus_core_client = original_core_client
         app.state.dependency_statuses = original_dependency_statuses
         setattr(main_module, "LotusPerformanceClient", original_performance_class)
+        setattr(drawdown_module, "LotusPerformanceClient", original_drawdown_performance_class)
         setattr(
             risk_calculation_module,
             "LotusPerformanceClient",
