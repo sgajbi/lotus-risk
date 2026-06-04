@@ -121,30 +121,20 @@ def _copy_missing_dates_sample(details: dict[str, Any], *, source: dict[str, Any
         ]
 
 
-async def _get_risk_free_coverage_details(
+def _risk_free_coverage_request_payload(*, start_date: date, end_date: date) -> dict[str, Any]:
+    return {
+        "window": {
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat(),
+        }
+    }
+
+
+def _copy_risk_free_coverage_details(
+    details: dict[str, Any],
     *,
-    core_client: LotusCoreClientProtocol,
-    currency: str,
-    start_date: date,
-    end_date: date,
-    correlation_id: str | None,
-) -> dict[str, Any]:
-    details: dict[str, Any] = {"risk_free_currency": currency}
-    try:
-        coverage = await core_client.get_risk_free_coverage(
-            currency=currency,
-            request_payload={
-                "window": {
-                    "start_date": start_date.isoformat(),
-                    "end_date": end_date.isoformat(),
-                }
-            },
-            correlation_id=correlation_id,
-        )
-    except UpstreamServiceError:
-        return details
-    if not isinstance(coverage, dict):
-        return details
+    coverage: dict[str, Any],
+) -> None:
     _copy_int_detail(
         details,
         source=coverage,
@@ -176,6 +166,31 @@ async def _get_risk_free_coverage_details(
         target_key="risk_free_coverage_request_fingerprint",
     )
     _copy_missing_dates_sample(details, source=coverage)
+
+
+async def _get_risk_free_coverage_details(
+    *,
+    core_client: LotusCoreClientProtocol,
+    currency: str,
+    start_date: date,
+    end_date: date,
+    correlation_id: str | None,
+) -> dict[str, Any]:
+    details: dict[str, Any] = {"risk_free_currency": currency}
+    try:
+        coverage = await core_client.get_risk_free_coverage(
+            currency=currency,
+            request_payload=_risk_free_coverage_request_payload(
+                start_date=start_date,
+                end_date=end_date,
+            ),
+            correlation_id=correlation_id,
+        )
+    except UpstreamServiceError:
+        return details
+    if not isinstance(coverage, dict):
+        return details
+    _copy_risk_free_coverage_details(details, coverage=coverage)
     return details
 
 
