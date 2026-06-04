@@ -50,6 +50,21 @@ class _ScenarioPackEvaluation:
     supportability: ScenarioSupportabilityState
 
 
+@dataclass(frozen=True)
+class _EffectivePeriodDecision:
+    status: ScenarioPackEffectivePeriodStatus
+    reason_codes: list[str]
+    supportability: ScenarioSupportabilityState
+
+
+@dataclass(frozen=True)
+class _PortfolioApplicabilityDecision:
+    status: ScenarioPackApplicabilityStatus
+    portfolio_applicability_ref: str | None
+    reason_codes: list[str]
+    supportability: ScenarioSupportabilityState
+
+
 SCENARIO_PACKS: dict[str, tuple[ScenarioDefinition, ...]] = {
     "CIO_REGIME_2026_Q2": (
         ScenarioDefinition(
@@ -176,6 +191,57 @@ def evaluate_regime_scenario_pack(
     )
 
 
+def _effective_period_decision(
+    *,
+    governance: ScenarioPackGovernanceDefinition,
+    as_of_date: dt.date,
+) -> _EffectivePeriodDecision:
+    if as_of_date < governance.effective_from:
+        return _EffectivePeriodDecision(
+            status=ScenarioPackEffectivePeriodStatus.NOT_YET_EFFECTIVE,
+            reason_codes=["REGIME_SCENARIO_EFFECTIVE_PERIOD_EXCEPTION"],
+            supportability=ScenarioSupportabilityState.DEGRADED,
+        )
+    if as_of_date > governance.effective_to:
+        return _EffectivePeriodDecision(
+            status=ScenarioPackEffectivePeriodStatus.EXPIRED,
+            reason_codes=["REGIME_SCENARIO_EFFECTIVE_PERIOD_EXCEPTION"],
+            supportability=ScenarioSupportabilityState.DEGRADED,
+        )
+    return _EffectivePeriodDecision(
+        status=ScenarioPackEffectivePeriodStatus.ACTIVE,
+        reason_codes=[],
+        supportability=ScenarioSupportabilityState.READY,
+    )
+
+
+def _portfolio_applicability_decision(
+    *,
+    governance: ScenarioPackGovernanceDefinition,
+    portfolio_id: str | None,
+) -> _PortfolioApplicabilityDecision:
+    if portfolio_id is None:
+        return _PortfolioApplicabilityDecision(
+            status=ScenarioPackApplicabilityStatus.PENDING_REVIEW,
+            portfolio_applicability_ref=None,
+            reason_codes=["REGIME_SCENARIO_PORTFOLIO_APPLICABILITY_NOT_CONFIRMED"],
+            supportability=ScenarioSupportabilityState.PENDING_REVIEW,
+        )
+    if portfolio_id in governance.applicable_portfolio_ids:
+        return _PortfolioApplicabilityDecision(
+            status=ScenarioPackApplicabilityStatus.APPLICABLE,
+            portfolio_applicability_ref=f"{governance.cio_approval_ref}-APP-{portfolio_id}",
+            reason_codes=[],
+            supportability=ScenarioSupportabilityState.READY,
+        )
+    return _PortfolioApplicabilityDecision(
+        status=ScenarioPackApplicabilityStatus.NOT_APPLICABLE,
+        portfolio_applicability_ref=None,
+        reason_codes=["REGIME_SCENARIO_PORTFOLIO_NOT_APPLICABLE"],
+        supportability=ScenarioSupportabilityState.BLOCKED,
+    )
+
+
 def _evaluate_governance_evidence(
     request: RegimeScenarioPackRequest,
 ) -> tuple[ScenarioPackGovernanceEvidence, list[str], ScenarioSupportabilityState]:
@@ -187,37 +253,25 @@ def _evaluate_governance_evidence(
         reason_codes.append("REGIME_SCENARIO_CIO_APPROVAL_NOT_CONFIRMED")
         supportability = ScenarioSupportabilityState.BLOCKED
 
-    effective_period_status = ScenarioPackEffectivePeriodStatus.ACTIVE
-    if request.as_of_date < governance.effective_from:
-        effective_period_status = ScenarioPackEffectivePeriodStatus.NOT_YET_EFFECTIVE
-        reason_codes.append("REGIME_SCENARIO_EFFECTIVE_PERIOD_EXCEPTION")
-        supportability = _most_severe_supportability(
-            supportability,
-            ScenarioSupportabilityState.DEGRADED,
-        )
-    elif request.as_of_date > governance.effective_to:
-        effective_period_status = ScenarioPackEffectivePeriodStatus.EXPIRED
-        reason_codes.append("REGIME_SCENARIO_EFFECTIVE_PERIOD_EXCEPTION")
-        supportability = _most_severe_supportability(
-            supportability,
-            ScenarioSupportabilityState.DEGRADED,
-        )
+    effective_period = _effective_period_decision(
+        governance=governance,
+        as_of_date=request.as_of_date,
+    )
+    reason_codes.extend(effective_period.reason_codes)
+    supportability = _most_severe_supportability(
+        supportability,
+        effective_period.supportability,
+    )
 
-    applicability_status = ScenarioPackApplicabilityStatus.APPLICABLE
-    portfolio_applicability_ref: str | None = None
-    if request.portfolio_id is None:
-        applicability_status = ScenarioPackApplicabilityStatus.PENDING_REVIEW
-        reason_codes.append("REGIME_SCENARIO_PORTFOLIO_APPLICABILITY_NOT_CONFIRMED")
-        supportability = _most_severe_supportability(
-            supportability,
-            ScenarioSupportabilityState.PENDING_REVIEW,
-        )
-    elif request.portfolio_id in governance.applicable_portfolio_ids:
-        portfolio_applicability_ref = f"{governance.cio_approval_ref}-APP-{request.portfolio_id}"
-    else:
-        applicability_status = ScenarioPackApplicabilityStatus.NOT_APPLICABLE
-        reason_codes.append("REGIME_SCENARIO_PORTFOLIO_NOT_APPLICABLE")
-        supportability = ScenarioSupportabilityState.BLOCKED
+    portfolio_applicability = _portfolio_applicability_decision(
+        governance=governance,
+        portfolio_id=request.portfolio_id,
+    )
+    reason_codes.extend(portfolio_applicability.reason_codes)
+    supportability = _most_severe_supportability(
+        supportability,
+        portfolio_applicability.supportability,
+    )
 
     return (
         ScenarioPackGovernanceEvidence(
@@ -227,10 +281,10 @@ def _evaluate_governance_evidence(
             approved_at=governance.approved_at,
             effective_from=governance.effective_from,
             effective_to=governance.effective_to,
-            effective_period_status=effective_period_status,
-            applicability_status=applicability_status,
+            effective_period_status=effective_period.status,
+            applicability_status=portfolio_applicability.status,
             applicability_scope=list(governance.applicability_scope),
-            portfolio_applicability_ref=portfolio_applicability_ref,
+            portfolio_applicability_ref=portfolio_applicability.portfolio_applicability_ref,
             methodology_ref=governance.methodology_ref,
         ),
         reason_codes,
