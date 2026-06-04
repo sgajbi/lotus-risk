@@ -33,11 +33,11 @@ documentation posture, and validation gates. It is not a completion claim.
 | src/app/services/attribution_engine.py | 608 | 20329 |
 | tests/unit/test_attribution_mode_adapter.py | 600 | 21872 |
 | tests/integration/test_risk_calculate.py | 596 | 25093 |
+| src/app/services/drawdown_engine.py | 590 | 19662 |
 | tests/integration/test_rolling_metrics_endpoint.py | 566 | 22142 |
 | src/app/services/attribution_mode_adapter.py | 533 | 19091 |
 | src/app/services/rolling_mode_adapter.py | 531 | 18368 |
 | tests/unit/test_lotus_performance_client.py | 530 | 19686 |
-| src/app/services/drawdown_engine.py | 530 | 18443 |
 | src/app/trust_telemetry.py | 511 | 21683 |
 
 ### Largest Functions And Classes
@@ -105,10 +105,10 @@ Success: no issues found in 163 source files
 ...
 src\app\upstream_errors.py                              55      0     20      3    96%   181->194, 187->189, 192->194
 ------------------------------------------------------------------------------------------------
-TOTAL                                                 4475     84    990     85    97%
+TOTAL                                                 4486     84    992     85    97%
 
 45 files skipped due to complete coverage.
-431 passed in 7.83s
+431 passed in 9.71s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -122,9 +122,6 @@ src\app\contracts\attribution.py
     C 116:0 HistoricalAttributionStatelessInput - C (11)
 src\app\contracts\rolling.py
     C 104:0 RollingStatelessInput - C (11)
-...
-    F 188:0 _drawdown_summary - C (13)
-    F 89:0 _build_episodes - C (11)
 src\app\services\concentration\parsing.py
     F 221:0 _apply_snapshot_display_names - C (13)
 src\app\services\risk\helpers.py
@@ -247,7 +244,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-431 tests collected in 1.68s
+431 tests collected in 2.01s
 ```
 - Import-linter report-only: passed
 

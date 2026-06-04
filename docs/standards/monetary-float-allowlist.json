@@ -106,37 +106,37 @@
       "review_by": "2026-12-01"
     },
     {
-      "finding": "src/app/services/drawdown_engine.py:173:dar_value = float(np.quantile(np.array(depths), 1.0 - alpha, method=\"linear\"))",
+      "finding": "src/app/services/drawdown_engine.py:210:dar_value = float(np.quantile(np.array(depths), 1.0 - alpha, method=\"linear\"))",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
       "review_by": "2026-12-01"
     },
     {
-      "finding": "src/app/services/drawdown_engine.py:175:cdar_value = float(np.mean(worst_tail)) if worst_tail else None",
+      "finding": "src/app/services/drawdown_engine.py:212:cdar_value = float(np.mean(worst_tail)) if worst_tail else None",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
       "review_by": "2026-12-01"
     },
     {
-      "finding": "src/app/services/drawdown_engine.py:180:dd_values = [float(value) for value in drawdown if float(value) < 0]",
+      "finding": "src/app/services/drawdown_engine.py:217:dd_values = [float(value) for value in drawdown if float(value) < 0]",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
       "review_by": "2026-12-01"
     },
     {
-      "finding": "src/app/services/drawdown_engine.py:210:time_under_water_days=int(sum(1 for value in drawdown if float(value) < 0)),",
+      "finding": "src/app/services/drawdown_engine.py:270:time_under_water_days=int(sum(1 for value in drawdown if float(value) < 0)),",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
       "review_by": "2026-12-01"
     },
     {
-      "finding": "src/app/services/drawdown_engine.py:223:points.append(UnderwaterPoint(date=timestamp.date(), drawdown=float(value)))",
+      "finding": "src/app/services/drawdown_engine.py:283:points.append(UnderwaterPoint(date=timestamp.date(), drawdown=float(value)))",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
       "review_by": "2026-12-01"
     },
     {
-      "finding": "src/app/services/drawdown_engine.py:93:values = [float(value) for value in drawdown]",
+      "finding": "src/app/services/drawdown_engine.py:178:values = [float(value) for value in drawdown]",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
       "review_by": "2026-12-01"

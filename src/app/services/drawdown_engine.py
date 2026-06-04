@@ -65,6 +65,17 @@ class _RelativeBenchmarkResult:
     context: RelativeDrawdownContext
 
 
+@dataclass(frozen=True)
+class _DrawdownExtremeFields:
+    max_drawdown: float
+    peak_date: date | None
+    trough_date: date | None
+    recovery_date: date | None
+    is_recovered: bool
+    days_to_trough: int
+    days_to_recovery: int | None
+
+
 def _duration_days(start: date, end: date, *, unit: str) -> int:
     if end < start:
         return 0
@@ -86,12 +97,45 @@ def _filter_period(df: pd.DataFrame, *, start: date, end: date) -> pd.Series:
     return filtered
 
 
-def _build_episodes(drawdown: pd.Series, *, duration_unit: str) -> list[_EpisodeRecord]:
-    if drawdown.empty:
-        return []
-    dates = [cast(pd.Timestamp, index).date() for index in drawdown.index]
-    values = [float(value) for value in drawdown]
+def _episode_record_from_segment(
+    *,
+    dates: list[date],
+    values: list[float],
+    start_index: int,
+    peak_date: date,
+    duration_unit: str,
+    recovery_index: int | None,
+) -> _EpisodeRecord:
+    end_index = recovery_index if recovery_index is not None else len(values) - 1
+    segment_values = values[start_index : end_index + 1]
+    trough_offset = int(np.argmin(segment_values))
+    trough_index = start_index + trough_offset
+    trough_date = dates[trough_index]
+    recovery_date = dates[recovery_index] if recovery_index is not None else None
+    terminal_date = recovery_date or dates[-1]
+    depth = float(min(segment_values))
+    return _EpisodeRecord(
+        peak_date=peak_date,
+        trough_date=trough_date,
+        recovery_date=recovery_date,
+        depth=depth,
+        days_to_trough=_duration_days(peak_date, trough_date, unit=duration_unit),
+        days_to_recovery=(
+            _duration_days(trough_date, recovery_date, unit=duration_unit)
+            if recovery_date is not None
+            else None
+        ),
+        total_days=_duration_days(peak_date, terminal_date, unit=duration_unit),
+        is_recovered=recovery_date is not None,
+    )
 
+
+def _episode_records_from_values(
+    *,
+    dates: list[date],
+    values: list[float],
+    duration_unit: str,
+) -> list[_EpisodeRecord]:
     episodes: list[_EpisodeRecord] = []
     in_episode = False
     start_index = 0
@@ -103,49 +147,42 @@ def _build_episodes(drawdown: pd.Series, *, duration_unit: str) -> list[_Episode
             peak_date = dates[idx - 1] if idx > 0 else dates[idx]
             continue
         if in_episode and dd_value >= 0:
-            segment_values = values[start_index : idx + 1]
-            trough_offset = int(np.argmin(segment_values))
-            trough_index = start_index + trough_offset
-            trough_date = dates[trough_index]
-            recovery_date = dates[idx]
-            depth = float(min(segment_values))
-            days_to_trough = _duration_days(peak_date, trough_date, unit=duration_unit)
-            days_to_recovery = _duration_days(trough_date, recovery_date, unit=duration_unit)
-            total_days = _duration_days(peak_date, recovery_date, unit=duration_unit)
             episodes.append(
-                _EpisodeRecord(
+                _episode_record_from_segment(
+                    dates=dates,
+                    values=values,
+                    start_index=start_index,
                     peak_date=peak_date,
-                    trough_date=trough_date,
-                    recovery_date=recovery_date,
-                    depth=depth,
-                    days_to_trough=days_to_trough,
-                    days_to_recovery=days_to_recovery,
-                    total_days=total_days,
-                    is_recovered=True,
+                    duration_unit=duration_unit,
+                    recovery_index=idx,
                 )
             )
             in_episode = False
 
     if in_episode:
-        segment_values = values[start_index:]
-        trough_offset = int(np.argmin(segment_values))
-        trough_index = start_index + trough_offset
-        trough_date = dates[trough_index]
-        depth = float(min(segment_values))
-        end_date = dates[-1]
         episodes.append(
-            _EpisodeRecord(
+            _episode_record_from_segment(
+                dates=dates,
+                values=values,
+                start_index=start_index,
                 peak_date=peak_date,
-                trough_date=trough_date,
-                recovery_date=None,
-                depth=depth,
-                days_to_trough=_duration_days(peak_date, trough_date, unit=duration_unit),
-                days_to_recovery=None,
-                total_days=_duration_days(peak_date, end_date, unit=duration_unit),
-                is_recovered=False,
+                duration_unit=duration_unit,
+                recovery_index=None,
             )
         )
     return episodes
+
+
+def _build_episodes(drawdown: pd.Series, *, duration_unit: str) -> list[_EpisodeRecord]:
+    dates = [cast(pd.Timestamp, index).date() for index in drawdown.index]
+    values = [float(value) for value in drawdown]
+    if not values:
+        return []
+    return _episode_records_from_values(
+        dates=dates,
+        values=values,
+        duration_unit=duration_unit,
+    )
 
 
 def _empty_drawdown_summary() -> DrawdownSummary:
@@ -185,6 +222,29 @@ def _ulcer_index(drawdown: pd.Series) -> float:
     return float(sqrt(float(np.mean(np.square(np.array([float(v) for v in drawdown]))))))
 
 
+def _drawdown_extreme_fields(episodes: list[_EpisodeRecord]) -> _DrawdownExtremeFields:
+    max_episode = min(episodes, key=lambda episode: episode.depth) if episodes else None
+    if max_episode is None:
+        return _DrawdownExtremeFields(
+            max_drawdown=0.0,
+            peak_date=None,
+            trough_date=None,
+            recovery_date=None,
+            is_recovered=True,
+            days_to_trough=0,
+            days_to_recovery=0,
+        )
+    return _DrawdownExtremeFields(
+        max_drawdown=max_episode.depth,
+        peak_date=max_episode.peak_date,
+        trough_date=max_episode.trough_date,
+        recovery_date=max_episode.recovery_date,
+        is_recovered=max_episode.is_recovered,
+        days_to_trough=max_episode.days_to_trough,
+        days_to_recovery=max_episode.days_to_recovery,
+    )
+
+
 def _drawdown_summary(
     drawdown: pd.Series,
     *,
@@ -197,16 +257,16 @@ def _drawdown_summary(
     episodes = _build_episodes(drawdown, duration_unit=duration_unit)
     depths = [episode.depth for episode in episodes]
     dar_value, cdar_value = _tail_drawdown_risk(depths, alpha=alpha)
-    max_episode = min(episodes, key=lambda episode: episode.depth) if episodes else None
+    extreme = _drawdown_extreme_fields(episodes)
 
     summary = DrawdownSummary(
-        max_drawdown=max_episode.depth if max_episode else 0.0,
-        max_drawdown_peak_date=max_episode.peak_date if max_episode else None,
-        max_drawdown_trough_date=max_episode.trough_date if max_episode else None,
-        max_drawdown_recovery_date=max_episode.recovery_date if max_episode else None,
-        is_recovered=max_episode.is_recovered if max_episode else True,
-        days_to_trough=max_episode.days_to_trough if max_episode else 0,
-        days_to_recovery=max_episode.days_to_recovery if max_episode else 0,
+        max_drawdown=extreme.max_drawdown,
+        max_drawdown_peak_date=extreme.peak_date,
+        max_drawdown_trough_date=extreme.trough_date,
+        max_drawdown_recovery_date=extreme.recovery_date,
+        is_recovered=extreme.is_recovered,
+        days_to_trough=extreme.days_to_trough,
+        days_to_recovery=extreme.days_to_recovery,
         time_under_water_days=int(sum(1 for value in drawdown if float(value) < 0)),
         average_drawdown=_average_drawdown(drawdown),
         ulcer_index=_ulcer_index(drawdown),
