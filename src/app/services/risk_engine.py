@@ -29,7 +29,6 @@ RISK_METRIC_DURATION_SECONDS = Histogram(
 BENCHMARK_METRICS = risk_helpers.BENCHMARK_METRICS
 
 
-
 def _record_metric_request(metrics: Sequence[str]) -> None:
     for metric in metrics:
         RISK_METRIC_REQUESTED_TOTAL.labels(metric_name=metric).inc()
