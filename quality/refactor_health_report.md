@@ -8,9 +8,9 @@ This slice establishes the report-only enterprise quality baseline and progressi
 
 | Rank | Target | Evidence | Next action |
 | --- | --- | --- | --- |
-| 1 | API entry point | src/app/main.py has 10 lines and 0 app decorators | Extract routers and dependency providers |
-| 2 | Concentration module | Largest service and contract files are concentration-related | Split source resolution, issuer aggregation, and response assembly |
-| 3 | Risk calculation engine | Largest function is LotusPerformanceClient at 253 lines | Extract per-metric calculators behind stable service API |
+| 1 | Contract model size | Largest files are API contract modules over 800 lines | Split reusable examples, metadata, and nested contract fragments where it improves readability |
+| 2 | Rolling calculation engine | calculate_rolling_metrics has 230 lines | Extract smaller metric helpers while preserving behavior with characterization tests |
+| 3 | Concentration service boundaries | Simulation/stateless resolvers and response assembly remain the largest service areas | Tighten ports, source resolution, issuer aggregation, and response assembly boundaries |
 
 ## Progressive Gate Posture
 

@@ -11,7 +11,7 @@ documentation posture, and validation gates. It is not a completion claim.
 ## Code Size Baseline
 
 - Python source files under `src/`: 78
-- Python test files under `tests/`: 84
+- Python test files under `tests/`: 85
 - Python packages under `src/`: 9
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
 
@@ -34,9 +34,9 @@ documentation posture, and validation gates. It is not a completion claim.
 | tests/integration/test_rolling_metrics_endpoint.py | 566 | 22142 |
 | tests/unit/test_lotus_performance_client.py | 530 | 19686 |
 | src/app/trust_telemetry.py | 476 | 20809 |
+| tests/unit/test_rolling_mode_adapter.py | 444 | 16926 |
 | tests/unit/test_drawdown_engine.py | 422 | 16234 |
 | tests/integration/test_rolling_live_characterization.py | 418 | 16694 |
-| tests/unit/test_rolling_mode_adapter.py | 402 | 15406 |
 | src/app/services/attribution_mode_adapter.py | 401 | 14732 |
 | src/app/services/drawdown_engine.py | 400 | 15643 |
 
@@ -69,7 +69,7 @@ documentation posture, and validation gates. It is not a completion claim.
 
 - Ruff: configured in `pyproject.toml`; enforced by `make lint`.
 - mypy: configured in `mypy.ini`; enforced by `make typecheck`.
-- pytest/coverage: repo-native test commands exist; PR coverage floor remains 98%.
+- pytest/coverage: repo-native test commands exist; default local coverage floor is 98%.
 - pip-audit: enforced through `make security-audit`.
 - Bandit, radon, vulture, deptry, and import-linter are now declared as development
   tooling for progressive quality evidence.
@@ -83,33 +83,32 @@ documentation posture, and validation gates. It is not a completion claim.
 ```text
 All checks passed!
 ```
-- Ruff format check: reported exit 1
+- Ruff format check: passed
 
 ```text
-Would reformat: src\app\services\risk_engine.py
-1 file would be reformatted, 174 files already formatted
+176 files already formatted
 ```
 - Type checking: passed
 
 ```text
-Success: no issues found in 162 source files
+Success: no issues found in 163 source files
 ```
 - Unit coverage snapshot: passed
 
 ```text
-........................................................................ [ 18%]
-........................................................................ [ 36%]
-........................................................................ [ 54%]
-........................................................................ [ 72%]
-........................................................................ [ 90%]
-......................................                                   [100%]
+........................................................................ [ 16%]
+........................................................................ [ 33%]
+........................................................................ [ 50%]
+........................................................................ [ 66%]
+........................................................................ [ 83%]
+.......................................................................  [100%]
 ...
 src\app\upstream_errors.py                              55      0     20      3    96%   181->194, 187->189, 192->194
 ------------------------------------------------------------------------------------------------
-TOTAL                                                 4041    172    998    113    94%
+TOTAL                                                 4047     79   1004     86    97%
 
-42 files skipped due to complete coverage.
-398 passed in 8.88s
+45 files skipped due to complete coverage.
+431 passed in 8.10s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -127,7 +126,7 @@ src\app\contracts\attribution.py
 src\app\services\concentration\response_builder.py
     F 37:0 _build_response - C (14)
 src\app\services\risk\calculation_orchestrator.py
-    F 178:0 _calculate_period_metrics - C (12)
+    F 178:0 _calculate_period_metrics - C (13)
 src\app\services\risk\helpers.py
     F 21:0 _resolve_period - C (13)
 ```
@@ -143,8 +142,8 @@ src\app\main.py - A (100.00)
 ...
 src\app\services\concentration\response_builder.py - A (45.12)
 src\app\services\concentration\__init__.py - A (100.00)
-src\app\services\risk\calculation_orchestrator.py - A (33.67)
-src\app\services\risk\helpers.py - A (24.91)
+src\app\services\risk\calculation_orchestrator.py - A (33.35)
+src\app\services\risk\helpers.py - A (24.30)
 src\app\services\risk\metric_calculators.py - A (39.28)
 src\app\services\risk\__init__.py - A (100.00)
 ```
@@ -248,7 +247,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-398 tests collected in 1.84s
+431 tests collected in 1.51s
 ```
 - Import-linter report-only: passed
 

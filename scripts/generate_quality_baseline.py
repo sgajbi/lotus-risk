@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 QUALITY_DIR = ROOT / "quality"
 SRC_DIR = ROOT / "src"
 TESTS_DIR = ROOT / "tests"
+COVERAGE_FAIL_UNDER = os.environ.get("COVERAGE_FAIL_UNDER", "98")
 IMPORT_LINTER_COMMAND = [
     sys.executable,
     "-c",
@@ -95,6 +96,10 @@ def collect_symbol_sizes() -> list[SymbolSize]:
     return sorted(sizes, key=lambda item: item.lines, reverse=True)
 
 
+def function_sizes(symbol_sizes: list[SymbolSize]) -> list[SymbolSize]:
+    return [item for item in symbol_sizes if item.kind in {"FunctionDef", "AsyncFunctionDef"}]
+
+
 def count_route_decorators() -> int:
     main_path = SRC_DIR / "app" / "main.py"
     return sum(
@@ -173,7 +178,7 @@ documentation posture, and validation gates. It is not a completion claim.
 
 - Ruff: configured in `pyproject.toml`; enforced by `make lint`.
 - mypy: configured in `mypy.ini`; enforced by `make typecheck`.
-- pytest/coverage: repo-native test commands exist; PR coverage floor remains 98%.
+- pytest/coverage: repo-native test commands exist; default local coverage floor is {COVERAGE_FAIL_UNDER}%.
 - pip-audit: enforced through `make security-audit`.
 - Bandit, radon, vulture, deptry, and import-linter are now declared as development
   tooling for progressive quality evidence.
@@ -278,16 +283,18 @@ def write_health_reports(
 ) -> None:
     main_lines = next(item.lines for item in file_sizes if item.path == "src/app/main.py")
     unit_tests_collected = collected_test_count(unit_collection_evidence)
+    largest_functions = function_sizes(symbol_sizes)
+    largest_function = largest_functions[0]
     scorecard = f"""# Lotus Risk Quality Scorecard
 
 | Dimension | Current posture | Refactor target |
 | --- | --- | --- |
-| API modularity | `src/app/main.py` is {main_lines} lines | Split app factory, routers, error metadata, and dependencies |
+| API modularity | `src/app/main.py` is {main_lines} lines with app construction delegated to `app_factory` | Keep routers modular and prevent API-entry-point regression |
 | Service boundaries | Calculation engines are under `src/app/services` | Keep business logic out of routers and middleware |
-| Architecture enforcement | `.importlinter` report-only contracts added | Promote to CI gate after router extraction |
-| OpenAPI governance | Existing repo gate plus Spectral config added | Standardize operation IDs and generated OpenAPI lint |
+| Architecture enforcement | `.importlinter` contracts are available through `make architecture-gate` | Keep contracts green and extend boundaries as modules mature |
+| OpenAPI governance | Existing repo gate plus `.spectral.yaml` governance config | Standardize generated OpenAPI lint in CI |
 | Tests | {len(_python_files(TESTS_DIR))} Python test files; {unit_tests_collected} unit tests collect | Add route-boundary and governance regression tests per slice |
-| Security | pip-audit gate exists; Bandit configured | Add report-only Bandit evidence, then enforce new regressions |
+| Security | pip-audit and Bandit are enforced through `make security-audit` | Add targeted negative/security tests for abuse and error leakage |
 | Observability | Metrics/correlation support exists | Consolidate runbook and dashboard/alert evidence |
 """
     (QUALITY_DIR / "quality_scorecard.md").write_text(scorecard, encoding="utf-8")
@@ -306,21 +313,21 @@ This slice establishes the report-only enterprise quality baseline and progressi
             [
                 (
                     1,
-                    "API entry point",
-                    f"src/app/main.py has {main_lines} lines and {count_route_decorators()} app decorators",
-                    "Extract routers and dependency providers",
+                    "Contract model size",
+                    "Largest files are API contract modules over 800 lines",
+                    "Split reusable examples, metadata, and nested contract fragments where it improves readability",
                 ),
                 (
                     2,
-                    "Concentration module",
-                    "Largest service and contract files are concentration-related",
-                    "Split source resolution, issuer aggregation, and response assembly",
+                    "Rolling calculation engine",
+                    f"{largest_function.name} has {largest_function.lines} lines",
+                    "Extract smaller metric helpers while preserving behavior with characterization tests",
                 ),
                 (
                     3,
-                    "Risk calculation engine",
-                    f"Largest function is {symbol_sizes[0].name} at {symbol_sizes[0].lines} lines",
-                    "Extract per-metric calculators behind stable service API",
+                    "Concentration service boundaries",
+                    "Simulation/stateless resolvers and response assembly remain the largest service areas",
+                    "Tighten ports, source resolution, issuer aggregation, and response assembly boundaries",
                 ),
             ],
         )
@@ -402,7 +409,7 @@ Generated by `python scripts/generate_quality_baseline.py`.
 | Unit tests | `make test-unit` | Feature Lane |
 | Integration tests | `make test-integration` | PR Merge Gate |
 | E2E tests | `make test-e2e` | PR Merge Gate |
-| Coverage floor | `make test-coverage` | PR Merge Gate |
+| Coverage floor | `make test-coverage` | PR Merge Gate parity |
 | Dependency and vulnerability audit | `make security-audit` | Feature Lane / PR Merge Gate |
 | Migration smoke | `make migration-smoke` | PR Merge Gate |
 | Docker build | `make docker-build` | PR Merge Gate |
