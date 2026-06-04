@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal, InvalidOperation
 from typing import Any, Protocol
@@ -55,6 +56,14 @@ class LotusCoreClientProtocol(Protocol):
         security_ids: list[str],
         correlation_id: str | None,
     ) -> dict[str, Any]: ...
+
+
+@dataclass(frozen=True)
+class _StatefulReturnsContext:
+    returns_request: dict[str, Any]
+    portfolio_returns: list[ReturnPoint]
+    benchmark_returns: list[ReturnPoint]
+    start_date: date
 
 
 def _requires_active_attribution(stateful: HistoricalAttributionStatefulInput) -> bool:
@@ -182,6 +191,60 @@ def _build_exposure_points(
     return points
 
 
+def _position_timeseries_dimensions(grouping_dimensions: list[GroupingDimension]) -> list[str]:
+    dimensions: list[str] = []
+    if "SECTOR" in grouping_dimensions:
+        dimensions.append("sector")
+    if "ASSET_CLASS" in grouping_dimensions:
+        dimensions.append("asset_class")
+    return dimensions
+
+
+def _position_timeseries_payload(
+    *,
+    as_of_date: date,
+    start_date: date,
+    reporting_currency: str | None,
+    dimensions: list[str],
+    page_token: str | None,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "as_of_date": as_of_date.isoformat(),
+        "window": {
+            "start_date": start_date.isoformat(),
+            "end_date": as_of_date.isoformat(),
+        },
+        "frequency": "daily",
+        "dimensions": dimensions,
+        "consumer_system": "lotus-risk",
+        "page": {"page_size": 5000, "page_token": page_token},
+    }
+    if reporting_currency:
+        payload["reporting_currency"] = reporting_currency
+    return payload
+
+
+def _extract_position_rows_batch(
+    *,
+    response: dict[str, Any],
+    portfolio_id: str,
+) -> list[dict[str, Any]]:
+    batch = response.get("rows")
+    if not isinstance(batch, list):
+        raise invalid_upstream_payload(
+            service="lotus-core",
+            operation=f"/integration/portfolios/{portfolio_id}/analytics/position-timeseries",
+            message="lotus-core position-timeseries payload missing 'rows' list",
+        )
+    return [row for row in batch if isinstance(row, dict)]
+
+
+def _next_position_page_token(response: dict[str, Any]) -> str | None:
+    page = response.get("page")
+    next_page_token = page.get("next_page_token") if isinstance(page, dict) else None
+    return next_page_token if isinstance(next_page_token, str) and next_page_token else None
+
+
 async def _fetch_position_timeseries_rows(
     *,
     core_client: LotusCoreClientProtocol,
@@ -192,51 +255,50 @@ async def _fetch_position_timeseries_rows(
     grouping_dimensions: list[GroupingDimension],
     correlation_id: str | None,
 ) -> list[dict[str, Any]]:
-    dimensions: list[str] = []
-    if "SECTOR" in grouping_dimensions:
-        dimensions.append("sector")
-    if "ASSET_CLASS" in grouping_dimensions:
-        dimensions.append("asset_class")
-
+    dimensions = _position_timeseries_dimensions(grouping_dimensions)
     page_token: str | None = None
     rows: list[dict[str, Any]] = []
     while True:
-        payload: dict[str, Any] = {
-            "as_of_date": as_of_date.isoformat(),
-            "window": {
-                "start_date": start_date.isoformat(),
-                "end_date": as_of_date.isoformat(),
-            },
-            "frequency": "daily",
-            "dimensions": dimensions,
-            "consumer_system": "lotus-risk",
-            "page": {"page_size": 5000, "page_token": page_token},
-        }
-        if reporting_currency:
-            payload["reporting_currency"] = reporting_currency
-
         response = await core_client.get_position_analytics_timeseries(
             portfolio_id=portfolio_id,
-            request_payload=payload,
+            request_payload=_position_timeseries_payload(
+                as_of_date=as_of_date,
+                start_date=start_date,
+                reporting_currency=reporting_currency,
+                dimensions=dimensions,
+                page_token=page_token,
+            ),
             correlation_id=correlation_id,
         )
-        batch = response.get("rows")
-        if not isinstance(batch, list):
-            raise invalid_upstream_payload(
-                service="lotus-core",
-                operation=f"/integration/portfolios/{portfolio_id}/analytics/position-timeseries",
-                message="lotus-core position-timeseries payload missing 'rows' list",
-            )
-        for row in batch:
-            if isinstance(row, dict):
-                rows.append(row)
-
-        page = response.get("page")
-        next_page_token = page.get("next_page_token") if isinstance(page, dict) else None
-        if not isinstance(next_page_token, str) or not next_page_token:
+        rows.extend(_extract_position_rows_batch(response=response, portfolio_id=portfolio_id))
+        page_token = _next_position_page_token(response)
+        if page_token is None:
             break
-        page_token = next_page_token
     return rows
+
+
+def _security_ids_from_position_rows(rows: list[dict[str, Any]]) -> list[str]:
+    return sorted(
+        {
+            str(row.get("security_id"))
+            for row in rows
+            if isinstance(row, dict) and row.get("security_id")
+        }
+    )
+
+
+def _issuer_identity_from_record(
+    record: dict[str, Any],
+) -> tuple[str, tuple[str, str | None]] | None:
+    security_id_raw = record.get("security_id")
+    if not security_id_raw:
+        return None
+    security_id = str(security_id_raw)
+    issuer_id_raw = record.get("issuer_id")
+    issuer_name_raw = record.get("issuer_name")
+    issuer_id = str(issuer_id_raw) if issuer_id_raw else f"ISSUER_{security_id}"
+    issuer_name = str(issuer_name_raw) if issuer_name_raw else None
+    return security_id, (issuer_id, issuer_name)
 
 
 async def _build_issuer_map(
@@ -245,13 +307,7 @@ async def _build_issuer_map(
     rows: list[dict[str, Any]],
     correlation_id: str | None,
 ) -> dict[str, tuple[str, str | None]]:
-    security_ids = sorted(
-        {
-            str(row.get("security_id"))
-            for row in rows
-            if isinstance(row, dict) and row.get("security_id")
-        }
-    )
+    security_ids = _security_ids_from_position_rows(rows)
     if not security_ids:
         return {}
     response = await core_client.get_instrument_enrichment(
@@ -269,34 +325,26 @@ async def _build_issuer_map(
     for record in records:
         if not isinstance(record, dict):
             continue
-        security_id_raw = record.get("security_id")
-        if not security_id_raw:
-            continue
-        security_id = str(security_id_raw)
-        issuer_id_raw = record.get("issuer_id")
-        issuer_name_raw = record.get("issuer_name")
-        issuer_id = str(issuer_id_raw) if issuer_id_raw else f"ISSUER_{security_id}"
-        issuer_name = str(issuer_name_raw) if issuer_name_raw else None
-        issuer_map[security_id] = (issuer_id, issuer_name)
+        issuer_identity = _issuer_identity_from_record(record)
+        if issuer_identity is not None:
+            security_id, issuer = issuer_identity
+            issuer_map[security_id] = issuer
     return issuer_map
 
 
-async def calculate_historical_attribution_stateful(
-    stateful: HistoricalAttributionStatefulInput,
-    *,
-    performance_client: LotusPerformanceClientProtocol,
-    core_client: LotusCoreClientProtocol,
-    correlation_id: str | None,
-) -> HistoricalAttributionResponse:
-    options = stateful.attribution_options
-    requested_groupings = options.grouping_dimensions
-    if "CUSTOM" in requested_groupings:
+def _validate_stateful_groupings(grouping_dimensions: list[GroupingDimension]) -> None:
+    if "CUSTOM" in grouping_dimensions:
         raise ValueError(
             "stateful historical-attribution does not support grouping_dimension=CUSTOM"
         )
 
-    requires_active = _requires_active_attribution(stateful)
 
+async def _fetch_stateful_returns_context(
+    *,
+    stateful: HistoricalAttributionStatefulInput,
+    performance_client: LotusPerformanceClientProtocol,
+    correlation_id: str | None,
+) -> _StatefulReturnsContext:
     returns_request = _build_stateful_returns_request(stateful)
     returns_response = await performance_client.get_returns_series(
         request_payload=returns_request,
@@ -304,7 +352,7 @@ async def calculate_historical_attribution_stateful(
     )
     series, portfolio_returns = extract_required_portfolio_returns(returns_response)
     benchmark_returns = to_return_points(series.get("benchmark_returns"))
-    if requires_active and not benchmark_returns:
+    if _requires_active_attribution(stateful) and not benchmark_returns:
         raise missing_upstream_data(
             service="lotus-performance",
             operation="/integration/returns/series",
@@ -313,15 +361,29 @@ async def calculate_historical_attribution_stateful(
                 "requested stateful active-risk attribution"
             ),
         )
-    start_date = min(point.date for point in portfolio_returns)
+    return _StatefulReturnsContext(
+        returns_request=returns_request,
+        portfolio_returns=portfolio_returns,
+        benchmark_returns=benchmark_returns,
+        start_date=min(point.date for point in portfolio_returns),
+    )
 
+
+async def _fetch_stateful_exposure_history(
+    *,
+    stateful: HistoricalAttributionStatefulInput,
+    core_client: LotusCoreClientProtocol,
+    start_date: date,
+    grouping_dimensions: list[GroupingDimension],
+    correlation_id: str | None,
+) -> list[ExposurePoint]:
     rows = await _fetch_position_timeseries_rows(
         core_client=core_client,
         portfolio_id=stateful.portfolio_id,
         as_of_date=stateful.as_of_date,
         start_date=start_date,
         reporting_currency=stateful.reporting_currency,
-        grouping_dimensions=requested_groupings,
+        grouping_dimensions=grouping_dimensions,
         correlation_id=correlation_id,
     )
     if not rows:
@@ -337,12 +399,12 @@ async def calculate_historical_attribution_stateful(
             rows=rows,
             correlation_id=correlation_id,
         )
-        if "ISSUER" in requested_groupings
+        if "ISSUER" in grouping_dimensions
         else {}
     )
     exposure_history = _build_exposure_points(
         rows=rows,
-        grouping_dimensions=requested_groupings,
+        grouping_dimensions=grouping_dimensions,
         issuer_map=issuer_map,
     )
     if not exposure_history:
@@ -351,44 +413,61 @@ async def calculate_historical_attribution_stateful(
             operation=f"/integration/portfolios/{stateful.portfolio_id}/analytics/position-timeseries",
             message="unable to build exposure history from lotus-core position-timeseries",
         )
+    return exposure_history
 
-    benchmark_exposure_history = (
-        await fetch_benchmark_exposure_history(
-            performance_client=performance_client,
-            portfolio_id=stateful.portfolio_id,
-            as_of_date=stateful.as_of_date,
-            start_date=start_date,
-            reporting_currency=stateful.reporting_currency,
-            grouping_dimensions=requested_groupings,
-            correlation_id=correlation_id,
-        )
-        if requires_active
-        else []
+
+async def _fetch_active_benchmark_exposure_history(
+    *,
+    stateful: HistoricalAttributionStatefulInput,
+    performance_client: LotusPerformanceClientProtocol,
+    benchmark_returns: list[ReturnPoint],
+    start_date: date,
+    grouping_dimensions: list[GroupingDimension],
+    correlation_id: str | None,
+) -> list[ExposurePoint]:
+    benchmark_exposure_history = await fetch_benchmark_exposure_history(
+        performance_client=performance_client,
+        portfolio_id=stateful.portfolio_id,
+        as_of_date=stateful.as_of_date,
+        start_date=start_date,
+        reporting_currency=stateful.reporting_currency,
+        grouping_dimensions=grouping_dimensions,
+        correlation_id=correlation_id,
     )
+    _validate_benchmark_exposure_alignment(
+        benchmark_returns=benchmark_returns,
+        benchmark_exposure_history=benchmark_exposure_history,
+    )
+    return benchmark_exposure_history
 
-    if requires_active:
-        _validate_benchmark_exposure_alignment(
-            benchmark_returns=benchmark_returns,
-            benchmark_exposure_history=benchmark_exposure_history,
-        )
 
-    stateless_input = HistoricalAttributionStatelessInput(
+def _build_stateful_stateless_input(
+    *,
+    stateful: HistoricalAttributionStatefulInput,
+    returns_context: _StatefulReturnsContext,
+    exposure_history: list[ExposurePoint],
+    benchmark_exposure_history: list[ExposurePoint],
+) -> HistoricalAttributionStatelessInput:
+    return HistoricalAttributionStatelessInput(
         scope=RiskRequestScope(
             as_of_date=stateful.as_of_date,
             reporting_currency=stateful.reporting_currency,
             net_or_gross=stateful.net_or_gross,
         ),
         periods=stateful.periods,
-        returns=portfolio_returns,
-        benchmark_returns=benchmark_returns,
+        returns=returns_context.portfolio_returns,
+        benchmark_returns=returns_context.benchmark_returns,
         exposure_history=exposure_history,
         benchmark_exposure_history=benchmark_exposure_history,
-        attribution_options=options,
+        attribution_options=stateful.attribution_options,
     )
-    response = calculate_historical_attribution(
-        stateless_input,
-        input_mode=AttributionInputMode.STATEFUL,
-    )
+
+
+def _attach_stateful_lineage(
+    *,
+    response: HistoricalAttributionResponse,
+    returns_request: dict[str, Any],
+) -> HistoricalAttributionResponse:
     response.metadata.source_services = ordered_source_services(
         "lotus-performance",
         "lotus-core",
@@ -399,3 +478,56 @@ async def calculate_historical_attribution_stateful(
         payload=returns_request,
     )
     return response
+
+
+async def calculate_historical_attribution_stateful(
+    stateful: HistoricalAttributionStatefulInput,
+    *,
+    performance_client: LotusPerformanceClientProtocol,
+    core_client: LotusCoreClientProtocol,
+    correlation_id: str | None,
+) -> HistoricalAttributionResponse:
+    options = stateful.attribution_options
+    requested_groupings = options.grouping_dimensions
+    _validate_stateful_groupings(requested_groupings)
+
+    requires_active = _requires_active_attribution(stateful)
+    returns_context = await _fetch_stateful_returns_context(
+        stateful=stateful,
+        performance_client=performance_client,
+        correlation_id=correlation_id,
+    )
+    exposure_history = await _fetch_stateful_exposure_history(
+        stateful=stateful,
+        core_client=core_client,
+        start_date=returns_context.start_date,
+        grouping_dimensions=requested_groupings,
+        correlation_id=correlation_id,
+    )
+
+    benchmark_exposure_history = (
+        await _fetch_active_benchmark_exposure_history(
+            stateful=stateful,
+            performance_client=performance_client,
+            benchmark_returns=returns_context.benchmark_returns,
+            start_date=returns_context.start_date,
+            grouping_dimensions=requested_groupings,
+            correlation_id=correlation_id,
+        )
+        if requires_active
+        else []
+    )
+    stateless_input = _build_stateful_stateless_input(
+        stateful=stateful,
+        returns_context=returns_context,
+        exposure_history=exposure_history,
+        benchmark_exposure_history=benchmark_exposure_history,
+    )
+    response = calculate_historical_attribution(
+        stateless_input,
+        input_mode=AttributionInputMode.STATEFUL,
+    )
+    return _attach_stateful_lineage(
+        response=response,
+        returns_request=returns_context.returns_request,
+    )
