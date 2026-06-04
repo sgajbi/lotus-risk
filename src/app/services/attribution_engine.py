@@ -55,6 +55,12 @@ class _AttributionSourceFrames:
     benchmark_exposure_df: pd.DataFrame
 
 
+@dataclass(frozen=True)
+class _AttributionPrecalculation:
+    calculation_inputs: _AttributionCalculationInputs | None
+    early_result: AttributionSetResult | None
+
+
 def _period_name(period: RiskRequestPeriod) -> str:
     return period.name or period.type
 
@@ -338,6 +344,41 @@ def _calculated_attribution_set(
     )
 
 
+def _attribution_set_precalculation_result(
+    *,
+    attribution_type: AttributionType,
+    metric: AttributionMetric,
+    grouping_dimension: GroupingDimension,
+    calculation_inputs: _AttributionCalculationInputs | None,
+    quality_flags: list[str],
+) -> _AttributionPrecalculation:
+    if calculation_inputs is None:
+        return _AttributionPrecalculation(
+            calculation_inputs=None,
+            early_result=_empty_attribution_set(
+                attribution_type=attribution_type,
+                metric=metric,
+                grouping_dimension=grouping_dimension,
+                quality_flags=quality_flags + ["active_risk:alignment_empty"],
+            ),
+        )
+
+    if len(calculation_inputs.metric_series.dropna()) < 2:
+        return _AttributionPrecalculation(
+            calculation_inputs=None,
+            early_result=_empty_attribution_set(
+                attribution_type=attribution_type,
+                metric=metric,
+                grouping_dimension=grouping_dimension,
+                quality_flags=quality_flags + ["series:insufficient_observations"],
+            ),
+        )
+    return _AttributionPrecalculation(
+        calculation_inputs=calculation_inputs,
+        early_result=None,
+    )
+
+
 def _build_attribution_set(
     *,
     attribution_type: AttributionType,
@@ -370,27 +411,23 @@ def _build_attribution_set(
         benchmark_weights=benchmark_weights,
         annualization_basis=annualization_basis,
     )
-    if calculation_inputs is None:
-        return _empty_attribution_set(
-            attribution_type=attribution_type,
-            metric=metric,
-            grouping_dimension=grouping_dimension,
-            quality_flags=flags + ["active_risk:alignment_empty"],
-        )
-
-    if len(calculation_inputs.metric_series.dropna()) < 2:
-        return _empty_attribution_set(
-            attribution_type=attribution_type,
-            metric=metric,
-            grouping_dimension=grouping_dimension,
-            quality_flags=flags + ["series:insufficient_observations"],
-        )
+    precalculation = _attribution_set_precalculation_result(
+        attribution_type=attribution_type,
+        metric=metric,
+        grouping_dimension=grouping_dimension,
+        calculation_inputs=calculation_inputs,
+        quality_flags=flags,
+    )
+    if precalculation.early_result is not None:
+        return precalculation.early_result
+    if precalculation.calculation_inputs is None:
+        raise RuntimeError("attribution precalculation returned no calculation inputs")
 
     return _calculated_attribution_set(
         attribution_type=attribution_type,
         metric=metric,
         grouping_dimension=grouping_dimension,
-        calculation_inputs=calculation_inputs,
+        calculation_inputs=precalculation.calculation_inputs,
         group_labels=group_labels,
         annualization_basis=annualization_basis,
         quality_flags=flags,
