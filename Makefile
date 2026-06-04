@@ -1,4 +1,4 @@
-.PHONY: install install-ci verify-dependencies lint monetary-float-guard no-alias-gate typecheck openapi-gate api-vocabulary-gate domain-data-product-gate migration-smoke migration-apply test test-unit test-integration test-e2e test-pyramid-gate test-coverage coverage-gate security-audit check ci docker-build clean
+.PHONY: install install-ci verify-dependencies lint monetary-float-guard no-alias-gate typecheck openapi-gate api-vocabulary-gate domain-data-product-gate migration-smoke migration-apply quality-baseline test test-unit test-integration test-e2e test-pyramid-gate test-coverage coverage-gate security-audit check ci docker-build clean
 
 install:
 	python -m pip install --upgrade pip
@@ -38,6 +38,9 @@ migration-smoke:
 
 migration-apply:
 	python scripts/migration_contract_check.py --mode no-schema
+
+quality-baseline:
+	python scripts/generate_quality_baseline.py
 
 test:
 	$(MAKE) test-unit
