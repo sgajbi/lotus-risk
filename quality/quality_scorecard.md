@@ -2,7 +2,7 @@
 
 | Dimension | Current posture | Refactor target |
 | --- | --- | --- |
-| API modularity | `src/app/main.py` is 418 lines | Split app factory, routers, error metadata, and dependencies |
+| API modularity | `src/app/main.py` is 386 lines | Split app factory, routers, error metadata, and dependencies |
 | Service boundaries | Calculation engines are under `src/app/services` | Keep business logic out of routers and middleware |
 | Architecture enforcement | `.importlinter` report-only contracts added | Promote to CI gate after router extraction |
 | OpenAPI governance | Existing repo gate plus Spectral config added | Standardize operation IDs and generated OpenAPI lint |

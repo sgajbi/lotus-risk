@@ -1,6 +1,3 @@
-from collections.abc import Awaitable, Callable
-from typing import TypeVar, cast
-
 from fastapi import FastAPI, Request
 
 from app.api_errors import (
@@ -41,7 +38,6 @@ from app.integrations.lotus_core_client import LotusCoreClient
 from app.integrations.lotus_performance_client import LotusPerformanceClient
 from app.middleware.correlation import CorrelationIdMiddleware
 from app.middleware.http_observation import build_http_observation_middleware
-from app.observability import observation_start, record_endpoint_execution
 from app.routers.operational import router as operational_router
 from app.service_metadata import (
     SERVICE_NAME as _SERVICE_NAME,
@@ -52,6 +48,7 @@ from app.services.attribution_engine import calculate_historical_attribution
 from app.services.attribution_mode_adapter import calculate_historical_attribution_stateful
 from app.services.drawdown_engine import calculate_drawdown
 from app.services.drawdown_mode_adapter import calculate_drawdown_stateful
+from app.services.endpoint_observation import observed_endpoint
 from app.services.mandate_health_context import evaluate_mandate_risk_health_context
 from app.services.rolling_engine import calculate_rolling_metrics
 from app.services.rolling_mode_adapter import calculate_rolling_metrics_stateful
@@ -60,7 +57,6 @@ from app.services.risk_event_cohort_engine import evaluate_risk_event_affected_c
 from app.services.risk_mode_adapter import calculate_risk_stateful
 from app.services.scenario_engine import evaluate_regime_scenario_pack
 
-ResponseT = TypeVar("ResponseT")
 SERVICE_NAME: str = _SERVICE_NAME
 SERVICE_VERSION: str = _SERVICE_VERSION
 
@@ -71,34 +67,6 @@ app.middleware("http")(build_enterprise_audit_middleware())
 app.middleware("http")(build_http_observation_middleware())
 register_exception_handlers(app)
 app.include_router(operational_router)
-
-
-async def _observed_endpoint(
-    *,
-    endpoint: str,
-    input_mode: str,
-    operation: Callable[[], ResponseT | Awaitable[ResponseT]],
-) -> ResponseT:
-    started_at = observation_start()
-    try:
-        result = operation()
-        if isinstance(result, Awaitable):
-            result = await result
-    except Exception:
-        record_endpoint_execution(
-            endpoint=endpoint,
-            input_mode=input_mode,
-            outcome="failure",
-            started_at=started_at,
-        )
-        raise
-    record_endpoint_execution(
-        endpoint=endpoint,
-        input_mode=input_mode,
-        outcome="success",
-        started_at=started_at,
-    )
-    return cast(ResponseT, result)
 
 
 @app.post(
@@ -117,7 +85,7 @@ async def _observed_endpoint(
 async def analytics_risk_mandate_health_context(
     request_payload: MandateRiskHealthContextRequest,
 ) -> MandateRiskHealthContextResponse:
-    return await _observed_endpoint(
+    return await observed_endpoint(
         endpoint="mandate-risk-health-context",
         input_mode="stateless",
         operation=lambda: evaluate_mandate_risk_health_context(request_payload),
@@ -141,7 +109,7 @@ async def analytics_risk_mandate_health_context(
 async def analytics_risk_regime_scenario_pack(
     request_payload: RegimeScenarioPackRequest,
 ) -> RegimeScenarioPackResponse:
-    return await _observed_endpoint(
+    return await observed_endpoint(
         endpoint="regime-scenario-pack",
         input_mode="stateless",
         operation=lambda: evaluate_regime_scenario_pack(request_payload),
@@ -165,7 +133,7 @@ async def analytics_risk_regime_scenario_pack(
 async def analytics_risk_event_affected_cohort(
     request_payload: RiskEventAffectedCohortRequest,
 ) -> RiskEventAffectedCohortResponse:
-    return await _observed_endpoint(
+    return await observed_endpoint(
         endpoint="risk-event-cohort",
         input_mode="stateless",
         operation=lambda: evaluate_risk_event_affected_cohort(request_payload),
@@ -194,7 +162,7 @@ async def analytics_risk_historical_attribution(
     if request_payload.input_mode == AttributionInputMode.STATELESS:
         stateless_input = request_payload.stateless_input
         assert stateless_input is not None
-        return await _observed_endpoint(
+        return await observed_endpoint(
             endpoint="historical-attribution",
             input_mode=input_mode,
             operation=lambda: calculate_historical_attribution(
@@ -212,7 +180,7 @@ async def analytics_risk_historical_attribution(
         core_client = getattr(app.state, "lotus_core_client", None)
         if core_client is None:
             core_client = LotusCoreClient()
-        return await _observed_endpoint(
+        return await observed_endpoint(
             endpoint="historical-attribution",
             input_mode=input_mode,
             operation=lambda: calculate_historical_attribution_stateful(
@@ -248,7 +216,7 @@ async def analytics_risk_concentration(
     core_client = getattr(app.state, "lotus_core_client", None)
     if core_client is None:
         core_client = LotusCoreClient()
-    return await _observed_endpoint(
+    return await observed_endpoint(
         endpoint="concentration",
         input_mode=payload.input_mode.value,
         operation=lambda: calculate_concentration(
@@ -281,7 +249,7 @@ async def analytics_risk_drawdown(
     if request_payload.input_mode == DrawdownInputMode.STATELESS:
         stateless_input = request_payload.stateless_input
         assert stateless_input is not None
-        return await _observed_endpoint(
+        return await observed_endpoint(
             endpoint="drawdown",
             input_mode=input_mode,
             operation=lambda: calculate_drawdown(
@@ -299,7 +267,7 @@ async def analytics_risk_drawdown(
         performance_client = getattr(app.state, "lotus_performance_client", None)
         if performance_client is None:
             performance_client = LotusPerformanceClient()
-        return await _observed_endpoint(
+        return await observed_endpoint(
             endpoint="drawdown",
             input_mode=input_mode,
             operation=lambda: calculate_drawdown_stateful(
@@ -336,7 +304,7 @@ async def analytics_risk_rolling_metrics(
     if request_payload.input_mode == RollingInputMode.STATELESS:
         stateless_input = request_payload.stateless_input
         assert stateless_input is not None
-        return await _observed_endpoint(
+        return await observed_endpoint(
             endpoint="rolling-metrics",
             input_mode=input_mode,
             operation=lambda: calculate_rolling_metrics(
@@ -354,7 +322,7 @@ async def analytics_risk_rolling_metrics(
         core_client = getattr(app.state, "lotus_core_client", None)
         if core_client is None:
             core_client = LotusCoreClient()
-        return await _observed_endpoint(
+        return await observed_endpoint(
             endpoint="rolling-metrics",
             input_mode=input_mode,
             operation=lambda: calculate_rolling_metrics_stateful(
@@ -391,7 +359,7 @@ async def analytics_risk_calculate(
     if request_payload.input_mode == RiskInputMode.STATELESS:
         stateless_input = request_payload.stateless_input
         assert stateless_input is not None
-        return await _observed_endpoint(
+        return await observed_endpoint(
             endpoint="risk/calculate",
             input_mode=input_mode,
             operation=lambda: calculate_risk(stateless_input),
@@ -403,7 +371,7 @@ async def analytics_risk_calculate(
         performance_client = getattr(app.state, "lotus_performance_client", None)
         if performance_client is None:
             performance_client = LotusPerformanceClient()
-        return await _observed_endpoint(
+        return await observed_endpoint(
             endpoint="risk/calculate",
             input_mode=input_mode,
             operation=lambda: calculate_risk_stateful(
