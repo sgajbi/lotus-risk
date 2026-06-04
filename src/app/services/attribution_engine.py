@@ -312,6 +312,32 @@ def _attribution_calculation_inputs(
     )
 
 
+def _calculated_attribution_set(
+    *,
+    attribution_type: AttributionType,
+    metric: AttributionMetric,
+    grouping_dimension: GroupingDimension,
+    calculation_inputs: _AttributionCalculationInputs,
+    group_labels: dict[str, str | None],
+    annualization_basis: int,
+    quality_flags: list[str],
+) -> AttributionSetResult:
+    rows = _component_decomposition(
+        group_matrix=calculation_inputs.group_matrix,
+        metric_series=calculation_inputs.metric_series,
+        total_value=calculation_inputs.risk_total,
+        annualization_basis=annualization_basis,
+    )
+    return _reconciled_attribution_set(
+        attribution_type=attribution_type,
+        metric=metric,
+        grouping_dimension=grouping_dimension,
+        risk_total=calculation_inputs.risk_total,
+        contributors=_attribution_contributors(rows=rows, group_labels=group_labels),
+        quality_flags=quality_flags,
+    )
+
+
 def _build_attribution_set(
     *,
     attribution_type: AttributionType,
@@ -360,18 +386,13 @@ def _build_attribution_set(
             quality_flags=flags + ["series:insufficient_observations"],
         )
 
-    rows = _component_decomposition(
-        group_matrix=calculation_inputs.group_matrix,
-        metric_series=calculation_inputs.metric_series,
-        total_value=calculation_inputs.risk_total,
-        annualization_basis=annualization_basis,
-    )
-    return _reconciled_attribution_set(
+    return _calculated_attribution_set(
         attribution_type=attribution_type,
         metric=metric,
         grouping_dimension=grouping_dimension,
-        risk_total=calculation_inputs.risk_total,
-        contributors=_attribution_contributors(rows=rows, group_labels=group_labels),
+        calculation_inputs=calculation_inputs,
+        group_labels=group_labels,
+        annualization_basis=annualization_basis,
         quality_flags=flags,
     )
 
