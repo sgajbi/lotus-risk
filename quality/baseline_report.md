@@ -10,7 +10,7 @@ documentation posture, and validation gates. It is not a completion claim.
 
 ## Code Size Baseline
 
-- Python source files under `src/`: 79
+- Python source files under `src/`: 80
 - Python test files under `tests/`: 85
 - Python packages under `src/`: 9
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
@@ -19,12 +19,12 @@ documentation posture, and validation gates. It is not a completion claim.
 
 | Path | Lines | Bytes |
 | --- | --- | --- |
-| src/app/contracts/rolling.py | 911 | 36547 |
 | src/app/contracts/risk.py | 885 | 33850 |
 | tests/integration/test_health.py | 843 | 36606 |
 | tests/unit/test_methodology_docs.py | 823 | 32953 |
 | src/app/contracts/drawdown.py | 816 | 32701 |
 | src/app/contracts/concentration.py | 782 | 31608 |
+| src/app/contracts/rolling.py | 780 | 29970 |
 | tests/e2e/test_smoke.py | 750 | 28373 |
 | tests/integration/test_historical_attribution_endpoint.py | 747 | 29645 |
 | src/app/services/rolling_engine.py | 733 | 24654 |
@@ -45,7 +45,6 @@ documentation posture, and validation gates. It is not a completion claim.
 | Path | Symbol | Kind | Lines |
 | --- | --- | --- | --- |
 | src/app/integrations/lotus_performance_client.py | LotusPerformanceClient | ClassDef | 294 |
-| src/app/contracts/rolling.py | RollingResponse | ClassDef | 220 |
 | src/app/contracts/risk.py | RiskResponse | ClassDef | 199 |
 | src/app/integrations/lotus_core_client.py | LotusCoreClient | ClassDef | 171 |
 | src/app/contracts/drawdown.py | DrawdownResponse | ClassDef | 159 |
@@ -59,6 +58,7 @@ documentation posture, and validation gates. It is not a completion claim.
 | src/app/contracts/attribution.py | HistoricalAttributionStatelessInput | ClassDef | 93 |
 | src/app/contracts/rolling.py | RollingPeriodResult | ClassDef | 90 |
 | src/app/contracts/scenario.py | RegimeScenarioPackResponse | ClassDef | 89 |
+| src/app/contracts/rolling.py | RollingResponse | ClassDef | 88 |
 | src/app/contracts/rolling.py | RollingMetadata | ClassDef | 87 |
 | src/app/contracts/drawdown.py | DrawdownPeriodResult | ClassDef | 84 |
 | src/app/contracts/scenario.py | RegimeScenarioPackRequest | ClassDef | 84 |
@@ -86,12 +86,12 @@ All checks passed!
 - Ruff format check: passed
 
 ```text
-177 files already formatted
+178 files already formatted
 ```
 - Type checking: passed
 
 ```text
-Success: no issues found in 164 source files
+Success: no issues found in 165 source files
 ```
 - Unit coverage snapshot: passed
 
@@ -105,10 +105,10 @@ Success: no issues found in 164 source files
 ...
 src\app\upstream_errors.py                              55      0     20      3    96%   181->194, 187->189, 192->194
 ------------------------------------------------------------------------------------------------
-TOTAL                                                 4539     85    994     86    97%
+TOTAL                                                 4542     85    994     86    97%
 
-46 files skipped due to complete coverage.
-431 passed in 10.48s
+47 files skipped due to complete coverage.
+431 passed in 7.89s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -121,7 +121,7 @@ src\app\enterprise_readiness.py
 src\app\contracts\attribution.py
     C 116:0 HistoricalAttributionStatelessInput - C (11)
 src\app\contracts\rolling.py
-    C 104:0 RollingStatelessInput - C (11)
+    C 105:0 RollingStatelessInput - C (11)
 src\app\services\concentration\parsing.py
     F 221:0 _apply_snapshot_display_names - C (13)
 src\app\services\risk\helpers.py
@@ -151,7 +151,7 @@ src\app\services\risk\__init__.py - A (100.00)
 - Dependency hygiene: passed
 
 ```text
-Scanning 79 files...
+Scanning 80 files...
 
 Success! No dependency issues found.
 ```
@@ -244,7 +244,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-431 tests collected in 2.04s
+431 tests collected in 1.69s
 ```
 - Import-linter report-only: passed
 
