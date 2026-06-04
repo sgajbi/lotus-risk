@@ -185,12 +185,13 @@ documentation posture, and validation gates. It is not a completion claim.
 
 1. Current OpenAPI operations define explicit operation IDs in route decorators, with a contract
    test preserving uniqueness and stable names.
-2. Pagination/filtering/sorting governance is not broadly applicable to calculation POST endpoints,
+2. Current POST operations publish request-body examples backed by Pydantic request-model validation.
+3. Pagination/filtering/sorting governance is not broadly applicable to calculation POST endpoints,
    but any future list/read-model route must use an explicit shared contract.
-3. Health, liveness, readiness, metadata, metrics, and ops endpoints exist and are documented, but
+4. Health, liveness, readiness, metadata, metrics, and ops endpoints exist and are documented, but
    public/internal route grouping is not yet enforced by module structure.
-4. Standard error response metadata exists in `src/app/api_errors.py`, but route-level examples
-   should be certified after router extraction.
+5. Standard error response metadata exists in `src/app/api_errors.py`, but richer problem-details
+   error examples remain a later certification slice.
 
 ## Security And Resilience Gaps
 

@@ -10,8 +10,8 @@ documentation posture, and validation gates. It is not a completion claim.
 
 ## Code Size Baseline
 
-- Python source files under `src/`: 64
-- Python test files under `tests/`: 82
+- Python source files under `src/`: 65
+- Python test files under `tests/`: 83
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
 
 ### Largest Python Files
@@ -102,12 +102,13 @@ documentation posture, and validation gates. It is not a completion claim.
 
 1. Current OpenAPI operations define explicit operation IDs in route decorators, with a contract
    test preserving uniqueness and stable names.
-2. Pagination/filtering/sorting governance is not broadly applicable to calculation POST endpoints,
+2. Current POST operations publish request-body examples backed by Pydantic request-model validation.
+3. Pagination/filtering/sorting governance is not broadly applicable to calculation POST endpoints,
    but any future list/read-model route must use an explicit shared contract.
-3. Health, liveness, readiness, metadata, metrics, and ops endpoints exist and are documented, but
+4. Health, liveness, readiness, metadata, metrics, and ops endpoints exist and are documented, but
    public/internal route grouping is not yet enforced by module structure.
-4. Standard error response metadata exists in `src/app/api_errors.py`, but route-level examples
-   should be certified after router extraction.
+5. Standard error response metadata exists in `src/app/api_errors.py`, but richer problem-details
+   error examples remain a later certification slice.
 
 ## Security And Resilience Gaps
 
@@ -151,7 +152,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-378 tests collected in 1.99s
+387 tests collected in 2.06s
 ```
 - Import-linter report-only: reported exit 127
 

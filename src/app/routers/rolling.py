@@ -11,6 +11,7 @@ from app.dependencies.downstream_clients import (
     resolve_lotus_performance_client,
 )
 from app.dependencies.request_context import request_correlation_id
+from app.openapi_examples import ROLLING_METRICS_EXAMPLES, request_body_examples
 from app.services.endpoint_observation import observed_endpoint
 from app.services.rolling_engine import calculate_rolling_metrics
 from app.services.rolling_mode_adapter import calculate_rolling_metrics_stateful
@@ -24,6 +25,7 @@ router = APIRouter(tags=["risk-analytics"])
     responses=STANDARD_ERROR_RESPONSES,
     operation_id="calculateRollingRiskMetrics",
     summary="Calculate rolling risk metrics",
+    openapi_extra=request_body_examples(ROLLING_METRICS_EXAMPLES),
     description=(
         "Calculates rolling-window historical risk diagnostics including volatility, Sharpe, beta, "
         "tracking error, information ratio, and rolling max drawdown. Supports stateless and "

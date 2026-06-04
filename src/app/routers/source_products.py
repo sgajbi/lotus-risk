@@ -10,6 +10,12 @@ from app.contracts.risk_event_cohort import (
     RiskEventAffectedCohortResponse,
 )
 from app.contracts.scenario import RegimeScenarioPackRequest, RegimeScenarioPackResponse
+from app.openapi_examples import (
+    MANDATE_HEALTH_EXAMPLES,
+    REGIME_SCENARIO_EXAMPLES,
+    RISK_EVENT_COHORT_EXAMPLES,
+    request_body_examples,
+)
 from app.services.endpoint_observation import observed_endpoint
 from app.services.mandate_health_context import evaluate_mandate_risk_health_context
 from app.services.risk_event_cohort_engine import evaluate_risk_event_affected_cohort
@@ -24,6 +30,7 @@ router = APIRouter(tags=["risk-analytics"])
     responses=STANDARD_ERROR_RESPONSES,
     operation_id="evaluateMandateRiskHealthContext",
     summary="Evaluate source-owned mandate risk health context",
+    openapi_extra=request_body_examples(MANDATE_HEALTH_EXAMPLES),
     description=(
         "Evaluates a bounded mandate risk health context using lotus-risk source-owned "
         "tracking-error methodology. The response preserves threshold posture, lineage, "
@@ -47,6 +54,7 @@ async def analytics_risk_mandate_health_context(
     responses=STANDARD_ERROR_RESPONSES,
     operation_id="evaluateRegimeScenarioPack",
     summary="Evaluate a governed regime scenario pack",
+    openapi_extra=request_body_examples(REGIME_SCENARIO_EXAMPLES),
     description=(
         "Evaluates caller-supplied portfolio exposure weights against a governed CIO regime "
         "scenario pack and returns source-owned worst-case loss, policy-threshold breach posture, "
@@ -71,6 +79,7 @@ async def analytics_risk_regime_scenario_pack(
     responses=STANDARD_ERROR_RESPONSES,
     operation_id="evaluateRiskEventAffectedCohort",
     summary="Evaluate a governed risk-event affected cohort",
+    openapi_extra=request_body_examples(RISK_EVENT_COHORT_EXAMPLES),
     description=(
         "Evaluates candidate portfolios against governed risk-event definitions and returns "
         "source-owned affected-cohort membership, impact scores, exclusions, lineage source refs, "

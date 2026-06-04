@@ -11,6 +11,7 @@ from app.dependencies.downstream_clients import (
     resolve_lotus_performance_client,
 )
 from app.dependencies.request_context import request_correlation_id
+from app.openapi_examples import HISTORICAL_ATTRIBUTION_EXAMPLES, request_body_examples
 from app.services.attribution_engine import calculate_historical_attribution
 from app.services.attribution_mode_adapter import calculate_historical_attribution_stateful
 from app.services.endpoint_observation import observed_endpoint
@@ -24,6 +25,7 @@ router = APIRouter(tags=["risk-analytics"])
     responses=STANDARD_ERROR_RESPONSES,
     operation_id="calculateHistoricalRiskAttribution",
     summary="Calculate historical risk attribution analytics",
+    openapi_extra=request_body_examples(HISTORICAL_ATTRIBUTION_EXAMPLES),
     description=(
         "Calculates historical risk and active-risk attribution decompositions with contributor-level "
         "component, marginal, and percent contributions plus reconciliation diagnostics. Supports "

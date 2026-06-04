@@ -4,6 +4,7 @@ from app.api_errors import STANDARD_ERROR_RESPONSES
 from app.contracts.risk import RiskAnalyticsRequest, RiskInputMode, RiskResponse
 from app.dependencies.downstream_clients import resolve_lotus_performance_client
 from app.dependencies.request_context import request_correlation_id
+from app.openapi_examples import RISK_CALCULATE_EXAMPLES, request_body_examples
 from app.services.endpoint_observation import observed_endpoint
 from app.services.risk_engine import calculate_risk
 from app.services.risk_mode_adapter import calculate_risk_stateful
@@ -17,6 +18,7 @@ router = APIRouter(tags=["risk-analytics"])
     responses=STANDARD_ERROR_RESPONSES,
     operation_id="calculateRiskAnalytics",
     summary="Calculate portfolio risk metrics",
+    openapi_extra=request_body_examples(RISK_CALCULATE_EXAMPLES),
     description=(
         "Calculates risk metrics from provided return series using stateless or stateful input modes. "
         "Supports EXPLICIT/YEAR/MTD/QTD/YTD/1Y/3Y/5Y/SI periods, with legacy "

@@ -4,6 +4,7 @@ from app.api_errors import STANDARD_ERROR_RESPONSES
 from app.contracts.concentration import ConcentrationRequest, ConcentrationResponse
 from app.dependencies.downstream_clients import resolve_lotus_core_client
 from app.dependencies.request_context import request_actor_id, request_correlation_id
+from app.openapi_examples import CONCENTRATION_EXAMPLES, request_body_examples
 from app.services.concentration_engine import calculate_concentration
 from app.services.endpoint_observation import observed_endpoint
 
@@ -16,6 +17,7 @@ router = APIRouter(tags=["risk-analytics"])
     responses=STANDARD_ERROR_RESPONSES,
     operation_id="calculateConcentrationRiskAnalytics",
     summary="Calculate concentration risk analytics",
+    openapi_extra=request_body_examples(CONCENTRATION_EXAMPLES),
     description=(
         "Calculates portfolio, single-position, and issuer concentration analytics across "
         "stateless, stateful, and simulation modes. Returns position-level HHI, top-position "

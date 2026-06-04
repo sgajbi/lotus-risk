@@ -8,6 +8,7 @@ from app.contracts.drawdown import (
 )
 from app.dependencies.downstream_clients import resolve_lotus_performance_client
 from app.dependencies.request_context import request_correlation_id
+from app.openapi_examples import DRAWDOWN_EXAMPLES, request_body_examples
 from app.services.drawdown_engine import calculate_drawdown
 from app.services.drawdown_mode_adapter import calculate_drawdown_stateful
 from app.services.endpoint_observation import observed_endpoint
@@ -21,6 +22,7 @@ router = APIRouter(tags=["risk-analytics"])
     responses=STANDARD_ERROR_RESPONSES,
     operation_id="calculateDrawdownAnalytics",
     summary="Calculate realized drawdown analytics",
+    openapi_extra=request_body_examples(DRAWDOWN_EXAMPLES),
     description=(
         "Calculates realized drawdown analytics for stateless or stateful return histories, including "
         "max drawdown, episode diagnostics, time-under-water, ulcer index, drawdown-at-risk, and "
