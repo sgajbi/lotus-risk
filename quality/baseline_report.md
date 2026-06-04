@@ -152,7 +152,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-387 tests collected in 2.06s
+387 tests collected in 1.92s
 ```
 - Import-linter report-only: reported exit 127
 
