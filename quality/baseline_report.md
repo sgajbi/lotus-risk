@@ -105,10 +105,10 @@ Success: no issues found in 163 source files
 ...
 src\app\upstream_errors.py                              55      0     20      3    96%   181->194, 187->189, 192->194
 ------------------------------------------------------------------------------------------------
-TOTAL                                                 4426     84    990     85    97%
+TOTAL                                                 4436     84    990     85    97%
 
 45 files skipped due to complete coverage.
-431 passed in 8.93s
+431 passed in 9.14s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -247,7 +247,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-431 tests collected in 1.57s
+431 tests collected in 1.70s
 ```
 - Import-linter report-only: passed
 
