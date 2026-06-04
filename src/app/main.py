@@ -1,7 +1,7 @@
 from collections.abc import Awaitable, Callable
 from typing import TypeVar, cast
 
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request
 
 from app.api_errors import (
     STANDARD_ERROR_RESPONSES,
@@ -40,7 +40,8 @@ from app.enterprise_readiness import (
 from app.integrations.lotus_core_client import LotusCoreClient
 from app.integrations.lotus_performance_client import LotusPerformanceClient
 from app.middleware.correlation import CorrelationIdMiddleware
-from app.observability import observation_start, record_endpoint_execution, record_http_request
+from app.middleware.http_observation import build_http_observation_middleware
+from app.observability import observation_start, record_endpoint_execution
 from app.routers.operational import router as operational_router
 from app.service_metadata import (
     SERVICE_NAME as _SERVICE_NAME,
@@ -67,26 +68,9 @@ app = FastAPI(title=SERVICE_NAME, version=SERVICE_VERSION)
 app.add_middleware(CorrelationIdMiddleware, service_name=SERVICE_NAME)
 validate_enterprise_runtime_config()
 app.middleware("http")(build_enterprise_audit_middleware())
+app.middleware("http")(build_http_observation_middleware())
 register_exception_handlers(app)
 app.include_router(operational_router)
-
-
-@app.middleware("http")
-async def observe_http_request(
-    request: Request,
-    call_next: Callable[[Request], Awaitable[Response]],
-) -> Response:
-    try:
-        response = await call_next(request)
-    except Exception:
-        route = request.scope.get("route")
-        handler = getattr(route, "path", request.url.path)
-        record_http_request(handler=handler, method=request.method, status_code=500)
-        raise
-    route = request.scope.get("route")
-    handler = getattr(route, "path", request.url.path)
-    record_http_request(handler=handler, method=request.method, status_code=response.status_code)
-    return response
 
 
 async def _observed_endpoint(

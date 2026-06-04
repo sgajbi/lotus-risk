@@ -10,9 +10,9 @@ documentation posture, and validation gates. It is not a completion claim.
 
 ## Code Size Baseline
 
-- Python source files under `src/`: 52
+- Python source files under `src/`: 53
 - Python test files under `tests/`: 77
-- API entry point route/middleware/handler decorators in `src/app/main.py`: 9
+- API entry point route/middleware/handler decorators in `src/app/main.py`: 8
 
 ### Largest Python Files
 
@@ -35,8 +35,8 @@ documentation posture, and validation gates. It is not a completion claim.
 | tests/integration/test_rolling_metrics_endpoint.py | 566 | 22142 |
 | src/app/trust_telemetry.py | 476 | 20809 |
 | tests/unit/test_lotus_performance_client.py | 472 | 17446 |
-| src/app/main.py | 434 | 17660 |
 | tests/unit/test_drawdown_engine.py | 422 | 16234 |
+| src/app/main.py | 418 | 17127 |
 | tests/integration/test_rolling_live_characterization.py | 418 | 16694 |
 
 ### Largest Functions And Classes
@@ -144,7 +144,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-369 tests collected in 1.55s
+369 tests collected in 1.57s
 ```
 - Import-linter report-only: reported exit 127
 
