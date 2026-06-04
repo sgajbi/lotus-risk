@@ -12,7 +12,7 @@ from app.api_errors import (
     handle_http_exception,
     handle_upstream_service_error,
 )
-from app.main import analytics_risk_calculate
+from app.routers.risk_calculation import analytics_risk_calculate
 from app.upstream_errors import UpstreamServiceError
 
 

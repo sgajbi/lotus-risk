@@ -153,10 +153,11 @@ documentation posture, and validation gates. It is not a completion claim.
    and exception-handler registration now live in `src/app/api_errors.py`; health, readiness,
    metrics, operational diagnostics, trust telemetry, and capability publication now live in
    `src/app/routers/operational.py`; stateless source-product endpoints now live in
-   `src/app/routers/source_products.py`.
+   `src/app/routers/source_products.py`; the primary risk calculation endpoint now lives in
+   `src/app/routers/risk_calculation.py`.
 2. Operational, capability, and stateless source-product routes are split into router modules.
-   Core calculation routes are not yet split into route modules; their OpenAPI metadata and
-   dependency resolution remain coupled to the FastAPI app instance.
+   Remaining core calculation routes are not yet split into route modules; their OpenAPI metadata
+   and dependency resolution remain coupled to the FastAPI app instance.
 3. Business calculations already live mostly under `src/app/services`, which gives the next slices
    a workable extraction boundary.
 4. Infrastructure clients already sit under `src/app/integrations`, but route handlers still

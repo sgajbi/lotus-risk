@@ -20,7 +20,6 @@ from app.contracts.rolling import (
     RollingInputMode,
     RollingResponse,
 )
-from app.contracts.risk import RiskAnalyticsRequest, RiskInputMode, RiskResponse
 from app.enterprise_readiness import (
     build_enterprise_audit_middleware,
     validate_enterprise_runtime_config,
@@ -30,6 +29,7 @@ from app.integrations.lotus_performance_client import LotusPerformanceClient
 from app.middleware.correlation import CorrelationIdMiddleware
 from app.middleware.http_observation import build_http_observation_middleware
 from app.routers.operational import router as operational_router
+from app.routers.risk_calculation import router as risk_calculation_router
 from app.routers.source_products import router as source_products_router
 from app.service_metadata import (
     SERVICE_NAME as _SERVICE_NAME,
@@ -43,8 +43,6 @@ from app.services.drawdown_mode_adapter import calculate_drawdown_stateful
 from app.services.endpoint_observation import observed_endpoint
 from app.services.rolling_engine import calculate_rolling_metrics
 from app.services.rolling_mode_adapter import calculate_rolling_metrics_stateful
-from app.services.risk_engine import calculate_risk
-from app.services.risk_mode_adapter import calculate_risk_stateful
 
 SERVICE_NAME: str = _SERVICE_NAME
 SERVICE_VERSION: str = _SERVICE_VERSION
@@ -57,6 +55,7 @@ app.middleware("http")(build_http_observation_middleware())
 register_exception_handlers(app)
 app.include_router(operational_router)
 app.include_router(source_products_router)
+app.include_router(risk_calculation_router)
 
 
 @app.post(
@@ -254,52 +253,4 @@ async def analytics_risk_rolling_metrics(
 
     raise ValueError(
         f"Unsupported input_mode={request_payload.input_mode.value} for /analytics/risk/rolling-metrics"
-    )
-
-
-@app.post(
-    "/analytics/risk/calculate",
-    response_model=RiskResponse,
-    responses=STANDARD_ERROR_RESPONSES,
-    summary="Calculate portfolio risk metrics",
-    tags=["risk-analytics"],
-    description=(
-        "Calculates risk metrics from provided return series using stateless or stateful input modes. "
-        "Supports EXPLICIT/YEAR/MTD/QTD/YTD/1Y/3Y/5Y/SI periods, with legacy "
-        "ONE_YEAR/THREE_YEAR/FIVE_YEAR aliases normalized at the boundary. "
-        "all VaR methods (HISTORICAL/GAUSSIAN/CORNISH_FISHER), and benchmark-aware metrics."
-    ),
-)
-async def analytics_risk_calculate(
-    request_payload: RiskAnalyticsRequest,
-    request: Request,
-) -> RiskResponse:
-    input_mode = request_payload.input_mode.value
-    if request_payload.input_mode == RiskInputMode.STATELESS:
-        stateless_input = request_payload.stateless_input
-        assert stateless_input is not None
-        return await observed_endpoint(
-            endpoint="risk/calculate",
-            input_mode=input_mode,
-            operation=lambda: calculate_risk(stateless_input),
-        )
-
-    if request_payload.input_mode == RiskInputMode.STATEFUL:
-        stateful_input = request_payload.stateful_input
-        assert stateful_input is not None
-        performance_client = getattr(app.state, "lotus_performance_client", None)
-        if performance_client is None:
-            performance_client = LotusPerformanceClient()
-        return await observed_endpoint(
-            endpoint="risk/calculate",
-            input_mode=input_mode,
-            operation=lambda: calculate_risk_stateful(
-                stateful_input,
-                performance_client=performance_client,
-                correlation_id=request.headers.get("X-Correlation-Id"),
-            ),
-        )
-
-    raise ValueError(
-        f"Unsupported input_mode={request_payload.input_mode.value} for /analytics/risk/calculate"
     )
