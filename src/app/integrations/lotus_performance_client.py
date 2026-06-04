@@ -23,6 +23,72 @@ def _correlation_headers(correlation_id: str | None) -> dict[str, str]:
     return {"X-Correlation-Id": correlation_id} if correlation_id else {}
 
 
+def _ensure_dict_payload(
+    response: httpx.Response,
+    *,
+    invalid_message: str,
+) -> dict[str, Any]:
+    payload = response.json()
+    if not isinstance(payload, dict):
+        raise invalid_upstream_payload(
+            service="lotus-performance",
+            operation=response.request.url.path,
+            message=invalid_message,
+        )
+    return payload
+
+
+def _parse_async_result_payload(
+    response: httpx.Response,
+    *,
+    invalid_message: str,
+) -> dict[str, Any] | None:
+    payload = response.json()
+    if payload is None:
+        return None
+    if not isinstance(payload, dict):
+        raise invalid_upstream_payload(
+            service="lotus-performance",
+            operation=response.request.url.path,
+            message=invalid_message,
+        )
+    return payload
+
+
+def _async_returns_series_paths(accepted_payload: dict[str, Any]) -> tuple[str, str | None]:
+    result_path = accepted_payload.get("result_path")
+    if not isinstance(result_path, str) or not result_path.startswith("/"):
+        raise invalid_upstream_payload(
+            service="lotus-performance",
+            operation=RETURNS_SERIES_OPERATION,
+            message="lotus-performance async accepted payload missing result_path",
+        )
+
+    poll_path = accepted_payload.get("poll_path")
+    if poll_path is not None and (not isinstance(poll_path, str) or not poll_path.startswith("/")):
+        raise invalid_upstream_payload(
+            service="lotus-performance",
+            operation=RETURNS_SERIES_OPERATION,
+            message="lotus-performance async accepted payload has invalid poll_path",
+        )
+    return result_path, poll_path
+
+
+def _raise_returns_series_async_failure(execution_payload: dict[str, Any]) -> None:
+    error_message = execution_payload.get("error_message")
+    if isinstance(error_message, str) and error_message:
+        raise missing_upstream_data(
+            service="lotus-performance",
+            operation=RETURNS_SERIES_OPERATION,
+            message=f"lotus-performance async returns-series failed: {error_message}",
+        )
+    raise missing_upstream_data(
+        service="lotus-performance",
+        operation=RETURNS_SERIES_OPERATION,
+        message="lotus-performance async returns-series failed",
+    )
+
+
 class LotusPerformanceClient:
     def __init__(
         self,
@@ -65,7 +131,7 @@ class LotusPerformanceClient:
                 request_factory=lambda: client.post(url, json=request_payload, headers=headers),
                 parse_response=lambda response: (
                     response.status_code,
-                    self._ensure_dict_payload(
+                    _ensure_dict_payload(
                         response,
                         invalid_message=(
                             "lotus-performance returned invalid async accepted payload"
@@ -103,7 +169,7 @@ class LotusPerformanceClient:
                 operation=path,
                 started_at=started_at,
                 request_factory=lambda: client.post(url, json=request_payload, headers=headers),
-                parse_response=lambda response: self._ensure_dict_payload(
+                parse_response=lambda response: _ensure_dict_payload(
                     response,
                     invalid_message="lotus-performance returned invalid benchmark exposure context payload",
                 ),
@@ -142,7 +208,7 @@ class LotusPerformanceClient:
         headers: dict[str, str],
         started_at: float,
     ) -> dict[str, Any]:
-        result_path, poll_path = self._async_returns_series_paths(accepted_payload)
+        result_path, poll_path = _async_returns_series_paths(accepted_payload)
         last_status = "pending"
         for _ in range(self._async_max_polls):
             if poll_path:
@@ -180,27 +246,6 @@ class LotusPerformanceClient:
             ),
         )
 
-    @staticmethod
-    def _async_returns_series_paths(accepted_payload: dict[str, Any]) -> tuple[str, str | None]:
-        result_path = accepted_payload.get("result_path")
-        if not isinstance(result_path, str) or not result_path.startswith("/"):
-            raise invalid_upstream_payload(
-                service="lotus-performance",
-                operation=RETURNS_SERIES_OPERATION,
-                message="lotus-performance async accepted payload missing result_path",
-            )
-
-        poll_path = accepted_payload.get("poll_path")
-        if poll_path is not None and (
-            not isinstance(poll_path, str) or not poll_path.startswith("/")
-        ):
-            raise invalid_upstream_payload(
-                service="lotus-performance",
-                operation=RETURNS_SERIES_OPERATION,
-                message="lotus-performance async accepted payload has invalid poll_path",
-            )
-        return result_path, poll_path
-
     async def _poll_returns_series_status(
         self,
         *,
@@ -221,23 +266,8 @@ class LotusPerformanceClient:
         status = execution_payload.get("status")
         next_status = status if isinstance(status, str) else last_status
         if status == "failed":
-            self._raise_returns_series_async_failure(execution_payload)
+            _raise_returns_series_async_failure(execution_payload)
         return next_status
-
-    @staticmethod
-    def _raise_returns_series_async_failure(execution_payload: dict[str, Any]) -> None:
-        error_message = execution_payload.get("error_message")
-        if isinstance(error_message, str) and error_message:
-            raise missing_upstream_data(
-                service="lotus-performance",
-                operation=RETURNS_SERIES_OPERATION,
-                message=f"lotus-performance async returns-series failed: {error_message}",
-            )
-        raise missing_upstream_data(
-            service="lotus-performance",
-            operation=RETURNS_SERIES_OPERATION,
-            message="lotus-performance async returns-series failed",
-        )
 
     async def _get_returns_series_result(
         self,
@@ -256,7 +286,7 @@ class LotusPerformanceClient:
                 response.status_code,
                 None
                 if response.status_code in {202, 404}
-                else self._parse_async_result_payload(
+                else _parse_async_result_payload(
                     response,
                     invalid_message="lotus-performance returned invalid async result payload",
                 ),
@@ -279,41 +309,9 @@ class LotusPerformanceClient:
             operation=operation,
             started_at=started_at,
             request_factory=lambda: client.get(f"{self._base_url}{path}", headers=headers),
-            parse_response=lambda response: self._ensure_dict_payload(
+            parse_response=lambda response: _ensure_dict_payload(
                 response,
                 invalid_message=f"lotus-performance returned invalid JSON payload for {path}",
             ),
             record_success=record_success,
         )
-
-    @staticmethod
-    def _ensure_dict_payload(
-        response: httpx.Response,
-        *,
-        invalid_message: str,
-    ) -> dict[str, Any]:
-        payload = response.json()
-        if not isinstance(payload, dict):
-            raise invalid_upstream_payload(
-                service="lotus-performance",
-                operation=response.request.url.path,
-                message=invalid_message,
-            )
-        return payload
-
-    @staticmethod
-    def _parse_async_result_payload(
-        response: httpx.Response,
-        *,
-        invalid_message: str,
-    ) -> dict[str, Any] | None:
-        payload = response.json()
-        if payload is None:
-            return None
-        if not isinstance(payload, dict):
-            raise invalid_upstream_payload(
-                service="lotus-performance",
-                operation=response.request.url.path,
-                message=invalid_message,
-            )
-        return payload
