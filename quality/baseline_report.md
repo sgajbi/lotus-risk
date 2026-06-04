@@ -44,7 +44,7 @@ documentation posture, and validation gates. It is not a completion claim.
 
 | Path | Symbol | Kind | Lines |
 | --- | --- | --- | --- |
-| src/app/integrations/lotus_performance_client.py | LotusPerformanceClient | ClassDef | 289 |
+| src/app/integrations/lotus_performance_client.py | LotusPerformanceClient | ClassDef | 294 |
 | src/app/contracts/rolling.py | RollingResponse | ClassDef | 220 |
 | src/app/contracts/risk.py | RiskResponse | ClassDef | 199 |
 | src/app/contracts/concentration.py | ConcentrationResponse | ClassDef | 181 |
@@ -105,10 +105,10 @@ Success: no issues found in 163 source files
 ...
 src\app\upstream_errors.py                              55      0     20      3    96%   181->194, 187->189, 192->194
 ------------------------------------------------------------------------------------------------
-TOTAL                                                 4526     85    996     86    97%
+TOTAL                                                 4526     85    994     86    97%
 
 45 files skipped due to complete coverage.
-431 passed in 10.00s
+431 passed in 9.21s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -244,7 +244,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-431 tests collected in 1.64s
+431 tests collected in 1.63s
 ```
 - Import-linter report-only: passed
 

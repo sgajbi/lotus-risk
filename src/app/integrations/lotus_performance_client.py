@@ -19,6 +19,10 @@ DEFAULT_LOTUS_PERFORMANCE_BASE_URL = "http://performance.dev.lotus"
 RETURNS_SERIES_OPERATION = "/integration/returns/series"
 
 
+def _correlation_headers(correlation_id: str | None) -> dict[str, str]:
+    return {"X-Correlation-Id": correlation_id} if correlation_id else {}
+
+
 class LotusPerformanceClient:
     def __init__(
         self,
@@ -49,10 +53,7 @@ class LotusPerformanceClient:
         request_payload: dict[str, Any],
         correlation_id: str | None,
     ) -> dict[str, Any]:
-        headers: dict[str, str] = {}
-        if correlation_id:
-            headers["X-Correlation-Id"] = correlation_id
-
+        headers = _correlation_headers(correlation_id)
         path = RETURNS_SERIES_OPERATION
         url = f"{self._base_url}{path}"
         started_at = observation_start()
@@ -75,30 +76,13 @@ class LotusPerformanceClient:
                 ),
                 record_success=False,
             )
-            if status_code == 202:
-                payload = await self._poll_returns_series_result(
-                    client=client,
-                    accepted_payload=payload,
-                    headers=headers,
-                    started_at=started_at,
-                )
-                record_upstream_request(
-                    dependency="lotus-performance",
-                    operation=path,
-                    outcome="success",
-                    category="ok",
-                    started_at=started_at,
-                )
-                return payload
-
-            record_upstream_request(
-                dependency="lotus-performance",
-                operation=path,
-                outcome="success",
-                category="ok",
+            return await self._finalize_returns_series_payload(
+                client=client,
+                status_code=status_code,
+                payload=payload,
+                headers=headers,
                 started_at=started_at,
             )
-            return payload
 
     async def get_benchmark_exposure_context(
         self,
@@ -124,6 +108,31 @@ class LotusPerformanceClient:
                     invalid_message="lotus-performance returned invalid benchmark exposure context payload",
                 ),
             )
+
+    async def _finalize_returns_series_payload(
+        self,
+        *,
+        client: httpx.AsyncClient,
+        status_code: int,
+        payload: dict[str, Any],
+        headers: dict[str, str],
+        started_at: float,
+    ) -> dict[str, Any]:
+        if status_code == 202:
+            payload = await self._poll_returns_series_result(
+                client=client,
+                accepted_payload=payload,
+                headers=headers,
+                started_at=started_at,
+            )
+        record_upstream_request(
+            dependency="lotus-performance",
+            operation=RETURNS_SERIES_OPERATION,
+            outcome="success",
+            category="ok",
+            started_at=started_at,
+        )
+        return payload
 
     async def _poll_returns_series_result(
         self,
