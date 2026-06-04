@@ -18,6 +18,14 @@ source_modules =
 forbidden_modules =
     app.integrations
 
+[importlinter:contract:routers_do_not_import_infrastructure_clients]
+name = Routers do not import downstream infrastructure clients directly
+type = forbidden
+source_modules =
+    app.routers
+forbidden_modules =
+    app.integrations
+
 [importlinter:contract:infrastructure_does_not_import_app_main]
 name = Infrastructure adapters do not depend on API entry point
 type = forbidden

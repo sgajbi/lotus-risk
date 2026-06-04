@@ -2,7 +2,7 @@ from fastapi import APIRouter, Request
 
 from app.api_errors import STANDARD_ERROR_RESPONSES
 from app.contracts.concentration import ConcentrationRequest, ConcentrationResponse
-from app.integrations.lotus_core_client import LotusCoreClient
+from app.dependencies.downstream_clients import resolve_lotus_core_client
 from app.services.concentration_engine import calculate_concentration
 from app.services.endpoint_observation import observed_endpoint
 
@@ -25,9 +25,7 @@ async def analytics_risk_concentration(
     payload: ConcentrationRequest,
     request: Request,
 ) -> ConcentrationResponse:
-    core_client = getattr(request.app.state, "lotus_core_client", None)
-    if core_client is None:
-        core_client = LotusCoreClient()
+    core_client = resolve_lotus_core_client(request)
     return await observed_endpoint(
         endpoint="concentration",
         input_mode=payload.input_mode.value,

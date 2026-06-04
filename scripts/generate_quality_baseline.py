@@ -171,12 +171,12 @@ documentation posture, and validation gates. It is not a completion claim.
    concentration analytics now lives in `src/app/routers/concentration.py`; historical
    attribution analytics now lives in `src/app/routers/historical_attribution.py`.
 2. Operational, capability, stateless source-product, and core calculation routes are split into
-   router modules. Client dependency fallback remains owned by router boundaries while shared test
-   overrides preserve deterministic stateful execution.
+   router modules. Downstream client resolution now lives in `src/app/dependencies/downstream_clients.py`
+   so routers no longer import `src/app/integrations` adapters directly.
 3. Business calculations already live mostly under `src/app/services`, which gives the next slices
    a workable extraction boundary.
-4. Infrastructure clients already sit under `src/app/integrations`, but route handlers still
-   instantiate clients directly for stateful calculations.
+4. Infrastructure clients already sit under `src/app/integrations`, and API routes now access them
+   through the application dependency provider boundary.
 5. Consistent error envelopes exist through `app.error_response`, but the contract remains
    repository-local rather than full RFC 7807 problem-details.
 

@@ -10,8 +10,8 @@ documentation posture, and validation gates. It is not a completion claim.
 
 ## Code Size Baseline
 
-- Python source files under `src/`: 61
-- Python test files under `tests/`: 78
+- Python source files under `src/`: 63
+- Python test files under `tests/`: 80
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
 
 ### Largest Python Files
@@ -88,12 +88,12 @@ documentation posture, and validation gates. It is not a completion claim.
    concentration analytics now lives in `src/app/routers/concentration.py`; historical
    attribution analytics now lives in `src/app/routers/historical_attribution.py`.
 2. Operational, capability, stateless source-product, and core calculation routes are split into
-   router modules. Client dependency fallback remains owned by router boundaries while shared test
-   overrides preserve deterministic stateful execution.
+   router modules. Downstream client resolution now lives in `src/app/dependencies/downstream_clients.py`
+   so routers no longer import `src/app/integrations` adapters directly.
 3. Business calculations already live mostly under `src/app/services`, which gives the next slices
    a workable extraction boundary.
-4. Infrastructure clients already sit under `src/app/integrations`, but route handlers still
-   instantiate clients directly for stateful calculations.
+4. Infrastructure clients already sit under `src/app/integrations`, and API routes now access them
+   through the application dependency provider boundary.
 5. Consistent error envelopes exist through `app.error_response`, but the contract remains
    repository-local rather than full RFC 7807 problem-details.
 
@@ -149,7 +149,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-371 tests collected in 3.38s
+374 tests collected in 2.08s
 ```
 - Import-linter report-only: reported exit 127
 

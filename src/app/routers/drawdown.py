@@ -6,7 +6,7 @@ from app.contracts.drawdown import (
     DrawdownInputMode,
     DrawdownResponse,
 )
-from app.integrations.lotus_performance_client import LotusPerformanceClient
+from app.dependencies.downstream_clients import resolve_lotus_performance_client
 from app.services.drawdown_engine import calculate_drawdown
 from app.services.drawdown_mode_adapter import calculate_drawdown_stateful
 from app.services.endpoint_observation import observed_endpoint
@@ -49,9 +49,7 @@ async def analytics_risk_drawdown(
     if request_payload.input_mode == DrawdownInputMode.STATEFUL:
         stateful_input = request_payload.stateful_input
         assert stateful_input is not None
-        performance_client = getattr(request.app.state, "lotus_performance_client", None)
-        if performance_client is None:
-            performance_client = LotusPerformanceClient()
+        performance_client = resolve_lotus_performance_client(request)
         return await observed_endpoint(
             endpoint="drawdown",
             input_mode=input_mode,

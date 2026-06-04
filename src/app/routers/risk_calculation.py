@@ -2,7 +2,7 @@ from fastapi import APIRouter, Request
 
 from app.api_errors import STANDARD_ERROR_RESPONSES
 from app.contracts.risk import RiskAnalyticsRequest, RiskInputMode, RiskResponse
-from app.integrations.lotus_performance_client import LotusPerformanceClient
+from app.dependencies.downstream_clients import resolve_lotus_performance_client
 from app.services.endpoint_observation import observed_endpoint
 from app.services.risk_engine import calculate_risk
 from app.services.risk_mode_adapter import calculate_risk_stateful
@@ -39,9 +39,7 @@ async def analytics_risk_calculate(
     if request_payload.input_mode == RiskInputMode.STATEFUL:
         stateful_input = request_payload.stateful_input
         assert stateful_input is not None
-        performance_client = getattr(request.app.state, "lotus_performance_client", None)
-        if performance_client is None:
-            performance_client = LotusPerformanceClient()
+        performance_client = resolve_lotus_performance_client(request)
         return await observed_endpoint(
             endpoint="risk/calculate",
             input_mode=input_mode,

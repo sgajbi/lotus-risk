@@ -6,8 +6,10 @@ from app.contracts.rolling import (
     RollingInputMode,
     RollingResponse,
 )
-from app.integrations.lotus_core_client import LotusCoreClient
-from app.integrations.lotus_performance_client import LotusPerformanceClient
+from app.dependencies.downstream_clients import (
+    resolve_lotus_core_client,
+    resolve_lotus_performance_client,
+)
 from app.services.endpoint_observation import observed_endpoint
 from app.services.rolling_engine import calculate_rolling_metrics
 from app.services.rolling_mode_adapter import calculate_rolling_metrics_stateful
@@ -47,12 +49,8 @@ async def analytics_risk_rolling_metrics(
     if request_payload.input_mode == RollingInputMode.STATEFUL:
         stateful_input = request_payload.stateful_input
         assert stateful_input is not None
-        performance_client = getattr(request.app.state, "lotus_performance_client", None)
-        if performance_client is None:
-            performance_client = LotusPerformanceClient()
-        core_client = getattr(request.app.state, "lotus_core_client", None)
-        if core_client is None:
-            core_client = LotusCoreClient()
+        performance_client = resolve_lotus_performance_client(request)
+        core_client = resolve_lotus_core_client(request)
         return await observed_endpoint(
             endpoint="rolling-metrics",
             input_mode=input_mode,
