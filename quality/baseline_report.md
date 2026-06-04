@@ -35,8 +35,8 @@ documentation posture, and validation gates. It is not a completion claim.
 | tests/integration/test_risk_calculate.py | 596 | 25093 |
 | src/app/services/drawdown_engine.py | 590 | 19662 |
 | tests/integration/test_rolling_metrics_endpoint.py | 566 | 22142 |
+| src/app/services/rolling_mode_adapter.py | 560 | 19273 |
 | src/app/services/attribution_mode_adapter.py | 533 | 19091 |
-| src/app/services/rolling_mode_adapter.py | 531 | 18368 |
 | tests/unit/test_lotus_performance_client.py | 530 | 19686 |
 | src/app/trust_telemetry.py | 511 | 21683 |
 
@@ -105,10 +105,10 @@ Success: no issues found in 163 source files
 ...
 src\app\upstream_errors.py                              55      0     20      3    96%   181->194, 187->189, 192->194
 ------------------------------------------------------------------------------------------------
-TOTAL                                                 4506     84    992     85    97%
+TOTAL                                                 4511     84    992     85    97%
 
 45 files skipped due to complete coverage.
-431 passed in 8.31s
+431 passed in 8.55s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -244,7 +244,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-431 tests collected in 1.48s
+431 tests collected in 1.61s
 ```
 - Import-linter report-only: passed
 

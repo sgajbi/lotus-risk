@@ -83,6 +83,12 @@ class _ResolvedStatefulRollingInputs:
     risk_free_points: list[ReturnPoint]
 
 
+@dataclass(frozen=True)
+class _ResolvedRiskFreeDependency:
+    request: dict[str, Any] | None
+    points: list[ReturnPoint]
+
+
 def _copy_int_detail(
     details: dict[str, Any],
     *,
@@ -443,6 +449,39 @@ def _attach_stateful_lineage(
     return response
 
 
+async def _resolve_risk_free_dependency(
+    *,
+    include_risk_free: bool,
+    source_responses: _StatefulSourceResponses,
+    core_client: LotusCoreClientProtocol | None,
+    reporting_currency: str | None,
+    stateful: RollingStatefulInput,
+    portfolio_points: list[ReturnPoint],
+    correlation_id: str | None,
+) -> _ResolvedRiskFreeDependency:
+    risk_free_response, fallback_risk_free_request = await _risk_free_response_or_none(
+        include_risk_free=include_risk_free,
+        risk_free_response=source_responses.risk_free_response,
+        core_client=core_client,
+        reporting_currency=reporting_currency,
+        stateful=stateful,
+        portfolio_points=portfolio_points,
+        correlation_id=correlation_id,
+    )
+    return _ResolvedRiskFreeDependency(
+        request=source_responses.risk_free_request or fallback_risk_free_request,
+        points=await _risk_free_points_or_raise(
+            include_risk_free=include_risk_free,
+            risk_free_response=risk_free_response,
+            core_client=core_client,
+            reporting_currency=reporting_currency,
+            annualization_basis=stateful.rolling_options.annualization_basis,
+            portfolio_points=portfolio_points,
+            correlation_id=correlation_id,
+        ),
+    )
+
+
 async def _resolve_stateful_rolling_inputs(
     stateful: RollingStatefulInput,
     *,
@@ -473,22 +512,12 @@ async def _resolve_stateful_rolling_inputs(
         series,
         include_benchmark=_requires_benchmark(stateful),
     )
-    risk_free_response, fallback_risk_free_request = await _risk_free_response_or_none(
+    risk_free_dependency = await _resolve_risk_free_dependency(
         include_risk_free=include_risk_free,
-        risk_free_response=source_responses.risk_free_response,
+        source_responses=source_responses,
         core_client=core_client,
         reporting_currency=resolved_reporting_currency,
         stateful=stateful,
-        portfolio_points=portfolio_points,
-        correlation_id=correlation_id,
-    )
-    risk_free_request = source_responses.risk_free_request or fallback_risk_free_request
-    risk_free_points = await _risk_free_points_or_raise(
-        include_risk_free=include_risk_free,
-        risk_free_response=risk_free_response,
-        core_client=core_client,
-        reporting_currency=resolved_reporting_currency,
-        annualization_basis=stateful.rolling_options.annualization_basis,
         portfolio_points=portfolio_points,
         correlation_id=correlation_id,
     )
@@ -496,10 +525,10 @@ async def _resolve_stateful_rolling_inputs(
         stateful=stateful,
         include_risk_free=include_risk_free,
         source_payload=source_responses.source_payload,
-        risk_free_request=risk_free_request,
+        risk_free_request=risk_free_dependency.request,
         portfolio_points=portfolio_points,
         benchmark_points=benchmark_points,
-        risk_free_points=risk_free_points,
+        risk_free_points=risk_free_dependency.points,
     )
 
 
