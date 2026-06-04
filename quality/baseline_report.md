@@ -100,8 +100,8 @@ documentation posture, and validation gates. It is not a completion claim.
 
 ## OpenAPI And API Governance Gaps
 
-1. Public analytics POST endpoints now define explicit operation IDs in route decorators; remaining
-   operational/internal endpoints should be standardized in later slices.
+1. Current OpenAPI operations define explicit operation IDs in route decorators, with a contract
+   test preserving uniqueness and stable names.
 2. Pagination/filtering/sorting governance is not broadly applicable to calculation POST endpoints,
    but any future list/read-model route must use an explicit shared contract.
 3. Health, liveness, readiness, metadata, metrics, and ops endpoints exist and are documented, but
@@ -151,7 +151,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-378 tests collected in 3.87s
+378 tests collected in 1.99s
 ```
 - Import-linter report-only: reported exit 127
 

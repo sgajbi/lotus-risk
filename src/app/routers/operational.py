@@ -51,6 +51,7 @@ def _dependency_statuses(dependencies: Sequence[DependencyRuntimeView]) -> list[
 @router.get(
     "/health",
     response_model=HealthResponse,
+    operation_id="getHealthStatus",
     summary="Health status",
     description="Returns basic service health for compatibility probes.",
     tags=["operational"],
@@ -63,6 +64,7 @@ async def health() -> HealthResponse:
 @router.get(
     "/health/live",
     response_model=LivenessResponse,
+    operation_id="getLivenessStatus",
     summary="Liveness probe",
     description="Returns liveness status for container/orchestrator probes.",
     tags=["operational"],
@@ -75,6 +77,7 @@ async def health_live() -> LivenessResponse:
 @router.get(
     "/health/ready",
     response_model=ReadinessResponse,
+    operation_id="getReadinessStatus",
     summary="Readiness probe",
     description="Returns readiness status, including draining behavior.",
     tags=["operational"],
@@ -92,6 +95,7 @@ async def health_ready(request: Request, response: Response) -> ReadinessRespons
 @router.get(
     "/metadata",
     response_model=MetadataResponse,
+    operation_id="getServiceMetadata",
     summary="Service metadata",
     description="Returns service metadata and policy versions.",
     tags=["operational"],
@@ -108,6 +112,7 @@ async def metadata() -> MetadataResponse:
 @router.get(
     "/ops",
     response_model=OpsResponse,
+    operation_id="getOperationalDiagnostics",
     summary="Operational diagnostics",
     description="Returns consolidated operational diagnostics and execution modes.",
     tags=["operational"],
@@ -134,6 +139,7 @@ async def ops(request: Request) -> OpsResponse:
 @router.get(
     "/ops/trust-telemetry",
     response_model=DeclaredProductTrustTelemetrySnapshot,
+    operation_id="getTrustTelemetrySnapshot",
     summary="Local trust telemetry snapshot",
     description=(
         "Returns the current repo-owned raw trust telemetry seeds for each repo-native declared "
@@ -153,6 +159,7 @@ async def ops_trust_telemetry(request: Request) -> DeclaredProductTrustTelemetry
 @router.get(
     "/integration/capabilities",
     response_model=IntegrationCapabilitiesResponse,
+    operation_id="getIntegrationCapabilities",
     summary="Integration capabilities",
     description="Publishes lotus-risk capabilities used for cross-service orchestration.",
     tags=["integration"],
@@ -255,6 +262,7 @@ async def integration_capabilities() -> IntegrationCapabilitiesResponse:
 
 @router.get(
     "/metrics",
+    operation_id="getPrometheusMetrics",
     summary="Prometheus metrics",
     description="Exposes Prometheus metrics for observability scraping.",
     tags=["operational"],
