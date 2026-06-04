@@ -21,8 +21,8 @@ documentation posture, and validation gates. It is not a completion claim.
 | --- | --- | --- |
 | tests/integration/test_health.py | 843 | 36606 |
 | tests/unit/test_methodology_docs.py | 823 | 32953 |
+| src/app/contracts/rolling.py | 788 | 30023 |
 | src/app/contracts/concentration.py | 782 | 31608 |
-| src/app/contracts/rolling.py | 780 | 29970 |
 | src/app/contracts/risk.py | 752 | 27324 |
 | tests/e2e/test_smoke.py | 750 | 28373 |
 | tests/integration/test_historical_attribution_endpoint.py | 747 | 29645 |
@@ -105,10 +105,10 @@ Success: no issues found in 168 source files
 ...
 src\app\upstream_errors.py                              55      0     20      3    96%   181->194, 187->189, 192->194
 ------------------------------------------------------------------------------------------------
-TOTAL                                                 4565     84    988     85    97%
+TOTAL                                                 4565     84    986     85    97%
 
 51 files skipped due to complete coverage.
-431 passed in 8.42s
+431 passed in 7.95s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -118,8 +118,6 @@ TOTAL                                                 4565     84    988     85 
 ```text
 src\app\enterprise_readiness.py
     F 90:0 authorize_write_request - C (13)
-src\app\contracts\rolling.py
-    C 105:0 RollingStatelessInput - C (11)
 ```
 - Maintainability index summary: passed
 
@@ -238,7 +236,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-431 tests collected in 1.57s
+431 tests collected in 1.59s
 ```
 - Import-linter report-only: passed
 

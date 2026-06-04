@@ -49,6 +49,31 @@ def _default_rolling_metrics() -> list[RollingMetric]:
     ]
 
 
+def _validate_unique_period_names(periods: list[RiskRequestPeriod]) -> None:
+    resolved_names = [period.name or period.type for period in periods]
+    duplicates = sorted({name for name in resolved_names if resolved_names.count(name) > 1})
+    if duplicates:
+        raise ValueError(
+            "Duplicate period names resolved in request: "
+            + ", ".join(duplicates)
+            + ". Each period name (or type fallback) must be unique."
+        )
+
+
+def _validate_rolling_stateless_dependencies(
+    *,
+    requested_metrics: set[RollingMetric],
+    benchmark_returns: list[ReturnPoint],
+    risk_free_returns: list[ReturnPoint],
+) -> None:
+    if requested_metrics.intersection(ROLLING_BENCHMARK_METRICS) and not benchmark_returns:
+        raise ValueError(
+            "benchmark_returns are required when requesting rolling benchmark-dependent metrics"
+        )
+    if "ROLLING_SHARPE" in requested_metrics and not risk_free_returns:
+        raise ValueError("risk_free_returns are required when requesting ROLLING_SHARPE")
+
+
 class RollingOptions(BaseModel):
     window_lengths: list[int] = Field(
         default_factory=lambda: [21, 63, 126, 252],
@@ -153,22 +178,12 @@ class RollingStatelessInput(BaseModel):
 
     @model_validator(mode="after")
     def validate_semantics(self) -> "RollingStatelessInput":
-        resolved_names = [period.name or period.type for period in self.periods]
-        duplicates = sorted({name for name in resolved_names if resolved_names.count(name) > 1})
-        if duplicates:
-            raise ValueError(
-                "Duplicate period names resolved in request: "
-                + ", ".join(duplicates)
-                + ". Each period name (or type fallback) must be unique."
-            )
-
-        requested_metrics = set(self.rolling_options.metrics)
-        if requested_metrics.intersection(ROLLING_BENCHMARK_METRICS) and not self.benchmark_returns:
-            raise ValueError(
-                "benchmark_returns are required when requesting rolling benchmark-dependent metrics"
-            )
-        if "ROLLING_SHARPE" in requested_metrics and not self.risk_free_returns:
-            raise ValueError("risk_free_returns are required when requesting ROLLING_SHARPE")
+        _validate_unique_period_names(self.periods)
+        _validate_rolling_stateless_dependencies(
+            requested_metrics=set(self.rolling_options.metrics),
+            benchmark_returns=self.benchmark_returns,
+            risk_free_returns=self.risk_free_returns,
+        )
         return self
 
 
@@ -217,14 +232,7 @@ class RollingStatefulInput(BaseModel):
 
     @model_validator(mode="after")
     def validate_semantics(self) -> "RollingStatefulInput":
-        resolved_names = [period.name or period.type for period in self.periods]
-        duplicates = sorted({name for name in resolved_names if resolved_names.count(name) > 1})
-        if duplicates:
-            raise ValueError(
-                "Duplicate period names resolved in request: "
-                + ", ".join(duplicates)
-                + ". Each period name (or type fallback) must be unique."
-            )
+        _validate_unique_period_names(self.periods)
         return self
 
 
