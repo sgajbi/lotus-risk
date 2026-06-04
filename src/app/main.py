@@ -15,21 +15,12 @@ from app.contracts.drawdown import (
     DrawdownInputMode,
     DrawdownResponse,
 )
-from app.contracts.mandate_health import (
-    MandateRiskHealthContextRequest,
-    MandateRiskHealthContextResponse,
-)
 from app.contracts.rolling import (
     RollingAnalyticsRequest,
     RollingInputMode,
     RollingResponse,
 )
 from app.contracts.risk import RiskAnalyticsRequest, RiskInputMode, RiskResponse
-from app.contracts.risk_event_cohort import (
-    RiskEventAffectedCohortRequest,
-    RiskEventAffectedCohortResponse,
-)
-from app.contracts.scenario import RegimeScenarioPackRequest, RegimeScenarioPackResponse
 from app.enterprise_readiness import (
     build_enterprise_audit_middleware,
     validate_enterprise_runtime_config,
@@ -39,6 +30,7 @@ from app.integrations.lotus_performance_client import LotusPerformanceClient
 from app.middleware.correlation import CorrelationIdMiddleware
 from app.middleware.http_observation import build_http_observation_middleware
 from app.routers.operational import router as operational_router
+from app.routers.source_products import router as source_products_router
 from app.service_metadata import (
     SERVICE_NAME as _SERVICE_NAME,
     SERVICE_VERSION as _SERVICE_VERSION,
@@ -49,13 +41,10 @@ from app.services.attribution_mode_adapter import calculate_historical_attributi
 from app.services.drawdown_engine import calculate_drawdown
 from app.services.drawdown_mode_adapter import calculate_drawdown_stateful
 from app.services.endpoint_observation import observed_endpoint
-from app.services.mandate_health_context import evaluate_mandate_risk_health_context
 from app.services.rolling_engine import calculate_rolling_metrics
 from app.services.rolling_mode_adapter import calculate_rolling_metrics_stateful
 from app.services.risk_engine import calculate_risk
-from app.services.risk_event_cohort_engine import evaluate_risk_event_affected_cohort
 from app.services.risk_mode_adapter import calculate_risk_stateful
-from app.services.scenario_engine import evaluate_regime_scenario_pack
 
 SERVICE_NAME: str = _SERVICE_NAME
 SERVICE_VERSION: str = _SERVICE_VERSION
@@ -67,77 +56,7 @@ app.middleware("http")(build_enterprise_audit_middleware())
 app.middleware("http")(build_http_observation_middleware())
 register_exception_handlers(app)
 app.include_router(operational_router)
-
-
-@app.post(
-    "/analytics/risk/mandate-health-context",
-    response_model=MandateRiskHealthContextResponse,
-    responses=STANDARD_ERROR_RESPONSES,
-    summary="Evaluate source-owned mandate risk health context",
-    tags=["risk-analytics"],
-    description=(
-        "Evaluates a bounded mandate risk health context using lotus-risk source-owned "
-        "tracking-error methodology. The response preserves threshold posture, lineage, "
-        "methodology ownership, and reason codes for downstream consumers such as lotus-manage "
-        "without creating mandate actions, rebalance waves, client communications, or execution."
-    ),
-)
-async def analytics_risk_mandate_health_context(
-    request_payload: MandateRiskHealthContextRequest,
-) -> MandateRiskHealthContextResponse:
-    return await observed_endpoint(
-        endpoint="mandate-risk-health-context",
-        input_mode="stateless",
-        operation=lambda: evaluate_mandate_risk_health_context(request_payload),
-    )
-
-
-@app.post(
-    "/analytics/risk/regime-scenario-pack/evaluate",
-    response_model=RegimeScenarioPackResponse,
-    responses=STANDARD_ERROR_RESPONSES,
-    summary="Evaluate a governed regime scenario pack",
-    tags=["risk-analytics"],
-    description=(
-        "Evaluates caller-supplied portfolio exposure weights against a governed CIO regime "
-        "scenario pack and returns source-owned worst-case loss, policy-threshold breach posture, "
-        "optional per-security contribution rows, CIO approval/effective-period/applicability "
-        "posture, bounded reason codes, and lineage metadata. "
-        "Consumers must not reconstruct scenario methodology outside lotus-risk."
-    ),
-)
-async def analytics_risk_regime_scenario_pack(
-    request_payload: RegimeScenarioPackRequest,
-) -> RegimeScenarioPackResponse:
-    return await observed_endpoint(
-        endpoint="regime-scenario-pack",
-        input_mode="stateless",
-        operation=lambda: evaluate_regime_scenario_pack(request_payload),
-    )
-
-
-@app.post(
-    "/analytics/risk/risk-event-cohorts/evaluate",
-    response_model=RiskEventAffectedCohortResponse,
-    responses=STANDARD_ERROR_RESPONSES,
-    summary="Evaluate a governed risk-event affected cohort",
-    tags=["risk-analytics"],
-    description=(
-        "Evaluates candidate portfolios against governed risk-event definitions and returns "
-        "source-owned affected-cohort membership, impact scores, exclusions, lineage source refs, "
-        "bounded reason codes, and supportability posture. Consumers must not reconstruct "
-        "risk-event cohort membership outside lotus-risk, and this endpoint does not create "
-        "rebalance waves, approvals, or campaign workflow."
-    ),
-)
-async def analytics_risk_event_affected_cohort(
-    request_payload: RiskEventAffectedCohortRequest,
-) -> RiskEventAffectedCohortResponse:
-    return await observed_endpoint(
-        endpoint="risk-event-cohort",
-        input_mode="stateless",
-        operation=lambda: evaluate_risk_event_affected_cohort(request_payload),
-    )
+app.include_router(source_products_router)
 
 
 @app.post(
