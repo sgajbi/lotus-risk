@@ -9,7 +9,6 @@ from app.contracts.attribution import (
     HistoricalAttributionRequest,
     HistoricalAttributionResponse,
 )
-from app.contracts.concentration import ConcentrationRequest, ConcentrationResponse
 from app.enterprise_readiness import (
     build_enterprise_audit_middleware,
     validate_enterprise_runtime_config,
@@ -18,6 +17,7 @@ from app.integrations.lotus_core_client import LotusCoreClient
 from app.integrations.lotus_performance_client import LotusPerformanceClient
 from app.middleware.correlation import CorrelationIdMiddleware
 from app.middleware.http_observation import build_http_observation_middleware
+from app.routers.concentration import router as concentration_router
 from app.routers.drawdown import router as drawdown_router
 from app.routers.operational import router as operational_router
 from app.routers.risk_calculation import router as risk_calculation_router
@@ -27,7 +27,6 @@ from app.service_metadata import (
     SERVICE_NAME as _SERVICE_NAME,
     SERVICE_VERSION as _SERVICE_VERSION,
 )
-from app.services.concentration_engine import calculate_concentration
 from app.services.attribution_engine import calculate_historical_attribution
 from app.services.attribution_mode_adapter import calculate_historical_attribution_stateful
 from app.services.endpoint_observation import observed_endpoint
@@ -46,6 +45,7 @@ app.include_router(source_products_router)
 app.include_router(risk_calculation_router)
 app.include_router(drawdown_router)
 app.include_router(rolling_router)
+app.include_router(concentration_router)
 
 
 @app.post(
@@ -101,36 +101,4 @@ async def analytics_risk_historical_attribution(
 
     raise ValueError(
         f"Unsupported input_mode={request_payload.input_mode.value} for /analytics/risk/historical-attribution"
-    )
-
-
-@app.post(
-    "/analytics/risk/concentration",
-    response_model=ConcentrationResponse,
-    responses=STANDARD_ERROR_RESPONSES,
-    summary="Calculate concentration risk analytics",
-    tags=["risk-analytics"],
-    description=(
-        "Calculates portfolio, single-position, and issuer concentration analytics across "
-        "stateless, stateful, and simulation modes. Returns position-level HHI, top-position "
-        "weight, top-N cumulative weight, issuer-level HHI, top-issuer weight, issuer coverage "
-        "diagnostics, and top concentration drivers for current and proposed states."
-    ),
-)
-async def analytics_risk_concentration(
-    payload: ConcentrationRequest,
-    request: Request,
-) -> ConcentrationResponse:
-    core_client = getattr(app.state, "lotus_core_client", None)
-    if core_client is None:
-        core_client = LotusCoreClient()
-    return await observed_endpoint(
-        endpoint="concentration",
-        input_mode=payload.input_mode.value,
-        operation=lambda: calculate_concentration(
-            payload,
-            core_client=core_client,
-            correlation_id=request.headers.get("X-Correlation-Id"),
-            actor_id=request.headers.get("X-Actor-Id"),
-        ),
     )

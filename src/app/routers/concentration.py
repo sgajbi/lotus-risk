@@ -1,0 +1,40 @@
+from fastapi import APIRouter, Request
+
+from app.api_errors import STANDARD_ERROR_RESPONSES
+from app.contracts.concentration import ConcentrationRequest, ConcentrationResponse
+from app.integrations.lotus_core_client import LotusCoreClient
+from app.services.concentration_engine import calculate_concentration
+from app.services.endpoint_observation import observed_endpoint
+
+router = APIRouter(tags=["risk-analytics"])
+
+
+@router.post(
+    "/analytics/risk/concentration",
+    response_model=ConcentrationResponse,
+    responses=STANDARD_ERROR_RESPONSES,
+    summary="Calculate concentration risk analytics",
+    description=(
+        "Calculates portfolio, single-position, and issuer concentration analytics across "
+        "stateless, stateful, and simulation modes. Returns position-level HHI, top-position "
+        "weight, top-N cumulative weight, issuer-level HHI, top-issuer weight, issuer coverage "
+        "diagnostics, and top concentration drivers for current and proposed states."
+    ),
+)
+async def analytics_risk_concentration(
+    payload: ConcentrationRequest,
+    request: Request,
+) -> ConcentrationResponse:
+    core_client = getattr(request.app.state, "lotus_core_client", None)
+    if core_client is None:
+        core_client = LotusCoreClient()
+    return await observed_endpoint(
+        endpoint="concentration",
+        input_mode=payload.input_mode.value,
+        operation=lambda: calculate_concentration(
+            payload,
+            core_client=core_client,
+            correlation_id=request.headers.get("X-Correlation-Id"),
+            actor_id=request.headers.get("X-Actor-Id"),
+        ),
+    )
