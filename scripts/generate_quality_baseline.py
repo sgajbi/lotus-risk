@@ -172,7 +172,8 @@ documentation posture, and validation gates. It is not a completion claim.
    attribution analytics now lives in `src/app/routers/historical_attribution.py`.
 2. Operational, capability, stateless source-product, and core calculation routes are split into
    router modules. Downstream client resolution now lives in `src/app/dependencies/downstream_clients.py`
-   so routers no longer import `src/app/integrations` adapters directly.
+   so routers no longer import `src/app/integrations` adapters directly. Request correlation and
+   actor identity extraction now lives in `src/app/dependencies/request_context.py`.
 3. Business calculations already live mostly under `src/app/services`, which gives the next slices
    a workable extraction boundary.
 4. Infrastructure clients already sit under `src/app/integrations`, and API routes now access them

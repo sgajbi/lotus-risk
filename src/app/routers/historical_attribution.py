@@ -10,6 +10,7 @@ from app.dependencies.downstream_clients import (
     resolve_lotus_core_client,
     resolve_lotus_performance_client,
 )
+from app.dependencies.request_context import request_correlation_id
 from app.services.attribution_engine import calculate_historical_attribution
 from app.services.attribution_mode_adapter import calculate_historical_attribution_stateful
 from app.services.endpoint_observation import observed_endpoint
@@ -59,7 +60,7 @@ async def analytics_risk_historical_attribution(
                 stateful_input,
                 performance_client=performance_client,
                 core_client=core_client,
-                correlation_id=request.headers.get("X-Correlation-Id"),
+                correlation_id=request_correlation_id(request),
             ),
         )
 

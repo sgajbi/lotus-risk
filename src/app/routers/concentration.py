@@ -3,6 +3,7 @@ from fastapi import APIRouter, Request
 from app.api_errors import STANDARD_ERROR_RESPONSES
 from app.contracts.concentration import ConcentrationRequest, ConcentrationResponse
 from app.dependencies.downstream_clients import resolve_lotus_core_client
+from app.dependencies.request_context import request_actor_id, request_correlation_id
 from app.services.concentration_engine import calculate_concentration
 from app.services.endpoint_observation import observed_endpoint
 
@@ -32,7 +33,7 @@ async def analytics_risk_concentration(
         operation=lambda: calculate_concentration(
             payload,
             core_client=core_client,
-            correlation_id=request.headers.get("X-Correlation-Id"),
-            actor_id=request.headers.get("X-Actor-Id"),
+            correlation_id=request_correlation_id(request),
+            actor_id=request_actor_id(request),
         ),
     )

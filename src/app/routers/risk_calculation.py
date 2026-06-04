@@ -3,6 +3,7 @@ from fastapi import APIRouter, Request
 from app.api_errors import STANDARD_ERROR_RESPONSES
 from app.contracts.risk import RiskAnalyticsRequest, RiskInputMode, RiskResponse
 from app.dependencies.downstream_clients import resolve_lotus_performance_client
+from app.dependencies.request_context import request_correlation_id
 from app.services.endpoint_observation import observed_endpoint
 from app.services.risk_engine import calculate_risk
 from app.services.risk_mode_adapter import calculate_risk_stateful
@@ -46,7 +47,7 @@ async def analytics_risk_calculate(
             operation=lambda: calculate_risk_stateful(
                 stateful_input,
                 performance_client=performance_client,
-                correlation_id=request.headers.get("X-Correlation-Id"),
+                correlation_id=request_correlation_id(request),
             ),
         )
 

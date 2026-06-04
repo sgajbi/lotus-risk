@@ -10,8 +10,8 @@ documentation posture, and validation gates. It is not a completion claim.
 
 ## Code Size Baseline
 
-- Python source files under `src/`: 63
-- Python test files under `tests/`: 80
+- Python source files under `src/`: 64
+- Python test files under `tests/`: 81
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
 
 ### Largest Python Files
@@ -89,7 +89,8 @@ documentation posture, and validation gates. It is not a completion claim.
    attribution analytics now lives in `src/app/routers/historical_attribution.py`.
 2. Operational, capability, stateless source-product, and core calculation routes are split into
    router modules. Downstream client resolution now lives in `src/app/dependencies/downstream_clients.py`
-   so routers no longer import `src/app/integrations` adapters directly.
+   so routers no longer import `src/app/integrations` adapters directly. Request correlation and
+   actor identity extraction now lives in `src/app/dependencies/request_context.py`.
 3. Business calculations already live mostly under `src/app/services`, which gives the next slices
    a workable extraction boundary.
 4. Infrastructure clients already sit under `src/app/integrations`, and API routes now access them
@@ -149,7 +150,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-374 tests collected in 2.08s
+376 tests collected in 1.67s
 ```
 - Import-linter report-only: reported exit 127
 

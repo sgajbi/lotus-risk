@@ -7,6 +7,7 @@ from app.contracts.drawdown import (
     DrawdownResponse,
 )
 from app.dependencies.downstream_clients import resolve_lotus_performance_client
+from app.dependencies.request_context import request_correlation_id
 from app.services.drawdown_engine import calculate_drawdown
 from app.services.drawdown_mode_adapter import calculate_drawdown_stateful
 from app.services.endpoint_observation import observed_endpoint
@@ -57,7 +58,7 @@ async def analytics_risk_drawdown(
                 stateful_input,
                 analysis_options=request_payload.analysis_options,
                 performance_client=performance_client,
-                correlation_id=request.headers.get("X-Correlation-Id"),
+                correlation_id=request_correlation_id(request),
             ),
         )
 

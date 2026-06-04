@@ -10,6 +10,7 @@ from app.dependencies.downstream_clients import (
     resolve_lotus_core_client,
     resolve_lotus_performance_client,
 )
+from app.dependencies.request_context import request_correlation_id
 from app.services.endpoint_observation import observed_endpoint
 from app.services.rolling_engine import calculate_rolling_metrics
 from app.services.rolling_mode_adapter import calculate_rolling_metrics_stateful
@@ -58,7 +59,7 @@ async def analytics_risk_rolling_metrics(
                 stateful_input,
                 performance_client=performance_client,
                 core_client=core_client,
-                correlation_id=request.headers.get("X-Correlation-Id"),
+                correlation_id=request_correlation_id(request),
             ),
         )
 
