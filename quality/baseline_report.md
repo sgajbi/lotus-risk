@@ -35,7 +35,7 @@ documentation posture, and validation gates. It is not a completion claim.
 | src/app/services/rolling_engine.py | 569 | 21231 |
 | tests/integration/test_rolling_metrics_endpoint.py | 566 | 22142 |
 | src/app/trust_telemetry.py | 476 | 20809 |
-| tests/unit/test_lotus_performance_client.py | 472 | 17446 |
+| tests/unit/test_lotus_performance_client.py | 466 | 17300 |
 | tests/unit/test_drawdown_engine.py | 422 | 16234 |
 | tests/integration/test_rolling_live_characterization.py | 418 | 16694 |
 | tests/unit/test_rolling_mode_adapter.py | 402 | 15406 |
@@ -108,7 +108,7 @@ src\app\upstream_errors.py                            55      0     20      3   
 TOTAL                                               3912    155    954     99    94%
 
 34 files skipped due to complete coverage.
-387 passed in 8.47s
+387 passed in 9.18s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -150,14 +150,7 @@ src\app\services\__init__.py - A (100.00)
 
 ## Dead Code And Dependency Hygiene Snapshot
 
-- Dead-code candidates: reported exit 3
-
-```text
-tests\unit\test_lotus_core_client.py:30: unused variable 'exc_type' (100% confidence)
-tests\unit\test_lotus_core_client.py:32: unused variable 'tb' (100% confidence)
-tests\unit\test_lotus_performance_client.py:31: unused variable 'exc_type' (100% confidence)
-tests\unit\test_lotus_performance_client.py:33: unused variable 'tb' (100% confidence)
-```
+- Dead-code candidates: passed
 - Dependency hygiene: reported exit 1
 
 ```text
@@ -181,7 +174,7 @@ For more information, see the documentation: https://deptry.com/
 - Bandit source scan: reported exit 1
 
 ```text
-Run started:2026-06-04 05:42:55.986878+00:00
+Run started:2026-06-04 05:49:37.282249+00:00
 
 Test results:
 >> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
@@ -290,7 +283,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-387 tests collected in 1.61s
+387 tests collected in 1.78s
 ```
 - Import-linter report-only: reported exit 127
 

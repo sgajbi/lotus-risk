@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from types import TracebackType
 from typing import Any
 
 import httpx
@@ -26,12 +25,7 @@ class _FakeAsyncClient:
     async def __aenter__(self) -> "_FakeAsyncClient":
         return self
 
-    async def __aexit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc: BaseException | None,
-        tb: TracebackType | None,
-    ) -> None:
+    async def __aexit__(self, *_args: object) -> None:
         return None
 
     async def post(
