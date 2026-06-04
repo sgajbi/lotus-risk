@@ -32,7 +32,6 @@ dev = [
   "bandit>=1.9.0",
   "deptry>=0.24.0",
   "import-linter>=2.7",
-  "interrogate>=1.7.0",
   "radon>=6.0.1",
   "vulture>=2.14"
 ]
@@ -56,13 +55,3 @@ skip_covered = true
 [tool.bandit]
 exclude_dirs = [".venv", "tests"]
 skips = ["B101"]
-
-[tool.interrogate]
-ignore-init-method = true
-ignore-init-module = true
-ignore-magic = true
-ignore-module = true
-ignore-nested-functions = true
-ignore-private = true
-fail-under = 70
-exclude = ["setup.py", "tests"]

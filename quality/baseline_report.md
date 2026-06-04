@@ -71,7 +71,7 @@ documentation posture, and validation gates. It is not a completion claim.
 - mypy: configured in `mypy.ini`; enforced by `make typecheck`.
 - pytest/coverage: repo-native test commands exist; PR coverage floor remains 98%.
 - pip-audit: enforced through `make security-audit`.
-- Bandit, radon, vulture, deptry, import-linter, and interrogate are now declared as development
+- Bandit, radon, vulture, deptry, and import-linter are now declared as development
   tooling for progressive quality evidence.
 - Spectral config is present for OpenAPI governance; CI is report-only until generated OpenAPI
   export is standardized for this repository.
@@ -108,7 +108,7 @@ src\app\upstream_errors.py                            55      0     20      3   
 TOTAL                                               3930    173    990    110    93%
 
 34 files skipped due to complete coverage.
-387 passed in 8.75s
+387 passed in 9.13s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -162,22 +162,11 @@ Success! No dependency issues found.
 ## Security Snapshot
 
 - Bandit source scan: passed
-- Dependency vulnerability audit: reported exit 1
+- Dependency vulnerability audit: passed
 
 ```text
 === Vulnerability Summary ===
-Known vulnerabilities: 1
-
-=== Vulnerabilities ===
-[
-  {
-...
-        ],
-        "description": "The py library through 1.11.0 for Python allows remote attackers to conduct a ReDoS (Regular expression Denial of Service) attack via a Subversion repository with crafted info data, because the InfoSvnCommand argument is mishandled."
-      }
-    ]
-  }
-]
+Known vulnerabilities: 0
 ```
 
 ## Current Architectural Findings
@@ -257,7 +246,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-387 tests collected in 1.91s
+387 tests collected in 2.58s
 ```
 - Import-linter report-only: reported exit 127
 
