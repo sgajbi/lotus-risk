@@ -63,13 +63,17 @@ def _resample_returns(returns: pd.Series, frequency: str) -> pd.Series:
         return returns
     rule = {"WEEKLY": "W-FRI", "MONTHLY": "ME"}[frequency]
     resampled = returns.resample(rule).apply(lambda x: ((1 + x / 100).prod() - 1) * 100).dropna()
-    return cast(pd.Series, resampled)
+    if isinstance(resampled, pd.DataFrame):
+        if resampled.shape[1] != 1:
+            raise TypeError(f"Unexpected resample result shape: {resampled.shape}")
+        resampled = resampled.iloc[:, 0]
+    return resampled
 
 
 def _to_log_returns(returns: pd.Series) -> pd.Series:
     if returns.empty:
         return returns
-    return cast(pd.Series, np.log1p(returns / 100) * 100)
+    return pd.Series(np.log1p(returns / 100) * 100, index=returns.index, name=returns.name)
 
 
 def _annual_to_periodic(rate: float, annual_factor: int) -> float:
