@@ -605,6 +605,63 @@ def _simulation_metadata(
     return metadata
 
 
+async def _fetch_simulation_snapshot_state(
+    *,
+    request: ConcentrationRequest,
+    simulation: SimulationConcentrationInput,
+    session: _SimulationSession,
+    core_client: LotusCoreClientProtocol,
+    correlation_id: str | None,
+    snapshot_payload: dict[str, Any],
+) -> tuple[_SimulationSnapshotState, _SimulationSession]:
+    snapshot = await core_client.get_core_snapshot(
+        portfolio_id=simulation.portfolio_id,
+        request_payload=snapshot_payload,
+        correlation_id=correlation_id,
+    )
+    sections = snapshot.get("sections")
+    if not isinstance(sections, dict):
+        raise ValueError("lotus-core simulation snapshot missing sections payload")
+
+    issuer_by_security, issuer_note = _issuer_map_from_snapshot_sections(
+        request=request,
+        sections=sections,
+        issuer_mappings=simulation.issuer_mappings,
+    )
+    return (
+        _simulation_snapshot_state(
+            snapshot,
+            sections=sections,
+            issuer_by_security=issuer_by_security,
+            issuer_note=issuer_note,
+        ),
+        _session_with_snapshot_version(session, snapshot=snapshot),
+    )
+
+
+def _simulation_computation_input(
+    *,
+    simulation: SimulationConcentrationInput,
+    snapshot_state: _SimulationSnapshotState,
+    metadata: ConcentrationMetadata,
+) -> ConcentrationComputationInput:
+    return ConcentrationComputationInput(
+        input_mode=ConcentrationInputMode.SIMULATION,
+        current_positions=snapshot_state.baseline_positions,
+        proposed_positions=snapshot_state.projected_positions,
+        top_n=simulation.top_n,
+        current_issuers=snapshot_state.baseline_issuers,
+        proposed_issuers=snapshot_state.projected_issuers,
+        covered_position_count_current=snapshot_state.covered_baseline,
+        covered_position_count_proposed=snapshot_state.covered_projected,
+        total_position_count_current=snapshot_state.total_baseline,
+        total_position_count_proposed=snapshot_state.total_projected,
+        issuer_note=snapshot_state.issuer_note,
+        valuation_context=snapshot_state.valuation_context,
+        metadata=metadata,
+    )
+
+
 async def resolve_simulation(
     request: ConcentrationRequest,
     *,
@@ -629,47 +686,22 @@ async def resolve_simulation(
         correlation_id=correlation_id,
     )
     snapshot_payload = _simulation_snapshot_payload(simulation, session=session)
-
-    snapshot = await core_client.get_core_snapshot(
-        portfolio_id=simulation.portfolio_id,
-        request_payload=snapshot_payload,
-        correlation_id=correlation_id,
-    )
-    sections = snapshot.get("sections")
-    if not isinstance(sections, dict):
-        raise ValueError("lotus-core simulation snapshot missing sections payload")
-
-    issuer_by_security, issuer_note = _issuer_map_from_snapshot_sections(
+    snapshot_state, session = await _fetch_simulation_snapshot_state(
         request=request,
-        sections=sections,
-        issuer_mappings=simulation.issuer_mappings,
+        simulation=simulation,
+        session=session,
+        core_client=core_client,
+        correlation_id=correlation_id,
+        snapshot_payload=snapshot_payload,
     )
-    snapshot_state = _simulation_snapshot_state(
-        snapshot,
-        sections=sections,
-        issuer_by_security=issuer_by_security,
-        issuer_note=issuer_note,
-    )
-    session = _session_with_snapshot_version(session, snapshot=snapshot)
     metadata = _simulation_metadata(
         request,
         simulation=simulation,
         session=session,
         snapshot_payload=snapshot_payload,
     )
-
-    return ConcentrationComputationInput(
-        input_mode=ConcentrationInputMode.SIMULATION,
-        current_positions=snapshot_state.baseline_positions,
-        proposed_positions=snapshot_state.projected_positions,
-        top_n=simulation.top_n,
-        current_issuers=snapshot_state.baseline_issuers,
-        proposed_issuers=snapshot_state.projected_issuers,
-        covered_position_count_current=snapshot_state.covered_baseline,
-        covered_position_count_proposed=snapshot_state.covered_projected,
-        total_position_count_current=snapshot_state.total_baseline,
-        total_position_count_proposed=snapshot_state.total_projected,
-        issuer_note=snapshot_state.issuer_note,
-        valuation_context=snapshot_state.valuation_context,
+    return _simulation_computation_input(
+        simulation=simulation,
+        snapshot_state=snapshot_state,
         metadata=metadata,
     )

@@ -9,7 +9,7 @@ This slice establishes the report-only enterprise quality baseline and progressi
 | Rank | Target | Evidence | Next action |
 | --- | --- | --- | --- |
 | 1 | Contract model size | Largest files are API contract modules over 800 lines | Split reusable examples, metadata, and nested contract fragments where it improves readability |
-| 2 | Largest remaining function | resolve_simulation has 68 lines | Extract focused helpers around the next service hotspot while preserving behavior with characterization tests |
+| 2 | Largest remaining function | supportability_from_period_results has 66 lines | Extract focused helpers around the next service hotspot while preserving behavior with characterization tests |
 | 3 | Concentration service boundaries | Simulation/stateless resolvers and response assembly remain the largest service areas | Tighten ports, source resolution, issuer aggregation, and response assembly boundaries |
 
 ## Progressive Gate Posture
