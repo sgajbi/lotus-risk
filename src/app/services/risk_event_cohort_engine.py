@@ -11,6 +11,7 @@ from app.contracts.risk_event_cohort import (
     RiskEventCohortMetadata,
     RiskEventCohortSupportabilityState,
     RiskEventExcludedPortfolio,
+    RiskEventPortfolioExposure,
 )
 
 
@@ -19,6 +20,15 @@ class RiskEventDefinition:
     risk_event_id: str
     display_name: str
     shock_by_bucket: dict[str, float]
+
+
+@dataclass(frozen=True)
+class _PortfolioRiskEventEvaluation:
+    portfolio: RiskEventPortfolioExposure
+    impact_score: float
+    dominant_bucket: str
+    bucket_impacts: dict[str, float]
+    unsupported_buckets: list[str]
 
 
 RISK_EVENTS: dict[str, RiskEventDefinition] = {
@@ -54,65 +64,24 @@ def evaluate_risk_event_affected_cohort(
 
     affected: list[RiskEventAffectedPortfolio] = []
     excluded: list[RiskEventExcludedPortfolio] = []
-    unsupported_bucket_seen = False
     supported_buckets = set(risk_event.shock_by_bucket)
 
     for portfolio in request.portfolios:
-        normalized_exposures = {
-            bucket.upper(): weight for bucket, weight in portfolio.exposure_weights.items()
-        }
-        unsupported_buckets = sorted(set(normalized_exposures) - supported_buckets)
-        unsupported_bucket_seen = unsupported_bucket_seen or bool(unsupported_buckets)
-        bucket_impacts = {
-            bucket: round(weight * risk_event.shock_by_bucket.get(bucket, 0.0), 6)
-            for bucket, weight in normalized_exposures.items()
-        }
-        impact_score = round(sum(abs(value) for value in bucket_impacts.values()), 6)
-        dominant_bucket = max(
-            bucket_impacts,
-            key=lambda bucket: abs(bucket_impacts[bucket]),
-            default="UNKNOWN",
+        evaluation = _evaluate_portfolio_exposure(
+            portfolio=portfolio,
+            risk_event=risk_event,
+            supported_buckets=supported_buckets,
         )
-        if impact_score >= request.minimum_impact_score and not unsupported_buckets:
-            affected.append(
-                RiskEventAffectedPortfolio(
-                    portfolio_id=portfolio.portfolio_id,
-                    mandate_id=portfolio.mandate_id,
-                    portfolio_manager_id=portfolio.portfolio_manager_id,
-                    impact_score=impact_score,
-                    dominant_bucket=dominant_bucket,
-                    bucket_impacts=bucket_impacts,
-                    source_ref=(
-                        "risk-event-cohort:"
-                        f"{request.risk_event_id}:{request.as_of_date.isoformat()}:"
-                        f"{portfolio.portfolio_id}"
-                    ),
-                    reason_codes=["RISK_EVENT_THRESHOLD_BREACHED"],
-                )
-            )
+        if _is_affected(evaluation, minimum_impact_score=request.minimum_impact_score):
+            affected.append(_affected_portfolio(request=request, evaluation=evaluation))
             continue
-
-        reason_codes = ["RISK_EVENT_BELOW_THRESHOLD"]
-        if unsupported_buckets:
-            reason_codes = ["RISK_EVENT_UNSUPPORTED_EXPOSURE_BUCKET"]
-        excluded.append(
-            RiskEventExcludedPortfolio(
-                portfolio_id=portfolio.portfolio_id,
-                impact_score=impact_score,
-                reason_codes=reason_codes,
-            )
-        )
-
-    supportability = RiskEventCohortSupportabilityState.READY
-    reason_codes = ["RISK_EVENT_AFFECTED_COHORT_READY"]
-    if unsupported_bucket_seen:
-        supportability = RiskEventCohortSupportabilityState.DEGRADED
-        reason_codes.append("RISK_EVENT_PARTIAL_UNSUPPORTED_EXPOSURE_BUCKETS")
-    if not affected:
-        supportability = RiskEventCohortSupportabilityState.PENDING_REVIEW
-        reason_codes.append("RISK_EVENT_NO_AFFECTED_PORTFOLIOS")
+        excluded.append(_excluded_portfolio(evaluation))
 
     request_fingerprint = _request_fingerprint(request)
+    supportability, reason_codes = _supportability_state(
+        affected=affected,
+        excluded=excluded,
+    )
     return RiskEventAffectedCohortResponse(
         cohort_id=_cohort_id(request_fingerprint),
         risk_event_id=request.risk_event_id,
@@ -126,6 +95,97 @@ def evaluate_risk_event_affected_cohort(
             calculation_supportability=supportability,
         ),
     )
+
+
+def _evaluate_portfolio_exposure(
+    *,
+    portfolio: RiskEventPortfolioExposure,
+    risk_event: RiskEventDefinition,
+    supported_buckets: set[str],
+) -> _PortfolioRiskEventEvaluation:
+    normalized_exposures = {
+        bucket.upper(): weight for bucket, weight in portfolio.exposure_weights.items()
+    }
+    unsupported_buckets = sorted(set(normalized_exposures) - supported_buckets)
+    bucket_impacts = {
+        bucket: round(weight * risk_event.shock_by_bucket.get(bucket, 0.0), 6)
+        for bucket, weight in normalized_exposures.items()
+    }
+    impact_score = round(sum(abs(value) for value in bucket_impacts.values()), 6)
+    dominant_bucket = max(
+        bucket_impacts,
+        key=lambda bucket: abs(bucket_impacts[bucket]),
+        default="UNKNOWN",
+    )
+    return _PortfolioRiskEventEvaluation(
+        portfolio=portfolio,
+        impact_score=impact_score,
+        dominant_bucket=dominant_bucket,
+        bucket_impacts=bucket_impacts,
+        unsupported_buckets=unsupported_buckets,
+    )
+
+
+def _is_affected(
+    evaluation: _PortfolioRiskEventEvaluation,
+    *,
+    minimum_impact_score: float,
+) -> bool:
+    return evaluation.impact_score >= minimum_impact_score and not evaluation.unsupported_buckets
+
+
+def _affected_portfolio(
+    *,
+    request: RiskEventAffectedCohortRequest,
+    evaluation: _PortfolioRiskEventEvaluation,
+) -> RiskEventAffectedPortfolio:
+    portfolio = evaluation.portfolio
+    return RiskEventAffectedPortfolio(
+        portfolio_id=portfolio.portfolio_id,
+        mandate_id=portfolio.mandate_id,
+        portfolio_manager_id=portfolio.portfolio_manager_id,
+        impact_score=evaluation.impact_score,
+        dominant_bucket=evaluation.dominant_bucket,
+        bucket_impacts=evaluation.bucket_impacts,
+        source_ref=(
+            "risk-event-cohort:"
+            f"{request.risk_event_id}:{request.as_of_date.isoformat()}:"
+            f"{portfolio.portfolio_id}"
+        ),
+        reason_codes=["RISK_EVENT_THRESHOLD_BREACHED"],
+    )
+
+
+def _excluded_portfolio(
+    evaluation: _PortfolioRiskEventEvaluation,
+) -> RiskEventExcludedPortfolio:
+    reason_codes = ["RISK_EVENT_BELOW_THRESHOLD"]
+    if evaluation.unsupported_buckets:
+        reason_codes = ["RISK_EVENT_UNSUPPORTED_EXPOSURE_BUCKET"]
+    return RiskEventExcludedPortfolio(
+        portfolio_id=evaluation.portfolio.portfolio_id,
+        impact_score=evaluation.impact_score,
+        reason_codes=reason_codes,
+    )
+
+
+def _supportability_state(
+    *,
+    affected: list[RiskEventAffectedPortfolio],
+    excluded: list[RiskEventExcludedPortfolio],
+) -> tuple[RiskEventCohortSupportabilityState, list[str]]:
+    supportability = RiskEventCohortSupportabilityState.READY
+    reason_codes = ["RISK_EVENT_AFFECTED_COHORT_READY"]
+    unsupported_bucket_seen = any(
+        "RISK_EVENT_UNSUPPORTED_EXPOSURE_BUCKET" in portfolio.reason_codes for portfolio in excluded
+    )
+    if unsupported_bucket_seen:
+        supportability = RiskEventCohortSupportabilityState.DEGRADED
+        reason_codes.append("RISK_EVENT_PARTIAL_UNSUPPORTED_EXPOSURE_BUCKETS")
+    if not affected:
+        supportability = RiskEventCohortSupportabilityState.PENDING_REVIEW
+        reason_codes.append("RISK_EVENT_NO_AFFECTED_PORTFOLIOS")
+    return supportability, sorted(set(reason_codes))
 
 
 def _request_fingerprint(request: RiskEventAffectedCohortRequest) -> str:
