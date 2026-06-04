@@ -76,7 +76,7 @@
       "review_by": "2026-12-01"
     },
     {
-      "finding": "src/app/services/concentration/parsing.py:268:numeric_value = float(candidate)",
+      "finding": "src/app/services/concentration/parsing.py:287:numeric_value = float(candidate)",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
       "review_by": "2026-12-01"

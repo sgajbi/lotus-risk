@@ -105,10 +105,10 @@ Success: no issues found in 168 source files
 ...
 src\app\upstream_errors.py                              55      0     20      3    96%   181->194, 187->189, 192->194
 ------------------------------------------------------------------------------------------------
-TOTAL                                                 4548     85    994     86    97%
+TOTAL                                                 4555     85    994     86    97%
 
 50 files skipped due to complete coverage.
-431 passed in 7.94s
+431 passed in 8.33s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -122,8 +122,6 @@ src\app\contracts\attribution.py
     C 120:0 HistoricalAttributionStatelessInput - C (11)
 src\app\contracts\rolling.py
     C 105:0 RollingStatelessInput - C (11)
-src\app\services\concentration\parsing.py
-    F 221:0 _apply_snapshot_display_names - C (13)
 src\app\services\risk\helpers.py
     F 21:0 _resolve_period - C (13)
 ```
@@ -244,7 +242,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-431 tests collected in 1.69s
+431 tests collected in 1.66s
 ```
 - Import-linter report-only: passed
 
