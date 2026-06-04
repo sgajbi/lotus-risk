@@ -10,11 +10,6 @@ from app.contracts.attribution import (
     HistoricalAttributionResponse,
 )
 from app.contracts.concentration import ConcentrationRequest, ConcentrationResponse
-from app.contracts.rolling import (
-    RollingAnalyticsRequest,
-    RollingInputMode,
-    RollingResponse,
-)
 from app.enterprise_readiness import (
     build_enterprise_audit_middleware,
     validate_enterprise_runtime_config,
@@ -26,6 +21,7 @@ from app.middleware.http_observation import build_http_observation_middleware
 from app.routers.drawdown import router as drawdown_router
 from app.routers.operational import router as operational_router
 from app.routers.risk_calculation import router as risk_calculation_router
+from app.routers.rolling import router as rolling_router
 from app.routers.source_products import router as source_products_router
 from app.service_metadata import (
     SERVICE_NAME as _SERVICE_NAME,
@@ -35,8 +31,6 @@ from app.services.concentration_engine import calculate_concentration
 from app.services.attribution_engine import calculate_historical_attribution
 from app.services.attribution_mode_adapter import calculate_historical_attribution_stateful
 from app.services.endpoint_observation import observed_endpoint
-from app.services.rolling_engine import calculate_rolling_metrics
-from app.services.rolling_mode_adapter import calculate_rolling_metrics_stateful
 
 SERVICE_NAME: str = _SERVICE_NAME
 SERVICE_VERSION: str = _SERVICE_VERSION
@@ -51,6 +45,7 @@ app.include_router(operational_router)
 app.include_router(source_products_router)
 app.include_router(risk_calculation_router)
 app.include_router(drawdown_router)
+app.include_router(rolling_router)
 
 
 @app.post(
@@ -138,59 +133,4 @@ async def analytics_risk_concentration(
             correlation_id=request.headers.get("X-Correlation-Id"),
             actor_id=request.headers.get("X-Actor-Id"),
         ),
-    )
-
-
-@app.post(
-    "/analytics/risk/rolling-metrics",
-    response_model=RollingResponse,
-    responses=STANDARD_ERROR_RESPONSES,
-    summary="Calculate rolling risk metrics",
-    tags=["risk-analytics"],
-    description=(
-        "Calculates rolling-window historical risk diagnostics including volatility, Sharpe, beta, "
-        "tracking error, information ratio, and rolling max drawdown. Supports stateless and "
-        "stateful execution, explicit rolling window configuration, benchmark-aware metrics, and "
-        "optional rolling time-series emission."
-    ),
-)
-async def analytics_risk_rolling_metrics(
-    request_payload: RollingAnalyticsRequest,
-    request: Request,
-) -> RollingResponse:
-    input_mode = request_payload.input_mode.value
-    if request_payload.input_mode == RollingInputMode.STATELESS:
-        stateless_input = request_payload.stateless_input
-        assert stateless_input is not None
-        return await observed_endpoint(
-            endpoint="rolling-metrics",
-            input_mode=input_mode,
-            operation=lambda: calculate_rolling_metrics(
-                stateless_input,
-                input_mode=RollingInputMode.STATELESS,
-            ),
-        )
-
-    if request_payload.input_mode == RollingInputMode.STATEFUL:
-        stateful_input = request_payload.stateful_input
-        assert stateful_input is not None
-        performance_client = getattr(app.state, "lotus_performance_client", None)
-        if performance_client is None:
-            performance_client = LotusPerformanceClient()
-        core_client = getattr(app.state, "lotus_core_client", None)
-        if core_client is None:
-            core_client = LotusCoreClient()
-        return await observed_endpoint(
-            endpoint="rolling-metrics",
-            input_mode=input_mode,
-            operation=lambda: calculate_rolling_metrics_stateful(
-                stateful_input,
-                performance_client=performance_client,
-                core_client=core_client,
-                correlation_id=request.headers.get("X-Correlation-Id"),
-            ),
-        )
-
-    raise ValueError(
-        f"Unsupported input_mode={request_payload.input_mode.value} for /analytics/risk/rolling-metrics"
     )
