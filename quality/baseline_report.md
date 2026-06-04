@@ -10,7 +10,7 @@ documentation posture, and validation gates. It is not a completion claim.
 
 ## Code Size Baseline
 
-- Python source files under `src/`: 82
+- Python source files under `src/`: 83
 - Python test files under `tests/`: 85
 - Python packages under `src/`: 9
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
@@ -29,11 +29,11 @@ documentation posture, and validation gates. It is not a completion claim.
 | src/app/services/rolling_engine.py | 733 | 24654 |
 | src/app/services/concentration/resolvers.py | 707 | 24526 |
 | src/app/contracts/drawdown.py | 681 | 26302 |
-| src/app/contracts/attribution.py | 667 | 26911 |
 | src/app/services/drawdown_engine.py | 647 | 21288 |
 | src/app/services/attribution_engine.py | 645 | 21664 |
 | tests/unit/test_attribution_mode_adapter.py | 600 | 21872 |
 | tests/integration/test_risk_calculate.py | 596 | 25093 |
+| src/app/contracts/attribution.py | 588 | 23270 |
 | src/app/services/rolling_mode_adapter.py | 575 | 19649 |
 | tests/integration/test_rolling_metrics_endpoint.py | 566 | 22142 |
 | src/app/services/attribution_mode_adapter.py | 533 | 19091 |
@@ -46,7 +46,6 @@ documentation posture, and validation gates. It is not a completion claim.
 | --- | --- | --- | --- |
 | src/app/integrations/lotus_performance_client.py | LotusPerformanceClient | ClassDef | 226 |
 | src/app/integrations/lotus_core_client.py | LotusCoreClient | ClassDef | 156 |
-| src/app/contracts/attribution.py | HistoricalAttributionResponse | ClassDef | 123 |
 | src/app/trust_telemetry.py | DeclaredProductTrustTelemetrySnapshot | ClassDef | 111 |
 | src/app/contracts/concentration.py | ConcentrationResponse | ClassDef | 105 |
 | src/app/contracts/concentration.py | IssuerConcentration | ClassDef | 97 |
@@ -60,10 +59,11 @@ documentation posture, and validation gates. It is not a completion claim.
 | src/app/contracts/rolling.py | RollingMetadata | ClassDef | 87 |
 | src/app/contracts/drawdown.py | DrawdownPeriodResult | ClassDef | 84 |
 | src/app/contracts/scenario.py | RegimeScenarioPackRequest | ClassDef | 84 |
-| src/app/contracts/attribution.py | HistoricalAttributionRequest | ClassDef | 82 |
 | src/app/contracts/drawdown.py | DrawdownResponse | ClassDef | 77 |
 | src/app/contracts/mandate_health.py | MandateRiskHealthContextResponse | ClassDef | 77 |
 | src/app/contracts/rolling.py | RollingMetricSummary | ClassDef | 76 |
+| src/app/contracts/concentration.py | ConcentrationRequest | ClassDef | 75 |
+| src/app/contracts/attribution.py | HistoricalAttributionMetadata | ClassDef | 71 |
 
 ## Tool Baseline
 
@@ -86,12 +86,12 @@ All checks passed!
 - Ruff format check: passed
 
 ```text
-180 files already formatted
+181 files already formatted
 ```
 - Type checking: passed
 
 ```text
-Success: no issues found in 167 source files
+Success: no issues found in 168 source files
 ```
 - Unit coverage snapshot: passed
 
@@ -105,10 +105,10 @@ Success: no issues found in 167 source files
 ...
 src\app\upstream_errors.py                              55      0     20      3    96%   181->194, 187->189, 192->194
 ------------------------------------------------------------------------------------------------
-TOTAL                                                 4544     85    994     86    97%
+TOTAL                                                 4548     85    994     86    97%
 
-49 files skipped due to complete coverage.
-431 passed in 9.15s
+50 files skipped due to complete coverage.
+431 passed in 8.85s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -119,7 +119,7 @@ TOTAL                                                 4544     85    994     86 
 src\app\enterprise_readiness.py
     F 90:0 authorize_write_request - C (13)
 src\app\contracts\attribution.py
-    C 116:0 HistoricalAttributionStatelessInput - C (11)
+    C 120:0 HistoricalAttributionStatelessInput - C (11)
 src\app\contracts\rolling.py
     C 105:0 RollingStatelessInput - C (11)
 src\app\services\concentration\parsing.py
@@ -151,7 +151,7 @@ src\app\services\risk\__init__.py - A (100.00)
 - Dependency hygiene: passed
 
 ```text
-Scanning 82 files...
+Scanning 83 files...
 
 Success! No dependency issues found.
 ```
@@ -244,7 +244,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-431 tests collected in 1.97s
+431 tests collected in 1.57s
 ```
 - Import-linter report-only: passed
 
