@@ -1,7 +1,7 @@
 {
   "description": "Approved baseline monetary-float findings. New findings fail CI.",
   "policy_version": "1.1.0",
-  "generated_at": "2026-06-04T11:24:51Z",
+  "generated_at": "2026-06-04T11:30:47Z",
   "allowlist": [
     {
       "finding": "src/app/contracts/attribution.py:400:total_value: float | None = Field(",
@@ -124,52 +124,40 @@
       "review_by": "2026-12-01"
     },
     {
-      "finding": "src/app/services/drawdown_engine.py:156:dar_value: float | None = None",
+      "finding": "src/app/services/drawdown_engine.py:173:dar_value = float(np.quantile(np.array(depths), 1.0 - alpha, method=\"linear\"))",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
-      "review_by": "2026-10-27"
+      "review_by": "2026-12-01"
     },
     {
-      "finding": "src/app/services/drawdown_engine.py:157:cdar_value: float | None = None",
+      "finding": "src/app/services/drawdown_engine.py:175:cdar_value = float(np.mean(worst_tail)) if worst_tail else None",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
-      "review_by": "2026-10-27"
+      "review_by": "2026-12-01"
     },
     {
-      "finding": "src/app/services/drawdown_engine.py:159:dar_value = float(np.quantile(np.array(depths), 1.0 - alpha, method=\"linear\"))",
+      "finding": "src/app/services/drawdown_engine.py:180:dd_values = [float(value) for value in drawdown if float(value) < 0]",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
-      "review_by": "2026-10-27"
+      "review_by": "2026-12-01"
     },
     {
-      "finding": "src/app/services/drawdown_engine.py:162:cdar_value = float(np.mean(worst_tail))",
+      "finding": "src/app/services/drawdown_engine.py:210:time_under_water_days=int(sum(1 for value in drawdown if float(value) < 0)),",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
-      "review_by": "2026-10-27"
+      "review_by": "2026-12-01"
     },
     {
-      "finding": "src/app/services/drawdown_engine.py:165:dd_values = [float(value) for value in drawdown if float(value) < 0]",
+      "finding": "src/app/services/drawdown_engine.py:223:points.append(UnderwaterPoint(date=timestamp.date(), drawdown=float(value)))",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
-      "review_by": "2026-10-27"
+      "review_by": "2026-12-01"
     },
     {
-      "finding": "src/app/services/drawdown_engine.py:177:time_under_water_days=int(sum(1 for value in drawdown if float(value) < 0)),",
+      "finding": "src/app/services/drawdown_engine.py:93:values = [float(value) for value in drawdown]",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
-      "review_by": "2026-10-27"
-    },
-    {
-      "finding": "src/app/services/drawdown_engine.py:190:points.append(UnderwaterPoint(date=timestamp.date(), drawdown=float(value)))",
-      "justification": "Temporary approved monetary float usage; migrate to Decimal.",
-      "owner": "platform-governance",
-      "review_by": "2026-10-27"
-    },
-    {
-      "finding": "src/app/services/drawdown_engine.py:71:values = [float(value) for value in drawdown]",
-      "justification": "Temporary approved monetary float usage; migrate to Decimal.",
-      "owner": "platform-governance",
-      "review_by": "2026-10-27"
+      "review_by": "2026-12-01"
     },
     {
       "finding": "src/app/services/risk/helpers.py:103:peak_value = _as_number(cast(float, peak.loc[trough_idx]))",

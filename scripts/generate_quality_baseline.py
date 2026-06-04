@@ -319,7 +319,7 @@ This slice establishes the report-only enterprise quality baseline and progressi
                 ),
                 (
                     2,
-                    "Rolling calculation engine",
+                    "Largest remaining function",
                     f"{largest_function.name} has {largest_function.lines} lines",
                     "Extract smaller metric helpers while preserving behavior with characterization tests",
                 ),

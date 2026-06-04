@@ -43,6 +43,28 @@ class _EpisodeRecord:
     is_recovered: bool
 
 
+@dataclass(frozen=True)
+class _DrawdownInputFrames:
+    portfolio: pd.DataFrame
+    benchmark: pd.DataFrame
+
+
+@dataclass(frozen=True)
+class _DrawdownPeriodSeries:
+    name: str
+    start: date
+    end: date
+    portfolio_returns: pd.Series
+    benchmark_returns: pd.Series
+    benchmark_available: bool
+
+
+@dataclass(frozen=True)
+class _RelativeBenchmarkResult:
+    summary: RelativeDrawdownSummary | None
+    context: RelativeDrawdownContext
+
+
 def _duration_days(start: date, end: date, *, unit: str) -> int:
     if end < start:
         return 0
@@ -126,6 +148,43 @@ def _build_episodes(drawdown: pd.Series, *, duration_unit: str) -> list[_Episode
     return episodes
 
 
+def _empty_drawdown_summary() -> DrawdownSummary:
+    return DrawdownSummary(
+        max_drawdown=None,
+        max_drawdown_peak_date=None,
+        max_drawdown_trough_date=None,
+        max_drawdown_recovery_date=None,
+        is_recovered=False,
+        days_to_trough=None,
+        days_to_recovery=None,
+        time_under_water_days=0,
+        average_drawdown=None,
+        ulcer_index=None,
+        drawdown_at_risk_95=None,
+        conditional_drawdown_at_risk_95=None,
+    )
+
+
+def _tail_drawdown_risk(
+    depths: Sequence[float], *, alpha: float
+) -> tuple[float | None, float | None]:
+    if not depths:
+        return None, None
+    dar_value = float(np.quantile(np.array(depths), 1.0 - alpha, method="linear"))
+    worst_tail = [depth for depth in depths if depth <= dar_value]
+    cdar_value = float(np.mean(worst_tail)) if worst_tail else None
+    return dar_value, cdar_value
+
+
+def _average_drawdown(drawdown: pd.Series) -> float:
+    dd_values = [float(value) for value in drawdown if float(value) < 0]
+    return float(np.mean(dd_values)) if dd_values else 0.0
+
+
+def _ulcer_index(drawdown: pd.Series) -> float:
+    return float(sqrt(float(np.mean(np.square(np.array([float(v) for v in drawdown]))))))
+
+
 def _drawdown_summary(
     drawdown: pd.Series,
     *,
@@ -133,38 +192,12 @@ def _drawdown_summary(
     duration_unit: str,
 ) -> tuple[DrawdownSummary, list[_EpisodeRecord]]:
     if drawdown.empty:
-        return (
-            DrawdownSummary(
-                max_drawdown=None,
-                max_drawdown_peak_date=None,
-                max_drawdown_trough_date=None,
-                max_drawdown_recovery_date=None,
-                is_recovered=False,
-                days_to_trough=None,
-                days_to_recovery=None,
-                time_under_water_days=0,
-                average_drawdown=None,
-                ulcer_index=None,
-                drawdown_at_risk_95=None,
-                conditional_drawdown_at_risk_95=None,
-            ),
-            [],
-        )
+        return _empty_drawdown_summary(), []
 
     episodes = _build_episodes(drawdown, duration_unit=duration_unit)
     depths = [episode.depth for episode in episodes]
-    dar_value: float | None = None
-    cdar_value: float | None = None
-    if depths:
-        dar_value = float(np.quantile(np.array(depths), 1.0 - alpha, method="linear"))
-        worst_tail = [depth for depth in depths if depth <= dar_value]
-        if worst_tail:
-            cdar_value = float(np.mean(worst_tail))
-
+    dar_value, cdar_value = _tail_drawdown_risk(depths, alpha=alpha)
     max_episode = min(episodes, key=lambda episode: episode.depth) if episodes else None
-    dd_values = [float(value) for value in drawdown if float(value) < 0]
-    average_drawdown = float(np.mean(dd_values)) if dd_values else 0.0
-    ulcer_index = float(sqrt(float(np.mean(np.square(np.array([float(v) for v in drawdown]))))))
 
     summary = DrawdownSummary(
         max_drawdown=max_episode.depth if max_episode else 0.0,
@@ -175,8 +208,8 @@ def _drawdown_summary(
         days_to_trough=max_episode.days_to_trough if max_episode else 0,
         days_to_recovery=max_episode.days_to_recovery if max_episode else 0,
         time_under_water_days=int(sum(1 for value in drawdown if float(value) < 0)),
-        average_drawdown=average_drawdown,
-        ulcer_index=ulcer_index,
+        average_drawdown=_average_drawdown(drawdown),
+        ulcer_index=_ulcer_index(drawdown),
         drawdown_at_risk_95=dar_value,
         conditional_drawdown_at_risk_95=cdar_value,
     )
@@ -217,6 +250,230 @@ def _build_metadata(
     )
 
 
+def _build_input_frames(request: DrawdownStatelessInput) -> _DrawdownInputFrames:
+    return _DrawdownInputFrames(
+        portfolio=_build_returns_df(request.returns),
+        benchmark=_build_returns_df(request.benchmark_returns),
+    )
+
+
+def _empty_response(
+    request: DrawdownStatelessInput,
+    *,
+    input_mode: DrawdownInputMode,
+    analysis_options: DrawdownAnalysisOptions,
+    include_benchmark: bool | None,
+    missing_benchmark_policy: Literal["IGNORE", "REQUIRE"] | None,
+) -> DrawdownResponse:
+    calculation_supportability = supportability_from_period_results(
+        returns=request.returns,
+        as_of_date=request.scope.as_of_date,
+        results={},
+    )
+    record_operation_supportability(
+        operation="risk/drawdown",
+        supportability=calculation_supportability,
+    )
+    return DrawdownResponse(
+        input_mode=input_mode,
+        scope=request.scope,
+        results={},
+        metadata=_build_metadata(
+            request=request,
+            analysis_options=analysis_options,
+            include_benchmark=include_benchmark,
+            missing_benchmark_policy=missing_benchmark_policy,
+            calculation_supportability=calculation_supportability,
+        ),
+    )
+
+
+def _period_series(
+    *,
+    frames: _DrawdownInputFrames,
+    request: DrawdownStatelessInput,
+    period: RiskRequestPeriod,
+    open_date: date,
+) -> _DrawdownPeriodSeries:
+    start, end = risk_helpers._resolve_period(
+        period.type,
+        request.scope.as_of_date,
+        open_date,
+        year=period.year,
+        from_date=period.from_date,
+        to_date=period.to_date,
+    )
+    benchmark_returns = (
+        _filter_period(frames.benchmark, start=start, end=end)
+        if not frames.benchmark.empty
+        else pd.Series(dtype="float64")
+    )
+    return _DrawdownPeriodSeries(
+        name=_period_name(period),
+        start=start,
+        end=end,
+        portfolio_returns=_filter_period(frames.portfolio, start=start, end=end),
+        benchmark_returns=benchmark_returns,
+        benchmark_available=not frames.benchmark.empty,
+    )
+
+
+def _insufficient_period_result(
+    period_series: _DrawdownPeriodSeries,
+    *,
+    include_benchmark: bool | None,
+) -> DrawdownPeriodResult:
+    return DrawdownPeriodResult(
+        start_date=period_series.start,
+        end_date=period_series.end,
+        portfolio_observation_count=0,
+        benchmark_observation_count=0,
+        summary=None,
+        episodes=[],
+        relative_to_benchmark=None,
+        relative_to_benchmark_context=RelativeDrawdownContext(
+            requested=include_benchmark is True,
+            applied=False,
+            reason="BENCHMARK_UNAVAILABLE" if include_benchmark is True else "NOT_REQUESTED",
+            aligned_observation_count=0,
+        ),
+        underwater_series=None,
+        error="Insufficient data",
+    )
+
+
+def _drawdown_from_returns(returns: pd.Series) -> pd.Series:
+    wealth = (1 + returns / 100.0).cumprod()
+    running_peak = wealth.cummax()
+    return wealth / running_peak - 1.0
+
+
+def _episode_models(
+    episodes: list[_EpisodeRecord],
+    *,
+    analysis_options: DrawdownAnalysisOptions,
+) -> list[DrawdownEpisode]:
+    min_depth = analysis_options.minimum_episode_depth_bps / 10000.0
+    filtered_episodes = [episode for episode in episodes if abs(episode.depth) >= min_depth]
+    filtered_episodes = sorted(filtered_episodes, key=lambda episode: episode.depth)[
+        : analysis_options.top_n_episodes
+    ]
+    if not analysis_options.include_episode_list:
+        return []
+    return [
+        DrawdownEpisode(
+            episode_id=f"dd_{index + 1:04d}",
+            peak_date=episode.peak_date,
+            trough_date=episode.trough_date,
+            recovery_date=episode.recovery_date,
+            depth=episode.depth,
+            days_to_trough=episode.days_to_trough,
+            days_to_recovery=episode.days_to_recovery,
+            total_days=episode.total_days,
+            is_recovered=episode.is_recovered,
+        )
+        for index, episode in enumerate(filtered_episodes)
+    ]
+
+
+def _relative_benchmark_result(
+    period_series: _DrawdownPeriodSeries,
+    *,
+    include_benchmark: bool | None,
+    analysis_options: DrawdownAnalysisOptions,
+) -> _RelativeBenchmarkResult:
+    relative_context = RelativeDrawdownContext(
+        requested=include_benchmark is True,
+        applied=False,
+        reason="NOT_REQUESTED" if include_benchmark is not True else "BENCHMARK_UNAVAILABLE",
+        aligned_observation_count=0,
+    )
+    if period_series.benchmark_returns.empty:
+        if period_series.benchmark_available:
+            relative_context = RelativeDrawdownContext(
+                requested=include_benchmark is True,
+                applied=False,
+                reason="NO_ALIGNED_OBSERVATIONS",
+                aligned_observation_count=0,
+            )
+        return _RelativeBenchmarkResult(summary=None, context=relative_context)
+
+    aligned = pd.merge(
+        period_series.portfolio_returns.to_frame("portfolio"),
+        period_series.benchmark_returns.to_frame("benchmark"),
+        left_index=True,
+        right_index=True,
+        how="inner",
+    )
+    relative_context = RelativeDrawdownContext(
+        requested=include_benchmark is True,
+        applied=not aligned.empty,
+        reason="APPLIED" if not aligned.empty else "NO_ALIGNED_OBSERVATIONS",
+        aligned_observation_count=len(aligned),
+    )
+    if aligned.empty:
+        return _RelativeBenchmarkResult(summary=None, context=relative_context)
+
+    active_drawdown = _drawdown_from_returns(aligned["portfolio"] - aligned["benchmark"])
+    active_summary, _ = _drawdown_summary(
+        active_drawdown,
+        alpha=float(analysis_options.cdar_alpha),
+        duration_unit=analysis_options.duration_unit,
+    )
+    return _RelativeBenchmarkResult(
+        summary=RelativeDrawdownSummary(
+            max_drawdown=active_summary.max_drawdown,
+            max_drawdown_peak_date=active_summary.max_drawdown_peak_date,
+            max_drawdown_trough_date=active_summary.max_drawdown_trough_date,
+            max_drawdown_recovery_date=active_summary.max_drawdown_recovery_date,
+            is_recovered=active_summary.is_recovered,
+            days_to_trough=active_summary.days_to_trough,
+            days_to_recovery=active_summary.days_to_recovery,
+            time_under_water_days=active_summary.time_under_water_days or 0,
+        ),
+        context=relative_context,
+    )
+
+
+def _calculate_period_result(
+    period_series: _DrawdownPeriodSeries,
+    *,
+    analysis_options: DrawdownAnalysisOptions,
+    include_benchmark: bool | None,
+) -> DrawdownPeriodResult:
+    if len(period_series.portfolio_returns) < 1:
+        return _insufficient_period_result(
+            period_series,
+            include_benchmark=include_benchmark,
+        )
+
+    drawdown = _drawdown_from_returns(period_series.portfolio_returns)
+    summary, episodes = _drawdown_summary(
+        drawdown,
+        alpha=float(analysis_options.cdar_alpha),
+        duration_unit=analysis_options.duration_unit,
+    )
+    relative = _relative_benchmark_result(
+        period_series,
+        include_benchmark=include_benchmark,
+        analysis_options=analysis_options,
+    )
+    return DrawdownPeriodResult(
+        start_date=period_series.start,
+        end_date=period_series.end,
+        portfolio_observation_count=len(period_series.portfolio_returns),
+        benchmark_observation_count=len(period_series.benchmark_returns),
+        summary=summary,
+        episodes=_episode_models(episodes, analysis_options=analysis_options),
+        relative_to_benchmark=relative.summary,
+        relative_to_benchmark_context=relative.context,
+        underwater_series=(
+            _to_underwater_series(drawdown) if analysis_options.include_underwater_series else None
+        ),
+        error=None,
+    )
+
+
 def calculate_drawdown(
     request: DrawdownStatelessInput,
     *,
@@ -225,156 +482,29 @@ def calculate_drawdown(
     include_benchmark: bool | None = None,
     missing_benchmark_policy: Literal["IGNORE", "REQUIRE"] | None = None,
 ) -> DrawdownResponse:
-    returns_df = _build_returns_df(request.returns)
-    benchmark_df = _build_returns_df(request.benchmark_returns)
-    if returns_df.empty:
-        calculation_supportability = supportability_from_period_results(
-            returns=request.returns,
-            as_of_date=request.scope.as_of_date,
-            results={},
-        )
-        record_operation_supportability(
-            operation="risk/drawdown",
-            supportability=calculation_supportability,
-        )
-        return DrawdownResponse(
+    frames = _build_input_frames(request)
+    if frames.portfolio.empty:
+        return _empty_response(
+            request,
             input_mode=input_mode,
-            scope=request.scope,
-            results={},
-            metadata=_build_metadata(
-                request=request,
-                analysis_options=analysis_options,
-                include_benchmark=include_benchmark,
-                missing_benchmark_policy=missing_benchmark_policy,
-                calculation_supportability=calculation_supportability,
-            ),
+            analysis_options=analysis_options,
+            include_benchmark=include_benchmark,
+            missing_benchmark_policy=missing_benchmark_policy,
         )
 
-    open_date = cast(pd.Timestamp, returns_df.index.min()).date()
+    open_date = cast(pd.Timestamp, frames.portfolio.index.min()).date()
     results: dict[str, DrawdownPeriodResult] = {}
     for period in request.periods:
-        start, end = risk_helpers._resolve_period(
-            period.type,
-            request.scope.as_of_date,
-            open_date,
-            year=period.year,
-            from_date=period.from_date,
-            to_date=period.to_date,
+        period_series = _period_series(
+            frames=frames,
+            request=request,
+            period=period,
+            open_date=open_date,
         )
-        portfolio_series = _filter_period(returns_df, start=start, end=end)
-        if len(portfolio_series) < 1:
-            results[_period_name(period)] = DrawdownPeriodResult(
-                start_date=start,
-                end_date=end,
-                portfolio_observation_count=0,
-                benchmark_observation_count=0,
-                summary=None,
-                episodes=[],
-                relative_to_benchmark=None,
-                relative_to_benchmark_context=RelativeDrawdownContext(
-                    requested=include_benchmark is True,
-                    applied=False,
-                    reason=(
-                        "BENCHMARK_UNAVAILABLE" if include_benchmark is True else "NOT_REQUESTED"
-                    ),
-                    aligned_observation_count=0,
-                ),
-                underwater_series=None,
-                error="Insufficient data",
-            )
-            continue
-
-        wealth = (1 + portfolio_series / 100.0).cumprod()
-        running_peak = wealth.cummax()
-        drawdown = wealth / running_peak - 1.0
-        summary, episodes = _drawdown_summary(
-            drawdown,
-            alpha=float(analysis_options.cdar_alpha),
-            duration_unit=analysis_options.duration_unit,
-        )
-
-        min_depth = analysis_options.minimum_episode_depth_bps / 10000.0
-        filtered_episodes = [episode for episode in episodes if abs(episode.depth) >= min_depth]
-        filtered_episodes = sorted(filtered_episodes, key=lambda episode: episode.depth)[
-            : analysis_options.top_n_episodes
-        ]
-        episode_models = (
-            [
-                DrawdownEpisode(
-                    episode_id=f"dd_{index + 1:04d}",
-                    peak_date=episode.peak_date,
-                    trough_date=episode.trough_date,
-                    recovery_date=episode.recovery_date,
-                    depth=episode.depth,
-                    days_to_trough=episode.days_to_trough,
-                    days_to_recovery=episode.days_to_recovery,
-                    total_days=episode.total_days,
-                    is_recovered=episode.is_recovered,
-                )
-                for index, episode in enumerate(filtered_episodes)
-            ]
-            if analysis_options.include_episode_list
-            else []
-        )
-
-        relative_summary: RelativeDrawdownSummary | None = None
-        relative_context = RelativeDrawdownContext(
-            requested=include_benchmark is True,
-            applied=False,
-            reason="NOT_REQUESTED" if include_benchmark is not True else "BENCHMARK_UNAVAILABLE",
-            aligned_observation_count=0,
-        )
-        if not benchmark_df.empty:
-            benchmark_series = _filter_period(benchmark_df, start=start, end=end)
-            aligned = pd.merge(
-                portfolio_series.to_frame("portfolio"),
-                benchmark_series.to_frame("benchmark"),
-                left_index=True,
-                right_index=True,
-                how="inner",
-            )
-            relative_context = RelativeDrawdownContext(
-                requested=include_benchmark is True,
-                applied=not aligned.empty,
-                reason="APPLIED" if not aligned.empty else "NO_ALIGNED_OBSERVATIONS",
-                aligned_observation_count=len(aligned),
-            )
-            if not aligned.empty:
-                active_returns = aligned["portfolio"] - aligned["benchmark"]
-                active_wealth = (1 + active_returns / 100.0).cumprod()
-                active_peak = active_wealth.cummax()
-                active_drawdown = active_wealth / active_peak - 1.0
-                active_summary, _ = _drawdown_summary(
-                    active_drawdown,
-                    alpha=float(analysis_options.cdar_alpha),
-                    duration_unit=analysis_options.duration_unit,
-                )
-                relative_summary = RelativeDrawdownSummary(
-                    max_drawdown=active_summary.max_drawdown,
-                    max_drawdown_peak_date=active_summary.max_drawdown_peak_date,
-                    max_drawdown_trough_date=active_summary.max_drawdown_trough_date,
-                    max_drawdown_recovery_date=active_summary.max_drawdown_recovery_date,
-                    is_recovered=active_summary.is_recovered,
-                    days_to_trough=active_summary.days_to_trough,
-                    days_to_recovery=active_summary.days_to_recovery,
-                    time_under_water_days=active_summary.time_under_water_days or 0,
-                )
-
-        results[_period_name(period)] = DrawdownPeriodResult(
-            start_date=start,
-            end_date=end,
-            portfolio_observation_count=len(portfolio_series),
-            benchmark_observation_count=len(benchmark_series) if not benchmark_df.empty else 0,
-            summary=summary,
-            episodes=episode_models,
-            relative_to_benchmark=relative_summary,
-            relative_to_benchmark_context=relative_context,
-            underwater_series=(
-                _to_underwater_series(drawdown)
-                if analysis_options.include_underwater_series
-                else None
-            ),
-            error=None,
+        results[period_series.name] = _calculate_period_result(
+            period_series,
+            analysis_options=analysis_options,
+            include_benchmark=include_benchmark,
         )
 
     calculation_supportability = supportability_from_period_results(
