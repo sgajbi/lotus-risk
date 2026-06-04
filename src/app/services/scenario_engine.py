@@ -40,6 +40,16 @@ class ScenarioPackGovernanceDefinition:
     methodology_ref: str
 
 
+@dataclass(frozen=True)
+class _ScenarioPackEvaluation:
+    scenario_results: list[ScenarioResult]
+    worst_case_loss: float
+    breach: bool
+    governance_evidence: ScenarioPackGovernanceEvidence
+    reason_codes: list[str]
+    supportability: ScenarioSupportabilityState
+
+
 SCENARIO_PACKS: dict[str, tuple[ScenarioDefinition, ...]] = {
     "CIO_REGIME_2026_Q2": (
         ScenarioDefinition(
@@ -90,13 +100,10 @@ SCENARIO_PACK_GOVERNANCE: dict[str, ScenarioPackGovernanceDefinition] = {
 }
 
 
-def evaluate_regime_scenario_pack(
+def _evaluate_scenario_pack_context(
     request: RegimeScenarioPackRequest,
-) -> RegimeScenarioPackResponse:
-    scenario_pack = SCENARIO_PACKS.get(request.scenario_pack_id)
-    if scenario_pack is None:
-        raise ValueError(f"Unsupported scenario_pack_id: {request.scenario_pack_id}")
-
+) -> _ScenarioPackEvaluation:
+    scenario_pack = SCENARIO_PACKS[request.scenario_pack_id]
     exposure_by_bucket = {
         exposure.bucket.upper(): exposure.weight for exposure in request.exposures
     }
@@ -135,19 +142,36 @@ def evaluate_regime_scenario_pack(
         if supportability == ScenarioSupportabilityState.READY:
             supportability = ScenarioSupportabilityState.PENDING_REVIEW
 
+    return _ScenarioPackEvaluation(
+        scenario_results=scenario_results,
+        worst_case_loss=worst_case_loss,
+        breach=breach,
+        governance_evidence=governance_evidence,
+        reason_codes=sorted(set(reason_codes)),
+        supportability=supportability,
+    )
+
+
+def evaluate_regime_scenario_pack(
+    request: RegimeScenarioPackRequest,
+) -> RegimeScenarioPackResponse:
+    if request.scenario_pack_id not in SCENARIO_PACKS:
+        raise ValueError(f"Unsupported scenario_pack_id: {request.scenario_pack_id}")
+
+    evaluation = _evaluate_scenario_pack_context(request)
     return RegimeScenarioPackResponse(
         scenario_pack_id=request.scenario_pack_id,
         portfolio_id=request.portfolio_id,
         as_of_date=request.as_of_date,
-        worst_case_loss_pct=round(worst_case_loss, 6),
+        worst_case_loss_pct=round(evaluation.worst_case_loss, 6),
         maximum_allowed_loss_pct=request.maximum_allowed_loss_pct,
-        breach=breach,
-        scenario_results=scenario_results,
-        governance_evidence=governance_evidence,
-        reason_codes=sorted(set(reason_codes)),
+        breach=evaluation.breach,
+        scenario_results=evaluation.scenario_results,
+        governance_evidence=evaluation.governance_evidence,
+        reason_codes=evaluation.reason_codes,
         metadata=ScenarioEvaluationMetadata(
             request_fingerprint=_request_fingerprint(request),
-            calculation_supportability=supportability,
+            calculation_supportability=evaluation.supportability,
         ),
     )
 
