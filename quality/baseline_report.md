@@ -12,6 +12,7 @@ documentation posture, and validation gates. It is not a completion claim.
 
 - Python source files under `src/`: 65
 - Python test files under `tests/`: 83
+- Python packages under `src/`: 7
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
 
 ### Largest Python Files
@@ -74,6 +75,143 @@ documentation posture, and validation gates. It is not a completion claim.
   tooling for progressive quality evidence.
 - Spectral config is present for OpenAPI governance; CI is report-only until generated OpenAPI
   export is standardized for this repository.
+
+## Static Quality Snapshot
+
+- Ruff lint: passed
+
+```text
+All checks passed!
+```
+- Ruff format check: passed
+
+```text
+159 files already formatted
+```
+- Type checking: passed
+
+```text
+Success: no issues found in 148 source files
+```
+- Unit coverage snapshot: passed
+
+```text
+........................................................................ [ 18%]
+........................................................................ [ 37%]
+........................................................................ [ 55%]
+........................................................................ [ 74%]
+........................................................................ [ 93%]
+...........................                                              [100%]
+...
+src\app\upstream_errors.py                            55      0     20      3    96%   181->194, 187->189, 192->194
+----------------------------------------------------------------------------------------------
+TOTAL                                               3912    155    954     99    94%
+
+34 files skipped due to complete coverage.
+387 passed in 8.47s
+```
+
+## Complexity And Maintainability Snapshot
+
+- Cyclomatic complexity C-or-worse candidates: passed
+
+```text
+src\app\enterprise_readiness.py
+    F 90:0 authorize_write_request - C (13)
+src\app\trust_telemetry.py
+    F 401:0 build_declared_product_trust_telemetry_snapshot - C (14)
+src\app\contracts\attribution.py
+    C 116:0 HistoricalAttributionStatelessInput - C (11)
+...
+    F 48:0 evaluate_risk_event_affected_cohort - C (12)
+src\app\services\rolling_engine.py
+    F 340:0 calculate_rolling_metrics - C (17)
+src\app\services\rolling_mode_adapter.py
+    F 182:0 calculate_rolling_metrics_stateful - D (27)
+    F 66:0 _get_risk_free_coverage_details - C (15)
+```
+- Maintainability index summary: passed
+
+```text
+src\app\api_errors.py - A (48.80)
+src\app\app_factory.py - A (100.00)
+src\app\domain_data_products.py - A (49.24)
+src\app\enterprise_readiness.py - A (33.14)
+src\app\error_response.py - A (68.27)
+src\app\main.py - A (100.00)
+...
+src\app\services\rolling_mode_adapter.py - A (26.04)
+src\app\services\scenario_engine.py - A (35.03)
+src\app\services\source_window.py - A (69.45)
+src\app\services\stateful_returns_request.py - A (71.31)
+src\app\services\stateful_returns_series_parser.py - A (50.84)
+src\app\services\__init__.py - A (100.00)
+```
+
+## Dead Code And Dependency Hygiene Snapshot
+
+- Dead-code candidates: reported exit 3
+
+```text
+tests\unit\test_lotus_core_client.py:30: unused variable 'exc_type' (100% confidence)
+tests\unit\test_lotus_core_client.py:32: unused variable 'tb' (100% confidence)
+tests\unit\test_lotus_performance_client.py:31: unused variable 'exc_type' (100% confidence)
+tests\unit\test_lotus_performance_client.py:33: unused variable 'tb' (100% confidence)
+```
+- Dependency hygiene: reported exit 1
+
+```text
+Scanning 65 files...
+
+pyproject.toml: DEP002 'uvicorn' defined as a dependency but not used in the codebase
+pyproject.toml: DEP002 'pydantic-settings' defined as a dependency but not used in the codebase
+pyproject.toml: DEP002 'ruff' defined as a dependency but not used in the codebase
+pyproject.toml: DEP002 'mypy' defined as a dependency but not used in the codebase
+...
+pyproject.toml: DEP002 'interrogate' defined as a dependency but not used in the codebase
+pyproject.toml: DEP002 'radon' defined as a dependency but not used in the codebase
+pyproject.toml: DEP002 'vulture' defined as a dependency but not used in the codebase
+Found 16 dependency issues.
+
+For more information, see the documentation: https://deptry.com/
+```
+
+## Security Snapshot
+
+- Bandit source scan: reported exit 1
+
+```text
+Run started:2026-06-04 05:42:55.986878+00:00
+
+Test results:
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+...
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 0
+		Medium: 0
+		High: 18
+Files skipped (0):
+```
+- Dependency vulnerability audit: reported exit 1
+
+```text
+=== Vulnerability Summary ===
+Known vulnerabilities: 1
+
+=== Vulnerabilities ===
+[
+  {
+...
+        ],
+        "description": "The py library through 1.11.0 for Python allows remote attackers to conduct a ReDoS (Regular expression Denial of Service) attack via a Subversion repository with crafted info data, because the InfoSvnCommand argument is mishandled."
+      }
+    ]
+  }
+]
+```
 
 ## Current Architectural Findings
 
@@ -152,7 +290,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-387 tests collected in 1.92s
+387 tests collected in 1.61s
 ```
 - Import-linter report-only: reported exit 127
 

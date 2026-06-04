@@ -128,15 +128,15 @@ def test_drawdown_empty_series_and_require_data_error() -> None:
 
 
 def test_endpoint_error_path_returns_400() -> None:
-    import app.main as main_module
+    import app.routers.risk_calculation as risk_calculation_module
 
-    main_module_any = cast(Any, main_module)
-    original = main_module_any.calculate_risk
+    risk_calculation_module_any = cast(Any, risk_calculation_module)
+    original = risk_calculation_module_any.calculate_risk
 
     def _raise(_request: object) -> None:
         raise ValueError("forced")
 
-    main_module_any.calculate_risk = _raise
+    risk_calculation_module_any.calculate_risk = _raise
     try:
         from fastapi.testclient import TestClient
 
@@ -160,7 +160,7 @@ def test_endpoint_error_path_returns_400() -> None:
         assert body["code"] == "INVALID_INPUT"
         assert body["correlation_id"] == "corr-400"
     finally:
-        main_module_any.calculate_risk = original
+        risk_calculation_module_any.calculate_risk = original
 
 
 def test_health_ready_draining_branch() -> None:

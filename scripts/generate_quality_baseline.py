@@ -85,6 +85,10 @@ def count_route_decorators() -> int:
     )
 
 
+def count_python_packages(base: Path) -> int:
+    return sum(1 for path in base.rglob("__init__.py") if "__pycache__" not in path.parts)
+
+
 def command_status(command: list[str]) -> str:
     returncode, output = _run(command)
     output_lines = output.splitlines()
@@ -137,6 +141,7 @@ documentation posture, and validation gates. It is not a completion claim.
 
 - Python source files under `src/`: {len(_python_files(SRC_DIR))}
 - Python test files under `tests/`: {len(_python_files(TESTS_DIR))}
+- Python packages under `src/`: {count_python_packages(SRC_DIR)}
 - API entry point route/middleware/handler decorators in `src/app/main.py`: {route_count}
 
 ### Largest Python Files
@@ -157,6 +162,28 @@ documentation posture, and validation gates. It is not a completion claim.
   tooling for progressive quality evidence.
 - Spectral config is present for OpenAPI governance; CI is report-only until generated OpenAPI
   export is standardized for this repository.
+
+## Static Quality Snapshot
+
+- Ruff lint: {command_status(["python", "-m", "ruff", "check", "."])}
+- Ruff format check: {command_status(["python", "-m", "ruff", "format", "--check", "."])}
+- Type checking: {command_status(["python", "-m", "mypy", "--config-file", "mypy.ini"])}
+- Unit coverage snapshot: {command_status(["python", "-m", "pytest", "tests/unit", "--cov=src", "--cov-report=term", "--cov-fail-under=0", "-q"])}
+
+## Complexity And Maintainability Snapshot
+
+- Cyclomatic complexity C-or-worse candidates: {command_status(["python", "-m", "radon", "cc", "src", "-s", "-n", "C"])}
+- Maintainability index summary: {command_status(["python", "-m", "radon", "mi", "src", "-s"])}
+
+## Dead Code And Dependency Hygiene Snapshot
+
+- Dead-code candidates: {command_status(["python", "-m", "vulture", "src", "tests", "--min-confidence", "80"])}
+- Dependency hygiene: {command_status(["python", "-m", "deptry", "src", "--no-ansi"])}
+
+## Security Snapshot
+
+- Bandit source scan: {command_status(["python", "-m", "bandit", "-r", "src", "-q"])}
+- Dependency vulnerability audit: {command_status(["python", "scripts/dependency_health_check.py", "--skip-outdated"])}
 
 ## Current Architectural Findings
 
