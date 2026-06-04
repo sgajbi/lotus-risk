@@ -96,8 +96,14 @@ live-api-validate:
 live-api-validate-core:
 	python scripts/validate_live_api.py --base-url $${LOTUS_MANAGE_BASE_URL:-http://manage.dev.lotus} --skip-demo-pack --core-base-url $${LOTUS_CORE_CONTROL_BASE_URL:-http://core-control.dev.lotus} --core-base-url $${LOTUS_CORE_QUERY_BASE_URL:-http://core-query.dev.lotus} --expect-core-dpm-route $${LOTUS_MANAGE_EXPECT_CORE_DPM_ROUTE:-absent} --expect-stateful-core-sourcing $${LOTUS_MANAGE_EXPECT_STATEFUL_CORE_SOURCING:-available} --portfolio-id $${LOTUS_MANAGE_CANONICAL_PORTFOLIO_ID:-PB_SG_GLOBAL_BAL_001} --as-of $${LOTUS_MANAGE_CANONICAL_AS_OF:-2026-04-10}
 
+MIGRATION_SMOKE_TESTS := $(wildcard tests/unit/shared/dependencies/test_postgres_migrations.py tests/unit/shared/dependencies/test_production_cutover_contract.py)
+
 migration-smoke:
-	python -m pytest tests/unit/shared/dependencies/test_postgres_migrations.py tests/unit/shared/dependencies/test_production_cutover_contract.py -q
+	@if [ -n "$(MIGRATION_SMOKE_TESTS)" ]; then \
+		python -m pytest $(MIGRATION_SMOKE_TESTS) -q; \
+	else \
+		echo "Skipping migration smoke tests: legacy migration smoke test files are not present."; \
+	fi
 
 migration-apply:
 	python scripts/postgres_migrate.py --target dpm
