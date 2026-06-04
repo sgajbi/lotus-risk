@@ -22,6 +22,7 @@ router = APIRouter(tags=["risk-analytics"])
     "/analytics/risk/mandate-health-context",
     response_model=MandateRiskHealthContextResponse,
     responses=STANDARD_ERROR_RESPONSES,
+    operation_id="evaluateMandateRiskHealthContext",
     summary="Evaluate source-owned mandate risk health context",
     description=(
         "Evaluates a bounded mandate risk health context using lotus-risk source-owned "
@@ -44,6 +45,7 @@ async def analytics_risk_mandate_health_context(
     "/analytics/risk/regime-scenario-pack/evaluate",
     response_model=RegimeScenarioPackResponse,
     responses=STANDARD_ERROR_RESPONSES,
+    operation_id="evaluateRegimeScenarioPack",
     summary="Evaluate a governed regime scenario pack",
     description=(
         "Evaluates caller-supplied portfolio exposure weights against a governed CIO regime "
@@ -67,6 +69,7 @@ async def analytics_risk_regime_scenario_pack(
     "/analytics/risk/risk-event-cohorts/evaluate",
     response_model=RiskEventAffectedCohortResponse,
     responses=STANDARD_ERROR_RESPONSES,
+    operation_id="evaluateRiskEventAffectedCohort",
     summary="Evaluate a governed risk-event affected cohort",
     description=(
         "Evaluates candidate portfolios against governed risk-event definitions and returns "

@@ -14,6 +14,7 @@ router = APIRouter(tags=["risk-analytics"])
     "/analytics/risk/concentration",
     response_model=ConcentrationResponse,
     responses=STANDARD_ERROR_RESPONSES,
+    operation_id="calculateConcentrationRiskAnalytics",
     summary="Calculate concentration risk analytics",
     description=(
         "Calculates portfolio, single-position, and issuer concentration analytics across "

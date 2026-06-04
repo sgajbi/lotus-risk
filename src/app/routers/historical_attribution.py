@@ -22,6 +22,7 @@ router = APIRouter(tags=["risk-analytics"])
     "/analytics/risk/historical-attribution",
     response_model=HistoricalAttributionResponse,
     responses=STANDARD_ERROR_RESPONSES,
+    operation_id="calculateHistoricalRiskAttribution",
     summary="Calculate historical risk attribution analytics",
     description=(
         "Calculates historical risk and active-risk attribution decompositions with contributor-level "

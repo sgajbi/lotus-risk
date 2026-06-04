@@ -22,6 +22,7 @@ router = APIRouter(tags=["risk-analytics"])
     "/analytics/risk/rolling-metrics",
     response_model=RollingResponse,
     responses=STANDARD_ERROR_RESPONSES,
+    operation_id="calculateRollingRiskMetrics",
     summary="Calculate rolling risk metrics",
     description=(
         "Calculates rolling-window historical risk diagnostics including volatility, Sharpe, beta, "

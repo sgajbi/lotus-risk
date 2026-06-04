@@ -183,7 +183,8 @@ documentation posture, and validation gates. It is not a completion claim.
 
 ## OpenAPI And API Governance Gaps
 
-1. Operation IDs are not yet visibly standardized in route decorators.
+1. Public analytics POST endpoints now define explicit operation IDs in route decorators; remaining
+   operational/internal endpoints should be standardized in later slices.
 2. Pagination/filtering/sorting governance is not broadly applicable to calculation POST endpoints,
    but any future list/read-model route must use an explicit shared contract.
 3. Health, liveness, readiness, metadata, metrics, and ops endpoints exist and are documented, but

@@ -11,7 +11,7 @@ documentation posture, and validation gates. It is not a completion claim.
 ## Code Size Baseline
 
 - Python source files under `src/`: 64
-- Python test files under `tests/`: 81
+- Python test files under `tests/`: 82
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
 
 ### Largest Python Files
@@ -100,7 +100,8 @@ documentation posture, and validation gates. It is not a completion claim.
 
 ## OpenAPI And API Governance Gaps
 
-1. Operation IDs are not yet visibly standardized in route decorators.
+1. Public analytics POST endpoints now define explicit operation IDs in route decorators; remaining
+   operational/internal endpoints should be standardized in later slices.
 2. Pagination/filtering/sorting governance is not broadly applicable to calculation POST endpoints,
    but any future list/read-model route must use an explicit shared contract.
 3. Health, liveness, readiness, metadata, metrics, and ops endpoints exist and are documented, but
@@ -150,7 +151,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-376 tests collected in 1.67s
+378 tests collected in 3.87s
 ```
 - Import-linter report-only: reported exit 127
 

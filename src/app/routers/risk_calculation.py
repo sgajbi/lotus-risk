@@ -15,6 +15,7 @@ router = APIRouter(tags=["risk-analytics"])
     "/analytics/risk/calculate",
     response_model=RiskResponse,
     responses=STANDARD_ERROR_RESPONSES,
+    operation_id="calculateRiskAnalytics",
     summary="Calculate portfolio risk metrics",
     description=(
         "Calculates risk metrics from provided return series using stateless or stateful input modes. "

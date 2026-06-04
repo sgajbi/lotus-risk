@@ -19,6 +19,7 @@ router = APIRouter(tags=["risk-analytics"])
     "/analytics/risk/drawdown",
     response_model=DrawdownResponse,
     responses=STANDARD_ERROR_RESPONSES,
+    operation_id="calculateDrawdownAnalytics",
     summary="Calculate realized drawdown analytics",
     description=(
         "Calculates realized drawdown analytics for stateless or stateful return histories, including "
