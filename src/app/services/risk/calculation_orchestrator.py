@@ -234,6 +234,8 @@ def _calculate_period_metrics(
             benchmark_observation_count = len(benchmark_period)
             if benchmark_period.empty:
                 aligned_count = 0
+                for metric_name in benchmark_metrics:
+                    metric_map[metric_name] = metric_error("Insufficient aligned observations")
             else:
                 aligned = resolve_aligned_benchmark_series(
                     metric_series=metric_series,
