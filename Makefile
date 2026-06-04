@@ -163,7 +163,7 @@ security-audit:
 	# PYSEC-2024-277 / CVE-2024-34997 is a disputed joblib trusted-cache
 	# deserialization advisory with no fixed release in the current audit feed.
 	python -m bandit -q -r src -c pyproject.toml --severity-level high
-	python -m pip_audit --ignore-vuln PYSEC-2024-277
+	python scripts/dependency_health_check.py --skip-outdated
 
 docker-build:
 	docker build -t lotus-risk:ci .

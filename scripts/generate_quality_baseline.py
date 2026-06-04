@@ -254,8 +254,10 @@ documentation posture, and validation gates. It is not a completion claim.
 4. Timeout, retry, and pooling posture are documented and enforced by shared adapter transport profile
    helpers in `src/app/integrations/_downstream_client_profile.py` and
    `docs/domain-apis/risk-upstream-failure-behavior.md`.
-5. API abuse controls beyond payload size and authorization headers need explicit threat-model
-   evidence before enterprise-readiness enforcement.
+5. API abuse controls for payload size, authorization headers, service identity, capability
+   checks, redaction, bounded downstream errors, and bounded metrics are documented in
+   `docs/security-threat-model.md`; final enterprise readiness still needs deployment identity
+   enforcement decisions.
 
 ## Observability Gaps
 
@@ -304,7 +306,7 @@ evidence for PR readiness, not a completion claim.
 | Architecture enforcement | Import-linter, architecture docs, and quality workflow were introduced as report-only baseline | `make architecture-gate` is green locally and in feature-lane CI | Architecture boundary checks are now part of routine slice validation | Extend contracts as service boundaries mature |
 | OpenAPI governance | Operation IDs were not visibly standardized; route-level examples needed certification after router extraction | Operation IDs are explicit; JSON mutation request examples are modularized and enforced by `make openapi-gate` against the generated schema | OpenAPI metadata is easier to review, no longer buried in large contract classes, and now fails missing operation IDs/request examples in CI lanes | Standardize secondary Spectral lint artifact export before final PR |
 | Tests | 77 Python test files at initial baseline; repo-native coverage gate existed | {len(_python_files(TESTS_DIR))} Python test files; {unit_tests_collected} tests collected in the latest baseline; OpenAPI gate logic has focused regression tests | Focused unit/integration coverage protects router, client, contract, middleware, service, and OpenAPI-governance refactors | Add more negative/security contract certification tests |
-| Security | Enterprise audit middleware, redaction tests, and upstream error mapping existed; abuse-control evidence was still a gap | Authorization checks are decomposed and covered by enterprise-readiness tests; Bandit and pip-audit remain green in baseline | Security behavior is easier to inspect and test without changing enforcement semantics | Add explicit threat-model and abuse-control evidence before final PR |
+| Security | Enterprise audit middleware, redaction tests, and upstream error mapping existed; abuse-control evidence was still a gap | Authorization checks are decomposed and covered by enterprise-readiness tests; threat-model/abuse-control evidence is pinned in `docs/security-threat-model.md`; Bandit and pip-audit remain green in baseline | Security behavior and abuse controls are easier to inspect and test without changing enforcement semantics | Finalize deployment identity enforcement decisions before PR |
 | Observability | HTTP, endpoint execution, supportability, freshness metrics, and correlation existed but needed consolidated docs | Observability docs exist and endpoint/upstream metrics remain covered by tests and baseline validation | Metrics/correlation posture is preserved through router and client decomposition | Add dashboard/alert evidence or governed no-dashboard decision |
 | Documentation and PR evidence | Baseline/reporting foundation was introduced with architecture, security, observability, runbook, wiki, and quality docs | `baseline_report.md`, `refactor_health_report.md`, and this scorecard are updated with current measured movement | Refactor progress is now auditable from generated reports and branch history | Final PR must summarize commands, CI, risks, and follow-up backlog |
 
@@ -358,8 +360,8 @@ after each pushed slice.
                 (
                     4,
                     "Security and abuse-control evidence",
-                    "Authorization, audit, redaction, Bandit, and pip-audit are covered; explicit threat-model/abuse-control evidence is still incomplete",
-                    "Add focused negative tests and document remaining governed risks",
+                    "Authorization, audit, redaction, Bandit, pip-audit, payload-size limits, capability checks, and threat-model evidence are covered",
+                    "Finalize deployment identity enforcement and server-level body-limit decisions before PR readiness",
                 ),
                 (
                     5,

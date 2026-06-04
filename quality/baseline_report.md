@@ -11,7 +11,7 @@ documentation posture, and validation gates. It is not a completion claim.
 ## Code Size Baseline
 
 - Python source files under `src/`: 83
-- Python test files under `tests/`: 86
+- Python test files under `tests/`: 87
 - Python packages under `src/`: 9
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
 
@@ -89,12 +89,12 @@ All checks passed!
 - Ruff format check: passed
 
 ```text
-182 files already formatted
+183 files already formatted
 ```
 - Type checking: passed
 
 ```text
-Success: no issues found in 169 source files
+Success: no issues found in 170 source files
 ```
 - Unit coverage snapshot: passed
 
@@ -111,7 +111,7 @@ src\app\upstream_errors.py                              55      0     20      3 
 TOTAL                                                 4578     84    986     85    97%
 
 51 files skipped due to complete coverage.
-434 passed in 9.91s
+436 passed in 8.22s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -200,8 +200,10 @@ Known vulnerabilities: 0
 4. Timeout, retry, and pooling posture are documented and enforced by shared adapter transport profile
    helpers in `src/app/integrations/_downstream_client_profile.py` and
    `docs/domain-apis/risk-upstream-failure-behavior.md`.
-5. API abuse controls beyond payload size and authorization headers need explicit threat-model
-   evidence before enterprise-readiness enforcement.
+5. API abuse controls for payload size, authorization headers, service identity, capability
+   checks, redaction, bounded downstream errors, and bounded metrics are documented in
+   `docs/security-threat-model.md`; final enterprise readiness still needs deployment identity
+   enforcement decisions.
 
 ## Observability Gaps
 
@@ -235,7 +237,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-434 tests collected in 2.05s
+436 tests collected in 2.43s
 ```
 - Import-linter report-only: passed
 
