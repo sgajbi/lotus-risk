@@ -1,7 +1,7 @@
 {
   "description": "Approved baseline monetary-float findings. New findings fail CI.",
   "policy_version": "1.1.0",
-  "generated_at": "2026-05-16T06:58:14Z",
+  "generated_at": "2026-06-04T09:17:47Z",
   "allowlist": [
     {
       "finding": "src/app/contracts/attribution.py:400:total_value: float | None = Field(",
@@ -32,6 +32,12 @@
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
       "review_by": "2026-10-27"
+    },
+    {
+      "finding": "src/app/integrations/_downstream_client_profile.py:160:value = float(raw_value)",
+      "justification": "Temporary approved monetary float usage; migrate to Decimal.",
+      "owner": "platform-governance",
+      "review_by": "2026-12-01"
     },
     {
       "finding": "src/app/services/attribution_engine.py:108:total_value: float,",
@@ -70,40 +76,52 @@
       "review_by": "2026-10-10"
     },
     {
-      "finding": "src/app/services/concentration_engine.py:176:value=float(candidate),",
+      "finding": "src/app/services/concentration/datamodels.py:22:value: float",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
-      "review_by": "2026-10-27"
+      "review_by": "2026-12-01"
     },
     {
-      "finding": "src/app/services/concentration_engine.py:190:value=float(candidate),",
+      "finding": "src/app/services/concentration/datamodels.py:29:value: float",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
-      "review_by": "2026-10-27"
+      "review_by": "2026-12-01"
     },
     {
-      "finding": "src/app/services/concentration_engine.py:303:def _round(value: float) -> float:",
+      "finding": "src/app/services/concentration/math.py:9:def _round(value: float) -> float:",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
-      "review_by": "2026-10-27"
+      "review_by": "2026-12-01"
     },
     {
-      "finding": "src/app/services/concentration_engine.py:548:numeric_value = float(candidate)",
+      "finding": "src/app/services/concentration/parsing.py:268:numeric_value = float(candidate)",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
-      "review_by": "2026-10-27"
+      "review_by": "2026-12-01"
     },
     {
-      "finding": "src/app/services/concentration_engine.py:84:value: float",
+      "finding": "src/app/services/concentration/parsing.py:79:value=float(candidate),",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
-      "review_by": "2026-10-27"
+      "review_by": "2026-12-01"
     },
     {
-      "finding": "src/app/services/concentration_engine.py:91:value: float",
+      "finding": "src/app/services/concentration/parsing.py:93:value=float(candidate),",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
-      "review_by": "2026-10-27"
+      "review_by": "2026-12-01"
+    },
+    {
+      "finding": "src/app/services/concentration/response_builder.py:30:value: float",
+      "justification": "Temporary approved monetary float usage; migrate to Decimal.",
+      "owner": "platform-governance",
+      "review_by": "2026-12-01"
+    },
+    {
+      "finding": "src/app/services/concentration/response_builder.py:34:return [float(entry.value) for entry in entries]",
+      "justification": "Temporary approved monetary float usage; migrate to Decimal.",
+      "owner": "platform-governance",
+      "review_by": "2026-12-01"
     },
     {
       "finding": "src/app/services/drawdown_engine.py:156:dar_value: float | None = None",
@@ -154,16 +172,22 @@
       "review_by": "2026-10-27"
     },
     {
-      "finding": "src/app/services/risk_engine.py:125:peak_value = _as_number(cast(float, peak.loc[trough_idx]))",
+      "finding": "src/app/services/risk/helpers.py:161:def _expected_shortfall(returns: pd.Series, var_value: float) -> float:",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
-      "review_by": "2026-10-27"
+      "review_by": "2026-12-01"
     },
     {
-      "finding": "src/app/services/risk_engine.py:187:def _expected_shortfall(returns: pd.Series, var_value: float) -> float:",
+      "finding": "src/app/services/risk/helpers.py:99:peak_value = _as_number(cast(float, peak.loc[trough_idx]))",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
-      "review_by": "2026-10-27"
+      "review_by": "2026-12-01"
+    },
+    {
+      "finding": "src/app/services/risk/metric_calculators.py:42:if isinstance(drawdown_value, (int, float))",
+      "justification": "Temporary approved monetary float usage; migrate to Decimal.",
+      "owner": "platform-governance",
+      "review_by": "2026-12-01"
     },
     {
       "finding": "src/app/services/rolling_engine.py:223:points_by_date[day][metric_name] = float(value) if pd.notna(value) else None",

@@ -10,16 +10,15 @@ documentation posture, and validation gates. It is not a completion claim.
 
 ## Code Size Baseline
 
-- Python source files under `src/`: 65
-- Python test files under `tests/`: 83
-- Python packages under `src/`: 7
+- Python source files under `src/`: 78
+- Python test files under `tests/`: 84
+- Python packages under `src/`: 9
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
 
 ### Largest Python Files
 
 | Path | Lines | Bytes |
 | --- | --- | --- |
-| src/app/services/concentration_engine.py | 984 | 37764 |
 | src/app/contracts/concentration.py | 921 | 38075 |
 | src/app/contracts/rolling.py | 911 | 36547 |
 | src/app/contracts/risk.py | 885 | 33850 |
@@ -29,41 +28,42 @@ documentation posture, and validation gates. It is not a completion claim.
 | tests/e2e/test_smoke.py | 750 | 28373 |
 | tests/integration/test_historical_attribution_endpoint.py | 747 | 29645 |
 | src/app/contracts/attribution.py | 667 | 26911 |
-| src/app/services/risk_engine.py | 622 | 26133 |
 | tests/unit/test_attribution_mode_adapter.py | 600 | 21872 |
 | tests/integration/test_risk_calculate.py | 596 | 25093 |
-| src/app/services/rolling_engine.py | 569 | 21231 |
+| src/app/services/rolling_engine.py | 569 | 21245 |
 | tests/integration/test_rolling_metrics_endpoint.py | 566 | 22142 |
+| tests/unit/test_lotus_performance_client.py | 530 | 19686 |
 | src/app/trust_telemetry.py | 476 | 20809 |
-| tests/unit/test_lotus_performance_client.py | 466 | 17300 |
 | tests/unit/test_drawdown_engine.py | 422 | 16234 |
 | tests/integration/test_rolling_live_characterization.py | 418 | 16694 |
 | tests/unit/test_rolling_mode_adapter.py | 402 | 15406 |
+| src/app/services/attribution_mode_adapter.py | 401 | 14732 |
+| src/app/services/drawdown_engine.py | 400 | 15643 |
 
 ### Largest Functions And Classes
 
 | Path | Symbol | Kind | Lines |
 | --- | --- | --- | --- |
-| src/app/services/risk_engine.py | calculate_risk | FunctionDef | 284 |
-| src/app/integrations/lotus_performance_client.py | LotusPerformanceClient | ClassDef | 256 |
+| src/app/integrations/lotus_performance_client.py | LotusPerformanceClient | ClassDef | 253 |
 | src/app/services/rolling_engine.py | calculate_rolling_metrics | FunctionDef | 230 |
 | src/app/contracts/rolling.py | RollingResponse | ClassDef | 220 |
 | src/app/contracts/risk.py | RiskResponse | ClassDef | 199 |
-| src/app/integrations/lotus_core_client.py | LotusCoreClient | ClassDef | 199 |
 | src/app/contracts/concentration.py | ConcentrationResponse | ClassDef | 181 |
 | src/app/services/drawdown_engine.py | calculate_drawdown | FunctionDef | 181 |
+| src/app/integrations/lotus_core_client.py | LotusCoreClient | ClassDef | 171 |
 | src/app/contracts/drawdown.py | DrawdownResponse | ClassDef | 159 |
-| src/app/services/concentration_engine.py | _resolve_simulation | AsyncFunctionDef | 152 |
+| src/app/services/concentration/resolvers.py | resolve_simulation | AsyncFunctionDef | 153 |
 | src/app/contracts/drawdown.py | DrawdownAnalyticsRequest | ClassDef | 148 |
 | src/app/services/rolling_mode_adapter.py | calculate_rolling_metrics_stateful | AsyncFunctionDef | 148 |
-| src/app/services/concentration_engine.py | calculate_concentration | AsyncFunctionDef | 145 |
 | src/app/contracts/concentration.py | ConcentrationRequest | ClassDef | 143 |
 | src/app/services/attribution_engine.py | calculate_historical_attribution | FunctionDef | 139 |
 | src/app/contracts/attribution.py | HistoricalAttributionResponse | ClassDef | 123 |
-| src/app/services/concentration_engine.py | _build_response | FunctionDef | 121 |
+| src/app/services/concentration/response_builder.py | _build_response | FunctionDef | 122 |
+| src/app/services/concentration/resolvers.py | resolve_stateless | AsyncFunctionDef | 119 |
 | src/app/services/attribution_mode_adapter.py | calculate_historical_attribution_stateful | AsyncFunctionDef | 118 |
 | src/app/services/attribution_engine.py | _build_attribution_set | FunctionDef | 114 |
 | src/app/trust_telemetry.py | DeclaredProductTrustTelemetrySnapshot | ClassDef | 111 |
+| src/app/contracts/concentration.py | IssuerConcentration | ClassDef | 97 |
 
 ## Tool Baseline
 
@@ -83,32 +83,33 @@ documentation posture, and validation gates. It is not a completion claim.
 ```text
 All checks passed!
 ```
-- Ruff format check: passed
+- Ruff format check: reported exit 1
 
 ```text
-159 files already formatted
+Would reformat: src\app\services\risk_engine.py
+1 file would be reformatted, 174 files already formatted
 ```
 - Type checking: passed
 
 ```text
-Success: no issues found in 148 source files
+Success: no issues found in 162 source files
 ```
 - Unit coverage snapshot: passed
 
 ```text
 ........................................................................ [ 18%]
-........................................................................ [ 37%]
-........................................................................ [ 55%]
-........................................................................ [ 74%]
-........................................................................ [ 93%]
-...........................                                              [100%]
+........................................................................ [ 36%]
+........................................................................ [ 54%]
+........................................................................ [ 72%]
+........................................................................ [ 90%]
+......................................                                   [100%]
 ...
-src\app\upstream_errors.py                            55      0     20      3    96%   181->194, 187->189, 192->194
-----------------------------------------------------------------------------------------------
-TOTAL                                               3930    173    990    110    93%
+src\app\upstream_errors.py                              55      0     20      3    96%   181->194, 187->189, 192->194
+------------------------------------------------------------------------------------------------
+TOTAL                                                 4041    172    998    113    94%
 
-34 files skipped due to complete coverage.
-387 passed in 9.94s
+42 files skipped due to complete coverage.
+398 passed in 8.88s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -123,12 +124,12 @@ src\app\trust_telemetry.py
 src\app\contracts\attribution.py
     C 116:0 HistoricalAttributionStatelessInput - C (11)
 ...
-    F 48:0 evaluate_risk_event_affected_cohort - C (12)
-src\app\services\rolling_engine.py
-    F 340:0 calculate_rolling_metrics - C (17)
-src\app\services\rolling_mode_adapter.py
-    F 182:0 calculate_rolling_metrics_stateful - D (27)
-    F 66:0 _get_risk_free_coverage_details - C (15)
+src\app\services\concentration\response_builder.py
+    F 37:0 _build_response - C (14)
+src\app\services\risk\calculation_orchestrator.py
+    F 178:0 _calculate_period_metrics - C (12)
+src\app\services\risk\helpers.py
+    F 21:0 _resolve_period - C (13)
 ```
 - Maintainability index summary: passed
 
@@ -140,12 +141,12 @@ src\app\enterprise_readiness.py - A (33.14)
 src\app\error_response.py - A (68.27)
 src\app\main.py - A (100.00)
 ...
-src\app\services\rolling_mode_adapter.py - A (25.62)
-src\app\services\scenario_engine.py - A (35.03)
-src\app\services\source_window.py - A (69.45)
-src\app\services\stateful_returns_request.py - A (71.31)
-src\app\services\stateful_returns_series_parser.py - A (50.84)
-src\app\services\__init__.py - A (100.00)
+src\app\services\concentration\response_builder.py - A (45.12)
+src\app\services\concentration\__init__.py - A (100.00)
+src\app\services\risk\calculation_orchestrator.py - A (33.67)
+src\app\services\risk\helpers.py - A (24.91)
+src\app\services\risk\metric_calculators.py - A (39.28)
+src\app\services\risk\__init__.py - A (100.00)
 ```
 
 ## Dead Code And Dependency Hygiene Snapshot
@@ -154,7 +155,7 @@ src\app\services\__init__.py - A (100.00)
 - Dependency hygiene: passed
 
 ```text
-Scanning 65 files...
+Scanning 78 files...
 
 Success! No dependency issues found.
 ```
@@ -209,8 +210,9 @@ Known vulnerabilities: 0
 1. Enterprise audit middleware and correlation middleware are present.
 2. Sensitive-data redaction has unit coverage.
 3. Upstream error mapping is centralized through `app.upstream_errors`.
-4. Timeout, retry, and pooling posture should be made explicit in quality docs for each downstream
-   adapter.
+4. Timeout, retry, and pooling posture are documented and enforced by shared adapter transport profile
+   helpers in `src/app/integrations/_downstream_client_profile.py` and
+   `docs/domain-apis/risk-upstream-failure-behavior.md`.
 5. API abuse controls beyond payload size and authorization headers need explicit threat-model
    evidence before enterprise-readiness enforcement.
 
@@ -246,7 +248,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-387 tests collected in 2.25s
+398 tests collected in 1.84s
 ```
 - Import-linter report-only: passed
 

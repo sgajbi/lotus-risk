@@ -242,8 +242,9 @@ documentation posture, and validation gates. It is not a completion claim.
 1. Enterprise audit middleware and correlation middleware are present.
 2. Sensitive-data redaction has unit coverage.
 3. Upstream error mapping is centralized through `app.upstream_errors`.
-4. Timeout, retry, and pooling posture should be made explicit in quality docs for each downstream
-   adapter.
+4. Timeout, retry, and pooling posture are documented and enforced by shared adapter transport profile
+   helpers in `src/app/integrations/_downstream_client_profile.py` and
+   `docs/domain-apis/risk-upstream-failure-behavior.md`.
 5. API abuse controls beyond payload size and authorization headers need explicit threat-model
    evidence before enterprise-readiness enforcement.
 

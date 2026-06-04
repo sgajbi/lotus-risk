@@ -54,4 +54,8 @@ skip_covered = true
 
 [tool.bandit]
 exclude_dirs = [".venv", "tests"]
-skips = ["B101"]
+
+[tool.deptry]
+known_first_party = ["app", "_repo_imports", "scripts"]
+optional_dependencies_dev_groups = ["dev"]
+per_rule_ignores = { DEP002 = ["uvicorn"], DEP004 = ["coverage"] }

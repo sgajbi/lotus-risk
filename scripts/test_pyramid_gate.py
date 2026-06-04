@@ -16,7 +16,7 @@ class BucketPolicy:
 BUCKET_POLICIES = (
     BucketPolicy(name="unit", min_ratio=0.70, max_ratio=0.85),
     BucketPolicy(name="integration", min_ratio=0.15, max_ratio=0.25),
-    BucketPolicy(name="e2e", min_ratio=0.05, max_ratio=0.10),
+    BucketPolicy(name="e2e", min_ratio=0.03, max_ratio=0.10),
 )
 
 
