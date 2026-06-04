@@ -2,11 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
-from math import sqrt
 from collections.abc import Sequence
 from typing import Literal, cast
 
-import numpy as np
 import pandas as pd
 
 from app.contracts.drawdown import (
@@ -20,7 +18,6 @@ from app.contracts.drawdown import (
     DrawdownStatelessInput,
     DrawdownSummary,
     RelativeDrawdownSummary,
-    UnderwaterPoint,
 )
 from app.contracts.risk import ReturnPoint, RiskCalculationSupportability, RiskRequestPeriod
 from app.services.audit_lineage import fingerprint_model
@@ -28,19 +25,17 @@ from app.services.calculation_supportability import (
     record_operation_supportability,
     supportability_from_period_results,
 )
+from app.services.drawdown_series import (
+    EpisodeRecord,
+    drawdown_from_returns as _drawdown_from_returns,
+    drawdown_summary as _drawdown_summary,
+    duration_days as _duration_days,
+    to_underwater_series as _to_underwater_series,
+)
 from app.services.risk import helpers as risk_helpers
 
 
-@dataclass
-class _EpisodeRecord:
-    peak_date: date
-    trough_date: date
-    recovery_date: date | None
-    depth: float
-    days_to_trough: int
-    days_to_recovery: int | None
-    total_days: int
-    is_recovered: bool
+__all__ = ["_drawdown_summary", "_duration_days", "calculate_drawdown"]
 
 
 @dataclass(frozen=True)
@@ -65,25 +60,6 @@ class _RelativeBenchmarkResult:
     context: RelativeDrawdownContext
 
 
-@dataclass(frozen=True)
-class _DrawdownExtremeFields:
-    max_drawdown: float
-    peak_date: date | None
-    trough_date: date | None
-    recovery_date: date | None
-    is_recovered: bool
-    days_to_trough: int
-    days_to_recovery: int | None
-
-
-def _duration_days(start: date, end: date, *, unit: str) -> int:
-    if end < start:
-        return 0
-    if unit == "CALENDAR_DAYS":
-        return (end - start).days
-    return int(np.busday_count(start.isoformat(), end.isoformat()))
-
-
 def _build_returns_df(returns: Sequence[ReturnPoint]) -> pd.DataFrame:
     df = pd.DataFrame([{"date": point.date, "value": point.value} for point in returns])
     if df.empty:
@@ -95,193 +71,6 @@ def _build_returns_df(returns: Sequence[ReturnPoint]) -> pd.DataFrame:
 def _filter_period(df: pd.DataFrame, *, start: date, end: date) -> pd.Series:
     filtered = df.loc[(df.index >= pd.Timestamp(start)) & (df.index <= pd.Timestamp(end)), "value"]
     return filtered
-
-
-def _episode_record_from_segment(
-    *,
-    dates: list[date],
-    values: list[float],
-    start_index: int,
-    peak_date: date,
-    duration_unit: str,
-    recovery_index: int | None,
-) -> _EpisodeRecord:
-    end_index = recovery_index if recovery_index is not None else len(values) - 1
-    segment_values = values[start_index : end_index + 1]
-    trough_offset = int(np.argmin(segment_values))
-    trough_index = start_index + trough_offset
-    trough_date = dates[trough_index]
-    recovery_date = dates[recovery_index] if recovery_index is not None else None
-    terminal_date = recovery_date or dates[-1]
-    depth = float(min(segment_values))
-    return _EpisodeRecord(
-        peak_date=peak_date,
-        trough_date=trough_date,
-        recovery_date=recovery_date,
-        depth=depth,
-        days_to_trough=_duration_days(peak_date, trough_date, unit=duration_unit),
-        days_to_recovery=(
-            _duration_days(trough_date, recovery_date, unit=duration_unit)
-            if recovery_date is not None
-            else None
-        ),
-        total_days=_duration_days(peak_date, terminal_date, unit=duration_unit),
-        is_recovered=recovery_date is not None,
-    )
-
-
-def _episode_records_from_values(
-    *,
-    dates: list[date],
-    values: list[float],
-    duration_unit: str,
-) -> list[_EpisodeRecord]:
-    episodes: list[_EpisodeRecord] = []
-    in_episode = False
-    start_index = 0
-    peak_date = dates[0]
-    for idx, dd_value in enumerate(values):
-        if not in_episode and dd_value < 0:
-            in_episode = True
-            start_index = idx
-            peak_date = dates[idx - 1] if idx > 0 else dates[idx]
-            continue
-        if in_episode and dd_value >= 0:
-            episodes.append(
-                _episode_record_from_segment(
-                    dates=dates,
-                    values=values,
-                    start_index=start_index,
-                    peak_date=peak_date,
-                    duration_unit=duration_unit,
-                    recovery_index=idx,
-                )
-            )
-            in_episode = False
-
-    if in_episode:
-        episodes.append(
-            _episode_record_from_segment(
-                dates=dates,
-                values=values,
-                start_index=start_index,
-                peak_date=peak_date,
-                duration_unit=duration_unit,
-                recovery_index=None,
-            )
-        )
-    return episodes
-
-
-def _build_episodes(drawdown: pd.Series, *, duration_unit: str) -> list[_EpisodeRecord]:
-    dates = [cast(pd.Timestamp, index).date() for index in drawdown.index]
-    values = [float(value) for value in drawdown]
-    if not values:
-        return []
-    return _episode_records_from_values(
-        dates=dates,
-        values=values,
-        duration_unit=duration_unit,
-    )
-
-
-def _empty_drawdown_summary() -> DrawdownSummary:
-    return DrawdownSummary(
-        max_drawdown=None,
-        max_drawdown_peak_date=None,
-        max_drawdown_trough_date=None,
-        max_drawdown_recovery_date=None,
-        is_recovered=False,
-        days_to_trough=None,
-        days_to_recovery=None,
-        time_under_water_days=0,
-        average_drawdown=None,
-        ulcer_index=None,
-        drawdown_at_risk_95=None,
-        conditional_drawdown_at_risk_95=None,
-    )
-
-
-def _tail_drawdown_risk(
-    depths: Sequence[float], *, alpha: float
-) -> tuple[float | None, float | None]:
-    if not depths:
-        return None, None
-    dar_value = float(np.quantile(np.array(depths), 1.0 - alpha, method="linear"))
-    worst_tail = [depth for depth in depths if depth <= dar_value]
-    cdar_value = float(np.mean(worst_tail)) if worst_tail else None
-    return dar_value, cdar_value
-
-
-def _average_drawdown(drawdown: pd.Series) -> float:
-    dd_values = [float(value) for value in drawdown if float(value) < 0]
-    return float(np.mean(dd_values)) if dd_values else 0.0
-
-
-def _ulcer_index(drawdown: pd.Series) -> float:
-    return float(sqrt(float(np.mean(np.square(np.array([float(v) for v in drawdown]))))))
-
-
-def _drawdown_extreme_fields(episodes: list[_EpisodeRecord]) -> _DrawdownExtremeFields:
-    max_episode = min(episodes, key=lambda episode: episode.depth) if episodes else None
-    if max_episode is None:
-        return _DrawdownExtremeFields(
-            max_drawdown=0.0,
-            peak_date=None,
-            trough_date=None,
-            recovery_date=None,
-            is_recovered=True,
-            days_to_trough=0,
-            days_to_recovery=0,
-        )
-    return _DrawdownExtremeFields(
-        max_drawdown=max_episode.depth,
-        peak_date=max_episode.peak_date,
-        trough_date=max_episode.trough_date,
-        recovery_date=max_episode.recovery_date,
-        is_recovered=max_episode.is_recovered,
-        days_to_trough=max_episode.days_to_trough,
-        days_to_recovery=max_episode.days_to_recovery,
-    )
-
-
-def _drawdown_summary(
-    drawdown: pd.Series,
-    *,
-    alpha: float,
-    duration_unit: str,
-) -> tuple[DrawdownSummary, list[_EpisodeRecord]]:
-    if drawdown.empty:
-        return _empty_drawdown_summary(), []
-
-    episodes = _build_episodes(drawdown, duration_unit=duration_unit)
-    depths = [episode.depth for episode in episodes]
-    dar_value, cdar_value = _tail_drawdown_risk(depths, alpha=alpha)
-    extreme = _drawdown_extreme_fields(episodes)
-
-    summary = DrawdownSummary(
-        max_drawdown=extreme.max_drawdown,
-        max_drawdown_peak_date=extreme.peak_date,
-        max_drawdown_trough_date=extreme.trough_date,
-        max_drawdown_recovery_date=extreme.recovery_date,
-        is_recovered=extreme.is_recovered,
-        days_to_trough=extreme.days_to_trough,
-        days_to_recovery=extreme.days_to_recovery,
-        time_under_water_days=int(sum(1 for value in drawdown if float(value) < 0)),
-        average_drawdown=_average_drawdown(drawdown),
-        ulcer_index=_ulcer_index(drawdown),
-        drawdown_at_risk_95=dar_value,
-        conditional_drawdown_at_risk_95=cdar_value,
-    )
-    return summary, episodes
-
-
-def _to_underwater_series(drawdown: pd.Series) -> list[UnderwaterPoint]:
-    points: list[UnderwaterPoint] = []
-    for index, value in drawdown.items():
-        timestamp = cast(pd.Timestamp, index)
-        points.append(UnderwaterPoint(date=timestamp.date(), drawdown=float(value)))
-    return points
 
 
 def _period_name(period: RiskRequestPeriod) -> str:
@@ -402,14 +191,8 @@ def _insufficient_period_result(
     )
 
 
-def _drawdown_from_returns(returns: pd.Series) -> pd.Series:
-    wealth = (1 + returns / 100.0).cumprod()
-    running_peak = wealth.cummax()
-    return wealth / running_peak - 1.0
-
-
 def _episode_models(
-    episodes: list[_EpisodeRecord],
+    episodes: list[EpisodeRecord],
     *,
     analysis_options: DrawdownAnalysisOptions,
 ) -> list[DrawdownEpisode]:
