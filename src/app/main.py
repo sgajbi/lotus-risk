@@ -1,12 +1,14 @@
 from collections.abc import Awaitable, Callable
-from typing import Any, TypeVar, cast
+from typing import TypeVar, cast
 
-from fastapi import FastAPI, HTTPException, Request, Response, status
-from fastapi.exceptions import RequestValidationError
+from fastapi import FastAPI, Request, Response, status
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from pydantic import BaseModel, Field
-from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.api_errors import (
+    STANDARD_ERROR_RESPONSES,
+    register_exception_handlers,
+)
 from app.contracts.capabilities import (
     CAPABILITY_FEATURE_KEYS,
     CapabilityFeature,
@@ -25,7 +27,6 @@ from app.contracts.drawdown import (
     DrawdownInputMode,
     DrawdownResponse,
 )
-from app.contracts.error import ErrorResponse
 from app.contracts.mandate_health import (
     MandateRiskHealthContextRequest,
     MandateRiskHealthContextResponse,
@@ -46,7 +47,6 @@ from app.enterprise_readiness import (
     build_enterprise_audit_middleware,
     validate_enterprise_runtime_config,
 )
-from app.error_response import error_response
 from app.integrations.lotus_core_client import LotusCoreClient
 from app.integrations.lotus_performance_client import LotusPerformanceClient
 from app.middleware.correlation import CorrelationIdMiddleware
@@ -68,7 +68,6 @@ from app.trust_telemetry import (
     DeclaredProductTrustTelemetrySnapshot,
     build_declared_product_trust_telemetry_snapshot,
 )
-from app.upstream_errors import UpstreamServiceError
 
 SERVICE_NAME = "lotus-risk"
 SERVICE_VERSION = "0.1.0"
@@ -80,6 +79,7 @@ app = FastAPI(title=SERVICE_NAME, version=SERVICE_VERSION)
 app.add_middleware(CorrelationIdMiddleware, service_name=SERVICE_NAME)
 validate_enterprise_runtime_config()
 app.middleware("http")(build_enterprise_audit_middleware())
+register_exception_handlers(app)
 
 
 @app.middleware("http")
@@ -153,190 +153,6 @@ class MetadataResponse(BaseModel):
     )
 
 
-ERROR_RESPONSE_400: dict[str, Any] = {
-    "model": ErrorResponse,
-    "description": "Invalid input for business rule evaluation.",
-    "content": {
-        "application/json": {
-            "example": {
-                "error": {
-                    "code": "INVALID_INPUT",
-                    "message": "Unsupported period type: BAD",
-                    "correlation_id": "corr-123",
-                }
-            }
-        }
-    },
-}
-ERROR_RESPONSE_403: dict[str, Any] = {
-    "model": ErrorResponse,
-    "description": "Authorization denied by enterprise policy.",
-    "content": {
-        "application/json": {
-            "example": {
-                "error": {
-                    "code": "AUTHORIZATION_DENIED",
-                    "message": "authorization_policy_denied",
-                    "correlation_id": "corr-123",
-                    "details": {"reason": "missing_headers:x-actor-id"},
-                }
-            }
-        }
-    },
-}
-ERROR_RESPONSE_404: dict[str, Any] = {
-    "model": ErrorResponse,
-    "description": "Endpoint or resource not found.",
-    "content": {
-        "application/json": {
-            "example": {
-                "error": {
-                    "code": "RESOURCE_NOT_FOUND",
-                    "message": "Not Found",
-                    "correlation_id": "corr-123",
-                }
-            }
-        }
-    },
-}
-ERROR_RESPONSE_422: dict[str, Any] = {
-    "model": ErrorResponse,
-    "description": "Request payload validation failed.",
-    "content": {
-        "application/json": {
-            "example": {
-                "error": {
-                    "code": "INVALID_REQUEST",
-                    "message": "Request validation failed",
-                    "correlation_id": "corr-123",
-                    "details": [
-                        {"loc": ["body", "periods", 0, "to_date"], "msg": "Field required"}
-                    ],
-                }
-            }
-        }
-    },
-}
-ERROR_RESPONSE_DEFAULT: dict[str, Any] = {
-    "model": ErrorResponse,
-    "description": "Unhandled service error.",
-    "content": {
-        "application/json": {
-            "example": {
-                "error": {
-                    "code": "REQUEST_REJECTED",
-                    "message": "Unexpected error",
-                    "correlation_id": "corr-123",
-                }
-            }
-        }
-    },
-}
-STANDARD_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
-    400: ERROR_RESPONSE_400,
-    424: {
-        "model": ErrorResponse,
-        "description": "Dependency rejected the request or did not provide required data.",
-        "content": {
-            "application/json": {
-                "example": {
-                    "error": {
-                        "code": "FAILED_DEPENDENCY",
-                        "message": "lotus-performance /integration/returns/series rejected request (404): missing benchmark assignment",
-                        "correlation_id": "corr-123",
-                        "details": {
-                            "service": "lotus-performance",
-                            "operation": "/integration/returns/series",
-                            "upstream_status_code": 404,
-                            "retryable": False,
-                        },
-                    }
-                }
-            }
-        },
-    },
-    403: ERROR_RESPONSE_403,
-    404: ERROR_RESPONSE_404,
-    422: ERROR_RESPONSE_422,
-    502: {
-        "model": ErrorResponse,
-        "description": "Dependency returned an invalid or failing upstream response.",
-        "content": {
-            "application/json": {
-                "example": {
-                    "error": {
-                        "code": "UPSTREAM_FAILURE",
-                        "message": "lotus-performance /integration/returns/series failed (503): upstream failed",
-                        "correlation_id": "corr-123",
-                        "details": {
-                            "service": "lotus-performance",
-                            "operation": "/integration/returns/series",
-                            "upstream_status_code": 503,
-                            "retryable": True,
-                        },
-                    }
-                }
-            }
-        },
-    },
-    503: {
-        "model": ErrorResponse,
-        "description": "Dependency is unavailable or service is draining.",
-        "content": {
-            "application/json": {
-                "example": {
-                    "error": {
-                        "code": "UPSTREAM_UNAVAILABLE",
-                        "message": "lotus-core /integration/reference/risk-free-series unavailable: network down",
-                        "correlation_id": "corr-123",
-                        "details": {
-                            "service": "lotus-core",
-                            "operation": "/integration/reference/risk-free-series",
-                            "retryable": True,
-                        },
-                    }
-                }
-            }
-        },
-    },
-    504: {
-        "model": ErrorResponse,
-        "description": "Dependency request timed out.",
-        "content": {
-            "application/json": {
-                "example": {
-                    "error": {
-                        "code": "UPSTREAM_TIMEOUT",
-                        "message": "lotus-core /integration/reference/risk-free-series timed out: request timed out",
-                        "correlation_id": "corr-123",
-                        "details": {
-                            "service": "lotus-core",
-                            "operation": "/integration/reference/risk-free-series",
-                            "retryable": True,
-                        },
-                    }
-                }
-            }
-        },
-    },
-    "default": ERROR_RESPONSE_DEFAULT,
-}
-
-
-def _default_error_code(status_code: int) -> str:
-    if status_code == status.HTTP_404_NOT_FOUND:
-        return "RESOURCE_NOT_FOUND"
-    if status_code == status.HTTP_403_FORBIDDEN:
-        return "AUTHORIZATION_DENIED"
-    if status_code == status.HTTP_413_CONTENT_TOO_LARGE:
-        return "PAYLOAD_TOO_LARGE"
-    if status_code == status.HTTP_422_UNPROCESSABLE_CONTENT:
-        return "INVALID_REQUEST"
-    if status_code == status.HTTP_400_BAD_REQUEST:
-        return "INVALID_INPUT"
-    return "REQUEST_REJECTED"
-
-
 async def _observed_endpoint(
     *,
     endpoint: str,
@@ -363,62 +179,6 @@ async def _observed_endpoint(
         started_at=started_at,
     )
     return cast(ResponseT, result)
-
-
-@app.exception_handler(RequestValidationError)
-async def handle_validation_error(request: Request, exc: RequestValidationError) -> Response:
-    return error_response(
-        request,
-        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-        code="INVALID_REQUEST",
-        message="Request validation failed",
-        details=exc.errors(),
-    )
-
-
-@app.exception_handler(StarletteHTTPException)
-async def handle_starlette_http_exception(
-    request: Request, exc: StarletteHTTPException
-) -> Response:
-    return error_response(
-        request,
-        status_code=exc.status_code,
-        code=_default_error_code(exc.status_code),
-        message=str(exc.detail),
-    )
-
-
-@app.exception_handler(HTTPException)
-async def handle_http_exception(request: Request, exc: HTTPException) -> Response:
-    return error_response(
-        request,
-        status_code=exc.status_code,
-        code=_default_error_code(exc.status_code),
-        message=str(exc.detail),
-    )
-
-
-@app.exception_handler(ValueError)
-async def handle_value_error(request: Request, exc: ValueError) -> Response:
-    return error_response(
-        request,
-        status_code=status.HTTP_400_BAD_REQUEST,
-        code="INVALID_INPUT",
-        message=str(exc),
-    )
-
-
-@app.exception_handler(UpstreamServiceError)
-async def handle_upstream_service_error(request: Request, exc: UpstreamServiceError) -> Response:
-    details = dict(exc.details)
-    details["retryable"] = exc.retryable
-    return error_response(
-        request,
-        status_code=exc.status_code,
-        code=exc.code,
-        message=exc.message,
-        details=details,
-    )
 
 
 @app.get(

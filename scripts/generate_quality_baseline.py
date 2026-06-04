@@ -148,9 +148,10 @@ documentation posture, and validation gates. It is not a completion claim.
 
 ## Current Architectural Findings
 
-1. `src/app/main.py` remains a monolithic API composition module. It owns app construction,
-   middleware registration, exception handlers, standard OpenAPI error metadata, operational
-   endpoints, capability publication, metrics, and risk analytics route orchestration.
+1. `src/app/main.py` remains a large API composition module. It owns app construction, middleware
+   registration, operational endpoints, capability publication, metrics, and risk analytics route
+   orchestration. Standard OpenAPI error metadata and exception-handler registration now live in
+   `src/app/api_errors.py`.
 2. Routers are not yet split into route modules; this keeps OpenAPI metadata and dependency
    resolution coupled to the FastAPI app instance.
 3. Business calculations already live mostly under `src/app/services`, which gives the next slices
@@ -167,8 +168,8 @@ documentation posture, and validation gates. It is not a completion claim.
    but any future list/read-model route must use an explicit shared contract.
 3. Health, liveness, readiness, metadata, metrics, and ops endpoints exist and are documented, but
    public/internal route grouping is not yet enforced by module structure.
-4. Standard error response metadata exists centrally, but route-level examples should be certified
-   after router extraction.
+4. Standard error response metadata exists in `src/app/api_errors.py`, but route-level examples
+   should be certified after router extraction.
 
 ## Security And Resilience Gaps
 

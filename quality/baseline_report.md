@@ -10,16 +10,15 @@ documentation posture, and validation gates. It is not a completion claim.
 
 ## Code Size Baseline
 
-- Python source files under `src/`: 48
+- Python source files under `src/`: 49
 - Python test files under `tests/`: 77
-- API entry point route/middleware/handler decorators in `src/app/main.py`: 22
+- API entry point route/middleware/handler decorators in `src/app/main.py`: 17
 
 ### Largest Python Files
 
 | Path | Lines | Bytes |
 | --- | --- | --- |
 | src/app/services/concentration_engine.py | 981 | 37562 |
-| src/app/main.py | 980 | 37386 |
 | src/app/contracts/concentration.py | 921 | 38075 |
 | src/app/contracts/rolling.py | 911 | 36547 |
 | src/app/contracts/risk.py | 885 | 33850 |
@@ -28,6 +27,7 @@ documentation posture, and validation gates. It is not a completion claim.
 | src/app/contracts/drawdown.py | 816 | 32701 |
 | tests/e2e/test_smoke.py | 750 | 28373 |
 | tests/integration/test_historical_attribution_endpoint.py | 747 | 29645 |
+| src/app/main.py | 740 | 29234 |
 | src/app/contracts/attribution.py | 667 | 26911 |
 | src/app/services/risk_engine.py | 622 | 26133 |
 | tests/unit/test_attribution_mode_adapter.py | 600 | 21872 |
@@ -77,9 +77,10 @@ documentation posture, and validation gates. It is not a completion claim.
 
 ## Current Architectural Findings
 
-1. `src/app/main.py` remains a monolithic API composition module. It owns app construction,
-   middleware registration, exception handlers, standard OpenAPI error metadata, operational
-   endpoints, capability publication, metrics, and risk analytics route orchestration.
+1. `src/app/main.py` remains a large API composition module. It owns app construction, middleware
+   registration, operational endpoints, capability publication, metrics, and risk analytics route
+   orchestration. Standard OpenAPI error metadata and exception-handler registration now live in
+   `src/app/api_errors.py`.
 2. Routers are not yet split into route modules; this keeps OpenAPI metadata and dependency
    resolution coupled to the FastAPI app instance.
 3. Business calculations already live mostly under `src/app/services`, which gives the next slices
@@ -96,8 +97,8 @@ documentation posture, and validation gates. It is not a completion claim.
    but any future list/read-model route must use an explicit shared contract.
 3. Health, liveness, readiness, metadata, metrics, and ops endpoints exist and are documented, but
    public/internal route grouping is not yet enforced by module structure.
-4. Standard error response metadata exists centrally, but route-level examples should be certified
-   after router extraction.
+4. Standard error response metadata exists in `src/app/api_errors.py`, but route-level examples
+   should be certified after router extraction.
 
 ## Security And Resilience Gaps
 
@@ -141,7 +142,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-369 tests collected in 2.66s
+369 tests collected in 2.00s
 ```
 - Import-linter report-only: reported exit 127
 
