@@ -321,7 +321,7 @@ This slice establishes the report-only enterprise quality baseline and progressi
                     2,
                     "Largest remaining function",
                     f"{largest_function.name} has {largest_function.lines} lines",
-                    "Extract smaller metric helpers while preserving behavior with characterization tests",
+                    "Extract focused helpers around the next service hotspot while preserving behavior with characterization tests",
                 ),
                 (
                     3,

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime as dt
 from dataclasses import dataclass
 from math import sqrt
 from typing import TypedDict, cast
@@ -11,16 +12,17 @@ from app.contracts.attribution import (
     AttributionContributor,
     AttributionInputMode,
     AttributionMetric,
+    AttributionOptions,
     AttributionSetResult,
     AttributionType,
-    GroupingDimension,
+    ExposurePoint,
     HistoricalAttributionMetadata,
     HistoricalAttributionPeriodResult,
     HistoricalAttributionResponse,
-    ExposurePoint,
     HistoricalAttributionStatelessInput,
+    GroupingDimension,
 )
-from app.contracts.risk import ReturnPoint, RiskRequestPeriod
+from app.contracts.risk import ReturnPoint, RiskCalculationSupportability, RiskRequestPeriod
 from app.services.audit_lineage import fingerprint_model
 from app.services.calculation_supportability import (
     record_operation_supportability,
@@ -43,6 +45,14 @@ class _AttributionCalculationInputs:
     metric_series: pd.Series
     group_matrix: pd.DataFrame
     risk_total: float
+
+
+@dataclass(frozen=True)
+class _AttributionSourceFrames:
+    returns_df: pd.DataFrame
+    benchmark_df: pd.DataFrame
+    exposure_df: pd.DataFrame
+    benchmark_exposure_df: pd.DataFrame
 
 
 def _period_name(period: RiskRequestPeriod) -> str:
@@ -324,120 +334,195 @@ def _build_attribution_set(
     )
 
 
+def _source_frames(request: HistoricalAttributionStatelessInput) -> _AttributionSourceFrames:
+    return _AttributionSourceFrames(
+        returns_df=_returns_df(request.returns),
+        benchmark_df=_returns_df(request.benchmark_returns),
+        exposure_df=_exposure_df(request.exposure_history),
+        benchmark_exposure_df=_exposure_df(request.benchmark_exposure_history),
+    )
+
+
+def _historical_attribution_metadata(
+    *,
+    request: HistoricalAttributionStatelessInput,
+    options: AttributionOptions,
+    calculation_supportability: RiskCalculationSupportability,
+) -> HistoricalAttributionMetadata:
+    return HistoricalAttributionMetadata(
+        request_fingerprint=fingerprint_model(request),
+        covariance_method=options.covariance_method,
+        annualization_basis=options.annualization_basis,
+        requested_attribution_types=list(options.attribution_types),
+        requested_metrics=list(options.metrics),
+        requested_grouping_dimensions=list(options.grouping_dimensions),
+        min_observations_policy=options.min_observations_policy,
+        calculation_supportability=calculation_supportability,
+    )
+
+
+def _empty_attribution_response(
+    *,
+    request: HistoricalAttributionStatelessInput,
+    input_mode: AttributionInputMode,
+) -> HistoricalAttributionResponse:
+    calculation_supportability = supportability_from_period_results(
+        returns=request.returns,
+        as_of_date=request.scope.as_of_date,
+        results={},
+    )
+    record_operation_supportability(
+        operation="risk/historical-attribution",
+        supportability=calculation_supportability,
+    )
+    return HistoricalAttributionResponse(
+        input_mode=input_mode,
+        scope=request.scope,
+        results={},
+        metadata=_historical_attribution_metadata(
+            request=request,
+            options=request.attribution_options,
+            calculation_supportability=calculation_supportability,
+        ),
+    )
+
+
+def _requires_benchmark_attribution(options: AttributionOptions) -> bool:
+    return "ACTIVE_RISK" in options.attribution_types or "TRACKING_ERROR" in options.metrics
+
+
+def _resolved_period_window(
+    *,
+    period: RiskRequestPeriod,
+    request: HistoricalAttributionStatelessInput,
+    open_date: pd.Timestamp,
+) -> tuple[dt.date, dt.date, pd.Timestamp, pd.Timestamp]:
+    start_date, end_date = risk_helpers._resolve_period(
+        period.type,
+        request.scope.as_of_date,
+        open_date.date(),
+        year=period.year,
+        from_date=period.from_date,
+        to_date=period.to_date,
+    )
+    return start_date, end_date, pd.Timestamp(start_date), pd.Timestamp(end_date)
+
+
+def _period_attribution_sets(
+    *,
+    options: AttributionOptions,
+    frames: _AttributionSourceFrames,
+    returns_series: pd.Series,
+    benchmark_series: pd.Series,
+    start: pd.Timestamp,
+    end: pd.Timestamp,
+) -> list[AttributionSetResult]:
+    period_sets: list[AttributionSetResult] = []
+    requires_benchmark_attribution = _requires_benchmark_attribution(options)
+
+    for grouping_dimension in options.grouping_dimensions:
+        weights, labels, flags = _pivot_exposure(
+            frames.exposure_df,
+            start=start,
+            end=end,
+            grouping_dimension=grouping_dimension,
+        )
+        if requires_benchmark_attribution:
+            benchmark_weights, benchmark_labels, benchmark_flags = _pivot_exposure(
+                frames.benchmark_exposure_df,
+                start=start,
+                end=end,
+                grouping_dimension=grouping_dimension,
+            )
+            labels = {**labels, **benchmark_labels}
+            flags = [*flags, *benchmark_flags]
+        else:
+            benchmark_weights = pd.DataFrame()
+
+        for attribution_type in options.attribution_types:
+            for metric in options.metrics:
+                period_sets.append(
+                    _build_attribution_set(
+                        attribution_type=attribution_type,
+                        metric=metric,
+                        grouping_dimension=grouping_dimension,
+                        returns_series=returns_series,
+                        benchmark_series=benchmark_series,
+                        exposure_weights=weights,
+                        benchmark_weights=benchmark_weights,
+                        group_labels=labels,
+                        annualization_basis=options.annualization_basis,
+                        base_flags=flags,
+                    )
+                )
+    return period_sets
+
+
+def _calculate_period_attribution(
+    *,
+    period: RiskRequestPeriod,
+    request: HistoricalAttributionStatelessInput,
+    frames: _AttributionSourceFrames,
+    open_timestamp: pd.Timestamp,
+    options: AttributionOptions,
+) -> tuple[str, HistoricalAttributionPeriodResult]:
+    start_date, end_date, start, end = _resolved_period_window(
+        period=period,
+        request=request,
+        open_date=open_timestamp,
+    )
+    name = _period_name(period)
+    returns_series = _window_returns(frames.returns_df, start, end) / 100.0
+    benchmark_series = (
+        _window_returns(frames.benchmark_df, start, end) / 100.0
+        if not frames.benchmark_df.empty
+        else pd.Series(dtype="float64")
+    )
+    if len(returns_series.dropna()) < 2:
+        return name, HistoricalAttributionPeriodResult(
+            start_date=start_date,
+            end_date=end_date,
+            attribution_sets=[],
+            error="Insufficient data",
+        )
+
+    return name, HistoricalAttributionPeriodResult(
+        start_date=start_date,
+        end_date=end_date,
+        attribution_sets=_period_attribution_sets(
+            options=options,
+            frames=frames,
+            returns_series=returns_series,
+            benchmark_series=benchmark_series,
+            start=start,
+            end=end,
+        ),
+        error=None,
+    )
+
+
 def calculate_historical_attribution(
     request: HistoricalAttributionStatelessInput,
     *,
     input_mode: AttributionInputMode,
 ) -> HistoricalAttributionResponse:
-    returns_df = _returns_df(request.returns)
-    benchmark_df = _returns_df(request.benchmark_returns)
-    exposure_df = _exposure_df(request.exposure_history)
-    benchmark_exposure_df = _exposure_df(request.benchmark_exposure_history)
+    frames = _source_frames(request)
+    if frames.returns_df.empty:
+        return _empty_attribution_response(request=request, input_mode=input_mode)
 
-    if returns_df.empty:
-        calculation_supportability = supportability_from_period_results(
-            returns=request.returns,
-            as_of_date=request.scope.as_of_date,
-            results={},
-        )
-        record_operation_supportability(
-            operation="risk/historical-attribution",
-            supportability=calculation_supportability,
-        )
-        return HistoricalAttributionResponse(
-            input_mode=input_mode,
-            scope=request.scope,
-            results={},
-            metadata=HistoricalAttributionMetadata(
-                request_fingerprint=fingerprint_model(request),
-                covariance_method=request.attribution_options.covariance_method,
-                annualization_basis=request.attribution_options.annualization_basis,
-                requested_attribution_types=list(request.attribution_options.attribution_types),
-                requested_metrics=list(request.attribution_options.metrics),
-                requested_grouping_dimensions=list(request.attribution_options.grouping_dimensions),
-                min_observations_policy=request.attribution_options.min_observations_policy,
-                calculation_supportability=calculation_supportability,
-            ),
-        )
-
-    open_date = cast(pd.Timestamp, returns_df.index.min()).date()
+    open_timestamp = cast(pd.Timestamp, frames.returns_df.index.min())
     options = request.attribution_options
 
     results: dict[str, HistoricalAttributionPeriodResult] = {}
     for period in request.periods:
-        start_date, end_date = risk_helpers._resolve_period(
-            period.type,
-            request.scope.as_of_date,
-            open_date,
-            year=period.year,
-            from_date=period.from_date,
-            to_date=period.to_date,
+        name, period_result = _calculate_period_attribution(
+            period=period,
+            request=request,
+            frames=frames,
+            open_timestamp=open_timestamp,
+            options=options,
         )
-        start = pd.Timestamp(start_date)
-        end = pd.Timestamp(end_date)
-        name = _period_name(period)
-
-        returns_series = _window_returns(returns_df, start, end) / 100.0
-        benchmark_series = (
-            _window_returns(benchmark_df, start, end) / 100.0
-            if not benchmark_df.empty
-            else pd.Series(dtype="float64")
-        )
-        if len(returns_series.dropna()) < 2:
-            results[name] = HistoricalAttributionPeriodResult(
-                start_date=start_date,
-                end_date=end_date,
-                attribution_sets=[],
-                error="Insufficient data",
-            )
-            continue
-
-        period_sets: list[AttributionSetResult] = []
-        requires_benchmark_attribution = (
-            "ACTIVE_RISK" in options.attribution_types or "TRACKING_ERROR" in options.metrics
-        )
-        for grouping_dimension in options.grouping_dimensions:
-            weights, labels, flags = _pivot_exposure(
-                exposure_df,
-                start=start,
-                end=end,
-                grouping_dimension=grouping_dimension,
-            )
-            if requires_benchmark_attribution:
-                benchmark_weights, benchmark_labels, benchmark_flags = _pivot_exposure(
-                    benchmark_exposure_df,
-                    start=start,
-                    end=end,
-                    grouping_dimension=grouping_dimension,
-                )
-                labels = {**labels, **benchmark_labels}
-                flags = [*flags, *benchmark_flags]
-            else:
-                benchmark_weights = pd.DataFrame()
-
-            for attribution_type in options.attribution_types:
-                for metric in options.metrics:
-                    period_sets.append(
-                        _build_attribution_set(
-                            attribution_type=attribution_type,
-                            metric=metric,
-                            grouping_dimension=grouping_dimension,
-                            returns_series=returns_series,
-                            benchmark_series=benchmark_series,
-                            exposure_weights=weights,
-                            benchmark_weights=benchmark_weights,
-                            group_labels=labels,
-                            annualization_basis=options.annualization_basis,
-                            base_flags=flags,
-                        )
-                    )
-
-        results[name] = HistoricalAttributionPeriodResult(
-            start_date=start_date,
-            end_date=end_date,
-            attribution_sets=period_sets,
-            error=None,
-        )
+        results[name] = period_result
 
     calculation_supportability = supportability_from_attribution_results(
         returns=request.returns,
@@ -452,14 +537,9 @@ def calculate_historical_attribution(
         input_mode=input_mode,
         scope=request.scope,
         results=results,
-        metadata=HistoricalAttributionMetadata(
-            request_fingerprint=fingerprint_model(request),
-            covariance_method=options.covariance_method,
-            annualization_basis=options.annualization_basis,
-            requested_attribution_types=list(options.attribution_types),
-            requested_metrics=list(options.metrics),
-            requested_grouping_dimensions=list(options.grouping_dimensions),
-            min_observations_policy=options.min_observations_policy,
+        metadata=_historical_attribution_metadata(
+            request=request,
+            options=options,
             calculation_supportability=calculation_supportability,
         ),
     )
