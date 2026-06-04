@@ -7,9 +7,12 @@ from typing import Any, cast
 
 from app.contracts.concentration import (
     ConcentrationInputMode,
+    ConcentrationMetadata,
     ConcentrationRequest,
     EnrichmentPolicy,
     IssuerGroupingLevel,
+    SimulationConcentrationInput,
+    ConcentrationValuationContext,
 )
 from app.services.audit_lineage import (
     ordered_source_services,
@@ -51,6 +54,27 @@ class _WeightedConcentrationState:
     total_current: int
     total_proposed: int
     issuer_note: str | None
+
+
+@dataclass(frozen=True)
+class _SimulationSession:
+    session_id: str
+    version: int | None
+    expires_at: datetime | None
+
+
+@dataclass(frozen=True)
+class _SimulationSnapshotState:
+    baseline_positions: list[PositionEntry]
+    projected_positions: list[PositionEntry]
+    baseline_issuers: list[IssuerEntry]
+    projected_issuers: list[IssuerEntry]
+    covered_baseline: int
+    covered_projected: int
+    total_baseline: int
+    total_projected: int
+    issuer_note: str | None
+    valuation_context: ConcentrationValuationContext | None
 
 
 def _stateless_caller_issuer_map(
@@ -314,17 +338,13 @@ async def resolve_stateful(
     )
 
 
-async def resolve_simulation(
-    request: ConcentrationRequest,
+async def _resolve_simulation_session(
+    simulation: SimulationConcentrationInput,
     *,
     core_client: LotusCoreClientProtocol,
     correlation_id: str | None,
     actor_id: str | None,
-) -> ConcentrationComputationInput:
-    simulation = request.simulation_input
-    if simulation is None:
-        raise ValueError("simulation_input is required when input_mode=simulation")
-
+) -> _SimulationSession:
     session_id = simulation.session_id
     session_version: int | None = None
     session_expires_at: datetime | None = None
@@ -351,21 +371,46 @@ async def resolve_simulation(
 
     if session_id is None:
         raise ValueError("simulation session_id could not be resolved")
+    return _SimulationSession(
+        session_id=session_id,
+        version=session_version,
+        expires_at=session_expires_at,
+    )
 
-    if simulation.simulation_changes:
-        payload = [
-            change.model_dump(mode="json", exclude_none=True)
-            for change in simulation.simulation_changes
-        ]
-        changes_response = await core_client.add_simulation_changes(
-            session_id=session_id,
-            changes=payload,
-            correlation_id=correlation_id,
-        )
-        session_version = _as_int(changes_response.get("version")) or session_version
 
-    expected_version = simulation.expected_version or session_version
+async def _apply_simulation_changes(
+    simulation: SimulationConcentrationInput,
+    *,
+    session: _SimulationSession,
+    core_client: LotusCoreClientProtocol,
+    correlation_id: str | None,
+) -> _SimulationSession:
+    if not simulation.simulation_changes:
+        return session
 
+    payload = [
+        change.model_dump(mode="json", exclude_none=True)
+        for change in simulation.simulation_changes
+    ]
+    changes_response = await core_client.add_simulation_changes(
+        session_id=session.session_id,
+        changes=payload,
+        correlation_id=correlation_id,
+    )
+    session_version = _as_int(changes_response.get("version")) or session.version
+    return _SimulationSession(
+        session_id=session.session_id,
+        version=session_version,
+        expires_at=session.expires_at,
+    )
+
+
+def _simulation_snapshot_payload(
+    simulation: SimulationConcentrationInput,
+    *,
+    session: _SimulationSession,
+) -> dict[str, Any]:
+    expected_version = simulation.expected_version or session.version
     snapshot_payload: dict[str, Any] = {
         "as_of_date": simulation.as_of_date.isoformat(),
         "snapshot_mode": "SIMULATION",
@@ -377,7 +422,7 @@ async def resolve_simulation(
             "instrument_enrichment",
         ],
         "simulation": {
-            "session_id": session_id,
+            "session_id": session.session_id,
         },
         "options": {
             "include_zero_quantity_positions": simulation.include_zero_quantity_positions,
@@ -390,30 +435,40 @@ async def resolve_simulation(
         snapshot_payload["simulation"]["expected_version"] = expected_version
     if simulation.reporting_currency:
         snapshot_payload["reporting_currency"] = simulation.reporting_currency
+    return snapshot_payload
 
-    snapshot = await core_client.get_core_snapshot(
-        portfolio_id=simulation.portfolio_id,
-        request_payload=snapshot_payload,
-        correlation_id=correlation_id,
-    )
-    sections = snapshot.get("sections")
-    if not isinstance(sections, dict):
-        raise ValueError("lotus-core simulation snapshot missing sections payload")
 
+def _issuer_map_from_snapshot_sections(
+    request: ConcentrationRequest,
+    *,
+    sections: dict[str, Any],
+    issuer_mappings: list[Any],
+) -> tuple[dict[str, IssuerIdentity], str | None]:
     core_issuer_map, issuer_note = _extract_issuer_map(
         sections, grouping_level=request.issuer_grouping_level
     )
     _apply_snapshot_display_names(sections, core_issuer_map)
     caller_map = _caller_issuer_map(
-        mappings=simulation.issuer_mappings,
+        mappings=issuer_mappings,
         grouping_level=request.issuer_grouping_level,
     )
-    issuer_by_security = _merge_issuer_maps(
-        caller_map=caller_map,
-        core_map=core_issuer_map,
-        policy=request.enrichment_policy,
+    return (
+        _merge_issuer_maps(
+            caller_map=caller_map,
+            core_map=core_issuer_map,
+            policy=request.enrichment_policy,
+        ),
+        issuer_note,
     )
 
+
+def _simulation_snapshot_state(
+    snapshot: dict[str, Any],
+    *,
+    sections: dict[str, Any],
+    issuer_by_security: dict[str, IssuerIdentity],
+    issuer_note: str | None,
+) -> _SimulationSnapshotState:
     baseline_positions, baseline_issuers, covered_baseline, total_baseline = (
         _extract_values_with_issuer_from_snapshot(
             sections.get("positions_baseline"), issuer_by_security
@@ -431,17 +486,49 @@ async def resolve_simulation(
         covered_projected = covered_baseline
         total_projected = total_baseline
 
-    snapshot_simulation = snapshot.get("simulation")
-    if isinstance(snapshot_simulation, dict):
-        session_version = _as_int(snapshot_simulation.get("version")) or session_version
+    return _SimulationSnapshotState(
+        baseline_positions=baseline_positions,
+        projected_positions=projected_positions,
+        baseline_issuers=baseline_issuers,
+        projected_issuers=projected_issuers,
+        covered_baseline=covered_baseline,
+        covered_projected=covered_projected,
+        total_baseline=total_baseline,
+        total_projected=total_projected,
+        issuer_note=issuer_note,
+        valuation_context=_extract_valuation_context(snapshot.get("valuation_context")),
+    )
 
+
+def _session_with_snapshot_version(
+    session: _SimulationSession,
+    *,
+    snapshot: dict[str, Any],
+) -> _SimulationSession:
+    snapshot_simulation = snapshot.get("simulation")
+    if not isinstance(snapshot_simulation, dict):
+        return session
+    return _SimulationSession(
+        session_id=session.session_id,
+        version=_as_int(snapshot_simulation.get("version")) or session.version,
+        expires_at=session.expires_at,
+    )
+
+
+def _simulation_metadata(
+    request: ConcentrationRequest,
+    *,
+    simulation: SimulationConcentrationInput,
+    session: _SimulationSession,
+    snapshot_payload: dict[str, Any],
+) -> ConcentrationMetadata:
     metadata = build_metadata(
         request=request,
         as_of_date=simulation.as_of_date,
         portfolio_id=simulation.portfolio_id,
-        simulation_session_id=session_id,
-        simulation_session_version=session_version,
-        session_expires_at=session_expires_at,
+        simulation_session_id=session.session_id,
+        simulation_session_version=session.version,
+        session_expires_at=session.expires_at,
         include_cash_positions=simulation.include_cash_positions,
         include_zero_quantity_positions=simulation.include_zero_quantity_positions,
     )
@@ -451,19 +538,74 @@ async def resolve_simulation(
         operation=f"/integration/portfolios/{simulation.portfolio_id}/core-snapshot",
         payload=snapshot_payload,
     )
+    return metadata
+
+
+async def resolve_simulation(
+    request: ConcentrationRequest,
+    *,
+    core_client: LotusCoreClientProtocol,
+    correlation_id: str | None,
+    actor_id: str | None,
+) -> ConcentrationComputationInput:
+    simulation = request.simulation_input
+    if simulation is None:
+        raise ValueError("simulation_input is required when input_mode=simulation")
+
+    session = await _resolve_simulation_session(
+        simulation,
+        core_client=core_client,
+        correlation_id=correlation_id,
+        actor_id=actor_id,
+    )
+    session = await _apply_simulation_changes(
+        simulation,
+        session=session,
+        core_client=core_client,
+        correlation_id=correlation_id,
+    )
+    snapshot_payload = _simulation_snapshot_payload(simulation, session=session)
+
+    snapshot = await core_client.get_core_snapshot(
+        portfolio_id=simulation.portfolio_id,
+        request_payload=snapshot_payload,
+        correlation_id=correlation_id,
+    )
+    sections = snapshot.get("sections")
+    if not isinstance(sections, dict):
+        raise ValueError("lotus-core simulation snapshot missing sections payload")
+
+    issuer_by_security, issuer_note = _issuer_map_from_snapshot_sections(
+        request=request,
+        sections=sections,
+        issuer_mappings=simulation.issuer_mappings,
+    )
+    snapshot_state = _simulation_snapshot_state(
+        snapshot,
+        sections=sections,
+        issuer_by_security=issuer_by_security,
+        issuer_note=issuer_note,
+    )
+    session = _session_with_snapshot_version(session, snapshot=snapshot)
+    metadata = _simulation_metadata(
+        request,
+        simulation=simulation,
+        session=session,
+        snapshot_payload=snapshot_payload,
+    )
 
     return ConcentrationComputationInput(
         input_mode=ConcentrationInputMode.SIMULATION,
-        current_positions=baseline_positions,
-        proposed_positions=projected_positions,
+        current_positions=snapshot_state.baseline_positions,
+        proposed_positions=snapshot_state.projected_positions,
         top_n=simulation.top_n,
-        current_issuers=baseline_issuers,
-        proposed_issuers=projected_issuers,
-        covered_position_count_current=covered_baseline,
-        covered_position_count_proposed=covered_projected,
-        total_position_count_current=total_baseline,
-        total_position_count_proposed=total_projected,
-        issuer_note=issuer_note,
-        valuation_context=_extract_valuation_context(snapshot.get("valuation_context")),
+        current_issuers=snapshot_state.baseline_issuers,
+        proposed_issuers=snapshot_state.projected_issuers,
+        covered_position_count_current=snapshot_state.covered_baseline,
+        covered_position_count_proposed=snapshot_state.covered_projected,
+        total_position_count_current=snapshot_state.total_baseline,
+        total_position_count_proposed=snapshot_state.total_projected,
+        issuer_note=snapshot_state.issuer_note,
+        valuation_context=snapshot_state.valuation_context,
         metadata=metadata,
     )

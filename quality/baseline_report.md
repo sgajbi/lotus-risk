@@ -29,13 +29,13 @@ documentation posture, and validation gates. It is not a completion claim.
 | tests/integration/test_historical_attribution_endpoint.py | 747 | 29645 |
 | src/app/services/rolling_engine.py | 705 | 23750 |
 | src/app/contracts/attribution.py | 667 | 26911 |
+| src/app/services/concentration/resolvers.py | 611 | 21617 |
 | tests/unit/test_attribution_mode_adapter.py | 600 | 21872 |
 | tests/integration/test_risk_calculate.py | 596 | 25093 |
 | tests/integration/test_rolling_metrics_endpoint.py | 566 | 22142 |
 | tests/unit/test_lotus_performance_client.py | 530 | 19686 |
 | src/app/services/drawdown_engine.py | 530 | 18443 |
 | src/app/trust_telemetry.py | 476 | 20809 |
-| src/app/services/concentration/resolvers.py | 469 | 17483 |
 | tests/unit/test_rolling_mode_adapter.py | 444 | 16926 |
 | tests/unit/test_drawdown_engine.py | 422 | 16234 |
 | tests/integration/test_rolling_live_characterization.py | 418 | 16694 |
@@ -50,7 +50,6 @@ documentation posture, and validation gates. It is not a completion claim.
 | src/app/contracts/concentration.py | ConcentrationResponse | ClassDef | 181 |
 | src/app/integrations/lotus_core_client.py | LotusCoreClient | ClassDef | 171 |
 | src/app/contracts/drawdown.py | DrawdownResponse | ClassDef | 159 |
-| src/app/services/concentration/resolvers.py | resolve_simulation | AsyncFunctionDef | 153 |
 | src/app/contracts/drawdown.py | DrawdownAnalyticsRequest | ClassDef | 148 |
 | src/app/services/rolling_mode_adapter.py | calculate_rolling_metrics_stateful | AsyncFunctionDef | 148 |
 | src/app/contracts/concentration.py | ConcentrationRequest | ClassDef | 143 |
@@ -64,6 +63,7 @@ documentation posture, and validation gates. It is not a completion claim.
 | src/app/contracts/risk.py | RiskResponseMetadata | ClassDef | 96 |
 | src/app/trust_telemetry.py | ProductTrustTelemetrySeed | ClassDef | 95 |
 | src/app/contracts/attribution.py | HistoricalAttributionStatelessInput | ClassDef | 93 |
+| src/app/integrations/lotus_performance_client.py | _poll_returns_series_result | AsyncFunctionDef | 93 |
 
 ## Tool Baseline
 
@@ -105,10 +105,10 @@ Success: no issues found in 163 source files
 ...
 src\app\upstream_errors.py                              55      0     20      3    96%   181->194, 187->189, 192->194
 ------------------------------------------------------------------------------------------------
-TOTAL                                                 4152     83   1004     88    97%
+TOTAL                                                 4190     83   1004     88    97%
 
 45 files skipped due to complete coverage.
-431 passed in 9.84s
+431 passed in 8.96s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -247,7 +247,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-431 tests collected in 3.64s
+431 tests collected in 1.61s
 ```
 - Import-linter report-only: passed
 
