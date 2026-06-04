@@ -160,7 +160,7 @@
       "review_by": "2026-12-01"
     },
     {
-      "finding": "src/app/services/rolling_engine.py:251:points_by_date[day][metric_name] = float(value) if pd.notna(value) else None",
+      "finding": "src/app/services/rolling_engine.py:259:points_by_date[day][metric_name] = float(value) if pd.notna(value) else None",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
       "review_by": "2026-12-01"

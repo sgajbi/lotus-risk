@@ -64,6 +64,14 @@ class _RollingWindowCalculation:
     aligned_risk_free_series_count: int
 
 
+@dataclass(frozen=True)
+class _RollingPeriodWindowAggregate:
+    window_results: list[RollingWindowResult]
+    quality_flags: set[str]
+    aligned_benchmark_series_count: int
+    aligned_risk_free_series_count: int
+
+
 def _build_returns_df(returns: list[ReturnPoint]) -> pd.DataFrame:
     df = pd.DataFrame([{"date": point.date, "value": point.value} for point in returns])
     if df.empty:
@@ -593,19 +601,12 @@ def _calculate_window_result(
     )
 
 
-def _calculate_period_result(
+def _rolling_period_window_aggregate(
     period_series: _RollingPeriodSeries,
     *,
     options: RollingOptions,
     requested_metrics: Sequence[str],
-) -> RollingPeriodResult:
-    if len(period_series.portfolio_pp) < 2:
-        return _insufficient_period_result(
-            period_series,
-            options=options,
-            requested_metrics=requested_metrics,
-        )
-
+) -> _RollingPeriodWindowAggregate:
     window_results: list[RollingWindowResult] = []
     period_flags: set[str] = set()
     aligned_benchmark_series_count = 0
@@ -629,30 +630,57 @@ def _calculate_period_result(
             calculation.aligned_risk_free_series_count,
         )
 
+    return _RollingPeriodWindowAggregate(
+        window_results=window_results,
+        quality_flags=period_flags,
+        aligned_benchmark_series_count=aligned_benchmark_series_count,
+        aligned_risk_free_series_count=aligned_risk_free_series_count,
+    )
+
+
+def _calculate_period_result(
+    period_series: _RollingPeriodSeries,
+    *,
+    options: RollingOptions,
+    requested_metrics: Sequence[str],
+) -> RollingPeriodResult:
+    if len(period_series.portfolio_pp) < 2:
+        return _insufficient_period_result(
+            period_series,
+            options=options,
+            requested_metrics=requested_metrics,
+        )
+
+    aggregate = _rolling_period_window_aggregate(
+        period_series,
+        options=options,
+        requested_metrics=requested_metrics,
+    )
+
     return RollingPeriodResult(
         start_date=period_series.start,
         end_date=period_series.end,
         series_count=len(period_series.portfolio_decimal),
         benchmark_series_count=len(period_series.benchmark_decimal),
-        aligned_benchmark_series_count=aligned_benchmark_series_count,
+        aligned_benchmark_series_count=aggregate.aligned_benchmark_series_count,
         risk_free_series_count=len(period_series.risk_free_decimal),
-        aligned_risk_free_series_count=aligned_risk_free_series_count,
+        aligned_risk_free_series_count=aggregate.aligned_risk_free_series_count,
         window_lengths_requested=list(options.window_lengths),
         window_count_requested=len(options.window_lengths),
-        window_lengths_emitted=[result.window_length for result in window_results],
-        window_count_emitted=len(window_results),
+        window_lengths_emitted=[result.window_length for result in aggregate.window_results],
+        window_count_emitted=len(aggregate.window_results),
         benchmark_context=_benchmark_context(
             requested_metrics,
             len(period_series.benchmark_decimal),
-            aligned_benchmark_series_count,
+            aggregate.aligned_benchmark_series_count,
         ),
         risk_free_context=_risk_free_context(
             requested_metrics,
             len(period_series.risk_free_decimal),
-            aligned_risk_free_series_count,
+            aggregate.aligned_risk_free_series_count,
         ),
-        window_results=window_results,
-        quality_flags=sorted(period_flags),
+        window_results=aggregate.window_results,
+        quality_flags=sorted(aggregate.quality_flags),
         error=None,
     )
 
