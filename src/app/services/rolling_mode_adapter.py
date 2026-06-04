@@ -72,6 +72,17 @@ class _StatefulSourceResponses:
     risk_free_response: dict[str, Any] | None
 
 
+@dataclass(frozen=True)
+class _ResolvedStatefulRollingInputs:
+    stateful: RollingStatefulInput
+    include_risk_free: bool
+    source_payload: dict[str, Any]
+    risk_free_request: dict[str, Any] | None
+    portfolio_points: list[ReturnPoint]
+    benchmark_points: list[ReturnPoint]
+    risk_free_points: list[ReturnPoint]
+
+
 def _copy_int_detail(
     details: dict[str, Any],
     *,
@@ -432,13 +443,13 @@ def _attach_stateful_lineage(
     return response
 
 
-async def calculate_rolling_metrics_stateful(
+async def _resolve_stateful_rolling_inputs(
     stateful: RollingStatefulInput,
     *,
     performance_client: LotusPerformanceClientProtocol,
     core_client: LotusCoreClientProtocol | None = None,
     correlation_id: str | None,
-) -> RollingResponse:
+) -> _ResolvedStatefulRollingInputs:
     include_risk_free = _requires_risk_free(stateful)
     resolved_reporting_currency = await _resolve_reporting_currency(
         stateful=stateful,
@@ -481,17 +492,40 @@ async def calculate_rolling_metrics_stateful(
         portfolio_points=portfolio_points,
         correlation_id=correlation_id,
     )
-
-    stateless = _build_stateless_request(
-        stateful,
+    return _ResolvedStatefulRollingInputs(
+        stateful=stateful,
+        include_risk_free=include_risk_free,
+        source_payload=source_responses.source_payload,
+        risk_free_request=risk_free_request,
         portfolio_points=portfolio_points,
         benchmark_points=benchmark_points,
         risk_free_points=risk_free_points,
     )
+
+
+async def calculate_rolling_metrics_stateful(
+    stateful: RollingStatefulInput,
+    *,
+    performance_client: LotusPerformanceClientProtocol,
+    core_client: LotusCoreClientProtocol | None = None,
+    correlation_id: str | None,
+) -> RollingResponse:
+    resolved_inputs = await _resolve_stateful_rolling_inputs(
+        stateful,
+        performance_client=performance_client,
+        core_client=core_client,
+        correlation_id=correlation_id,
+    )
+    stateless = _build_stateless_request(
+        resolved_inputs.stateful,
+        portfolio_points=resolved_inputs.portfolio_points,
+        benchmark_points=resolved_inputs.benchmark_points,
+        risk_free_points=resolved_inputs.risk_free_points,
+    )
     response = calculate_rolling_metrics(stateless, input_mode=RollingInputMode.STATEFUL)
     return _attach_stateful_lineage(
         response,
-        include_risk_free=include_risk_free,
-        source_payload=source_responses.source_payload,
-        risk_free_request=risk_free_request,
+        include_risk_free=resolved_inputs.include_risk_free,
+        source_payload=resolved_inputs.source_payload,
+        risk_free_request=resolved_inputs.risk_free_request,
     )
