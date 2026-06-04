@@ -10,8 +10,8 @@ documentation posture, and validation gates. It is not a completion claim.
 
 ## Code Size Baseline
 
-- Python source files under `src/`: 60
-- Python test files under `tests/`: 77
+- Python source files under `src/`: 61
+- Python test files under `tests/`: 78
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
 
 ### Largest Python Files
@@ -77,9 +77,9 @@ documentation posture, and validation gates. It is not a completion claim.
 
 ## Current Architectural Findings
 
-1. `src/app/main.py` is now the FastAPI app composition module. It owns app construction,
-   middleware registration, and router registration only. Standard OpenAPI error metadata
-   and exception-handler registration now live in `src/app/api_errors.py`; health, readiness,
+1. `src/app/main.py` now preserves the stable ASGI export while `src/app/app_factory.py` owns
+   FastAPI app construction, middleware registration, exception-handler registration, and router
+   registration. Standard OpenAPI error metadata now lives in `src/app/api_errors.py`; health, readiness,
    metrics, operational diagnostics, trust telemetry, and capability publication now live in
    `src/app/routers/operational.py`; stateless source-product endpoints now live in
    `src/app/routers/source_products.py`; the primary risk calculation endpoint now lives in
@@ -137,19 +137,19 @@ operations, and supported features. Initial pages are added in this slice.
 - Unit test collection: passed
 
 ```text
+tests/unit/test_app_factory.py::test_create_app_builds_independent_service_instance
+tests/unit/test_app_factory.py::test_create_app_registers_risk_analytics_routes
 tests/unit/test_app_runtime.py::test_override_app_runtime_restores_clients_and_classes_after_exit
 tests/unit/test_app_runtime.py::test_override_app_runtime_restores_state_after_exception
 tests/unit/test_attribution_contract.py::test_attribution_contract_accepts_stateless_payload
 tests/unit/test_attribution_contract.py::test_attribution_contract_requires_stateless_input
-tests/unit/test_attribution_contract.py::test_attribution_contract_requires_stateful_input
-tests/unit/test_attribution_contract.py::test_attribution_contract_rejects_simulation_mode_from_public_contract
 ...
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc0-504-UPSTREAM_TIMEOUT-timeout]
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc1-503-UPSTREAM_UNAVAILABLE-transport]
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-369 tests collected in 3.00s
+371 tests collected in 3.38s
 ```
 - Import-linter report-only: reported exit 127
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -100,6 +101,13 @@ def command_status(command: list[str]) -> str:
     return f"{status}\n\n```text\n{excerpt}\n```"
 
 
+def collected_test_count(evidence: str) -> str:
+    match = re.search(r"(\d+) tests collected", evidence)
+    if match is None:
+        return "unknown"
+    return match.group(1)
+
+
 def markdown_table(headers: tuple[str, ...], rows: list[tuple[object, ...]]) -> str:
     lines = [
         "| " + " | ".join(headers) + " |",
@@ -109,7 +117,11 @@ def markdown_table(headers: tuple[str, ...], rows: list[tuple[object, ...]]) -> 
     return "\n".join(lines)
 
 
-def write_baseline_report(file_sizes: list[FileSize], symbol_sizes: list[SymbolSize]) -> None:
+def write_baseline_report(
+    file_sizes: list[FileSize],
+    symbol_sizes: list[SymbolSize],
+    unit_collection_evidence: str,
+) -> None:
     route_count = count_route_decorators()
     text = f"""# Lotus Risk Enterprise Refactor Baseline
 
@@ -148,9 +160,9 @@ documentation posture, and validation gates. It is not a completion claim.
 
 ## Current Architectural Findings
 
-1. `src/app/main.py` is now the FastAPI app composition module. It owns app construction,
-   middleware registration, and router registration only. Standard OpenAPI error metadata
-   and exception-handler registration now live in `src/app/api_errors.py`; health, readiness,
+1. `src/app/main.py` now preserves the stable ASGI export while `src/app/app_factory.py` owns
+   FastAPI app construction, middleware registration, exception-handler registration, and router
+   registration. Standard OpenAPI error metadata now lives in `src/app/api_errors.py`; health, readiness,
    metrics, operational diagnostics, trust telemetry, and capability publication now live in
    `src/app/routers/operational.py`; stateless source-product endpoints now live in
    `src/app/routers/source_products.py`; the primary risk calculation endpoint now lives in
@@ -205,14 +217,19 @@ operations, and supported features. Initial pages are added in this slice.
 
 ## Validation Snapshot
 
-- Unit test collection: {command_status(["python", "-m", "pytest", "tests/unit", "--collect-only", "-q"])}
+- Unit test collection: {unit_collection_evidence}
 - Import-linter report-only: {command_status(["lint-imports", "--config", ".importlinter"])}
 """
     (QUALITY_DIR / "baseline_report.md").write_text(text, encoding="utf-8")
 
 
-def write_health_reports(file_sizes: list[FileSize], symbol_sizes: list[SymbolSize]) -> None:
+def write_health_reports(
+    file_sizes: list[FileSize],
+    symbol_sizes: list[SymbolSize],
+    unit_collection_evidence: str,
+) -> None:
     main_lines = next(item.lines for item in file_sizes if item.path == "src/app/main.py")
+    unit_tests_collected = collected_test_count(unit_collection_evidence)
     scorecard = f"""# Lotus Risk Quality Scorecard
 
 | Dimension | Current posture | Refactor target |
@@ -221,7 +238,7 @@ def write_health_reports(file_sizes: list[FileSize], symbol_sizes: list[SymbolSi
 | Service boundaries | Calculation engines are under `src/app/services` | Keep business logic out of routers and middleware |
 | Architecture enforcement | `.importlinter` report-only contracts added | Promote to CI gate after router extraction |
 | OpenAPI governance | Existing repo gate plus Spectral config added | Standardize operation IDs and generated OpenAPI lint |
-| Tests | {len(_python_files(TESTS_DIR))} Python test files; 369 unit tests collect | Add route-boundary and governance regression tests per slice |
+| Tests | {len(_python_files(TESTS_DIR))} Python test files; {unit_tests_collected} unit tests collect | Add route-boundary and governance regression tests per slice |
 | Security | pip-audit gate exists; Bandit configured | Add report-only Bandit evidence, then enforce new regressions |
 | Observability | Metrics/correlation support exists | Consolidate runbook and dashboard/alert evidence |
 """
@@ -312,8 +329,11 @@ def main() -> int:
     QUALITY_DIR.mkdir(exist_ok=True)
     file_sizes = collect_file_sizes()
     symbol_sizes = collect_symbol_sizes()
-    write_baseline_report(file_sizes, symbol_sizes)
-    write_health_reports(file_sizes, symbol_sizes)
+    unit_collection_evidence = command_status(
+        ["python", "-m", "pytest", "tests/unit", "--collect-only", "-q"]
+    )
+    write_baseline_report(file_sizes, symbol_sizes, unit_collection_evidence)
+    write_health_reports(file_sizes, symbol_sizes, unit_collection_evidence)
     write_rules()
     return 0
 
