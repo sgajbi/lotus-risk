@@ -15,6 +15,9 @@ Risk APIs must remain explicit, version-aware, documented, and domain-correct.
 
 ## Current Gates
 
-The repo already runs OpenAPI quality, API vocabulary, no-alias, type, lint, security, and test
-gates through `Makefile`. `.spectral.yaml` is present as report-only OpenAPI governance scaffolding
-until generated OpenAPI export is standardized for CI.
+The repo runs OpenAPI quality, API vocabulary, no-alias, type, lint, security, and test gates
+through `Makefile`. `make openapi-gate` evaluates the generated FastAPI OpenAPI schema and fails
+missing summaries, descriptions, tags, operation IDs, success/error responses, JSON request
+examples for mutation endpoints, schema field descriptions/examples, and duplicate operation IDs.
+`.spectral.yaml` remains secondary lint scaffolding until generated Spectral artifact export is
+standardized for CI.

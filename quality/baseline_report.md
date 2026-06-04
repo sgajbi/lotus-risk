@@ -11,7 +11,7 @@ documentation posture, and validation gates. It is not a completion claim.
 ## Code Size Baseline
 
 - Python source files under `src/`: 83
-- Python test files under `tests/`: 85
+- Python test files under `tests/`: 86
 - Python packages under `src/`: 9
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
 
@@ -73,8 +73,11 @@ documentation posture, and validation gates. It is not a completion claim.
 - pip-audit: enforced through `make security-audit`.
 - Bandit, radon, vulture, deptry, and import-linter are now declared as development
   tooling for progressive quality evidence.
-- Spectral config is present for OpenAPI governance; CI is report-only until generated OpenAPI
-  export is standardized for this repository.
+- The repo-native OpenAPI quality gate enforces endpoint summaries, descriptions, tags,
+  operation IDs, success and error responses, JSON mutation request examples, schema field
+  descriptions, schema field examples, and duplicate operation ID detection.
+- Spectral config is present as a secondary lint scaffold; generated Spectral artifact export
+  remains report-only until standardized for this repository.
 
 ## Static Quality Snapshot
 
@@ -86,29 +89,29 @@ All checks passed!
 - Ruff format check: passed
 
 ```text
-181 files already formatted
+182 files already formatted
 ```
 - Type checking: passed
 
 ```text
-Success: no issues found in 168 source files
+Success: no issues found in 169 source files
 ```
 - Unit coverage snapshot: passed
 
 ```text
 ........................................................................ [ 16%]
 ........................................................................ [ 33%]
-........................................................................ [ 50%]
+........................................................................ [ 49%]
 ........................................................................ [ 66%]
-........................................................................ [ 83%]
-.......................................................................  [100%]
+........................................................................ [ 82%]
+........................................................................ [ 99%]
 ...
 src\app\upstream_errors.py                              55      0     20      3    96%   181->194, 187->189, 192->194
 ------------------------------------------------------------------------------------------------
 TOTAL                                                 4578     84    986     85    97%
 
 51 files skipped due to complete coverage.
-431 passed in 7.94s
+434 passed in 9.91s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -178,9 +181,10 @@ Known vulnerabilities: 0
 
 ## OpenAPI And API Governance Gaps
 
-1. Current OpenAPI operations define explicit operation IDs in route decorators, with a contract
-   test preserving uniqueness and stable names.
-2. Current POST operations publish request-body examples backed by Pydantic request-model validation.
+1. Current OpenAPI operations define explicit operation IDs in route decorators, and the
+   repo-native OpenAPI quality gate fails missing or duplicate operation IDs.
+2. Current POST operations publish JSON request-body examples backed by Pydantic request-model
+   validation, and the OpenAPI quality gate fails missing JSON mutation examples.
 3. Pagination/filtering/sorting governance is not broadly applicable to calculation POST endpoints,
    but any future list/read-model route must use an explicit shared contract.
 4. Health, liveness, readiness, metadata, metrics, and ops endpoints exist and are documented, but
@@ -231,7 +235,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-431 tests collected in 1.57s
+434 tests collected in 2.05s
 ```
 - Import-linter report-only: passed
 

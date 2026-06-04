@@ -182,8 +182,11 @@ documentation posture, and validation gates. It is not a completion claim.
 - pip-audit: enforced through `make security-audit`.
 - Bandit, radon, vulture, deptry, and import-linter are now declared as development
   tooling for progressive quality evidence.
-- Spectral config is present for OpenAPI governance; CI is report-only until generated OpenAPI
-  export is standardized for this repository.
+- The repo-native OpenAPI quality gate enforces endpoint summaries, descriptions, tags,
+  operation IDs, success and error responses, JSON mutation request examples, schema field
+  descriptions, schema field examples, and duplicate operation ID detection.
+- Spectral config is present as a secondary lint scaffold; generated Spectral artifact export
+  remains report-only until standardized for this repository.
 
 ## Static Quality Snapshot
 
@@ -232,9 +235,10 @@ documentation posture, and validation gates. It is not a completion claim.
 
 ## OpenAPI And API Governance Gaps
 
-1. Current OpenAPI operations define explicit operation IDs in route decorators, with a contract
-   test preserving uniqueness and stable names.
-2. Current POST operations publish request-body examples backed by Pydantic request-model validation.
+1. Current OpenAPI operations define explicit operation IDs in route decorators, and the
+   repo-native OpenAPI quality gate fails missing or duplicate operation IDs.
+2. Current POST operations publish JSON request-body examples backed by Pydantic request-model
+   validation, and the OpenAPI quality gate fails missing JSON mutation examples.
 3. Pagination/filtering/sorting governance is not broadly applicable to calculation POST endpoints,
    but any future list/read-model route must use an explicit shared contract.
 4. Health, liveness, readiness, metadata, metrics, and ops endpoints exist and are documented, but
@@ -287,15 +291,33 @@ def write_health_reports(
     largest_function = largest_functions[0]
     scorecard = f"""# Lotus Risk Quality Scorecard
 
-| Dimension | Current posture | Refactor target |
-| --- | --- | --- |
-| API modularity | `src/app/main.py` is {main_lines} lines with app construction delegated to `app_factory` | Keep routers modular and prevent API-entry-point regression |
-| Service boundaries | Calculation engines are under `src/app/services` | Keep business logic out of routers and middleware |
-| Architecture enforcement | `.importlinter` contracts are available through `make architecture-gate` | Keep contracts green and extend boundaries as modules mature |
-| OpenAPI governance | Existing repo gate plus `.spectral.yaml` governance config | Standardize generated OpenAPI lint in CI |
-| Tests | {len(_python_files(TESTS_DIR))} Python test files; {unit_tests_collected} unit tests collect | Add route-boundary and governance regression tests per slice |
-| Security | pip-audit and Bandit are enforced through `make security-audit` | Add targeted negative/security tests for abuse and error leakage |
-| Observability | Metrics/correlation support exists | Consolidate runbook and dashboard/alert evidence |
+This scorecard tracks measurable movement from the enterprise refactor baseline
+introduced in commit `3254774` to the current feature branch state. It is
+evidence for PR readiness, not a completion claim.
+
+| Dimension | Baseline evidence | Current evidence | Improvement shown | Remaining target |
+| --- | --- | --- | --- | --- |
+| API modularity | `src/app/main.py` had 22 route/middleware/handler decorators and 980 lines | `src/app/main.py` has 0 route/middleware/handler decorators and {main_lines} lines | App construction, routers, middleware, errors, and downstream dependency resolution are split into modules | Keep router boundaries green and prevent app-entry-point regression |
+| Code size | Largest files included `src/app/services/concentration_engine.py` at 981 lines and `src/app/main.py` at 980 lines | Largest source files are contract/service modules; no source file over 800 lines after the latest baseline | Monolithic API and concentration service files were split; contract example payloads were extracted | Continue reducing service hotspots over 600 lines |
+| Largest behavior units | Largest function/class included `calculate_risk` at 284 lines, `calculate_rolling_metrics` at 230 lines, and `LotusPerformanceClient` at 256 lines | Largest remaining function is `{largest_function.name}` at {largest_function.lines} lines; `LotusPerformanceClient` is 113 lines | Large engines and clients were decomposed into helpers, services, routers, and polling/parsing functions | Continue reducing engine-level orchestration hotspots |
+| Complexity | Baseline reported C-or-worse candidates across large service, contract, and readiness code | Current baseline reports no C-or-worse candidates in the complexity snapshot | C-level candidates in concentration parsing, risk period resolution, rolling/attribution validation, and enterprise authorization were removed | Keep radon report-only evidence clean while thresholds are tightened |
+| Architecture enforcement | Import-linter, architecture docs, and quality workflow were introduced as report-only baseline | `make architecture-gate` is green locally and in feature-lane CI | Architecture boundary checks are now part of routine slice validation | Extend contracts as service boundaries mature |
+| OpenAPI governance | Operation IDs were not visibly standardized; route-level examples needed certification after router extraction | Operation IDs are explicit; JSON mutation request examples are modularized and enforced by `make openapi-gate` against the generated schema | OpenAPI metadata is easier to review, no longer buried in large contract classes, and now fails missing operation IDs/request examples in CI lanes | Standardize secondary Spectral lint artifact export before final PR |
+| Tests | 77 Python test files at initial baseline; repo-native coverage gate existed | {len(_python_files(TESTS_DIR))} Python test files; {unit_tests_collected} tests collected in the latest baseline; OpenAPI gate logic has focused regression tests | Focused unit/integration coverage protects router, client, contract, middleware, service, and OpenAPI-governance refactors | Add more negative/security contract certification tests |
+| Security | Enterprise audit middleware, redaction tests, and upstream error mapping existed; abuse-control evidence was still a gap | Authorization checks are decomposed and covered by enterprise-readiness tests; Bandit and pip-audit remain green in baseline | Security behavior is easier to inspect and test without changing enforcement semantics | Add explicit threat-model and abuse-control evidence before final PR |
+| Observability | HTTP, endpoint execution, supportability, freshness metrics, and correlation existed but needed consolidated docs | Observability docs exist and endpoint/upstream metrics remain covered by tests and baseline validation | Metrics/correlation posture is preserved through router and client decomposition | Add dashboard/alert evidence or governed no-dashboard decision |
+| Documentation and PR evidence | Baseline/reporting foundation was introduced with architecture, security, observability, runbook, wiki, and quality docs | `baseline_report.md`, `refactor_health_report.md`, and this scorecard are updated with current measured movement | Refactor progress is now auditable from generated reports and branch history | Final PR must summarize commands, CI, risks, and follow-up backlog |
+
+## Current Gate Snapshot
+
+- Local feature-lane checks used across recent slices: focused pytest packs,
+  `make typecheck`, `make lint`, `make architecture-gate`, targeted `radon cc`,
+  and `make quality-baseline`.
+- GitHub checks are pushed after each slice and reviewed asynchronously:
+  `Quality Baseline` and `Remote Feature Lane`.
+- The latest baseline keeps the progressive gate posture report-only where
+  thresholds are not final; generated OpenAPI schema governance is actively
+  enforced through `make openapi-gate`.
 """
     (QUALITY_DIR / "quality_scorecard.md").write_text(scorecard, encoding="utf-8")
 
@@ -303,7 +325,11 @@ def write_health_reports(
 
 ## Current Slice
 
-This slice establishes the report-only enterprise quality baseline and progressive gate scaffolding.
+The branch has moved beyond report-only scaffolding into measured modularity,
+contract-size, client-boundary, complexity reduction, and generated OpenAPI
+schema certification. The current baseline shows no C-or-worse complexity
+candidates, while GitHub feature-lane checks are being used asynchronously
+after each pushed slice.
 
 ## Highest Priority Refactor Targets
 
@@ -313,21 +339,33 @@ This slice establishes the report-only enterprise quality baseline and progressi
             [
                 (
                     1,
-                    "Contract model size",
-                    "Largest files are API contract modules over 800 lines",
-                    "Split reusable examples, metadata, and nested contract fragments where it improves readability",
+                    "Service module size",
+                    "Largest remaining source modules include `rolling_engine.py`, `concentration/resolvers.py`, `drawdown_engine.py`, and `attribution_engine.py`",
+                    "Continue extracting cohesive orchestration, response-building, and dependency-resolution helpers with characterization tests",
                 ),
                 (
                     2,
-                    "Largest remaining function",
-                    f"{largest_function.name} has {largest_function.lines} lines",
-                    "Extract focused helpers around the next service hotspot while preserving behavior with characterization tests",
+                    "Contract module size",
+                    "Contract modules are improved but `concentration.py`, `rolling.py`, `risk.py`, and `drawdown.py` remain prominent source files",
+                    "Split reusable metadata or nested contract fragments only where it improves reviewability",
                 ),
                 (
                     3,
-                    "Concentration service boundaries",
-                    "Simulation/stateless resolvers and response assembly remain the largest service areas",
-                    "Tighten ports, source resolution, issuer aggregation, and response assembly boundaries",
+                    "OpenAPI and certification evidence",
+                    "`make openapi-gate` now evaluates the generated FastAPI schema and fails missing operation IDs, duplicate operation IDs, missing endpoint docs/responses, missing JSON mutation examples, and missing schema field metadata",
+                    "Standardize secondary Spectral artifact export/lint evidence before final PR readiness",
+                ),
+                (
+                    4,
+                    "Security and abuse-control evidence",
+                    "Authorization, audit, redaction, Bandit, and pip-audit are covered; explicit threat-model/abuse-control evidence is still incomplete",
+                    "Add focused negative tests and document remaining governed risks",
+                ),
+                (
+                    5,
+                    "Observability operations evidence",
+                    "Metrics/correlation support and docs exist; dashboard/alert proof is still not final",
+                    "Add alert/dashboard evidence or a governed no-dashboard decision with runbook linkage",
                 ),
             ],
         )
@@ -335,10 +373,16 @@ This slice establishes the report-only enterprise quality baseline and progressi
 
 ## Progressive Gate Posture
 
-1. Baseline/report-only: active in this slice.
-2. Fail only new regressions: next stage after baseline artifacts are stable.
-3. Enforce agreed thresholds: after monolithic routers and largest engines are reduced.
-4. Enterprise-readiness gates: final stage once API, security, observability, and docs are certified.
+1. Baseline/report-only: implemented and refreshed per slice.
+2. Fail only new regressions: partially active through lint, typecheck,
+   architecture gate, monetary-float guard, OpenAPI gate, focused tests, and
+   GitHub feature lane checks.
+3. Enforce agreed thresholds: not complete; complexity is clean and OpenAPI
+   generation is actively gated, but file-size, secondary Spectral lint,
+   security, and observability thresholds still need final policy.
+4. Enterprise-readiness gates: not complete; final PR still needs healthy CI,
+   OpenAPI/security/observability certification evidence, risks, and follow-up
+   backlog.
 """
     (QUALITY_DIR / "refactor_health_report.md").write_text(health, encoding="utf-8")
 
@@ -366,7 +410,8 @@ def write_rules() -> None:
         """# Lotus Risk API Governance Rules
 
 1. Every endpoint must define summary, description, tags, response model, operation ID, examples,
-   and standard error responses.
+   and standard error responses; the OpenAPI quality gate must fail missing operation IDs and
+   missing JSON request examples for mutation endpoints.
 2. POST calculation endpoints must document input mode, source ownership, lineage, supportability,
    and failure semantics.
 3. Any list endpoint must use consistent pagination, filtering, and sorting contracts before
@@ -403,7 +448,7 @@ Generated by `python scripts/generate_quality_baseline.py`.
 | Monetary float guard | `make monetary-float-guard` | Feature Lane |
 | No-alias contract guard | `make no-alias-gate` | Feature Lane |
 | Type checking | `make typecheck` | Feature Lane |
-| OpenAPI quality | `make openapi-gate` | Feature Lane |
+| OpenAPI quality | `make openapi-gate` | Feature Lane / PR Merge Gate / Main Releasability |
 | API vocabulary | `make api-vocabulary-gate` | Feature Lane |
 | Domain data products | `make domain-data-product-gate` | Feature Lane / PR Merge Gate |
 | Unit tests | `make test-unit` | Feature Lane |
@@ -420,7 +465,7 @@ Generated by `python scripts/generate_quality_baseline.py`.
 | Tool family | Current evidence | Promotion target |
 | --- | --- | --- |
 | Import-linter | `.importlinter` contracts run through the active Python interpreter in report-only baseline evidence | Promote to CI enforcement once current contracts are green |
-| Spectral | `.spectral.yaml` exists for OpenAPI governance | Enforce against generated OpenAPI artifact |
+| Spectral | `.spectral.yaml` exists as secondary OpenAPI lint scaffolding | Enforce against generated OpenAPI artifact |
 | Complexity and maintainability | Largest files/functions are reported in `quality/baseline_report.md` | Add radon/xenon thresholds after extraction reduces known hotspots |
 | Dead-code candidates | `vulture` is declared as dev tooling | Add report-only evidence, then regression gating |
 | Dependency hygiene | `deptry` is declared as dev tooling | Add report-only evidence, then regression gating |
