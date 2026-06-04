@@ -1,0 +1,248 @@
+{
+  "contract_id": "lotus-risk:observability-monitoring:v1",
+  "contract_version": "1.0.0",
+  "service": "lotus-risk",
+  "owner_repository": "lotus-risk",
+  "status": "active",
+  "purpose": "Govern the implemented monitoring surface for risk analytics without exposing identifiers and request/response payload fields.",
+  "no_sensitive_telemetry_policy": {
+    "forbidden_label_values": [
+      "portfolio_id",
+      "account_id",
+      "client_id",
+      "instrument_id",
+      "request_hash",
+      "idempotency_key",
+      "correlation_id",
+      "run_id",
+      "actor_id",
+      "raw_error"
+    ],
+    "label_cardinality_posture": "bounded_allowlist_only"
+  },
+  "metrics": [
+    {
+      "name": "lotus_risk_endpoint_executions_total",
+      "type": "counter",
+      "description": "Counts endpoint executions by endpoint, input mode, and outcome.",
+      "labels": {
+        "endpoint": [
+          "risk/calculate",
+          "drawdown",
+          "rolling-metrics",
+          "historical-attribution",
+          "concentration",
+          "mandate-risk-health-context",
+          "regime-scenario-pack",
+          "risk-event-cohort",
+          "unknown"
+        ],
+        "input_mode": [
+          "stateless",
+          "stateful",
+          "simulation",
+          "unknown"
+        ],
+        "outcome": [
+          "success",
+          "failure"
+        ]
+      },
+      "source": "app.observability.record_endpoint_execution"
+    },
+    {
+      "name": "lotus_risk_upstream_requests_total",
+      "type": "counter",
+      "description": "Counts upstream dependency request outcomes by dependency, operation, outcome, and category.",
+      "labels": {
+        "dependency": [
+          "lotus-core",
+          "lotus-performance"
+        ],
+        "operation": [
+          "/query/portfolio-state",
+          "/query/portfolio/portfolio-state",
+          "/integration/returns/series",
+          "/integration/returns/async",
+          "/integration/returns/poll",
+          "/integration/returns/status",
+          "unknown"
+        ],
+        "outcome": [
+          "success",
+          "failure"
+        ],
+        "category": [
+          "ok",
+          "invalid_response",
+          "data_gap",
+          "throttled",
+          "upstream_failure",
+          "rejected_request",
+          "timeout",
+          "transport"
+        ]
+      },
+      "source": "app.observability.record_upstream_request"
+    },
+    {
+      "name": "lotus_risk_calculation_supportability_total",
+      "type": "counter",
+      "description": "Counts risk calculation supportability signals by bounded operation and state.",
+      "labels": {
+        "operation": [
+          "risk/calculate",
+          "drawdown",
+          "rolling-metrics",
+          "historical-attribution",
+          "concentration",
+          "mandate-risk-health-context",
+          "regime-scenario-pack",
+          "risk-event-cohort",
+          "unknown"
+        ],
+        "supportability_state": [
+          "ready",
+          "stale",
+          "degraded",
+          "empty",
+          "error",
+          "permission_blocked",
+          "unsupported"
+        ],
+        "reason": [
+          "calculation_complete",
+          "benchmark_unavailable",
+          "calculation_quality_issue",
+          "insufficient_aligned_observations",
+          "insufficient_observations",
+          "no_return_observations",
+          "permission_blocked",
+          "stale_source_observations",
+          "unsupported_input_mode",
+          "unknown"
+        ],
+        "freshness_bucket": [
+          "current",
+          "same_day",
+          "stale",
+          "unknown"
+        ]
+      },
+      "source": "app.observability.record_calculation_supportability"
+    },
+    {
+      "name": "lotus_analytics_freshness_bucket_total",
+      "type": "counter",
+      "description": "Counts risk freshness posture by service and operational operation.",
+      "labels": {
+        "service": [
+          "lotus-risk"
+        ],
+        "operation": [
+          "risk/calculate",
+          "drawdown",
+          "rolling-metrics",
+          "historical-attribution",
+          "concentration",
+          "mandate-risk-health-context",
+          "regime-scenario-pack",
+          "risk-event-cohort",
+          "unknown"
+        ],
+        "freshness_bucket": [
+          "current",
+          "same_day",
+          "stale",
+          "unknown"
+        ],
+        "supportability_state": [
+          "ready",
+          "stale",
+          "degraded",
+          "empty",
+          "error",
+          "permission_blocked",
+          "unsupported"
+        ]
+      },
+      "source": "app.observability.record_analytics_freshness_bucket"
+    },
+    {
+      "name": "http_requests_total",
+      "type": "counter",
+      "description": "Counts HTTP requests by route handler, method, and status class.",
+      "labels": {
+        "handler": [
+          "/ops",
+          "/ops/trust-telemetry",
+          "/health",
+          "/health/live",
+          "/health/ready",
+          "/metadata",
+          "/metrics",
+          "/analytics/risk/calculate",
+          "/analytics/risk/drawdown",
+          "/analytics/risk/rolling-metrics",
+          "/analytics/risk/historical-attribution",
+          "/analytics/risk/concentration",
+          "/analytics/risk/mandate-health-context",
+          "/analytics/risk/regime-scenario-pack/evaluate",
+          "/analytics/risk/risk-event-cohorts/evaluate"
+        ],
+        "method": [
+          "GET",
+          "POST",
+          "PUT",
+          "DELETE",
+          "OPTIONS"
+        ],
+        "status": [
+          "1xx",
+          "2xx",
+          "3xx",
+          "4xx",
+          "5xx"
+        ]
+      },
+      "source": "app.observability.record_http_request"
+    }
+  ],
+  "dashboards": [
+    {
+      "dashboard_id": "lotus-risk-observability-overview",
+      "audience": ["operations", "engineering", "platform-governance"],
+      "panels": [
+        {
+          "panel_id": "risk-endpoint-success-rate",
+          "title": "Risk Endpoint Success and Failure",
+          "metric": "lotus_risk_endpoint_executions_total",
+          "query": "sum by (endpoint, outcome) (rate(lotus_risk_endpoint_executions_total[5m]))",
+          "use_when": "Monitor endpoint execution stability, including stateless/stateful failure posture."
+        },
+        {
+          "panel_id": "risk-upstream-outcome-breakdown",
+          "title": "Upstream Dependency Outcomes",
+          "metric": "lotus_risk_upstream_requests_total",
+          "query": "sum by (dependency, outcome, category) (rate(lotus_risk_upstream_requests_total[5m]))",
+          "use_when": "Detect upstream dependency instability before it flows into degraded risk supportability."
+        },
+        {
+          "panel_id": "risk-calculation-supportability",
+          "title": "Calculation Supportability Trend",
+          "metric": "lotus_risk_calculation_supportability_total",
+          "query": "sum by (operation, supportability_state, reason) (rate(lotus_risk_calculation_supportability_total[5m]))",
+          "use_when": "Track calculation readiness, degradation causes, and freshness-related supportability posture."
+        },
+        {
+          "panel_id": "risk-http-status-overview",
+          "title": "HTTP Status Class by Handler",
+          "metric": "http_requests_total",
+          "query": "sum by (handler, status) (rate(http_requests_total[5m]))",
+          "use_when": "Validate service exposure stability and surface-level request mix."
+        }
+      ]
+    }
+  ],
+  "alerts": []
+}
