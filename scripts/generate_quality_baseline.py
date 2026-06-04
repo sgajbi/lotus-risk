@@ -274,8 +274,8 @@ documentation posture, and validation gates. It is not a completion claim.
 
 The repository has domain-methodology documentation, domain API pages, and consolidated enterprise
 pages for architecture, API governance, observability, security, operations, and supported
-features. Final PR packaging still needs the merged evidence summary, risk register, and follow-up
-backlog.
+features. Draft PR packaging now lives in `quality/final_pr_readiness.md`; final PR creation still
+needs current CI status, generated OpenAPI artifact evidence, and reviewer-ready command output.
 
 ## Validation Snapshot
 
@@ -311,7 +311,7 @@ evidence for PR readiness, not a completion claim.
 | Tests | 77 Python test files at initial baseline; repo-native coverage gate existed | {len(_python_files(TESTS_DIR))} Python test files; {unit_tests_collected} tests collected in the latest baseline; OpenAPI gate logic has focused regression tests | Focused unit/integration coverage protects router, client, contract, middleware, service, and OpenAPI-governance refactors | Add more negative/security contract certification tests |
 | Security | Enterprise audit middleware, redaction tests, and upstream error mapping existed; abuse-control evidence was still a gap | Authorization checks are decomposed and covered by enterprise-readiness tests; threat-model/abuse-control evidence is pinned in `docs/security-threat-model.md`; bank deployment policy is pinned in `docs/security-deployment-policy.md`; Bandit and pip-audit remain green in baseline | Security behavior, deployment posture, and abuse controls are easier to inspect and test without changing local-development semantics | Add gateway-backed token-validation evidence and final runtime configuration proof before release promotion |
 | Observability | HTTP, endpoint execution, supportability, freshness metrics, and correlation existed but needed consolidated docs | Observability docs, dashboard panels, alert definitions, runbook anchors, and endpoint/upstream metrics are covered by tests and baseline validation | Metrics/correlation posture is preserved through router and client decomposition, and operator response evidence is now governed | Keep alert thresholds aligned with production telemetry after deployment |
-| Documentation and PR evidence | Baseline/reporting foundation was introduced with architecture, security, observability, runbook, wiki, and quality docs | `baseline_report.md`, `refactor_health_report.md`, and this scorecard are updated with current measured movement | Refactor progress is now auditable from generated reports and branch history | Final PR must summarize commands, CI, risks, and follow-up backlog |
+| Documentation and PR evidence | Baseline/reporting foundation was introduced with architecture, security, observability, runbook, wiki, and quality docs | `baseline_report.md`, `refactor_health_report.md`, `quality_scorecard.md`, and `final_pr_readiness.md` are updated with current measured movement and PR assembly evidence | Refactor progress is now auditable from generated reports and branch history | Final PR must attach current generated artifacts, CI status, and command evidence |
 
 ## Current Gate Snapshot
 
@@ -386,9 +386,8 @@ after each pushed slice.
    generation is actively gated, security deployment policy is documented and
    tested, and observability operations evidence is governed, but file-size
    and production telemetry thresholds still need final policy.
-4. Enterprise-readiness gates: not complete; final PR still needs healthy CI,
-   OpenAPI/security/observability certification evidence, risks, and follow-up
-   backlog.
+4. Enterprise-readiness gates: not complete; final PR still needs healthy PR
+   merge-gate CI plus current generated OpenAPI artifact and command evidence.
 """
     (QUALITY_DIR / "refactor_health_report.md").write_text(health, encoding="utf-8")
 

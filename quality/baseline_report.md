@@ -11,7 +11,7 @@ documentation posture, and validation gates. It is not a completion claim.
 ## Code Size Baseline
 
 - Python source files under `src/`: 83
-- Python test files under `tests/`: 90
+- Python test files under `tests/`: 91
 - Python packages under `src/`: 9
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
 
@@ -90,13 +90,12 @@ All checks passed!
 
 ```text
 Would reformat: scripts\generate_quality_baseline.py
-Would reformat: tests\unit\test_enterprise_deployment_policy_docs.py
-2 files would be reformatted, 185 files already formatted
+1 file would be reformatted, 187 files already formatted
 ```
 - Type checking: passed
 
 ```text
-Success: no issues found in 173 source files
+Success: no issues found in 174 source files
 ```
 - Unit coverage snapshot: passed
 
@@ -106,14 +105,14 @@ Success: no issues found in 173 source files
 ........................................................................ [ 48%]
 ........................................................................ [ 64%]
 ........................................................................ [ 80%]
-........................................................................ [ 97%]
+........................................................................ [ 96%]
 ...
 src\app\upstream_errors.py                              55      0     20      3    96%   181->194, 187->189, 192->194
 ------------------------------------------------------------------------------------------------
 TOTAL                                                 4578     84    986     85    97%
 
 51 files skipped due to complete coverage.
-445 passed in 10.13s
+447 passed in 7.13s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -222,8 +221,8 @@ Known vulnerabilities: 0
 
 The repository has domain-methodology documentation, domain API pages, and consolidated enterprise
 pages for architecture, API governance, observability, security, operations, and supported
-features. Final PR packaging still needs the merged evidence summary, risk register, and follow-up
-backlog.
+features. Draft PR packaging now lives in `quality/final_pr_readiness.md`; final PR creation still
+needs current CI status, generated OpenAPI artifact evidence, and reviewer-ready command output.
 
 ## Validation Snapshot
 
@@ -242,7 +241,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-445 tests collected in 2.44s
+447 tests collected in 1.46s
 ```
 - Import-linter report-only: passed
 

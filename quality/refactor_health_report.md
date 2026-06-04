@@ -28,6 +28,5 @@ after each pushed slice.
    generation is actively gated, security deployment policy is documented and
    tested, and observability operations evidence is governed, but file-size
    and production telemetry thresholds still need final policy.
-4. Enterprise-readiness gates: not complete; final PR still needs healthy CI,
-   OpenAPI/security/observability certification evidence, risks, and follow-up
-   backlog.
+4. Enterprise-readiness gates: not complete; final PR still needs healthy PR
+   merge-gate CI plus current generated OpenAPI artifact and command evidence.
