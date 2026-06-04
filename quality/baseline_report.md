@@ -108,7 +108,7 @@ src\app\upstream_errors.py                            55      0     20      3   
 TOTAL                                               3930    173    990    110    93%
 
 34 files skipped due to complete coverage.
-387 passed in 9.13s
+387 passed in 9.94s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -246,10 +246,22 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-387 tests collected in 2.58s
+387 tests collected in 2.25s
 ```
-- Import-linter report-only: reported exit 127
+- Import-linter report-only: passed
 
 ```text
-[WinError 2] The system cannot find the file specified
+=============
+Import Linter
+=============
+
+
+---------
+...
+Domain and service layers stay framework independent KEPT
+DTO contracts do not import infrastructure clients KEPT
+Routers do not import downstream infrastructure clients directly KEPT
+Infrastructure adapters do not depend on API entry point KEPT
+
+Contracts: 4 kept, 0 broken.
 ```
