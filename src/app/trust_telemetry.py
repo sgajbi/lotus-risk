@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Literal
+from typing import Any, Literal
 
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
@@ -16,7 +16,7 @@ from app.domain_data_products import (
     list_declared_dependencies,
     list_declared_products,
 )
-from app.ops_runtime import resolve_ops_status, resolve_readiness_status
+from app.ops_runtime import DependencyRuntimeView, resolve_ops_status, resolve_readiness_status
 
 TelemetryLifecycleStatus = Literal["active", "deprecated", "retired"]
 
@@ -398,38 +398,50 @@ def build_product_trust_telemetry_seed(
     )
 
 
-def build_declared_product_trust_telemetry_snapshot(
+def _dependency_index(
+    dependencies: list[DependencyRuntimeView],
+) -> dict[str, DependencyRuntimeView]:
+    return {dependency.service: dependency for dependency in dependencies}
+
+
+def _declared_dependency_telemetry(
     *,
-    app: FastAPI,
-    service_name: str,
-) -> DeclaredProductTrustTelemetrySnapshot:
-    _readiness_status_code, _readiness_status, dependencies = resolve_readiness_status(app)
-    dependency_index = {dependency.service: dependency for dependency in dependencies}
-    declared_dependencies = [
-        DeclaredConsumerDependencyTelemetry(
-            product_name=dependency["product_name"],
-            producer_repository=dependency["producer_repository"],
-            required_product_version=dependency["required_product_version"],
-            consumption_mode=dependency["consumption_mode"],
-            failure_posture=dependency["failure_posture"],
-            validation_lanes=list(dependency.get("validation_lanes", [])),
-            required_trust_metadata=list(dependency.get("required_trust_metadata", [])),
-            runtime_status=dependency_index[dependency["producer_repository"]].status
-            if dependency["producer_repository"] in dependency_index
-            else None,
-            runtime_detail=dependency_index[dependency["producer_repository"]].detail
-            if dependency["producer_repository"] in dependency_index
-            else None,
-            runtime_category=dependency_index[dependency["producer_repository"]].category
-            if dependency["producer_repository"] in dependency_index
-            else None,
-            runtime_issue_code=dependency_index[dependency["producer_repository"]].issue_code
-            if dependency["producer_repository"] in dependency_index
-            else None,
+    dependency: dict[str, Any],
+    dependency_index: dict[str, DependencyRuntimeView],
+) -> DeclaredConsumerDependencyTelemetry:
+    producer_repository = dependency["producer_repository"]
+    runtime_dependency = dependency_index.get(producer_repository)
+    return DeclaredConsumerDependencyTelemetry(
+        product_name=dependency["product_name"],
+        producer_repository=producer_repository,
+        required_product_version=dependency["required_product_version"],
+        consumption_mode=dependency["consumption_mode"],
+        failure_posture=dependency["failure_posture"],
+        validation_lanes=list(dependency.get("validation_lanes", [])),
+        required_trust_metadata=list(dependency.get("required_trust_metadata", [])),
+        runtime_status=runtime_dependency.status if runtime_dependency is not None else None,
+        runtime_detail=runtime_dependency.detail if runtime_dependency is not None else None,
+        runtime_category=runtime_dependency.category if runtime_dependency is not None else None,
+        runtime_issue_code=(
+            runtime_dependency.issue_code if runtime_dependency is not None else None
+        ),
+    )
+
+
+def _declared_dependency_telemetry_list(
+    dependency_index: dict[str, DependencyRuntimeView],
+) -> list[DeclaredConsumerDependencyTelemetry]:
+    return [
+        _declared_dependency_telemetry(
+            dependency=dependency,
+            dependency_index=dependency_index,
         )
         for dependency in list_declared_dependencies()
     ]
-    products = [
+
+
+def _declared_product_seeds(app: FastAPI) -> list[ProductTrustTelemetrySeed]:
+    return [
         build_product_trust_telemetry_seed(
             app=app,
             product_name=product["product_name"],
@@ -437,6 +449,13 @@ def build_declared_product_trust_telemetry_snapshot(
         )
         for product in list_declared_products()
     ]
+
+
+def _trust_telemetry_summary(
+    *,
+    products: list[ProductTrustTelemetrySeed],
+    declared_dependencies: list[DeclaredConsumerDependencyTelemetry],
+) -> TrustTelemetryReviewSummary:
     degraded_dependency_products = [
         dependency.product_name
         for dependency in declared_dependencies
@@ -454,6 +473,28 @@ def build_declared_product_trust_telemetry_snapshot(
             if dependency.runtime_status is None
         }
     )
+    return TrustTelemetryReviewSummary(
+        declared_product_count=len(products),
+        declared_dependency_count=len(declared_dependencies),
+        degraded_dependency_count=len(degraded_dependency_products),
+        unavailable_dependency_count=len(unavailable_dependency_products),
+        missing_runtime_service_count=len(missing_runtime_services),
+        degraded_dependency_products=degraded_dependency_products,
+        unavailable_dependency_products=unavailable_dependency_products,
+        missing_runtime_services=missing_runtime_services,
+    )
+
+
+def build_declared_product_trust_telemetry_snapshot(
+    *,
+    app: FastAPI,
+    service_name: str,
+) -> DeclaredProductTrustTelemetrySnapshot:
+    _readiness_status_code, _readiness_status, dependencies = resolve_readiness_status(app)
+    declared_dependencies = _declared_dependency_telemetry_list(
+        dependency_index=_dependency_index(dependencies),
+    )
+    products = _declared_product_seeds(app)
 
     return DeclaredProductTrustTelemetrySnapshot(
         service=service_name,
@@ -462,15 +503,9 @@ def build_declared_product_trust_telemetry_snapshot(
         consumer_declaration_source=REPO_RELATIVE_CONSUMER_DECLARATION_PATH.as_posix(),
         consumer_declaration_fingerprint=get_local_consumer_declaration_fingerprint(),
         declared_dependencies=declared_dependencies,
-        summary=TrustTelemetryReviewSummary(
-            declared_product_count=len(products),
-            declared_dependency_count=len(declared_dependencies),
-            degraded_dependency_count=len(degraded_dependency_products),
-            unavailable_dependency_count=len(unavailable_dependency_products),
-            missing_runtime_service_count=len(missing_runtime_services),
-            degraded_dependency_products=degraded_dependency_products,
-            unavailable_dependency_products=unavailable_dependency_products,
-            missing_runtime_services=missing_runtime_services,
+        summary=_trust_telemetry_summary(
+            products=products,
+            declared_dependencies=declared_dependencies,
         ),
         products=products,
     )

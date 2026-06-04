@@ -37,8 +37,8 @@ documentation posture, and validation gates. It is not a completion claim.
 | src/app/services/attribution_mode_adapter.py | 533 | 19091 |
 | tests/unit/test_lotus_performance_client.py | 530 | 19686 |
 | src/app/services/drawdown_engine.py | 530 | 18443 |
+| src/app/trust_telemetry.py | 511 | 21683 |
 | src/app/services/rolling_mode_adapter.py | 497 | 17121 |
-| src/app/trust_telemetry.py | 476 | 20809 |
 
 ### Largest Functions And Classes
 
@@ -105,10 +105,10 @@ Success: no issues found in 163 source files
 ...
 src\app\upstream_errors.py                              55      0     20      3    96%   181->194, 187->189, 192->194
 ------------------------------------------------------------------------------------------------
-TOTAL                                                 4392     84    990     85    97%
+TOTAL                                                 4403     84    990     85    97%
 
 45 files skipped due to complete coverage.
-431 passed in 7.84s
+431 passed in 8.03s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -118,10 +118,10 @@ TOTAL                                                 4392     84    990     85 
 ```text
 src\app\enterprise_readiness.py
     F 90:0 authorize_write_request - C (13)
-src\app\trust_telemetry.py
-    F 401:0 build_declared_product_trust_telemetry_snapshot - C (14)
 src\app\contracts\attribution.py
     C 116:0 HistoricalAttributionStatelessInput - C (11)
+src\app\contracts\rolling.py
+    C 104:0 RollingStatelessInput - C (11)
 ...
     F 188:0 _drawdown_summary - C (13)
     F 89:0 _build_episodes - C (11)
@@ -247,7 +247,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-431 tests collected in 1.75s
+431 tests collected in 1.49s
 ```
 - Import-linter report-only: passed
 
