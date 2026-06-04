@@ -2,19 +2,29 @@
 
 ## Current Slice
 
-This slice establishes the report-only enterprise quality baseline and progressive gate scaffolding.
+The branch has moved beyond report-only scaffolding into measured modularity,
+contract-size, client-boundary, and complexity reduction. The current baseline
+shows no C-or-worse complexity candidates, while GitHub feature-lane checks are
+being used asynchronously after each pushed slice.
 
 ## Highest Priority Refactor Targets
 
 | Rank | Target | Evidence | Next action |
 | --- | --- | --- | --- |
-| 1 | Contract model size | Largest files are API contract modules over 800 lines | Split reusable examples, metadata, and nested contract fragments where it improves readability |
-| 2 | Largest remaining function | _build_attribution_set has 53 lines | Extract focused helpers around the next service hotspot while preserving behavior with characterization tests |
-| 3 | Concentration service boundaries | Simulation/stateless resolvers and response assembly remain the largest service areas | Tighten ports, source resolution, issuer aggregation, and response assembly boundaries |
+| 1 | Service module size | Largest remaining source modules include `rolling_engine.py`, `concentration/resolvers.py`, `drawdown_engine.py`, and `attribution_engine.py` | Continue extracting cohesive orchestration, response-building, and dependency-resolution helpers with characterization tests |
+| 2 | Contract module size | Contract modules are improved but `concentration.py`, `rolling.py`, `risk.py`, and `drawdown.py` remain prominent source files | Split reusable metadata or nested contract fragments only where it improves reviewability |
+| 3 | OpenAPI and certification evidence | Operation IDs and examples are improved, but generated OpenAPI lint remains report-only | Standardize generated OpenAPI export/lint evidence before final PR readiness |
+| 4 | Security and abuse-control evidence | Authorization, audit, redaction, Bandit, and pip-audit are covered; explicit threat-model/abuse-control evidence is still incomplete | Add focused negative tests and document remaining governed risks |
+| 5 | Observability operations evidence | Metrics/correlation support and docs exist; dashboard/alert proof is still not final | Add alert/dashboard evidence or a governed no-dashboard decision with runbook linkage |
 
 ## Progressive Gate Posture
 
-1. Baseline/report-only: active in this slice.
-2. Fail only new regressions: next stage after baseline artifacts are stable.
-3. Enforce agreed thresholds: after monolithic routers and largest engines are reduced.
-4. Enterprise-readiness gates: final stage once API, security, observability, and docs are certified.
+1. Baseline/report-only: implemented and refreshed per slice.
+2. Fail only new regressions: partially active through lint, typecheck,
+   architecture gate, monetary-float guard, focused tests, and GitHub feature
+   lane checks.
+3. Enforce agreed thresholds: not complete; complexity is clean but file-size,
+   OpenAPI, security, and observability thresholds still need final policy.
+4. Enterprise-readiness gates: not complete; final PR still needs healthy CI,
+   OpenAPI/security/observability certification evidence, risks, and follow-up
+   backlog.

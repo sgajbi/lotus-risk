@@ -1,11 +1,28 @@
 # Lotus Risk Quality Scorecard
 
-| Dimension | Current posture | Refactor target |
-| --- | --- | --- |
-| API modularity | `src/app/main.py` is 10 lines with app construction delegated to `app_factory` | Keep routers modular and prevent API-entry-point regression |
-| Service boundaries | Calculation engines are under `src/app/services` | Keep business logic out of routers and middleware |
-| Architecture enforcement | `.importlinter` contracts are available through `make architecture-gate` | Keep contracts green and extend boundaries as modules mature |
-| OpenAPI governance | Existing repo gate plus `.spectral.yaml` governance config | Standardize generated OpenAPI lint in CI |
-| Tests | 85 Python test files; 431 unit tests collect | Add route-boundary and governance regression tests per slice |
-| Security | pip-audit and Bandit are enforced through `make security-audit` | Add targeted negative/security tests for abuse and error leakage |
-| Observability | Metrics/correlation support exists | Consolidate runbook and dashboard/alert evidence |
+This scorecard tracks measurable movement from the enterprise refactor baseline
+introduced in commit `3254774` to the current feature branch state. It is
+evidence for PR readiness, not a completion claim.
+
+| Dimension | Baseline evidence | Current evidence | Improvement shown | Remaining target |
+| --- | --- | --- | --- | --- |
+| API modularity | `src/app/main.py` had 22 route/middleware/handler decorators and 980 lines | `src/app/main.py` has 0 route/middleware/handler decorators and 10 lines | App construction, routers, middleware, errors, and downstream dependency resolution are split into modules | Keep router boundaries green and prevent app-entry-point regression |
+| Code size | Largest files included `src/app/services/concentration_engine.py` at 981 lines and `src/app/main.py` at 980 lines | Largest source files are contract/service modules; no source file over 800 lines after the latest baseline | Monolithic API and concentration service files were split; contract example payloads were extracted | Continue reducing service hotspots over 600 lines |
+| Largest behavior units | Largest function/class included `calculate_risk` at 284 lines, `calculate_rolling_metrics` at 230 lines, and `LotusPerformanceClient` at 256 lines | Largest class is `LotusCoreClient` at 156 lines; `LotusPerformanceClient` is 113 lines | Large engines and clients were decomposed into helpers, services, routers, and polling/parsing functions | Continue reducing engine-level orchestration hotspots |
+| Complexity | Baseline reported C-or-worse candidates across large service, contract, and readiness code | Current baseline reports no C-or-worse candidates in the complexity snapshot | C-level candidates in concentration parsing, risk period resolution, rolling/attribution validation, and enterprise authorization were removed | Keep radon report-only evidence clean while thresholds are tightened |
+| Architecture enforcement | Import-linter, architecture docs, and quality workflow were introduced as report-only baseline | `make architecture-gate` is green locally and in feature-lane CI | Architecture boundary checks are now part of routine slice validation | Extend contracts as service boundaries mature |
+| OpenAPI governance | Operation IDs were not visibly standardized; route-level examples needed certification after router extraction | Operation IDs are explicit and request/response examples are modularized across contract example modules | OpenAPI metadata is easier to review and no longer buried in large contract classes | Standardize generated OpenAPI lint as an enforced CI gate |
+| Tests | 77 Python test files at initial baseline; repo-native coverage gate existed | 85 Python test files; 431 tests collected in the latest baseline | Focused unit/integration coverage protects router, client, contract, middleware, and service refactors | Add more negative/security and OpenAPI contract certification tests |
+| Security | Enterprise audit middleware, redaction tests, and upstream error mapping existed; abuse-control evidence was still a gap | Authorization checks are decomposed and covered by enterprise-readiness tests; Bandit and pip-audit remain green in baseline | Security behavior is easier to inspect and test without changing enforcement semantics | Add explicit threat-model and abuse-control evidence before final PR |
+| Observability | HTTP, endpoint execution, supportability, freshness metrics, and correlation existed but needed consolidated docs | Observability docs exist and endpoint/upstream metrics remain covered by tests and baseline validation | Metrics/correlation posture is preserved through router and client decomposition | Add dashboard/alert evidence or governed no-dashboard decision |
+| Documentation and PR evidence | Baseline/reporting foundation was introduced with architecture, security, observability, runbook, wiki, and quality docs | `baseline_report.md`, `refactor_health_report.md`, and this scorecard are updated with current measured movement | Refactor progress is now auditable from generated reports and branch history | Final PR must summarize commands, CI, risks, and follow-up backlog |
+
+## Current Gate Snapshot
+
+- Local feature-lane checks used across recent slices: focused pytest packs,
+  `make typecheck`, `make lint`, `make architecture-gate`, targeted `radon cc`,
+  and `make quality-baseline`.
+- GitHub checks are pushed after each slice and reviewed asynchronously:
+  `Quality Baseline` and `Remote Feature Lane`.
+- The latest baseline keeps the progressive gate posture report-only; final
+  enterprise-readiness enforcement remains a later PR-readiness step.
