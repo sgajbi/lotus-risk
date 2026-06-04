@@ -19,5 +19,6 @@ The repo runs OpenAPI quality, API vocabulary, no-alias, type, lint, security, a
 through `Makefile`. `make openapi-gate` evaluates the generated FastAPI OpenAPI schema and fails
 missing summaries, descriptions, tags, operation IDs, success/error responses, JSON request
 examples for mutation endpoints, schema field descriptions/examples, and duplicate operation IDs.
-`.spectral.yaml` remains secondary lint scaffolding until generated Spectral artifact export is
-standardized for CI.
+`make openapi-artifact-gate` exports `output/openapi/lotus-risk.openapi.json` and validates the
+artifact against the repository's Spectral policy expectations from `.spectral.yaml`. The generated
+artifact is ignored by Git and should be attached as CI/PR evidence rather than committed.

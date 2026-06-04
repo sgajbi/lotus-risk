@@ -11,7 +11,7 @@ documentation posture, and validation gates. It is not a completion claim.
 ## Code Size Baseline
 
 - Python source files under `src/`: 83
-- Python test files under `tests/`: 88
+- Python test files under `tests/`: 89
 - Python packages under `src/`: 9
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
 
@@ -76,8 +76,8 @@ documentation posture, and validation gates. It is not a completion claim.
 - The repo-native OpenAPI quality gate enforces endpoint summaries, descriptions, tags,
   operation IDs, success and error responses, JSON mutation request examples, schema field
   descriptions, schema field examples, and duplicate operation ID detection.
-- Spectral config is present as a secondary lint scaffold; generated Spectral artifact export
-  remains report-only until standardized for this repository.
+- `make openapi-artifact-gate` exports `output/openapi/lotus-risk.openapi.json` and validates the
+  artifact against the repository's Spectral policy expectations from `.spectral.yaml`.
 
 ## Static Quality Snapshot
 
@@ -89,29 +89,29 @@ All checks passed!
 - Ruff format check: passed
 
 ```text
-184 files already formatted
+186 files already formatted
 ```
 - Type checking: passed
 
 ```text
-Success: no issues found in 171 source files
+Success: no issues found in 172 source files
 ```
 - Unit coverage snapshot: passed
 
 ```text
 ........................................................................ [ 16%]
 ........................................................................ [ 32%]
-........................................................................ [ 49%]
+........................................................................ [ 48%]
 ........................................................................ [ 65%]
-........................................................................ [ 82%]
-........................................................................ [ 98%]
+........................................................................ [ 81%]
+........................................................................ [ 97%]
 ...
 src\app\upstream_errors.py                              55      0     20      3    96%   181->194, 187->189, 192->194
 ------------------------------------------------------------------------------------------------
 TOTAL                                                 4578     84    986     85    97%
 
 51 files skipped due to complete coverage.
-439 passed in 8.14s
+442 passed in 8.29s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -240,7 +240,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-439 tests collected in 1.65s
+442 tests collected in 1.63s
 ```
 - Import-linter report-only: passed
 

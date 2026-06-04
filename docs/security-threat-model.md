@@ -44,7 +44,7 @@ diagnostics, or downstream failure messages.
 | Sensitive metadata appears in audit events | `redact_sensitive` masks password, secret, token, authorization, ssn, account_number, and client_email keys recursively | `test_emit_audit_event_redacts_metadata` and `test_redact_sensitive_masks_nested_structures` | Redaction is key-based; newly introduced sensitive field names must update `_REDACT_FIELDS` with tests |
 | Downstream service returns unsafe details or malformed payloads | `app.upstream_errors` bounds upstream failure categories and messages | `tests/unit/test_upstream_errors.py` | Upstream contracts must continue publishing bounded problem details |
 | Metrics cardinality attack through payload fields | Metrics labels are constrained to bounded service/endpoint/status/supportability dimensions | `test_risk_supportability_openapi_documents_metric_labels` | New metrics must use the same bounded-label rule before merge |
-| OpenAPI drift hides missing request examples or operation identifiers | `make openapi-gate` evaluates generated schema metadata and request examples | `tests/unit/test_openapi_quality_gate.py` | Secondary Spectral artifact export remains a PR-readiness follow-up |
+| OpenAPI drift hides missing request examples or operation identifiers | `make openapi-gate` evaluates generated schema metadata and request examples; `make openapi-artifact-gate` exports the generated artifact and validates Spectral policy expectations | `tests/unit/test_openapi_quality_gate.py` and `tests/unit/test_openapi_artifact_gate.py` | Keep generated artifact evidence attached to CI/PR review |
 
 ## Deployment Decisions
 
@@ -72,4 +72,4 @@ make typecheck
 1. Promote final enterprise readiness mode once deployment identity validation is settled.
 2. Add gateway-backed token-validation evidence when platform identity contracts are available.
 3. Add server-level request body limits for requests without trustworthy `Content-Length`.
-4. Standardize secondary Spectral OpenAPI artifact export in CI.
+4. Attach generated OpenAPI artifact evidence to the final PR.

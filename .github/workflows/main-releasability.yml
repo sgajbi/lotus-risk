@@ -49,6 +49,8 @@ jobs:
         run: make typecheck
       - name: OpenAPI Gate
         run: make openapi-gate
+      - name: OpenAPI Artifact Gate
+        run: make openapi-artifact-gate
       - name: API Vocabulary Gate
         run: make api-vocabulary-gate
       - name: Architecture Gate
