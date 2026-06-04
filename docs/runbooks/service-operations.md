@@ -21,6 +21,21 @@
 2. Verify /health/ready, /ops, and metrics endpoint.
 3. Run local parity check (make ci) before hotfix PR.
 
+## Enterprise Deployment Security Checks
+
+Enterprise bank deployments must run with the security posture in
+`docs/security-deployment-policy.md`.
+
+1. Verify `ENTERPRISE_ENFORCE_AUTHZ=true`.
+2. Verify `ENTERPRISE_ENFORCE_RUNTIME_CONFIG=true`.
+3. Verify `ENTERPRISE_PRIMARY_KEY_ID` and `ENTERPRISE_SECRET_ROTATION_DAYS` are set.
+4. Verify `ENTERPRISE_CAPABILITY_RULES_JSON` contains the endpoint capability map for write-like
+   analytics POST endpoints.
+5. Verify ingress/proxy and ASGI/server request body limits are at or below
+   `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES`.
+6. Treat missing body-limit enforcement for requests without trustworthy `Content-Length` as a
+   deployment-readiness failure, not an application-code exception.
+
 ## Endpoint Failure Rate Alert
 
 Alert id: `lotus-risk-endpoint-failure-rate`

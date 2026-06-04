@@ -11,7 +11,7 @@ documentation posture, and validation gates. It is not a completion claim.
 ## Code Size Baseline
 
 - Python source files under `src/`: 83
-- Python test files under `tests/`: 89
+- Python test files under `tests/`: 90
 - Python packages under `src/`: 9
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
 
@@ -86,15 +86,17 @@ documentation posture, and validation gates. It is not a completion claim.
 ```text
 All checks passed!
 ```
-- Ruff format check: passed
+- Ruff format check: reported exit 1
 
 ```text
-186 files already formatted
+Would reformat: scripts\generate_quality_baseline.py
+Would reformat: tests\unit\test_enterprise_deployment_policy_docs.py
+2 files would be reformatted, 185 files already formatted
 ```
 - Type checking: passed
 
 ```text
-Success: no issues found in 172 source files
+Success: no issues found in 173 source files
 ```
 - Unit coverage snapshot: passed
 
@@ -102,8 +104,8 @@ Success: no issues found in 172 source files
 ........................................................................ [ 16%]
 ........................................................................ [ 32%]
 ........................................................................ [ 48%]
-........................................................................ [ 65%]
-........................................................................ [ 81%]
+........................................................................ [ 64%]
+........................................................................ [ 80%]
 ........................................................................ [ 97%]
 ...
 src\app\upstream_errors.py                              55      0     20      3    96%   181->194, 187->189, 192->194
@@ -111,7 +113,7 @@ src\app\upstream_errors.py                              55      0     20      3 
 TOTAL                                                 4578     84    986     85    97%
 
 51 files skipped due to complete coverage.
-442 passed in 8.29s
+445 passed in 10.13s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -202,8 +204,8 @@ Known vulnerabilities: 0
    `docs/domain-apis/risk-upstream-failure-behavior.md`.
 5. API abuse controls for payload size, authorization headers, service identity, capability
    checks, redaction, bounded downstream errors, and bounded metrics are documented in
-   `docs/security-threat-model.md`; final enterprise readiness still needs deployment identity
-   enforcement decisions.
+   `docs/security-threat-model.md`; bank deployment identity and body-limit posture is recorded in
+   `docs/security-deployment-policy.md`.
 
 ## Observability Posture
 
@@ -240,7 +242,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-442 tests collected in 1.63s
+445 tests collected in 2.44s
 ```
 - Import-linter report-only: passed
 

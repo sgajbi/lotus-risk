@@ -37,10 +37,10 @@ diagnostics, or downstream failure messages.
 
 | Abuse case | Current control | Verification evidence | Remaining risk |
 | --- | --- | --- | --- |
-| Oversized POST payload attempts resource exhaustion | `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES` returns `413 PAYLOAD_TOO_LARGE` before handler execution | `test_enterprise_middleware_payload_limit` | Streaming/body-size enforcement depends on upstream ASGI/server configuration for requests without trustworthy `Content-Length` |
-| Caller invokes calculation POST without actor, tenant, role, or correlation context | `ENTERPRISE_ENFORCE_AUTHZ=true` requires `X-Actor-Id`, `X-Tenant-Id`, `X-Role`, and `X-Correlation-Id` | `test_authorize_write_request_enforces_headers_identity_and_capabilities` and `test_enterprise_middleware_denies_unauthorized_writes` | Enforcement remains environment-controlled until final enterprise readiness mode is selected |
-| Caller presents actor context without service identity | Authorization fails with `missing_service_identity` unless `X-Service-Identity` or `Authorization` is present | `test_authorize_write_request_enforces_headers_identity_and_capabilities` | Token validation is delegated to gateway/platform identity infrastructure |
-| Caller lacks endpoint capability | Capability rules from `ENTERPRISE_CAPABILITY_RULES_JSON` deny missing `X-Capabilities` entries | `test_authorize_write_request_enforces_headers_identity_and_capabilities` | Capability vocabulary must be governed by deployment configuration |
+| Oversized POST payload attempts resource exhaustion | `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES` returns `413 PAYLOAD_TOO_LARGE` before handler execution | `test_enterprise_middleware_payload_limit` and `docs/security-deployment-policy.md` | Enterprise deployments must enforce matching ingress and ASGI/server request body limits for requests without trustworthy `Content-Length` |
+| Caller invokes calculation POST without actor, tenant, role, or correlation context | `ENTERPRISE_ENFORCE_AUTHZ=true` requires `X-Actor-Id`, `X-Tenant-Id`, `X-Role`, and `X-Correlation-Id`; enterprise bank deployment mode requires this flag | `test_authorize_write_request_enforces_headers_identity_and_capabilities`, `test_enterprise_middleware_denies_unauthorized_writes`, and `test_enterprise_deployment_policy_docs.py` | Local development mode may keep enforcement disabled, but that mode cannot support a bank-buyable production-readiness claim |
+| Caller presents actor context without service identity | Authorization fails with `missing_service_identity` unless `X-Service-Identity` or `Authorization` is present | `test_authorize_write_request_enforces_headers_identity_and_capabilities` | Gateway-backed token-validation evidence remains a platform integration proof item |
+| Caller lacks endpoint capability | Capability rules from `ENTERPRISE_CAPABILITY_RULES_JSON` deny missing `X-Capabilities` entries | `test_authorize_write_request_enforces_headers_identity_and_capabilities` | Capability vocabulary must stay governed by deployment configuration |
 | Sensitive metadata appears in audit events | `redact_sensitive` masks password, secret, token, authorization, ssn, account_number, and client_email keys recursively | `test_emit_audit_event_redacts_metadata` and `test_redact_sensitive_masks_nested_structures` | Redaction is key-based; newly introduced sensitive field names must update `_REDACT_FIELDS` with tests |
 | Downstream service returns unsafe details or malformed payloads | `app.upstream_errors` bounds upstream failure categories and messages | `tests/unit/test_upstream_errors.py` | Upstream contracts must continue publishing bounded problem details |
 | Metrics cardinality attack through payload fields | Metrics labels are constrained to bounded service/endpoint/status/supportability dimensions | `test_risk_supportability_openapi_documents_metric_labels` | New metrics must use the same bounded-label rule before merge |
@@ -48,13 +48,19 @@ diagnostics, or downstream failure messages.
 
 ## Deployment Decisions
 
-1. `ENTERPRISE_ENFORCE_AUTHZ` controls write-authorization enforcement.
-2. `ENTERPRISE_ENFORCE_RUNTIME_CONFIG` converts runtime configuration findings into startup
-   failures.
-3. `ENTERPRISE_PRIMARY_KEY_ID` is required when authorization is enforced.
-4. `ENTERPRISE_SECRET_ROTATION_DAYS` must be between 1 and 90.
-5. `ENTERPRISE_CAPABILITY_RULES_JSON` defines endpoint capability requirements.
-6. `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES` defines the pre-handler POST payload-size threshold.
+The governed deployment posture is now recorded in
+[`security-deployment-policy.md`](security-deployment-policy.md).
+
+1. Local development mode may leave `ENTERPRISE_ENFORCE_AUTHZ` disabled.
+2. Enterprise bank deployment mode requires `ENTERPRISE_ENFORCE_AUTHZ=true`.
+3. Enterprise bank deployment mode requires `ENTERPRISE_ENFORCE_RUNTIME_CONFIG=true`.
+4. `ENTERPRISE_PRIMARY_KEY_ID` is required when authorization is enforced.
+5. `ENTERPRISE_SECRET_ROTATION_DAYS` must be between `1` and `90`.
+6. `ENTERPRISE_CAPABILITY_RULES_JSON` defines endpoint capability requirements.
+7. `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES` defines the in-process pre-handler POST payload-size
+   threshold.
+8. Ingress/proxy and ASGI/server request body limits must be configured at or below
+   `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES` for enterprise deployments.
 
 ## Evidence Commands
 
@@ -62,6 +68,7 @@ Use these commands as focused security evidence for the refactor PR:
 
 ```text
 python -m pytest tests/unit/test_enterprise_readiness.py tests/unit/test_upstream_errors.py tests/unit/test_security_evidence_docs.py -q
+python -m pytest tests/unit/test_enterprise_deployment_policy_docs.py -q
 make security-audit
 make lint
 make typecheck
@@ -69,7 +76,7 @@ make typecheck
 
 ## Follow-Up Backlog
 
-1. Promote final enterprise readiness mode once deployment identity validation is settled.
-2. Add gateway-backed token-validation evidence when platform identity contracts are available.
-3. Add server-level request body limits for requests without trustworthy `Content-Length`.
-4. Attach generated OpenAPI artifact evidence to the final PR.
+1. Add gateway-backed token-validation evidence when platform identity contracts are available.
+2. Attach generated OpenAPI artifact evidence to the final PR.
+3. Validate the final enterprise deployment configuration in the target runtime before merge or
+   release promotion.

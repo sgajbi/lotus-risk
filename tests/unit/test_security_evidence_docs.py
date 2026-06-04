@@ -24,7 +24,9 @@ def test_security_threat_model_records_current_abuse_controls() -> None:
         "bounded-label rule",
         "make security-audit",
         "scripts/dependency_health_check.py --skip-outdated",
-        "server-level request body limits",
+        "security-deployment-policy.md",
+        "Enterprise bank deployment mode requires",
+        "ASGI/server request body limits",
     )
 
     for term in required_terms:

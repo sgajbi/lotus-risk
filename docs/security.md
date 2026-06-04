@@ -13,6 +13,8 @@ client, request, response, trace, or correlation data through logs, metrics, err
 5. Bandit configuration is added for progressive static security evidence.
 6. Abuse-control and threat-model evidence is recorded in
    [`security-threat-model.md`](security-threat-model.md).
+7. Enterprise deployment security posture is recorded in
+   [`security-deployment-policy.md`](security-deployment-policy.md).
 
 ## Refactor Requirements
 
@@ -21,3 +23,5 @@ client, request, response, trace, or correlation data through logs, metrics, err
 3. Keep abuse-protection and threat-model evidence current before promoting enterprise-readiness
    gates.
 4. Prove sensitive-data masking with tests whenever new diagnostics, logs, or metrics are added.
+5. Treat `ENTERPRISE_ENFORCE_AUTHZ=true`, `ENTERPRISE_ENFORCE_RUNTIME_CONFIG=true`, explicit
+   capability rules, and ingress/server request body limits as mandatory for bank deployment mode.

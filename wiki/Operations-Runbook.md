@@ -52,6 +52,14 @@ Examples:
 2. pointing `LOTUS_CORE_BASE_URL` at the wrong lotus-core surface,
 3. assuming all stateful failures are analytics bugs when they are really upstream URL or supportability issues.
 
+## Enterprise Deployment Security
+
+Bank deployment mode must enable enterprise authorization and runtime configuration enforcement,
+configure primary key and secret-rotation evidence, configure endpoint capability rules, and align
+ingress/proxy plus ASGI/server request body limits with `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES`.
+Missing ingress/server body-limit enforcement for requests without trustworthy `Content-Length` is
+a deployment-readiness failure.
+
 ## Live Validation Baseline
 
 Current governed default:
