@@ -288,6 +288,30 @@ def _reconciled_attribution_set(
     )
 
 
+def _attribution_calculation_inputs(
+    *,
+    attribution_type: AttributionType,
+    returns_series: pd.Series,
+    benchmark_series: pd.Series,
+    exposure_weights: pd.DataFrame,
+    benchmark_weights: pd.DataFrame,
+    annualization_basis: int,
+) -> _AttributionCalculationInputs | None:
+    if attribution_type == "TOTAL_RISK":
+        return _total_risk_inputs(
+            returns_series=returns_series,
+            exposure_weights=exposure_weights,
+            annualization_basis=annualization_basis,
+        )
+    return _active_risk_inputs(
+        returns_series=returns_series,
+        benchmark_series=benchmark_series,
+        exposure_weights=exposure_weights,
+        benchmark_weights=benchmark_weights,
+        annualization_basis=annualization_basis,
+    )
+
+
 def _build_attribution_set(
     *,
     attribution_type: AttributionType,
@@ -312,28 +336,21 @@ def _build_attribution_set(
     if unsupported is not None:
         return unsupported
 
-    if attribution_type == "TOTAL_RISK":
-        calculation_inputs = _total_risk_inputs(
-            returns_series=returns_series,
-            exposure_weights=exposure_weights,
-            annualization_basis=annualization_basis,
+    calculation_inputs = _attribution_calculation_inputs(
+        attribution_type=attribution_type,
+        returns_series=returns_series,
+        benchmark_series=benchmark_series,
+        exposure_weights=exposure_weights,
+        benchmark_weights=benchmark_weights,
+        annualization_basis=annualization_basis,
+    )
+    if calculation_inputs is None:
+        return _empty_attribution_set(
+            attribution_type=attribution_type,
+            metric=metric,
+            grouping_dimension=grouping_dimension,
+            quality_flags=flags + ["active_risk:alignment_empty"],
         )
-    else:
-        active_inputs = _active_risk_inputs(
-            returns_series=returns_series,
-            benchmark_series=benchmark_series,
-            exposure_weights=exposure_weights,
-            benchmark_weights=benchmark_weights,
-            annualization_basis=annualization_basis,
-        )
-        if active_inputs is None:
-            return _empty_attribution_set(
-                attribution_type=attribution_type,
-                metric=metric,
-                grouping_dimension=grouping_dimension,
-                quality_flags=flags + ["active_risk:alignment_empty"],
-            )
-        calculation_inputs = active_inputs
 
     if len(calculation_inputs.metric_series.dropna()) < 2:
         return _empty_attribution_set(
