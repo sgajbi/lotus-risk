@@ -247,6 +247,47 @@ def _active_risk_inputs(
     )
 
 
+def _attribution_contributors(
+    *,
+    rows: list[DecompositionRow],
+    group_labels: dict[str, str | None],
+) -> list[AttributionContributor]:
+    return [
+        AttributionContributor(
+            group_key=row["group_key"],
+            group_label=group_labels.get(row["group_key"]),
+            weight_average=row["weight_average"],
+            marginal_contribution=row["marginal_contribution"],
+            component_contribution=row["component_contribution"],
+            percent_contribution=row["percent_contribution"],
+        )
+        for row in rows
+    ]
+
+
+def _reconciled_attribution_set(
+    *,
+    attribution_type: AttributionType,
+    metric: AttributionMetric,
+    grouping_dimension: GroupingDimension,
+    risk_total: float,
+    contributors: list[AttributionContributor],
+    quality_flags: list[str],
+) -> AttributionSetResult:
+    reconciled_sum = float(sum(c.component_contribution or 0.0 for c in contributors))
+    residual = float(risk_total - reconciled_sum)
+    return AttributionSetResult(
+        attribution_type=attribution_type,
+        metric=metric,
+        grouping_dimension=grouping_dimension,
+        total_value=risk_total,
+        reconciled_sum=reconciled_sum,
+        residual=residual,
+        contributors=contributors,
+        quality_flags=quality_flags,
+    )
+
+
 def _build_attribution_set(
     *,
     attribution_type: AttributionType,
@@ -308,28 +349,12 @@ def _build_attribution_set(
         total_value=calculation_inputs.risk_total,
         annualization_basis=annualization_basis,
     )
-    contributors = [
-        AttributionContributor(
-            group_key=row["group_key"],
-            group_label=group_labels.get(row["group_key"]),
-            weight_average=row["weight_average"],
-            marginal_contribution=row["marginal_contribution"],
-            component_contribution=row["component_contribution"],
-            percent_contribution=row["percent_contribution"],
-        )
-        for row in rows
-    ]
-    reconciled_sum = float(sum(c.component_contribution or 0.0 for c in contributors))
-    residual = float(calculation_inputs.risk_total - reconciled_sum)
-
-    return AttributionSetResult(
+    return _reconciled_attribution_set(
         attribution_type=attribution_type,
         metric=metric,
         grouping_dimension=grouping_dimension,
-        total_value=calculation_inputs.risk_total,
-        reconciled_sum=reconciled_sum,
-        residual=residual,
-        contributors=contributors,
+        risk_total=calculation_inputs.risk_total,
+        contributors=_attribution_contributors(rows=rows, group_labels=group_labels),
         quality_flags=flags,
     )
 
