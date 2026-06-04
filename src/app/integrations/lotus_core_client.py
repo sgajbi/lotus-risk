@@ -15,6 +15,21 @@ from app.upstream_errors import (
 DEFAULT_LOTUS_CORE_BASE_URL = "http://core-control.dev.lotus"
 
 
+def _parse_json_dict_payload(
+    response: httpx.Response,
+    *,
+    invalid_message: str,
+) -> dict[str, Any]:
+    payload = response.json()
+    if not isinstance(payload, dict):
+        raise invalid_upstream_payload(
+            service="lotus-core",
+            operation=response.request.url.path,
+            message=invalid_message,
+        )
+    return payload
+
+
 class LotusCoreClient:
     def __init__(
         self,
@@ -166,23 +181,8 @@ class LotusCoreClient:
                     json=json_payload,
                     headers=headers,
                 ),
-                parse_response=lambda response: self._parse_json_dict_payload(
+                parse_response=lambda response: _parse_json_dict_payload(
                     response=response,
                     invalid_message=f"lotus-core returned invalid JSON payload for {path}",
                 ),
             )
-
-    @staticmethod
-    def _parse_json_dict_payload(
-        response: httpx.Response,
-        *,
-        invalid_message: str,
-    ) -> dict[str, Any]:
-        payload = response.json()
-        if not isinstance(payload, dict):
-            raise invalid_upstream_payload(
-                service="lotus-core",
-                operation=response.request.url.path,
-                message=invalid_message,
-            )
-        return payload
