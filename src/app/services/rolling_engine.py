@@ -29,7 +29,7 @@ from app.services.calculation_supportability import (
     record_operation_supportability,
     supportability_from_period_results,
 )
-from app.services.risk_engine import _resolve_period
+from app.services.risk import helpers as risk_helpers
 
 
 ROLLING_SHARPE_METRIC = "ROLLING_SHARPE"
@@ -387,7 +387,7 @@ def calculate_rolling_metrics(
 
     results: dict[str, RollingPeriodResult] = {}
     for period in request.periods:
-        start, end = _resolve_period(
+        start, end = risk_helpers._resolve_period(
             period.type,
             request.scope.as_of_date,
             open_date,

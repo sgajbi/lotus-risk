@@ -1,0 +1,37 @@
+[importlinter]
+root_package = app
+include_external_packages = True
+
+[importlinter:contract:domain_and_services_do_not_depend_on_fastapi]
+name = Domain and service layers stay framework independent
+type = forbidden
+source_modules =
+    app.services
+forbidden_modules =
+    fastapi
+    starlette
+
+[importlinter:contract:contracts_do_not_depend_on_infrastructure]
+name = DTO contracts do not import infrastructure clients
+type = forbidden
+source_modules =
+    app.contracts
+forbidden_modules =
+    app.integrations
+
+[importlinter:contract:routers_do_not_import_infrastructure_clients]
+name = Routers do not import downstream infrastructure clients directly
+type = forbidden
+source_modules =
+    app.routers
+forbidden_modules =
+    app.integrations
+allow_indirect_imports = True
+
+[importlinter:contract:infrastructure_does_not_import_app_main]
+name = Infrastructure adapters do not depend on API entry point
+type = forbidden
+source_modules =
+    app.integrations
+forbidden_modules =
+    app.main

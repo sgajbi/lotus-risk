@@ -14,6 +14,7 @@ The repo-native commands are designed to map to those lanes directly.
 
 - `make check` - fast local gate
 - `make ci` - PR-grade local gate
+- `make quality-baseline` - report-only enterprise refactor baseline and quality scorecard
 - `make domain-data-product-gate` - repo-native domain product declaration validation
 - `make test-unit` - unit suite
 - `make test-integration` - integration suite
@@ -44,6 +45,21 @@ The repo-native commands are designed to map to those lanes directly.
 5. coverage enforcement,
 6. Docker build validation.
 
+## Quality Baseline
+
+`make quality-baseline` generates report-only refactor evidence under `quality/`.
+
+It currently records:
+
+1. largest files and functions/classes,
+2. API entry-point modularity risk,
+3. architecture and API-governance rules,
+4. quality scorecard posture,
+5. report-only import-linter/Spectral readiness.
+
+This evidence is a prioritization and regression-control baseline. It is not an enterprise-readiness
+completion claim until the progressive gates move from report-only to enforced thresholds.
+
 ## Why These Gates Matter Here
 
 In `lotus-risk`, the gates protect more than code style.
@@ -60,6 +76,8 @@ They protect:
 
 - `Makefile`
 - `REPOSITORY-ENGINEERING-CONTEXT.md`
+- `quality/baseline_report.md`
+- `quality/quality_scorecard.md`
 - `docs/operations/development-workflow-and-ci-strategy.md`
 - `docs/domain-apis/endpoint-matrix.md`
 - `docs/domain-apis/risk-product-surface-alignment.md`

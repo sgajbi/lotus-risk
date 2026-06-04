@@ -7,12 +7,12 @@ from fastapi import HTTPException
 import pytest
 from starlette.requests import Request
 
-from app.main import (
+from app.api_errors import (
     _default_error_code,
-    analytics_risk_calculate,
     handle_http_exception,
     handle_upstream_service_error,
 )
+from app.routers.risk_calculation import analytics_risk_calculate
 from app.upstream_errors import UpstreamServiceError
 
 

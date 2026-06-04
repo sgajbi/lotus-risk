@@ -43,6 +43,23 @@ When a caller sends `X-Correlation-Id`, `lotus-risk` forwards it to upstream cli
 4. `throttled`, `upstream_failure`, `timeout`, and `transport` are retryable classes, but clients should use bounded retry policies.
 5. `/health/ready` and `/ops` expose dependency state for readiness and operational diagnosis; endpoint-level failures still carry richer operation-specific context.
 
+## Upstream Client Resilience Posture
+
+The following explicit downstream transport posture is defined in
+`src/app/integrations/_downstream_client_profile.py` and used by both adapters:
+
+- `lotus-core` resolves `LOTUS_CORE_TIMEOUT_SECONDS`, `LOTUS_CORE_MAX_CONNECTIONS`,
+  `LOTUS_CORE_MAX_KEEPALIVE_CONNECTIONS`, and `LOTUS_CORE_KEEPALIVE_EXPIRY_SECONDS`.
+- `lotus-performance` resolves `LOTUS_PERFORMANCE_TIMEOUT_SECONDS`,
+  `LOTUS_PERFORMANCE_MAX_CONNECTIONS`, `LOTUS_PERFORMANCE_MAX_KEEPALIVE_CONNECTIONS`,
+  and `LOTUS_PERFORMANCE_KEEPALIVE_EXPIRY_SECONDS`.
+- `lotus-performance` also controls async polling through
+  `LOTUS_PERFORMANCE_ASYNC_POLL_INTERVAL_SECONDS` and
+  `LOTUS_PERFORMANCE_ASYNC_MAX_POLLS`.
+- Timeout and retry-class handling remains deterministic:
+  transport errors map to `UPSTREAM_TIMEOUT` or `UPSTREAM_UNAVAILABLE`,
+  while HTTP `429` and `5xx` map to retryable throttling and upstream-failure classes.
+
 ## Validation Evidence
 
 The failure classification matrix is covered by `tests/unit/test_upstream_errors.py` and client-specific coverage in:

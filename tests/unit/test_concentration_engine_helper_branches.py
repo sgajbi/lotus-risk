@@ -9,15 +9,18 @@ from app.contracts.concentration import (
     IssuerGroupingLevel,
     IssuerMappingInput,
 )
-from app.services.concentration_engine import (
-    IssuerEntry,
-    IssuerIdentity,
-    PositionEntry,
-    _coverage_ratio,
-    _uncovered_count,
+from app.services.concentration.datamodels import IssuerEntry, IssuerIdentity, PositionEntry
+from app.services.concentration.parsing import (
+    _apply_snapshot_display_names,
     _caller_issuer_map,
     _extract_issuer_map,
+    _extract_values_from_snapshot_positions,
     _extract_values_with_issuer_from_snapshot,
+    _issuer_key_from_mapping,
+    _issuer_key_from_position,
+)
+from app.services.concentration.math import _coverage_ratio, _uncovered_count
+from app.services.concentration_engine import (
     calculate_concentration,
 )
 
@@ -100,6 +103,47 @@ def test_helper_caller_issuer_map_ultimate_parent_branch() -> None:
     assert issuer_map["SEC_A"] == IssuerIdentity(issuer_id="PARENT_A", issuer_name=None)
 
 
+def test_helper_issuer_key_resolution_covers_legal_issuer_and_missing_ids() -> None:
+    assert _issuer_key_from_mapping(
+        IssuerMappingInput(security_id="SEC_A", issuer_id="ISSUER_A", issuer_name="Issuer A"),
+        grouping_level=IssuerGroupingLevel.LEGAL_ISSUER,
+    ) == IssuerIdentity(issuer_id="ISSUER_A", issuer_name="Issuer A")
+    assert (
+        _issuer_key_from_mapping(
+            IssuerMappingInput(security_id="SEC_A"),
+            grouping_level=IssuerGroupingLevel.LEGAL_ISSUER,
+        )
+        is None
+    )
+    assert _issuer_key_from_position(
+        issuer_id="ISSUER_B",
+        issuer_name="Issuer B",
+        ultimate_parent_issuer_id=None,
+        ultimate_parent_issuer_name=None,
+        grouping_level=IssuerGroupingLevel.LEGAL_ISSUER,
+    ) == IssuerIdentity(issuer_id="ISSUER_B", issuer_name="Issuer B")
+    assert (
+        _issuer_key_from_position(
+            issuer_id=None,
+            issuer_name=None,
+            ultimate_parent_issuer_id=None,
+            ultimate_parent_issuer_name=None,
+            grouping_level=IssuerGroupingLevel.LEGAL_ISSUER,
+        )
+        is None
+    )
+
+
+def test_extract_snapshot_position_values_handles_empty_and_quantity_fallback() -> None:
+    assert _extract_values_from_snapshot_positions(None) == []
+    rows: list[Any] = [
+        "bad-row",
+        {"market_value_base": None, "quantity": "12.5"},
+        {"market_value_base": "-1", "quantity": None},
+    ]
+    assert _extract_values_from_snapshot_positions(cast(list[dict[str, Any]], rows)) == [12.5]
+
+
 def test_extract_values_with_issuer_handles_fallback_and_non_dict_rows() -> None:
     rows: list[Any] = [
         {"security_id": "SEC_A", "market_value_base": None, "quantity": "10"},
@@ -114,6 +158,51 @@ def test_extract_values_with_issuer_handles_fallback_and_non_dict_rows() -> None
     assert issuer_values == [IssuerEntry(issuer_id="ISSUER_A", issuer_name=None, value=10.0)]
     assert covered == 1
     assert total == 1
+
+
+def test_extract_values_with_issuer_aggregates_multiple_positions_for_same_issuer() -> None:
+    values, issuer_values, covered, total = _extract_values_with_issuer_from_snapshot(
+        [
+            {"security_id": "SEC_A", "instrument_name": "Bond A", "market_value_base": "10"},
+            {"security_id": "SEC_B", "instrument_name": "Bond B", "market_value_base": "15"},
+        ],
+        {
+            "SEC_A": IssuerIdentity(issuer_id="ISSUER_A", issuer_name="Issuer A"),
+            "SEC_B": IssuerIdentity(issuer_id="ISSUER_A", issuer_name="Issuer A"),
+        },
+    )
+
+    assert values == [
+        PositionEntry(security_id="SEC_A", security_name="Bond A", value=10.0),
+        PositionEntry(security_id="SEC_B", security_name="Bond B", value=15.0),
+    ]
+    assert issuer_values == [IssuerEntry(issuer_id="ISSUER_A", issuer_name="Issuer A", value=25.0)]
+    assert covered == 2
+    assert total == 2
+
+
+def test_snapshot_display_name_enrichment_ignores_malformed_sections_and_rows() -> None:
+    sections: dict[str, Any] = {
+        "instrument_enrichment": [
+            "bad-row",
+            {"security_id": "SEC_A", "instrument_name": "Instrument A"},
+        ],
+        "positions_baseline": [
+            "bad-position",
+            {"security_id": "SEC_A"},
+            {"security_id": "SEC_B", "instrument_name": "Existing Name"},
+        ],
+        "positions_projected": "bad-shape",
+        "positions_delta": [{"security_id": None}],
+    }
+
+    _apply_snapshot_display_names(
+        sections,
+        {"SEC_A": IssuerIdentity(issuer_id="ISSUER_A", issuer_name=None)},
+    )
+
+    assert sections["positions_baseline"][1]["instrument_name"] == "Instrument A"
+    assert sections["positions_baseline"][2]["instrument_name"] == "Existing Name"
 
 
 def test_coverage_ratio_handles_zero_and_rounding() -> None:

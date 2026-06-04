@@ -5,12 +5,10 @@ from typing import Any
 
 import httpx
 
-from app.observability import observation_start, record_upstream_request
+from app.integrations._downstream_client_profile import resolve_downstream_client_profile
+from app.integrations._downstream_client_profile import execute_downstream_request_json
+from app.observability import observation_start
 from app.upstream_errors import (
-    UpstreamServiceError,
-    classify_upstream_http_error,
-    classify_upstream_transport_error,
-    extract_upstream_error_detail,
     invalid_upstream_payload,
 )
 
@@ -30,9 +28,11 @@ class LotusCoreClient:
         if not configured_base_url:
             configured_base_url = DEFAULT_LOTUS_CORE_BASE_URL
         resolved_base_url = configured_base_url.rstrip("/")
-        resolved_timeout = timeout_seconds or float(os.getenv("LOTUS_CORE_TIMEOUT_SECONDS", "10"))
         self._base_url = resolved_base_url
-        self._timeout = httpx.Timeout(resolved_timeout)
+        self._profile = resolve_downstream_client_profile(
+            env_prefix="LOTUS_CORE",
+            default_timeout_seconds=timeout_seconds or 10.0,
+        )
 
     @property
     def base_url(self) -> str:
@@ -155,64 +155,34 @@ class LotusCoreClient:
 
         url = f"{self._base_url}{path}"
         started_at = observation_start()
-        try:
-            async with httpx.AsyncClient(timeout=self._timeout) as client:
-                response = await client.request(
+        async with self._profile.make_client() as client:
+            return await execute_downstream_request_json(
+                dependency="lotus-core",
+                operation=path,
+                started_at=started_at,
+                request_factory=lambda: client.request(
                     method=method,
                     url=url,
                     json=json_payload,
                     headers=headers,
-                )
-                response.raise_for_status()
-                data = response.json()
-                if not isinstance(data, dict):
-                    raise invalid_upstream_payload(
-                        service="lotus-core",
-                        operation=path,
-                        message=f"lotus-core returned invalid JSON payload for {path}",
-                    )
-                record_upstream_request(
-                    dependency="lotus-core",
-                    operation=path,
-                    outcome="success",
-                    category="ok",
-                    started_at=started_at,
-                )
-                return data
-        except UpstreamServiceError as exc:
-            self._record_upstream_failure(path, started_at=started_at, exc=exc)
-            raise
-        except httpx.HTTPStatusError as exc:
-            detail = extract_upstream_error_detail(exc.response)
-            error = classify_upstream_http_error(
-                service="lotus-core",
-                operation=path,
-                response=exc.response,
-                detail=detail,
+                ),
+                parse_response=lambda response: self._parse_json_dict_payload(
+                    response=response,
+                    invalid_message=f"lotus-core returned invalid JSON payload for {path}",
+                ),
             )
-            self._record_upstream_failure(path, started_at=started_at, exc=error)
-            raise error from exc
-        except httpx.HTTPError as exc:
-            error = classify_upstream_transport_error(
-                service="lotus-core",
-                operation=path,
-                exc=exc,
-            )
-            self._record_upstream_failure(path, started_at=started_at, exc=error)
-            raise error from exc
 
     @staticmethod
-    def _record_upstream_failure(
-        operation: str,
+    def _parse_json_dict_payload(
+        response: httpx.Response,
         *,
-        started_at: float,
-        exc: UpstreamServiceError,
-    ) -> None:
-        category = exc.details.get("category")
-        record_upstream_request(
-            dependency="lotus-core",
-            operation=operation,
-            outcome="failure",
-            category=str(category or exc.code),
-            started_at=started_at,
-        )
+        invalid_message: str,
+    ) -> dict[str, Any]:
+        payload = response.json()
+        if not isinstance(payload, dict):
+            raise invalid_upstream_payload(
+                service="lotus-core",
+                operation=response.request.url.path,
+                message=invalid_message,
+            )
+        return payload

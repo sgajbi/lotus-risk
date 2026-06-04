@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from http import HTTPStatus
 from typing import Any
 
 import httpx
-from fastapi import status
 
 
 @dataclass(slots=True)
@@ -48,7 +48,7 @@ def invalid_upstream_payload(
     return UpstreamServiceError(
         service=service,
         operation=operation,
-        status_code=status.HTTP_502_BAD_GATEWAY,
+        status_code=HTTPStatus.BAD_GATEWAY,
         code="UPSTREAM_INVALID_RESPONSE",
         message=message,
         details=_dependency_details(
@@ -71,7 +71,7 @@ def missing_upstream_data(
     return UpstreamServiceError(
         service=service,
         operation=operation,
-        status_code=status.HTTP_424_FAILED_DEPENDENCY,
+        status_code=HTTPStatus.FAILED_DEPENDENCY,
         code="FAILED_DEPENDENCY",
         message=message,
         details=_dependency_details(
@@ -92,11 +92,11 @@ def classify_upstream_http_error(
     detail: str,
 ) -> UpstreamServiceError:
     upstream_status = response.status_code
-    if upstream_status == status.HTTP_429_TOO_MANY_REQUESTS:
+    if upstream_status == HTTPStatus.TOO_MANY_REQUESTS:
         return UpstreamServiceError(
             service=service,
             operation=operation,
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            status_code=HTTPStatus.SERVICE_UNAVAILABLE,
             code="UPSTREAM_THROTTLED",
             message=f"{service} {operation} throttled ({upstream_status}): {detail}",
             details=_dependency_details(
@@ -107,11 +107,11 @@ def classify_upstream_http_error(
             ),
             retryable=True,
         )
-    if upstream_status >= status.HTTP_500_INTERNAL_SERVER_ERROR:
+    if upstream_status >= HTTPStatus.INTERNAL_SERVER_ERROR:
         return UpstreamServiceError(
             service=service,
             operation=operation,
-            status_code=status.HTTP_502_BAD_GATEWAY,
+            status_code=HTTPStatus.BAD_GATEWAY,
             code="UPSTREAM_FAILURE",
             message=f"{service} {operation} failed ({upstream_status}): {detail}",
             details=_dependency_details(
@@ -125,7 +125,7 @@ def classify_upstream_http_error(
     return UpstreamServiceError(
         service=service,
         operation=operation,
-        status_code=status.HTTP_424_FAILED_DEPENDENCY,
+        status_code=HTTPStatus.FAILED_DEPENDENCY,
         code="FAILED_DEPENDENCY",
         message=f"{service} {operation} rejected request ({upstream_status}): {detail}",
         details=_dependency_details(
@@ -148,7 +148,7 @@ def classify_upstream_transport_error(
         return UpstreamServiceError(
             service=service,
             operation=operation,
-            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            status_code=HTTPStatus.GATEWAY_TIMEOUT,
             code="UPSTREAM_TIMEOUT",
             message=f"{service} {operation} timed out: {exc}",
             details=_dependency_details(
@@ -161,7 +161,7 @@ def classify_upstream_transport_error(
     return UpstreamServiceError(
         service=service,
         operation=operation,
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        status_code=HTTPStatus.SERVICE_UNAVAILABLE,
         code="UPSTREAM_UNAVAILABLE",
         message=f"{service} {operation} unavailable: {exc}",
         details=_dependency_details(

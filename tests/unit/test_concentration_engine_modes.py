@@ -6,7 +6,8 @@ from typing import Any, cast
 import pytest
 
 from app.contracts.concentration import ConcentrationRequest
-from app.services import concentration_engine
+from app.services.concentration import parsing as concentration_parsing
+from app.services.concentration.resolvers import resolve_simulation, resolve_stateful
 from app.services.concentration_engine import calculate_concentration
 
 
@@ -97,6 +98,25 @@ async def test_stateful_mode_includes_reporting_currency_and_metadata() -> None:
 
 
 @pytest.mark.asyncio
+async def test_stateless_legal_issuer_core_enrichment_branch() -> None:
+    request = ConcentrationRequest.model_validate(
+        {
+            "input_mode": "stateless",
+            "issuer_grouping_level": "legal_issuer",
+            "stateless_input": {
+                "current_positions": [{"security_id": "A", "quantity": 60}],
+                "projected_positions": [{"security_id": "A", "proposed_quantity": 40}],
+            },
+        }
+    )
+
+    response = await calculate_concentration(request, core_client=_RecordingCoreClient())
+
+    assert response.issuer_concentration.covered_position_count_current == 1
+    assert response.issuer_concentration.covered_position_count_proposed == 1
+
+
+@pytest.mark.asyncio
 async def test_stateful_mode_requires_sections_dict() -> None:
     client = _RecordingCoreClient()
     client.snapshot_response = {}
@@ -108,6 +128,19 @@ async def test_stateful_mode_requires_sections_dict() -> None:
     )
     with pytest.raises(ValueError, match="stateful snapshot missing sections"):
         await calculate_concentration(request, core_client=client)
+
+
+@pytest.mark.asyncio
+async def test_stateful_resolver_requires_stateful_input() -> None:
+    request = ConcentrationRequest.model_construct(
+        input_mode="stateful",
+        stateless_input=None,
+        stateful_input=None,
+        simulation_input=None,
+    )
+
+    with pytest.raises(ValueError, match="stateful_input is required"):
+        await resolve_stateful(request, core_client=_RecordingCoreClient(), correlation_id=None)
 
 
 @pytest.mark.asyncio
@@ -193,6 +226,38 @@ async def test_simulation_mode_falls_back_to_baseline_and_parses_metadata() -> N
 
 
 @pytest.mark.asyncio
+async def test_simulation_mode_reuses_existing_session_without_snapshot_version() -> None:
+    client = _RecordingCoreClient()
+    client.snapshot_response = {
+        "sections": {
+            "positions_baseline": [{"security_id": "SEC_A", "market_value_base": "100"}],
+            "positions_projected": [{"security_id": "SEC_A", "market_value_base": "80"}],
+            "instrument_enrichment": [{"security_id": "SEC_A", "issuer_id": "ISSUER_A"}],
+        },
+    }
+    request = ConcentrationRequest.model_validate(
+        {
+            "input_mode": "simulation",
+            "simulation_input": {
+                "portfolio_id": "DEMO_DPM_EUR_001",
+                "as_of_date": "2026-02-27",
+                "session_id": "SIM_EXISTING",
+                "start_new_session": False,
+                "simulation_changes": [],
+            },
+        }
+    )
+
+    response = await calculate_concentration(request, core_client=client)
+
+    assert response.metadata is not None
+    assert response.metadata.simulation_session_id == "SIM_EXISTING"
+    assert response.metadata.simulation_session_version is None
+    assert client.last_snapshot_payload is not None
+    assert client.last_snapshot_payload["simulation"] == {"session_id": "SIM_EXISTING"}
+
+
+@pytest.mark.asyncio
 async def test_simulation_mode_requires_sections_dict() -> None:
     client = _RecordingCoreClient()
     client.create_response = {"session": {"session_id": "SIM_0001"}}
@@ -209,6 +274,24 @@ async def test_simulation_mode_requires_sections_dict() -> None:
     )
     with pytest.raises(ValueError, match="simulation snapshot missing sections"):
         await calculate_concentration(request, core_client=client)
+
+
+@pytest.mark.asyncio
+async def test_simulation_resolver_requires_simulation_input() -> None:
+    request = ConcentrationRequest.model_construct(
+        input_mode="simulation",
+        stateless_input=None,
+        stateful_input=None,
+        simulation_input=None,
+    )
+
+    with pytest.raises(ValueError, match="simulation_input is required"):
+        await resolve_simulation(
+            request,
+            core_client=_RecordingCoreClient(),
+            correlation_id=None,
+            actor_id=None,
+        )
 
 
 @pytest.mark.asyncio
@@ -236,16 +319,16 @@ async def test_unsupported_mode_guard_branch() -> None:
 
 
 def test_helper_branches_for_type_conversion() -> None:
-    assert concentration_engine._extract_valuation_context(None) is None
-    assert concentration_engine._as_int("12") == 12
-    assert concentration_engine._as_datetime(None) is None
-    assert concentration_engine._as_datetime("not-a-date") is None
+    assert concentration_parsing._extract_valuation_context(None) is None
+    assert concentration_parsing._as_int("12") == 12
+    assert concentration_parsing._as_datetime(None) is None
+    assert concentration_parsing._as_datetime("not-a-date") is None
     mixed_positions: list[Any] = [
         None,
         {"security_id": "A", "market_value_base": "bad"},
         {"security_id": "B", "quantity": "7.5"},
     ]
-    values = concentration_engine._extract_values_from_snapshot_positions(
+    values = concentration_parsing._extract_values_from_snapshot_positions(
         cast(list[dict[str, Any]], mixed_positions)
     )
     assert values == [7.5]

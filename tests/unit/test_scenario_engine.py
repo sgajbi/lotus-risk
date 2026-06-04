@@ -1,8 +1,15 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 
-from app.contracts.scenario import RegimeScenarioPackRequest, ScenarioSupportabilityState
+from app.contracts.scenario import (
+    RegimeScenarioPackRequest,
+    ScenarioPackApprovalStatus,
+    ScenarioSupportabilityState,
+)
+from app.services import scenario_engine
 from app.services.scenario_engine import evaluate_regime_scenario_pack
 
 
@@ -125,6 +132,31 @@ def test_regime_scenario_pack_evaluation_degrades_for_effective_period_exception
     assert response.metadata.calculation_supportability == ScenarioSupportabilityState.DEGRADED
     assert response.governance_evidence.effective_period_status == "expired"
     assert "REGIME_SCENARIO_EFFECTIVE_PERIOD_EXCEPTION" in response.reason_codes
+
+
+def test_regime_scenario_pack_evaluation_degrades_before_effective_period() -> None:
+    response = evaluate_regime_scenario_pack(_request(as_of_date="2026-03-31"))
+
+    assert response.metadata.calculation_supportability == ScenarioSupportabilityState.DEGRADED
+    assert response.governance_evidence.effective_period_status == "not_yet_effective"
+    assert "REGIME_SCENARIO_EFFECTIVE_PERIOD_EXCEPTION" in response.reason_codes
+
+
+def test_regime_scenario_pack_evaluation_blocks_when_cio_approval_not_confirmed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    original = scenario_engine.SCENARIO_PACK_GOVERNANCE["CIO_REGIME_2026_Q2"]
+    monkeypatch.setitem(
+        scenario_engine.SCENARIO_PACK_GOVERNANCE,
+        "CIO_REGIME_2026_Q2",
+        replace(original, cio_approval_status=ScenarioPackApprovalStatus.NOT_APPROVED),
+    )
+
+    response = evaluate_regime_scenario_pack(_request())
+
+    assert response.metadata.calculation_supportability == ScenarioSupportabilityState.BLOCKED
+    assert response.governance_evidence.cio_approval_status == "not_approved"
+    assert "REGIME_SCENARIO_CIO_APPROVAL_NOT_CONFIRMED" in response.reason_codes
 
 
 def test_regime_scenario_pack_evaluation_pending_review_without_portfolio_scope() -> None:

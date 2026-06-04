@@ -1,0 +1,28 @@
+extends:
+  - spectral:oas
+
+rules:
+  operation-operationId: error
+  operation-description: warn
+  operation-tags: error
+  operation-summary: error
+  oas3-api-servers: off
+  lotus-standard-error-responses:
+    description: Every operation should document standard error responses.
+    message: "Operation should include at least one 4xx response and one default or 5xx response."
+    severity: warn
+    given: "$.paths[*][*]"
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          type: object
+          required:
+            - responses
+          properties:
+            responses:
+              type: object
+              anyOf:
+                - required: ["400"]
+                - required: ["422"]
+                - required: ["default"]
