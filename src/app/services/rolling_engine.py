@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import date
 from typing import cast
 from collections.abc import Sequence
@@ -18,7 +17,6 @@ from app.contracts.rolling import (
     RollingRiskFreeContext,
     RollingResponse,
     RollingStatelessInput,
-    RollingWindowResult,
 )
 from app.contracts.risk import ReturnPoint, RiskCalculationSupportability, RiskRequestPeriod
 from app.services.audit_lineage import fingerprint_model
@@ -29,46 +27,9 @@ from app.services.calculation_supportability import (
 from app.services.risk import helpers as risk_helpers
 from app.services.rolling_metric_series import (
     ROLLING_SHARPE_METRIC,
-    calculate_rolling_metric_values,
-    min_observations,
-    rolling_metric_series_context,
-    rolling_metric_series_points,
-    rolling_metric_summary,
 )
-
-
-@dataclass(frozen=True)
-class _RollingInputFrames:
-    portfolio: pd.DataFrame
-    benchmark: pd.DataFrame
-    risk_free: pd.DataFrame
-
-
-@dataclass(frozen=True)
-class _RollingPeriodSeries:
-    name: str
-    start: date
-    end: date
-    portfolio_pp: pd.Series
-    portfolio_decimal: pd.Series
-    benchmark_decimal: pd.Series
-    risk_free_decimal: pd.Series
-
-
-@dataclass(frozen=True)
-class _RollingWindowCalculation:
-    window_result: RollingWindowResult
-    quality_flags: set[str]
-    aligned_benchmark_series_count: int
-    aligned_risk_free_series_count: int
-
-
-@dataclass(frozen=True)
-class _RollingPeriodWindowAggregate:
-    window_results: list[RollingWindowResult]
-    quality_flags: set[str]
-    aligned_benchmark_series_count: int
-    aligned_risk_free_series_count: int
+from app.services.rolling_engine_models import RollingInputFrames, RollingPeriodSeries
+from app.services.rolling_window_calculation import rolling_period_window_aggregate
 
 
 def _build_returns_df(returns: list[ReturnPoint]) -> pd.DataFrame:
@@ -167,8 +128,8 @@ def _request_dependency_context(
     )
 
 
-def _build_input_frames(request: RollingStatelessInput) -> _RollingInputFrames:
-    return _RollingInputFrames(
+def _build_input_frames(request: RollingStatelessInput) -> RollingInputFrames:
+    return RollingInputFrames(
         portfolio=_build_returns_df(request.returns),
         benchmark=_build_returns_df(request.benchmark_returns),
         risk_free=_build_returns_df(request.risk_free_returns),
@@ -232,11 +193,11 @@ def _empty_response(
 
 def _period_series(
     *,
-    frames: _RollingInputFrames,
+    frames: RollingInputFrames,
     request: RollingStatelessInput,
     period: RiskRequestPeriod,
     open_date: date,
-) -> _RollingPeriodSeries:
+) -> RollingPeriodSeries:
     start, end = risk_helpers._resolve_period(
         period.type,
         request.scope.as_of_date,
@@ -256,7 +217,7 @@ def _period_series(
         if not frames.risk_free.empty
         else pd.Series(dtype="float64")
     )
-    return _RollingPeriodSeries(
+    return RollingPeriodSeries(
         name=_period_name(period),
         start=start,
         end=end,
@@ -268,7 +229,7 @@ def _period_series(
 
 
 def _insufficient_period_result(
-    period_series: _RollingPeriodSeries,
+    period_series: RollingPeriodSeries,
     *,
     options: RollingOptions,
     requested_metrics: Sequence[str],
@@ -293,102 +254,8 @@ def _insufficient_period_result(
     )
 
 
-def _calculate_window_result(
-    period_series: _RollingPeriodSeries,
-    *,
-    requested_metrics: Sequence[str],
-    options: RollingOptions,
-    window_length: int,
-) -> _RollingWindowCalculation:
-    min_obs = min_observations(window_length, options.min_observations_policy)
-    metric_series_map: dict[str, pd.Series] = {}
-    quality_flags: set[str] = set()
-    aligned_benchmark_series_count = 0
-    aligned_risk_free_series_count = 0
-
-    for metric_name in requested_metrics:
-        calculation = calculate_rolling_metric_values(
-            metric_name,
-            portfolio_decimal=period_series.portfolio_decimal,
-            benchmark_decimal=period_series.benchmark_decimal,
-            risk_free_decimal=period_series.risk_free_decimal,
-            window_length=window_length,
-            annualization_basis=options.annualization_basis,
-            min_obs=min_obs,
-        )
-        metric_series_map[metric_name] = calculation.values
-        quality_flags.update(calculation.quality_flags)
-        aligned_benchmark_series_count = max(
-            aligned_benchmark_series_count,
-            calculation.aligned_benchmark_series_count,
-        )
-        aligned_risk_free_series_count = max(
-            aligned_risk_free_series_count,
-            calculation.aligned_risk_free_series_count,
-        )
-
-    summaries = {
-        metric_name: rolling_metric_summary(series, min_obs=min_obs)
-        for metric_name, series in metric_series_map.items()
-    }
-    metric_points = (
-        rolling_metric_series_points(metric_series_map) if options.include_time_series else None
-    )
-    return _RollingWindowCalculation(
-        window_result=RollingWindowResult(
-            window_length=window_length,
-            metric_summaries=summaries,
-            metric_series=metric_points,
-            metric_series_context=rolling_metric_series_context(
-                include_time_series=options.include_time_series,
-                metric_points=metric_points,
-            ),
-        ),
-        quality_flags=quality_flags,
-        aligned_benchmark_series_count=aligned_benchmark_series_count,
-        aligned_risk_free_series_count=aligned_risk_free_series_count,
-    )
-
-
-def _rolling_period_window_aggregate(
-    period_series: _RollingPeriodSeries,
-    *,
-    options: RollingOptions,
-    requested_metrics: Sequence[str],
-) -> _RollingPeriodWindowAggregate:
-    window_results: list[RollingWindowResult] = []
-    period_flags: set[str] = set()
-    aligned_benchmark_series_count = 0
-    aligned_risk_free_series_count = 0
-
-    for window_length in options.window_lengths:
-        calculation = _calculate_window_result(
-            period_series,
-            requested_metrics=requested_metrics,
-            options=options,
-            window_length=window_length,
-        )
-        window_results.append(calculation.window_result)
-        period_flags.update(calculation.quality_flags)
-        aligned_benchmark_series_count = max(
-            aligned_benchmark_series_count,
-            calculation.aligned_benchmark_series_count,
-        )
-        aligned_risk_free_series_count = max(
-            aligned_risk_free_series_count,
-            calculation.aligned_risk_free_series_count,
-        )
-
-    return _RollingPeriodWindowAggregate(
-        window_results=window_results,
-        quality_flags=period_flags,
-        aligned_benchmark_series_count=aligned_benchmark_series_count,
-        aligned_risk_free_series_count=aligned_risk_free_series_count,
-    )
-
-
 def _calculate_period_result(
-    period_series: _RollingPeriodSeries,
+    period_series: RollingPeriodSeries,
     *,
     options: RollingOptions,
     requested_metrics: Sequence[str],
@@ -400,7 +267,7 @@ def _calculate_period_result(
             requested_metrics=requested_metrics,
         )
 
-    aggregate = _rolling_period_window_aggregate(
+    aggregate = rolling_period_window_aggregate(
         period_series,
         options=options,
         requested_metrics=requested_metrics,
