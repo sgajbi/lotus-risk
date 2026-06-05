@@ -3,11 +3,13 @@ from pydantic import ValidationError
 
 from app.contracts.risk import RiskAnalyticsRequest, RiskInputMode, RiskResponse
 from app.contracts.risk_inputs import RiskAnalyticsRequest as RiskAnalyticsRequestSource
+from app.contracts.risk_request_inputs import RiskAnalyticsRequest as RiskAnalyticsRequestModule
 from app.contracts.risk_outputs import RiskResponse as RiskResponseSource
 
 
 def test_risk_contract_module_preserves_public_import_surface() -> None:
     assert RiskAnalyticsRequest is RiskAnalyticsRequestSource
+    assert RiskAnalyticsRequest is RiskAnalyticsRequestModule
     assert RiskResponse is RiskResponseSource
 
 
