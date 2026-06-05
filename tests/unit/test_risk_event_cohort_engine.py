@@ -4,7 +4,14 @@ import pytest
 
 from app.contracts.risk_event_cohort import (
     RiskEventAffectedCohortRequest,
+    RiskEventAffectedCohortResponse,
     RiskEventCohortSupportabilityState,
+)
+from app.contracts.risk_event_cohort_inputs import (
+    RiskEventAffectedCohortRequest as RiskEventAffectedCohortRequestImplementation,
+)
+from app.contracts.risk_event_cohort_response import (
+    RiskEventAffectedCohortResponse as RiskEventAffectedCohortResponseImplementation,
 )
 from app.services.risk_event_cohort_engine import evaluate_risk_event_affected_cohort
 
@@ -38,6 +45,11 @@ def _request(**overrides: object) -> RiskEventAffectedCohortRequest:
     }
     payload.update(overrides)
     return RiskEventAffectedCohortRequest.model_validate(payload)
+
+
+def test_risk_event_cohort_contract_module_preserves_public_import_surface() -> None:
+    assert RiskEventAffectedCohortRequest is RiskEventAffectedCohortRequestImplementation
+    assert RiskEventAffectedCohortResponse is RiskEventAffectedCohortResponseImplementation
 
 
 def test_risk_event_affected_cohort_returns_source_owned_membership() -> None:
