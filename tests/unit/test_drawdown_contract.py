@@ -13,12 +13,16 @@ from app.contracts.drawdown_metric_outputs import DrawdownSummary as DrawdownSum
 from app.contracts.drawdown_response_outputs import (
     DrawdownResponse as DrawdownResponseImplementation,
 )
+from app.contracts.drawdown_response_envelope_outputs import (
+    DrawdownResponse as DrawdownResponseEnvelope,
+)
 
 
 def test_drawdown_contract_module_preserves_public_import_surface() -> None:
     assert DrawdownAnalyticsRequest is DrawdownAnalyticsRequestSource
     assert DrawdownResponse is DrawdownResponseSource
     assert DrawdownResponse is DrawdownResponseImplementation
+    assert DrawdownResponse is DrawdownResponseEnvelope
     assert DrawdownSummary is DrawdownSummarySource
 
 
