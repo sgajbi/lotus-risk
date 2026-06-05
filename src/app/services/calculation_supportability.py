@@ -21,6 +21,14 @@ class _PeriodSupportabilityAssessment:
     degraded_result_count: int
 
 
+_SUPPORTABILITY_REASON_PRECEDENCE: tuple[RiskSupportabilityReason, ...] = (
+    "benchmark_unavailable",
+    "insufficient_aligned_observations",
+    "insufficient_observations",
+    "calculation_quality_issue",
+)
+
+
 def default_calculation_supportability() -> RiskCalculationSupportability:
     return RiskCalculationSupportability(
         state="ready",
@@ -59,13 +67,10 @@ def _supportability_reason_for_error(error: str) -> RiskSupportabilityReason:
 
 
 def _select_reason(reasons: Sequence[RiskSupportabilityReason]) -> RiskSupportabilityReason:
-    reason_order: tuple[RiskSupportabilityReason, ...] = (
-        "benchmark_unavailable",
-        "insufficient_aligned_observations",
-        "insufficient_observations",
-        "calculation_quality_issue",
+    available_reasons = set(reasons)
+    return next(
+        reason for reason in _SUPPORTABILITY_REASON_PRECEDENCE if reason in available_reasons
     )
-    return next(reason for reason in reason_order if reason in set(reasons))
 
 
 def _observation_count(period_result: Any) -> int | None:
