@@ -10,7 +10,7 @@ documentation posture, and validation gates. It is not a completion claim.
 
 ## Code Size Baseline
 
-- Python source files under `src/`: 179
+- Python source files under `src/`: 180
 - Python test files under `tests/`: 91
 - Python packages under `src/`: 9
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
@@ -33,7 +33,7 @@ documentation posture, and validation gates. It is not a completion claim.
 | tests/integration/test_rolling_live_characterization.py | 418 | 16694 |
 | tests/unit/test_risk_engine.py | 395 | 15947 |
 | tests/unit/test_concentration_engine.py | 394 | 16053 |
-| src/app/services/scenario_engine.py | 364 | 12949 |
+| src/app/services/scenario_engine.py | 369 | 13050 |
 | src/app/services/concentration/simulation_resolver.py | 360 | 12246 |
 | tests/unit/test_rolling_engine.py | 354 | 14341 |
 | tests/unit/test_risk_engine_branch_coverage.py | 353 | 13642 |
@@ -46,7 +46,7 @@ documentation posture, and validation gates. It is not a completion claim.
 | --- | --- | --- | --- |
 | src/app/integrations/lotus_core_client.py | LotusCoreClient | ClassDef | 156 |
 | src/app/trust_telemetry_snapshot_models.py | DeclaredProductTrustTelemetrySnapshot | ClassDef | 115 |
-| src/app/integrations/lotus_performance_client.py | LotusPerformanceClient | ClassDef | 113 |
+| src/app/integrations/lotus_performance_client.py | LotusPerformanceClient | ClassDef | 110 |
 | src/app/contracts/concentration_response_envelope_outputs.py | ConcentrationResponse | ClassDef | 105 |
 | src/app/contracts/concentration_issuer_metric_outputs.py | IssuerConcentration | ClassDef | 97 |
 | src/app/contracts/risk_response_outputs.py | RiskResponseMetadata | ClassDef | 96 |
@@ -89,29 +89,29 @@ All checks passed!
 - Ruff format check: passed
 
 ```text
-284 files already formatted
+285 files already formatted
 ```
 - Type checking: passed
 
 ```text
-Success: no issues found in 270 source files
+Success: no issues found in 271 source files
 ```
 - Unit coverage snapshot: passed
 
 ```text
 ........................................................................ [ 15%]
 ........................................................................ [ 31%]
-........................................................................ [ 47%]
-........................................................................ [ 63%]
-........................................................................ [ 78%]
-........................................................................ [ 94%]
+........................................................................ [ 46%]
+........................................................................ [ 62%]
+........................................................................ [ 77%]
+........................................................................ [ 93%]
 ...
 src\app\upstream_errors.py                                 55      0     20      3    96%   181->194, 187->189, 192->194
 ---------------------------------------------------------------------------------------------------
-TOTAL                                                    5145     86    986     85    97%
+TOTAL                                                    5152     86    984     85    97%
 
-139 files skipped due to complete coverage.
-457 passed in 9.79s
+140 files skipped due to complete coverage.
+462 passed in 8.35s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -141,7 +141,7 @@ src\app\services\risk\__init__.py - A (100.00)
 - Dependency hygiene: passed
 
 ```text
-Scanning 179 files...
+Scanning 180 files...
 
 Success! No dependency issues found.
 ```
@@ -240,7 +240,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-457 tests collected in 2.01s
+462 tests collected in 1.62s
 ```
 - Import-linter report-only: passed
 
