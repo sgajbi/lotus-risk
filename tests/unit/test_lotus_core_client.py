@@ -11,6 +11,7 @@ from app.integrations.lotus_core_client import (
     DEFAULT_LOTUS_CORE_BASE_URL,
     LotusCoreClient,
 )
+from app.integrations.lotus_core_operations import build_simulation_session_payload
 from app.integrations.lotus_core_transport import resolve_lotus_core_base_url
 from app.upstream_errors import UpstreamServiceError, extract_upstream_error_detail
 
@@ -54,6 +55,16 @@ def _ok_response(
         json=payload,
         request=httpx.Request("POST", url),
     )
+
+
+def test_build_simulation_session_payload_omits_empty_optional_fields() -> None:
+    payload = build_simulation_session_payload(
+        portfolio_id="DEMO_DPM_EUR_001",
+        ttl_hours=None,
+        created_by="",
+    )
+
+    assert payload == {"portfolio_id": "DEMO_DPM_EUR_001"}
 
 
 @pytest.mark.asyncio

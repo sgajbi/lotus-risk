@@ -3,9 +3,17 @@ from __future__ import annotations
 from typing import Any
 
 from app.integrations._downstream_client_profile import resolve_downstream_client_profile
+from app.integrations.lotus_core_operations import (
+    execute_add_simulation_changes_request,
+    execute_core_snapshot_request,
+    execute_create_simulation_session_request,
+    execute_instrument_enrichment_request,
+    execute_position_analytics_timeseries_request,
+    execute_risk_free_coverage_request,
+    execute_risk_free_series_request,
+)
 from app.integrations.lotus_core_transport import (
     DEFAULT_LOTUS_CORE_BASE_URL as _DEFAULT_LOTUS_CORE_BASE_URL,
-    execute_lotus_core_json_request,
     resolve_lotus_core_base_url,
 )
 
@@ -37,15 +45,12 @@ class LotusCoreClient:
         created_by: str | None,
         correlation_id: str | None,
     ) -> dict[str, Any]:
-        payload: dict[str, Any] = {"portfolio_id": portfolio_id}
-        if ttl_hours is not None:
-            payload["ttl_hours"] = ttl_hours
-        if created_by:
-            payload["created_by"] = created_by
-        return await self._request_json(
-            "POST",
-            "/simulation-sessions",
-            json_payload=payload,
+        return await execute_create_simulation_session_request(
+            profile=self._profile,
+            base_url=self._base_url,
+            portfolio_id=portfolio_id,
+            ttl_hours=ttl_hours,
+            created_by=created_by,
             correlation_id=correlation_id,
         )
 
@@ -56,10 +61,11 @@ class LotusCoreClient:
         changes: list[dict[str, Any]],
         correlation_id: str | None,
     ) -> dict[str, Any]:
-        return await self._request_json(
-            "POST",
-            f"/simulation-sessions/{session_id}/changes",
-            json_payload={"changes": changes},
+        return await execute_add_simulation_changes_request(
+            profile=self._profile,
+            base_url=self._base_url,
+            session_id=session_id,
+            changes=changes,
             correlation_id=correlation_id,
         )
 
@@ -70,10 +76,11 @@ class LotusCoreClient:
         request_payload: dict[str, Any],
         correlation_id: str | None,
     ) -> dict[str, Any]:
-        return await self._request_json(
-            "POST",
-            f"/integration/portfolios/{portfolio_id}/core-snapshot",
-            json_payload=request_payload,
+        return await execute_core_snapshot_request(
+            profile=self._profile,
+            base_url=self._base_url,
+            portfolio_id=portfolio_id,
+            request_payload=request_payload,
             correlation_id=correlation_id,
         )
 
@@ -83,11 +90,10 @@ class LotusCoreClient:
         security_ids: list[str],
         correlation_id: str | None,
     ) -> dict[str, Any]:
-        payload = {"security_ids": security_ids}
-        return await self._request_json(
-            "POST",
-            "/integration/instruments/enrichment-bulk",
-            json_payload=payload,
+        return await execute_instrument_enrichment_request(
+            profile=self._profile,
+            base_url=self._base_url,
+            security_ids=security_ids,
             correlation_id=correlation_id,
         )
 
@@ -98,10 +104,11 @@ class LotusCoreClient:
         request_payload: dict[str, Any],
         correlation_id: str | None,
     ) -> dict[str, Any]:
-        return await self._request_json(
-            "POST",
-            f"/integration/portfolios/{portfolio_id}/analytics/position-timeseries",
-            json_payload=request_payload,
+        return await execute_position_analytics_timeseries_request(
+            profile=self._profile,
+            base_url=self._base_url,
+            portfolio_id=portfolio_id,
+            request_payload=request_payload,
             correlation_id=correlation_id,
         )
 
@@ -111,10 +118,10 @@ class LotusCoreClient:
         request_payload: dict[str, Any],
         correlation_id: str | None,
     ) -> dict[str, Any]:
-        return await self._request_json(
-            "POST",
-            "/integration/reference/risk-free-series",
-            json_payload=request_payload,
+        return await execute_risk_free_series_request(
+            profile=self._profile,
+            base_url=self._base_url,
+            request_payload=request_payload,
             correlation_id=correlation_id,
         )
 
@@ -125,26 +132,10 @@ class LotusCoreClient:
         request_payload: dict[str, Any],
         correlation_id: str | None,
     ) -> dict[str, Any]:
-        return await self._request_json(
-            "POST",
-            f"/integration/reference/risk-free-series/coverage?currency={currency}",
-            json_payload=request_payload,
-            correlation_id=correlation_id,
-        )
-
-    async def _request_json(
-        self,
-        method: str,
-        path: str,
-        *,
-        json_payload: dict[str, Any],
-        correlation_id: str | None,
-    ) -> dict[str, Any]:
-        return await execute_lotus_core_json_request(
+        return await execute_risk_free_coverage_request(
             profile=self._profile,
             base_url=self._base_url,
-            method=method,
-            path=path,
-            json_payload=json_payload,
+            currency=currency,
+            request_payload=request_payload,
             correlation_id=correlation_id,
         )
