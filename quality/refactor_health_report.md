@@ -12,7 +12,7 @@ after each pushed slice.
 
 | Rank | Target | Evidence | Next action |
 | --- | --- | --- | --- |
-| 1 | Service module size | Largest remaining source module hotspots include `concentration/resolvers.py`; attribution and rolling public adapters have been split from stateful input and exposure-resolution helpers | Continue extracting cohesive orchestration, response-building, and dependency-resolution helpers with characterization tests |
+| 1 | Service module size | Concentration, attribution, and rolling public adapters have been split from stateful, simulation, and exposure-resolution helpers; remaining source-size pressure is concentrated in contract modules | Continue extracting cohesive orchestration, response-building, and dependency-resolution helpers with characterization tests |
 | 2 | Contract module size | Contract modules are improved but `concentration.py`, `rolling.py`, `risk.py`, and `drawdown.py` remain prominent source files | Split reusable metadata or nested contract fragments only where it improves reviewability |
 | 3 | OpenAPI and certification evidence | `make openapi-gate` evaluates the generated FastAPI schema; `make openapi-artifact-gate` exports `output/openapi/lotus-risk.openapi.json` and validates Spectral policy expectations | Attach generated OpenAPI artifact evidence to final PR |
 | 4 | Security and abuse-control evidence | Authorization, audit, redaction, Bandit, pip-audit, payload-size limits, capability checks, threat-model evidence, and bank deployment policy are covered | Add gateway-backed token-validation evidence and final runtime configuration proof before release promotion |
