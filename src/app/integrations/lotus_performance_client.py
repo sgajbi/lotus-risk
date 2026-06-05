@@ -281,10 +281,7 @@ class LotusPerformanceClient:
         request_payload: dict[str, Any],
         correlation_id: str | None,
     ) -> dict[str, Any]:
-        headers: dict[str, str] = {}
-        if correlation_id:
-            headers["X-Correlation-Id"] = correlation_id
-
+        headers = _correlation_headers(correlation_id)
         path = "/integration/benchmarks/exposure-context"
         url = f"{self._base_url}{path}"
         started_at = observation_start()
