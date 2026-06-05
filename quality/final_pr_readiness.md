@@ -27,7 +27,7 @@ Current measured highlights:
 1. `src/app/main.py` moved from `980` lines and `22` route/middleware/handler decorators to `10`
    lines and `0` decorators.
 2. The latest quality baseline reports no C-or-worse cyclomatic-complexity candidates.
-3. The latest quality baseline collects `447` tests across `91` Python test files.
+3. The latest quality baseline collects `448` tests across `91` Python test files.
 4. OpenAPI governance now enforces operation IDs, mutation request examples, duplicate operation ID
    checks, and generated artifact policy.
 5. Security evidence now covers authorization headers, service identity, capability checks,
@@ -59,11 +59,13 @@ Evidence:
    artifact against repository Spectral policy expectations.
 3. `tests/unit/test_openapi_quality_gate.py` and `tests/unit/test_openapi_artifact_gate.py` pin the
    gate behavior.
+4. `quality/openapi_artifact_evidence.md` records the current generated artifact path, checksum,
+   size, schema counts, and regeneration commands for PR attachment.
 
 PR requirement:
 
 1. Attach or reference the generated `output/openapi/lotus-risk.openapi.json` artifact in the final
-   PR evidence.
+   PR evidence, using `quality/openapi_artifact_evidence.md` as the checksum manifest.
 
 ## Testing Improvements
 
@@ -72,7 +74,7 @@ Evidence:
 1. Focused tests protect app factory wiring, router extraction, downstream client boundaries,
    OpenAPI governance, security evidence, observability contracts, upstream error mapping,
    enterprise readiness, and risk analytics behavior.
-2. The latest generated baseline records `447` collected tests and `97%` total coverage.
+2. The latest generated baseline records `448` collected tests and `97%` total coverage.
 3. The final PR should list exact local commands and GitHub check names that passed.
 
 ## Security Improvements
@@ -118,6 +120,8 @@ Evidence:
 2. Repo-local wiki source has been updated for security and operations posture.
 3. `quality/baseline_report.md`, `quality/refactor_health_report.md`, and
    `quality/quality_scorecard.md` provide generated measurable evidence.
+4. `quality/openapi_artifact_evidence.md` records the generated OpenAPI artifact checksum and
+   attachment metadata.
 
 ## Validation Evidence To Include In The PR
 
