@@ -11,6 +11,13 @@ from app.contracts.concentration_outputs import ConcentrationResponse as Concent
 from app.contracts.concentration_request_inputs import (
     ConcentrationRequest as ConcentrationRequestImplementation,
 )
+from app.contracts.concentration_response_field_examples import (
+    CONCENTRATION_ISSUER_EXAMPLE,
+    CONCENTRATION_METADATA_EXAMPLE,
+    CONCENTRATION_RISK_PROXY_EXAMPLE,
+    CONCENTRATION_SINGLE_POSITION_EXAMPLE,
+    CONCENTRATION_VALUATION_CONTEXT_EXAMPLE,
+)
 from app.contracts.concentration_metric_outputs import (
     IssuerConcentration as IssuerConcentrationSource,
 )
@@ -33,6 +40,19 @@ def test_concentration_contract_module_preserves_public_import_surface() -> None
     assert ConcentrationResponse is ConcentrationResponseEnvelope
     assert IssuerConcentration is IssuerConcentrationSource
     assert IssuerConcentration is IssuerConcentrationImplementation
+
+
+def test_concentration_response_schema_uses_governed_field_examples() -> None:
+    properties = ConcentrationResponseEnvelope.model_json_schema()["properties"]
+
+    assert properties["risk_proxy"]["example"] == CONCENTRATION_RISK_PROXY_EXAMPLE
+    assert (
+        properties["single_position_concentration"]["example"]
+        == CONCENTRATION_SINGLE_POSITION_EXAMPLE
+    )
+    assert properties["issuer_concentration"]["example"] == CONCENTRATION_ISSUER_EXAMPLE
+    assert properties["valuation_context"]["example"] == CONCENTRATION_VALUATION_CONTEXT_EXAMPLE
+    assert properties["metadata"]["example"] == CONCENTRATION_METADATA_EXAMPLE
 
 
 def test_simulation_input_rejects_ttl_when_reusing_session() -> None:
