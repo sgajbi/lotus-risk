@@ -10,8 +10,8 @@ documentation posture, and validation gates. It is not a completion claim.
 
 ## Code Size Baseline
 
-- Python source files under `src/`: 180
-- Python test files under `tests/`: 91
+- Python source files under `src/`: 181
+- Python test files under `tests/`: 92
 - Python packages under `src/`: 9
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
 
@@ -34,11 +34,11 @@ documentation posture, and validation gates. It is not a completion claim.
 | tests/unit/test_rolling_engine.py | 411 | 16442 |
 | tests/unit/test_risk_engine.py | 395 | 15947 |
 | tests/unit/test_concentration_engine.py | 394 | 16053 |
-| src/app/services/rolling_engine.py | 383 | 12374 |
 | src/app/services/scenario_engine.py | 369 | 13050 |
 | src/app/services/concentration/simulation_resolver.py | 360 | 12246 |
 | tests/unit/test_risk_engine_branch_coverage.py | 353 | 13642 |
 | tests/unit/test_concentration_engine_modes.py | 334 | 12149 |
+| src/app/services/calculation_supportability.py | 328 | 11177 |
 
 ### Largest Functions And Classes
 
@@ -89,29 +89,29 @@ All checks passed!
 - Ruff format check: passed
 
 ```text
-285 files already formatted
+287 files already formatted
 ```
 - Type checking: passed
 
 ```text
-Success: no issues found in 271 source files
+Success: no issues found in 273 source files
 ```
 - Unit coverage snapshot: passed
 
 ```text
 ........................................................................ [ 15%]
-........................................................................ [ 31%]
-........................................................................ [ 46%]
-........................................................................ [ 62%]
-........................................................................ [ 77%]
-........................................................................ [ 93%]
+........................................................................ [ 30%]
+........................................................................ [ 45%]
+........................................................................ [ 61%]
+........................................................................ [ 76%]
+........................................................................ [ 91%]
 ...
 src\app\upstream_errors.py                                 55      0     20      3    96%   181->194, 187->189, 192->194
 ---------------------------------------------------------------------------------------------------
-TOTAL                                                    5158     80    978     79    97%
+TOTAL                                                    5164     80    978     79    97%
 
-141 files skipped due to complete coverage.
-464 passed in 7.76s
+142 files skipped due to complete coverage.
+470 passed in 7.69s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -141,7 +141,7 @@ src\app\services\risk\__init__.py - A (100.00)
 - Dependency hygiene: passed
 
 ```text
-Scanning 180 files...
+Scanning 181 files...
 
 Success! No dependency issues found.
 ```
@@ -240,7 +240,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-464 tests collected in 1.55s
+470 tests collected in 1.52s
 ```
 - Import-linter report-only: passed
 
