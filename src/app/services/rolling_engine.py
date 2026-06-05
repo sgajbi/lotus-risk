@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import date
-from typing import Literal, cast
+from typing import cast
 from collections.abc import Sequence
 
 import pandas as pd
@@ -10,12 +9,10 @@ import pandas as pd
 from app.contracts.rolling import (
     ROLLING_BENCHMARK_METRICS,
     RollingInputMode,
-    RollingBenchmarkContext,
     RollingMetadata,
     RollingOptions,
     RollingPeriodResult,
     RollingRequestDependencyContext,
-    RollingRiskFreeContext,
     RollingResponse,
     RollingStatelessInput,
 )
@@ -26,40 +23,12 @@ from app.services.calculation_supportability import (
     supportability_from_period_results,
 )
 from app.services.risk import helpers as risk_helpers
+from app.services.rolling_dependency_context import benchmark_context, risk_free_context
 from app.services.rolling_metric_series import (
     ROLLING_SHARPE_METRIC,
 )
 from app.services.rolling_engine_models import RollingInputFrames, RollingPeriodSeries
 from app.services.rolling_window_calculation import rolling_period_window_aggregate
-
-
-RollingDependencyReason = Literal[
-    "NOT_REQUESTED",
-    "BENCHMARK_UNAVAILABLE",
-    "RISK_FREE_UNAVAILABLE",
-    "NO_ALIGNED_OBSERVATIONS",
-    "APPLIED",
-]
-RollingBenchmarkReason = Literal[
-    "NOT_REQUESTED",
-    "BENCHMARK_UNAVAILABLE",
-    "NO_ALIGNED_OBSERVATIONS",
-    "APPLIED",
-]
-RollingRiskFreeReason = Literal[
-    "NOT_REQUESTED",
-    "RISK_FREE_UNAVAILABLE",
-    "NO_ALIGNED_OBSERVATIONS",
-    "APPLIED",
-]
-
-
-@dataclass(frozen=True)
-class _RollingDependencyDecision:
-    requested: bool
-    available: bool
-    aligned: bool
-    reason: RollingDependencyReason
 
 
 def _build_returns_df(returns: list[ReturnPoint]) -> pd.DataFrame:
@@ -76,80 +45,6 @@ def _period_name(period: RiskRequestPeriod) -> str:
 
 def _filter_period(df: pd.DataFrame, *, start: date, end: date) -> pd.Series:
     return df.loc[(df.index >= pd.Timestamp(start)) & (df.index <= pd.Timestamp(end)), "value"]
-
-
-def _dependency_decision(
-    *,
-    requested: bool,
-    source_series_count: int,
-    aligned_series_count: int,
-    unavailable_reason: RollingDependencyReason,
-) -> _RollingDependencyDecision:
-    if not requested:
-        return _RollingDependencyDecision(
-            requested=False,
-            available=False,
-            aligned=False,
-            reason="NOT_REQUESTED",
-        )
-    if source_series_count == 0:
-        return _RollingDependencyDecision(
-            requested=True,
-            available=False,
-            aligned=False,
-            reason=unavailable_reason,
-        )
-    if aligned_series_count == 0:
-        return _RollingDependencyDecision(
-            requested=True,
-            available=True,
-            aligned=False,
-            reason="NO_ALIGNED_OBSERVATIONS",
-        )
-    return _RollingDependencyDecision(
-        requested=True,
-        available=True,
-        aligned=True,
-        reason="APPLIED",
-    )
-
-
-def _benchmark_context(
-    requested_metrics: Sequence[str],
-    benchmark_series_count: int,
-    aligned_benchmark_series_count: int,
-) -> RollingBenchmarkContext:
-    decision = _dependency_decision(
-        requested=any(metric in ROLLING_BENCHMARK_METRICS for metric in requested_metrics),
-        source_series_count=benchmark_series_count,
-        aligned_series_count=aligned_benchmark_series_count,
-        unavailable_reason="BENCHMARK_UNAVAILABLE",
-    )
-    return RollingBenchmarkContext(
-        requested=decision.requested,
-        available=decision.available,
-        aligned=decision.aligned,
-        reason=cast(RollingBenchmarkReason, decision.reason),
-    )
-
-
-def _risk_free_context(
-    requested_metrics: Sequence[str],
-    risk_free_series_count: int,
-    aligned_risk_free_series_count: int,
-) -> RollingRiskFreeContext:
-    decision = _dependency_decision(
-        requested=ROLLING_SHARPE_METRIC in requested_metrics,
-        source_series_count=risk_free_series_count,
-        aligned_series_count=aligned_risk_free_series_count,
-        unavailable_reason="RISK_FREE_UNAVAILABLE",
-    )
-    return RollingRiskFreeContext(
-        requested=decision.requested,
-        available=decision.available,
-        aligned=decision.aligned,
-        reason=cast(RollingRiskFreeReason, decision.reason),
-    )
 
 
 def _request_dependency_context(
@@ -280,8 +175,16 @@ def _insufficient_period_result(
         window_count_requested=len(options.window_lengths),
         window_lengths_emitted=[],
         window_count_emitted=0,
-        benchmark_context=_benchmark_context(requested_metrics, 0, 0),
-        risk_free_context=_risk_free_context(requested_metrics, 0, 0),
+        benchmark_context=benchmark_context(
+            requested_metrics,
+            benchmark_series_count=0,
+            aligned_benchmark_series_count=0,
+        ),
+        risk_free_context=risk_free_context(
+            requested_metrics,
+            risk_free_series_count=0,
+            aligned_risk_free_series_count=0,
+        ),
         window_results=[],
         quality_flags=[],
         error="Insufficient data",
@@ -319,15 +222,15 @@ def _calculate_period_result(
         window_count_requested=len(options.window_lengths),
         window_lengths_emitted=[result.window_length for result in aggregate.window_results],
         window_count_emitted=len(aggregate.window_results),
-        benchmark_context=_benchmark_context(
+        benchmark_context=benchmark_context(
             requested_metrics,
-            len(period_series.benchmark_decimal),
-            aggregate.aligned_benchmark_series_count,
+            benchmark_series_count=len(period_series.benchmark_decimal),
+            aligned_benchmark_series_count=aggregate.aligned_benchmark_series_count,
         ),
-        risk_free_context=_risk_free_context(
+        risk_free_context=risk_free_context(
             requested_metrics,
-            len(period_series.risk_free_decimal),
-            aggregate.aligned_risk_free_series_count,
+            risk_free_series_count=len(period_series.risk_free_decimal),
+            aligned_risk_free_series_count=aggregate.aligned_risk_free_series_count,
         ),
         window_results=aggregate.window_results,
         quality_flags=sorted(aggregate.quality_flags),
