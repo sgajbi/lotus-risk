@@ -31,13 +31,13 @@ documentation posture, and validation gates. It is not a completion claim.
 | tests/unit/test_drawdown_engine.py | 422 | 16234 |
 | src/app/services/attribution_decomposition.py | 420 | 13767 |
 | tests/integration/test_rolling_live_characterization.py | 418 | 16694 |
+| tests/unit/test_rolling_engine.py | 411 | 16442 |
 | tests/unit/test_risk_engine.py | 395 | 15947 |
 | tests/unit/test_concentration_engine.py | 394 | 16053 |
+| src/app/services/rolling_engine.py | 383 | 12374 |
 | src/app/services/scenario_engine.py | 369 | 13050 |
 | src/app/services/concentration/simulation_resolver.py | 360 | 12246 |
-| tests/unit/test_rolling_engine.py | 354 | 14341 |
 | tests/unit/test_risk_engine_branch_coverage.py | 353 | 13642 |
-| src/app/services/rolling_engine.py | 349 | 11473 |
 | tests/unit/test_concentration_engine_modes.py | 334 | 12149 |
 
 ### Largest Functions And Classes
@@ -108,10 +108,10 @@ Success: no issues found in 271 source files
 ...
 src\app\upstream_errors.py                                 55      0     20      3    96%   181->194, 187->189, 192->194
 ---------------------------------------------------------------------------------------------------
-TOTAL                                                    5152     86    984     85    97%
+TOTAL                                                    5158     80    978     79    97%
 
-140 files skipped due to complete coverage.
-462 passed in 8.35s
+141 files skipped due to complete coverage.
+464 passed in 7.76s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -240,7 +240,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-462 tests collected in 1.62s
+464 tests collected in 1.55s
 ```
 - Import-linter report-only: passed
 
