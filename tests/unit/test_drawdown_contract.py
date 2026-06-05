@@ -13,6 +13,12 @@ from app.contracts.drawdown_metric_outputs import DrawdownSummary as DrawdownSum
 from app.contracts.drawdown_request_inputs import (
     DrawdownAnalyticsRequest as DrawdownAnalyticsRequestImplementation,
 )
+from app.contracts.drawdown_request_field_examples import (
+    DRAWDOWN_ANALYSIS_OPTIONS_EXAMPLE,
+    DRAWDOWN_BENCHMARK_POLICY_EXAMPLE,
+    DRAWDOWN_STATEFUL_INPUT_EXAMPLE,
+    DRAWDOWN_STATELESS_INPUT_EXAMPLE,
+)
 from app.contracts.drawdown_response_outputs import (
     DrawdownResponse as DrawdownResponseImplementation,
 )
@@ -28,6 +34,15 @@ def test_drawdown_contract_module_preserves_public_import_surface() -> None:
     assert DrawdownResponse is DrawdownResponseImplementation
     assert DrawdownResponse is DrawdownResponseEnvelope
     assert DrawdownSummary is DrawdownSummarySource
+
+
+def test_drawdown_request_schema_uses_governed_field_examples() -> None:
+    properties = DrawdownAnalyticsRequestImplementation.model_json_schema()["properties"]
+
+    assert properties["stateless_input"]["example"] == DRAWDOWN_STATELESS_INPUT_EXAMPLE
+    assert properties["stateful_input"]["example"] == DRAWDOWN_STATEFUL_INPUT_EXAMPLE
+    assert properties["benchmark_policy"]["example"] == DRAWDOWN_BENCHMARK_POLICY_EXAMPLE
+    assert properties["analysis_options"]["example"] == DRAWDOWN_ANALYSIS_OPTIONS_EXAMPLE
 
 
 def _stateless_payload() -> dict[str, object]:

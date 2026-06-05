@@ -10,6 +10,12 @@ from app.contracts.drawdown_common_inputs import (
     DrawdownInputMode,
 )
 from app.contracts.drawdown_examples import DRAWDOWN_REQUEST_EXAMPLES
+from app.contracts.drawdown_request_field_examples import (
+    DRAWDOWN_ANALYSIS_OPTIONS_EXAMPLE,
+    DRAWDOWN_BENCHMARK_POLICY_EXAMPLE,
+    DRAWDOWN_STATEFUL_INPUT_EXAMPLE,
+    DRAWDOWN_STATELESS_INPUT_EXAMPLE,
+)
 from app.contracts.drawdown_stateful_inputs import DrawdownStatefulInput
 from app.contracts.drawdown_stateless_inputs import DrawdownStatelessInput
 
@@ -23,42 +29,12 @@ class DrawdownAnalyticsRequest(BaseModel):
     stateless_input: DrawdownStatelessInput | None = Field(
         default=None,
         description="Stateless drawdown input payload.",
-        json_schema_extra={
-            "example": {
-                "scope": {
-                    "as_of_date": "2026-03-31",
-                    "reporting_currency": "USD",
-                    "net_or_gross": "NET",
-                },
-                "periods": [{"type": "YTD", "name": "YTD"}],
-                "returns": [
-                    {"date": "2026-01-02", "value": 0.82},
-                    {"date": "2026-01-03", "value": -1.45},
-                    {"date": "2026-01-04", "value": 0.37},
-                ],
-                "benchmark_returns": [
-                    {"date": "2026-01-02", "value": 0.61},
-                    {"date": "2026-01-03", "value": -0.98},
-                    {"date": "2026-01-04", "value": 0.21},
-                ],
-            }
-        },
+        json_schema_extra={"example": DRAWDOWN_STATELESS_INPUT_EXAMPLE},
     )
     stateful_input: DrawdownStatefulInput | None = Field(
         default=None,
         description="Stateful drawdown input payload sourced through integrations.",
-        json_schema_extra={
-            "example": {
-                "portfolio_id": "PB_SG_GLOBAL_BAL_001",
-                "as_of_date": "2026-03-31",
-                "reporting_currency": "USD",
-                "periods": [{"type": "YTD", "name": "YTD"}],
-                "benchmark_policy": {
-                    "include_benchmark": True,
-                    "missing_benchmark_policy": "REQUIRE",
-                },
-            }
-        },
+        json_schema_extra={"example": DRAWDOWN_STATEFUL_INPUT_EXAMPLE},
     )
     benchmark_policy: BenchmarkDrawdownPolicy = Field(
         default_factory=BenchmarkDrawdownPolicy,
@@ -66,23 +42,12 @@ class DrawdownAnalyticsRequest(BaseModel):
             "Benchmark-relative drawdown policy for stateless requests. "
             "Stateful requests must use `stateful_input.benchmark_policy`."
         ),
-        json_schema_extra={
-            "example": {"include_benchmark": True, "missing_benchmark_policy": "REQUIRE"}
-        },
+        json_schema_extra={"example": DRAWDOWN_BENCHMARK_POLICY_EXAMPLE},
     )
     analysis_options: DrawdownAnalysisOptions = Field(
         default_factory=DrawdownAnalysisOptions,
         description="Drawdown analytics option flags and thresholds.",
-        json_schema_extra={
-            "example": {
-                "include_underwater_series": True,
-                "include_episode_list": True,
-                "top_n_episodes": 5,
-                "cdar_alpha": 0.95,
-                "minimum_episode_depth_bps": 25.0,
-                "duration_unit": "BUSINESS_DAYS",
-            }
-        },
+        json_schema_extra={"example": DRAWDOWN_ANALYSIS_OPTIONS_EXAMPLE},
     )
 
     model_config = ConfigDict(
