@@ -6,8 +6,15 @@ import pytest
 
 from app.contracts.scenario import (
     RegimeScenarioPackRequest,
+    RegimeScenarioPackResponse,
     ScenarioPackApprovalStatus,
     ScenarioSupportabilityState,
+)
+from app.contracts.scenario_inputs import (
+    RegimeScenarioPackRequest as RegimeScenarioPackRequestSource,
+)
+from app.contracts.scenario_outputs import (
+    RegimeScenarioPackResponse as RegimeScenarioPackResponseSource,
 )
 from app.services import scenario_engine
 from app.services.scenario_engine import evaluate_regime_scenario_pack
@@ -27,6 +34,11 @@ def _request(**overrides: object) -> RegimeScenarioPackRequest:
     }
     payload.update(overrides)
     return RegimeScenarioPackRequest.model_validate(payload)
+
+
+def test_scenario_contract_module_preserves_public_import_surface() -> None:
+    assert RegimeScenarioPackRequest is RegimeScenarioPackRequestSource
+    assert RegimeScenarioPackResponse is RegimeScenarioPackResponseSource
 
 
 def test_regime_scenario_pack_evaluation_returns_source_owned_worst_case_loss() -> None:
