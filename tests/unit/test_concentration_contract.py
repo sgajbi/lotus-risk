@@ -14,6 +14,9 @@ from app.contracts.concentration_request_inputs import (
 from app.contracts.concentration_metric_outputs import (
     IssuerConcentration as IssuerConcentrationSource,
 )
+from app.contracts.concentration_issuer_metric_outputs import (
+    IssuerConcentration as IssuerConcentrationImplementation,
+)
 from app.contracts.concentration_response_outputs import (
     ConcentrationResponse as ConcentrationResponseImplementation,
 )
@@ -25,6 +28,7 @@ def test_concentration_contract_module_preserves_public_import_surface() -> None
     assert ConcentrationResponse is ConcentrationResponseSource
     assert ConcentrationResponse is ConcentrationResponseImplementation
     assert IssuerConcentration is IssuerConcentrationSource
+    assert IssuerConcentration is IssuerConcentrationImplementation
 
 
 def test_simulation_input_rejects_ttl_when_reusing_session() -> None:
