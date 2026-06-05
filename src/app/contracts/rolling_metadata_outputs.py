@@ -6,6 +6,12 @@ from pydantic import BaseModel, Field
 
 from app.contracts.audit import AuditMetadataFields
 from app.contracts.risk import RiskCalculationSupportability
+from app.contracts.rolling_response_field_examples import (
+    ROLLING_BENCHMARK_CONTEXT_EXAMPLE,
+    ROLLING_CALCULATION_SUPPORTABILITY_EXAMPLE,
+    ROLLING_REQUESTED_METRICS_EXAMPLE,
+    ROLLING_RISK_FREE_CONTEXT_EXAMPLE,
+)
 
 
 class RollingRequestDependencyContext(BaseModel):
@@ -38,13 +44,7 @@ class RollingMetadata(AuditMetadataFields):
     requested_metrics: list[str] = Field(
         default_factory=list,
         description="Requested rolling metrics in canonical execution order.",
-        json_schema_extra={
-            "example": [
-                "ROLLING_VOLATILITY",
-                "ROLLING_SHARPE",
-                "ROLLING_BETA",
-            ]
-        },
+        json_schema_extra={"example": ROLLING_REQUESTED_METRICS_EXAMPLE},
     )
     window_lengths_requested: list[int] = Field(
         default_factory=list,
@@ -70,24 +70,11 @@ class RollingMetadata(AuditMetadataFields):
     )
     benchmark_context: RollingRequestDependencyContext = Field(
         description="Top-level benchmark dependency context derived from the requested rolling metrics.",
-        json_schema_extra={
-            "example": {
-                "requested": True,
-                "requested_metrics": [
-                    "ROLLING_BETA",
-                    "ROLLING_TRACKING_ERROR",
-                ],
-            }
-        },
+        json_schema_extra={"example": ROLLING_BENCHMARK_CONTEXT_EXAMPLE},
     )
     risk_free_context: RollingRequestDependencyContext = Field(
         description="Top-level risk-free dependency context derived from the requested rolling metrics.",
-        json_schema_extra={
-            "example": {
-                "requested": True,
-                "requested_metrics": ["ROLLING_SHARPE"],
-            }
-        },
+        json_schema_extra={"example": ROLLING_RISK_FREE_CONTEXT_EXAMPLE},
     )
     calculation_supportability: RiskCalculationSupportability = Field(
         default_factory=lambda: RiskCalculationSupportability(
@@ -96,16 +83,7 @@ class RollingMetadata(AuditMetadataFields):
             freshness_bucket="unknown",
         ),
         description="Source-backed supportability posture for UI and operator consumption.",
-        json_schema_extra={
-            "example": {
-                "state": "ready",
-                "reason": "calculation_complete",
-                "freshness_bucket": "current",
-                "degraded_metric_count": 0,
-                "empty_period_count": 0,
-                "evaluated_period_count": 1,
-            }
-        },
+        json_schema_extra={"example": ROLLING_CALCULATION_SUPPORTABILITY_EXAMPLE},
     )
 
 

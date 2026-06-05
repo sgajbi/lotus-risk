@@ -22,12 +22,22 @@ from app.contracts.rolling_metric_summary_outputs import (
 from app.contracts.rolling_request_inputs import (
     RollingAnalyticsRequest as RollingAnalyticsRequestImplementation,
 )
+from app.contracts.rolling_response_field_examples import (
+    ROLLING_BENCHMARK_CONTEXT_EXAMPLE,
+    ROLLING_CALCULATION_SUPPORTABILITY_EXAMPLE,
+    ROLLING_REQUESTED_METRICS_EXAMPLE,
+    ROLLING_RESPONSE_METADATA_EXAMPLE,
+    ROLLING_RESPONSE_RESULTS_EXAMPLE,
+    ROLLING_RESPONSE_SCOPE_EXAMPLE,
+    ROLLING_RISK_FREE_CONTEXT_EXAMPLE,
+)
 from app.contracts.rolling_response_outputs import (
     RollingResponse as RollingResponseImplementation,
 )
 from app.contracts.rolling_response_envelope_outputs import (
     RollingResponse as RollingResponseEnvelope,
 )
+from app.contracts.rolling_metadata_outputs import RollingMetadata
 
 
 BASE_STATELESS_PAYLOAD = {
@@ -73,6 +83,22 @@ def test_rolling_contract_module_preserves_public_import_surface() -> None:
     assert RollingResponse is RollingResponseEnvelope
     assert RollingMetricSummary is RollingMetricSummarySource
     assert RollingMetricSummary is RollingMetricSummaryImplementation
+
+
+def test_rolling_response_schema_uses_governed_field_examples() -> None:
+    response_properties = RollingResponseEnvelope.model_json_schema()["properties"]
+    metadata_properties = RollingMetadata.model_json_schema()["properties"]
+
+    assert response_properties["scope"]["example"] == ROLLING_RESPONSE_SCOPE_EXAMPLE
+    assert response_properties["results"]["example"] == ROLLING_RESPONSE_RESULTS_EXAMPLE
+    assert response_properties["metadata"]["example"] == ROLLING_RESPONSE_METADATA_EXAMPLE
+    assert metadata_properties["requested_metrics"]["example"] == ROLLING_REQUESTED_METRICS_EXAMPLE
+    assert metadata_properties["benchmark_context"]["example"] == ROLLING_BENCHMARK_CONTEXT_EXAMPLE
+    assert metadata_properties["risk_free_context"]["example"] == ROLLING_RISK_FREE_CONTEXT_EXAMPLE
+    assert (
+        metadata_properties["calculation_supportability"]["example"]
+        == ROLLING_CALCULATION_SUPPORTABILITY_EXAMPLE
+    )
 
 
 def test_rolling_contract_accepts_stateless_payload() -> None:
