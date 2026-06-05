@@ -48,7 +48,7 @@ Evidence:
 Remaining risk:
 
 1. Several service and contract modules remain large enough to deserve later cohesive extraction:
-   targeted concentration, attribution, rolling, and risk-output contract fragments.
+   targeted attribution, rolling, and risk-output contract fragments.
 
 ## API And OpenAPI Improvements
 

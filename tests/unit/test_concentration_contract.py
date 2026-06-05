@@ -8,6 +8,9 @@ from app.contracts.concentration import (
 )
 from app.contracts.concentration_inputs import ConcentrationRequest as ConcentrationRequestSource
 from app.contracts.concentration_outputs import ConcentrationResponse as ConcentrationResponseSource
+from app.contracts.concentration_request_inputs import (
+    ConcentrationRequest as ConcentrationRequestImplementation,
+)
 from app.contracts.concentration_metric_outputs import (
     IssuerConcentration as IssuerConcentrationSource,
 )
@@ -18,6 +21,7 @@ from app.contracts.concentration_response_outputs import (
 
 def test_concentration_contract_module_preserves_public_import_surface() -> None:
     assert ConcentrationRequest is ConcentrationRequestSource
+    assert ConcentrationRequest is ConcentrationRequestImplementation
     assert ConcentrationResponse is ConcentrationResponseSource
     assert ConcentrationResponse is ConcentrationResponseImplementation
     assert IssuerConcentration is IssuerConcentrationSource
