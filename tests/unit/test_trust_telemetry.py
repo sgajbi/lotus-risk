@@ -20,6 +20,14 @@ from app.trust_telemetry import (
     build_declared_product_trust_telemetry_snapshot,
     build_product_trust_telemetry_seed,
 )
+from app.trust_telemetry_product_examples import (
+    APPROVED_CONSUMER_EXAMPLES,
+    CURRENT_ROUTE_EXAMPLES,
+    DEPENDENCY_SIGNAL_EXAMPLES,
+    REQUIRED_TRUST_METADATA_EXAMPLES,
+    SOURCE_SERVICE_EXAMPLES,
+    UPSTREAM_REQUEST_FINGERPRINT_EXAMPLE,
+)
 from app.trust_telemetry_snapshot_examples import (
     DECLARED_DEPENDENCY_EXAMPLES,
     PRODUCT_TRUST_TELEMETRY_SEED_EXAMPLES,
@@ -104,6 +112,21 @@ def test_trust_telemetry_snapshot_schema_uses_governed_examples() -> None:
     assert properties["declared_dependencies"]["example"] == DECLARED_DEPENDENCY_EXAMPLES
     assert properties["summary"]["example"] == TRUST_TELEMETRY_SUMMARY_EXAMPLE
     assert properties["products"]["example"] == PRODUCT_TRUST_TELEMETRY_SEED_EXAMPLES
+
+
+def test_product_trust_telemetry_seed_schema_uses_governed_examples() -> None:
+    schema = ProductTrustTelemetrySeed.model_json_schema()
+    properties = schema["properties"]
+
+    assert properties["approved_consumers"]["example"] == APPROVED_CONSUMER_EXAMPLES
+    assert properties["required_trust_metadata"]["example"] == REQUIRED_TRUST_METADATA_EXAMPLES
+    assert properties["current_routes"]["example"] == CURRENT_ROUTE_EXAMPLES
+    assert properties["source_services"]["example"] == SOURCE_SERVICE_EXAMPLES
+    assert (
+        properties["upstream_request_fingerprints"]["example"]
+        == UPSTREAM_REQUEST_FINGERPRINT_EXAMPLE
+    )
+    assert properties["dependency_signals"]["example"] == DEPENDENCY_SIGNAL_EXAMPLES
 
 
 def test_build_product_trust_telemetry_seed_uses_runtime_and_lineage_inputs() -> None:

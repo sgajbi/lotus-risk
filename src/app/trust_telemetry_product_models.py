@@ -4,6 +4,15 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from app.trust_telemetry_product_examples import (
+    APPROVED_CONSUMER_EXAMPLES,
+    CURRENT_ROUTE_EXAMPLES,
+    DEPENDENCY_SIGNAL_EXAMPLES,
+    REQUIRED_TRUST_METADATA_EXAMPLES,
+    SOURCE_SERVICE_EXAMPLES,
+    UPSTREAM_REQUEST_FINGERPRINT_EXAMPLE,
+)
+
 
 TelemetryLifecycleStatus = Literal["active", "deprecated", "retired"]
 
@@ -54,12 +63,12 @@ class ProductTrustTelemetrySeed(BaseModel):
     approved_consumers: list[str] = Field(
         default_factory=list,
         description="Consumers explicitly approved in the repo-native producer declaration.",
-        json_schema_extra={"example": ["lotus-gateway"]},
+        json_schema_extra={"example": APPROVED_CONSUMER_EXAMPLES},
     )
     required_trust_metadata: list[str] = Field(
         default_factory=list,
         description="Trust metadata fields the repo-native declaration requires for the product.",
-        json_schema_extra={"example": ["product_name", "product_version", "as_of_date"]},
+        json_schema_extra={"example": REQUIRED_TRUST_METADATA_EXAMPLES},
     )
     lifecycle_status: TelemetryLifecycleStatus = Field(
         description="Repo-owned lifecycle status mirrored from the governed product declaration.",
@@ -68,7 +77,7 @@ class ProductTrustTelemetrySeed(BaseModel):
     current_routes: list[str] = Field(
         default_factory=list,
         description="Current API routes declared as publishing or serving this product.",
-        json_schema_extra={"example": ["/analytics/risk/calculate"]},
+        json_schema_extra={"example": CURRENT_ROUTE_EXAMPLES},
     )
     emitted_at: str = Field(
         description="UTC timestamp when lotus-risk assembled the local trust telemetry seed.",
@@ -101,31 +110,15 @@ class ProductTrustTelemetrySeed(BaseModel):
     source_services: list[str] = Field(
         default_factory=list,
         description="Ordered source-service lineage already published by lotus-risk.",
-        json_schema_extra={"example": ["lotus-risk", "lotus-performance"]},
+        json_schema_extra={"example": SOURCE_SERVICE_EXAMPLES},
     )
     upstream_request_fingerprints: dict[str, str] = Field(
         default_factory=dict,
         description="Upstream request fingerprints already published by lotus-risk.",
-        json_schema_extra={
-            "example": {
-                "lotus-performance:/integration/returns/series": (
-                    "sha256:8d7411c13a0a25a18d7411c13a0a25a18d7411c13a0a25a18d7411c13a0a25a1"
-                )
-            }
-        },
+        json_schema_extra={"example": UPSTREAM_REQUEST_FINGERPRINT_EXAMPLE},
     )
     dependency_signals: list[DependencyTelemetrySignal] = Field(
         default_factory=list,
         description="Dependency runtime evidence used as raw trust telemetry input.",
-        json_schema_extra={
-            "example": [
-                {
-                    "service": "lotus-performance",
-                    "status": "degraded",
-                    "detail": "high_latency",
-                    "category": "transport",
-                    "issue_code": "UPSTREAM_HIGH_LATENCY",
-                }
-            ]
-        },
+        json_schema_extra={"example": DEPENDENCY_SIGNAL_EXAMPLES},
     )
