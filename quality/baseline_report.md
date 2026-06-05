@@ -10,7 +10,7 @@ documentation posture, and validation gates. It is not a completion claim.
 
 ## Code Size Baseline
 
-- Python source files under `src/`: 193
+- Python source files under `src/`: 194
 - Python test files under `tests/`: 96
 - Python packages under `src/`: 9
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
@@ -26,7 +26,7 @@ documentation posture, and validation gates. It is not a completion claim.
 | tests/unit/test_attribution_mode_adapter.py | 600 | 21872 |
 | tests/integration/test_risk_calculate.py | 596 | 25093 |
 | tests/integration/test_rolling_metrics_endpoint.py | 566 | 22142 |
-| tests/unit/test_lotus_performance_client.py | 536 | 19752 |
+| tests/unit/test_lotus_performance_client.py | 556 | 20504 |
 | tests/unit/test_rolling_mode_adapter.py | 444 | 16926 |
 | tests/unit/test_drawdown_engine.py | 422 | 16234 |
 | tests/integration/test_rolling_live_characterization.py | 418 | 16694 |
@@ -46,7 +46,6 @@ documentation posture, and validation gates. It is not a completion claim.
 | --- | --- | --- | --- |
 | src/app/integrations/lotus_core_client.py | LotusCoreClient | ClassDef | 136 |
 | src/app/trust_telemetry_snapshot_models.py | DeclaredProductTrustTelemetrySnapshot | ClassDef | 115 |
-| src/app/integrations/lotus_performance_client.py | LotusPerformanceClient | ClassDef | 110 |
 | src/app/contracts/concentration_response_envelope_outputs.py | ConcentrationResponse | ClassDef | 105 |
 | src/app/contracts/concentration_issuer_metric_outputs.py | IssuerConcentration | ClassDef | 97 |
 | src/app/contracts/risk_response_outputs.py | RiskResponseMetadata | ClassDef | 96 |
@@ -64,6 +63,7 @@ documentation posture, and validation gates. It is not a completion claim.
 | src/app/contracts/rolling_metric_summary_outputs.py | RollingMetricSummary | ClassDef | 76 |
 | src/app/contracts/concentration_request_inputs.py | ConcentrationRequest | ClassDef | 75 |
 | src/app/contracts/attribution_metadata_outputs.py | HistoricalAttributionMetadata | ClassDef | 71 |
+| src/app/contracts/drawdown_metadata_outputs.py | DrawdownMetadata | ClassDef | 69 |
 
 ## Tool Baseline
 
@@ -89,12 +89,12 @@ All checks passed!
 - Ruff format check: passed
 
 ```text
-303 files already formatted
+304 files already formatted
 ```
 - Type checking: passed
 
 ```text
-Success: no issues found in 289 source files
+Success: no issues found in 290 source files
 ```
 - Unit coverage snapshot: passed
 
@@ -108,10 +108,10 @@ Success: no issues found in 289 source files
 ...
 src\app\upstream_errors.py                                    55      0     20      3    96%   181->194, 187->189, 192->194
 ------------------------------------------------------------------------------------------------------
-TOTAL                                                       5246     85    978     79    97%
+TOTAL                                                       5256     85    978     79    97%
 
-152 files skipped due to complete coverage.
-482 passed in 8.31s
+153 files skipped due to complete coverage.
+484 passed in 7.94s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -141,7 +141,7 @@ src\app\services\risk\__init__.py - A (100.00)
 - Dependency hygiene: passed
 
 ```text
-Scanning 193 files...
+Scanning 194 files...
 
 Success! No dependency issues found.
 ```
@@ -240,7 +240,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-482 tests collected in 1.56s
+484 tests collected in 1.47s
 ```
 - Import-linter report-only: passed
 

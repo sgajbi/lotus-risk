@@ -11,6 +11,10 @@ from app.integrations.lotus_performance_client import (
     DEFAULT_LOTUS_PERFORMANCE_BASE_URL,
     LotusPerformanceClient,
 )
+from app.integrations.lotus_performance_transport import (
+    correlation_headers,
+    resolve_lotus_performance_base_url,
+)
 from app.upstream_errors import UpstreamServiceError, extract_upstream_error_detail
 
 
@@ -514,6 +518,22 @@ def test_client_defaults_base_url_when_env_missing(monkeypatch: pytest.MonkeyPat
     monkeypatch.delenv("LOTUS_PERFORMANCE_BASE_URL", raising=False)
     client = LotusPerformanceClient()
     assert client._base_url == DEFAULT_LOTUS_PERFORMANCE_BASE_URL
+
+
+def test_resolve_lotus_performance_base_url_prefers_explicit_then_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("LOTUS_PERFORMANCE_BASE_URL", "http://env-performance.local/")
+
+    assert resolve_lotus_performance_base_url("http://explicit-performance.local/") == (
+        "http://explicit-performance.local"
+    )
+    assert resolve_lotus_performance_base_url(None) == "http://env-performance.local"
+
+
+def test_correlation_headers_omits_empty_correlation_id() -> None:
+    assert correlation_headers(None) == {}
+    assert correlation_headers("corr-perf") == {"X-Correlation-Id": "corr-perf"}
 
 
 def test_client_reads_async_polling_controls_with_fallbacks(
