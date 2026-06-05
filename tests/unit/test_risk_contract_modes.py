@@ -5,7 +5,18 @@ from app.contracts.risk import RiskAnalyticsRequest, RiskInputMode, RiskResponse
 from app.contracts.risk_inputs import RiskAnalyticsRequest as RiskAnalyticsRequestSource
 from app.contracts.risk_request_inputs import RiskAnalyticsRequest as RiskAnalyticsRequestModule
 from app.contracts.risk_outputs import RiskResponse as RiskResponseSource
-from app.contracts.risk_response_outputs import RiskResponse as RiskResponseModule
+from app.contracts.risk_response_field_examples import (
+    RISK_BENCHMARK_CONTEXT_EXAMPLE,
+    RISK_CALCULATION_SUPPORTABILITY_EXAMPLE,
+    RISK_FREE_CONTEXT_EXAMPLE,
+    RISK_RESPONSE_METADATA_EXAMPLE,
+    RISK_RESPONSE_RESULTS_EXAMPLE,
+    RISK_RESPONSE_SCOPE_EXAMPLE,
+)
+from app.contracts.risk_response_outputs import (
+    RiskResponse as RiskResponseModule,
+    RiskResponseMetadata,
+)
 
 
 def test_risk_contract_module_preserves_public_import_surface() -> None:
@@ -13,6 +24,21 @@ def test_risk_contract_module_preserves_public_import_surface() -> None:
     assert RiskAnalyticsRequest is RiskAnalyticsRequestModule
     assert RiskResponse is RiskResponseSource
     assert RiskResponse is RiskResponseModule
+
+
+def test_risk_response_schema_uses_governed_field_examples() -> None:
+    response_properties = RiskResponseModule.model_json_schema()["properties"]
+    metadata_properties = RiskResponseMetadata.model_json_schema()["properties"]
+
+    assert response_properties["scope"]["example"] == RISK_RESPONSE_SCOPE_EXAMPLE
+    assert response_properties["results"]["example"] == RISK_RESPONSE_RESULTS_EXAMPLE
+    assert response_properties["metadata"]["example"] == RISK_RESPONSE_METADATA_EXAMPLE
+    assert metadata_properties["risk_free_context"]["example"] == RISK_FREE_CONTEXT_EXAMPLE
+    assert metadata_properties["benchmark_context"]["example"] == RISK_BENCHMARK_CONTEXT_EXAMPLE
+    assert (
+        metadata_properties["calculation_supportability"]["example"]
+        == RISK_CALCULATION_SUPPORTABILITY_EXAMPLE
+    )
 
 
 def _stateless_payload() -> dict[str, object]:
