@@ -1,33 +1,15 @@
 from __future__ import annotations
 
-import os
 from typing import Any
 
-import httpx
-
 from app.integrations._downstream_client_profile import resolve_downstream_client_profile
-from app.integrations._downstream_client_profile import execute_downstream_request_json
-from app.observability import observation_start
-from app.upstream_errors import (
-    invalid_upstream_payload,
+from app.integrations.lotus_core_transport import (
+    DEFAULT_LOTUS_CORE_BASE_URL as _DEFAULT_LOTUS_CORE_BASE_URL,
+    execute_lotus_core_json_request,
+    resolve_lotus_core_base_url,
 )
 
-DEFAULT_LOTUS_CORE_BASE_URL = "http://core-control.dev.lotus"
-
-
-def _parse_json_dict_payload(
-    response: httpx.Response,
-    *,
-    invalid_message: str,
-) -> dict[str, Any]:
-    payload = response.json()
-    if not isinstance(payload, dict):
-        raise invalid_upstream_payload(
-            service="lotus-core",
-            operation=response.request.url.path,
-            message=invalid_message,
-        )
-    return payload
+DEFAULT_LOTUS_CORE_BASE_URL = _DEFAULT_LOTUS_CORE_BASE_URL
 
 
 class LotusCoreClient:
@@ -37,13 +19,7 @@ class LotusCoreClient:
         base_url: str | None = None,
         timeout_seconds: float | None = None,
     ) -> None:
-        configured_base_url = base_url
-        if configured_base_url is None:
-            configured_base_url = os.getenv("LOTUS_CORE_BASE_URL")
-        if not configured_base_url:
-            configured_base_url = DEFAULT_LOTUS_CORE_BASE_URL
-        resolved_base_url = configured_base_url.rstrip("/")
-        self._base_url = resolved_base_url
+        self._base_url = resolve_lotus_core_base_url(base_url)
         self._profile = resolve_downstream_client_profile(
             env_prefix="LOTUS_CORE",
             default_timeout_seconds=timeout_seconds or 10.0,
@@ -164,25 +140,11 @@ class LotusCoreClient:
         json_payload: dict[str, Any],
         correlation_id: str | None,
     ) -> dict[str, Any]:
-        headers: dict[str, str] = {}
-        if correlation_id:
-            headers["X-Correlation-Id"] = correlation_id
-
-        url = f"{self._base_url}{path}"
-        started_at = observation_start()
-        async with self._profile.make_client() as client:
-            return await execute_downstream_request_json(
-                dependency="lotus-core",
-                operation=path,
-                started_at=started_at,
-                request_factory=lambda: client.request(
-                    method=method,
-                    url=url,
-                    json=json_payload,
-                    headers=headers,
-                ),
-                parse_response=lambda response: _parse_json_dict_payload(
-                    response=response,
-                    invalid_message=f"lotus-core returned invalid JSON payload for {path}",
-                ),
-            )
+        return await execute_lotus_core_json_request(
+            profile=self._profile,
+            base_url=self._base_url,
+            method=method,
+            path=path,
+            json_payload=json_payload,
+            correlation_id=correlation_id,
+        )

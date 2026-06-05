@@ -10,7 +10,7 @@ documentation posture, and validation gates. It is not a completion claim.
 
 ## Code Size Baseline
 
-- Python source files under `src/`: 192
+- Python source files under `src/`: 193
 - Python test files under `tests/`: 96
 - Python packages under `src/`: 9
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
@@ -44,7 +44,7 @@ documentation posture, and validation gates. It is not a completion claim.
 
 | Path | Symbol | Kind | Lines |
 | --- | --- | --- | --- |
-| src/app/integrations/lotus_core_client.py | LotusCoreClient | ClassDef | 156 |
+| src/app/integrations/lotus_core_client.py | LotusCoreClient | ClassDef | 136 |
 | src/app/trust_telemetry_snapshot_models.py | DeclaredProductTrustTelemetrySnapshot | ClassDef | 115 |
 | src/app/integrations/lotus_performance_client.py | LotusPerformanceClient | ClassDef | 110 |
 | src/app/contracts/concentration_response_envelope_outputs.py | ConcentrationResponse | ClassDef | 105 |
@@ -89,12 +89,12 @@ All checks passed!
 - Ruff format check: passed
 
 ```text
-302 files already formatted
+303 files already formatted
 ```
 - Type checking: passed
 
 ```text
-Success: no issues found in 288 source files
+Success: no issues found in 289 source files
 ```
 - Unit coverage snapshot: passed
 
@@ -108,10 +108,10 @@ Success: no issues found in 288 source files
 ...
 src\app\upstream_errors.py                                    55      0     20      3    96%   181->194, 187->189, 192->194
 ------------------------------------------------------------------------------------------------------
-TOTAL                                                       5238     85    978     79    97%
+TOTAL                                                       5246     85    978     79    97%
 
-151 files skipped due to complete coverage.
-481 passed in 8.13s
+152 files skipped due to complete coverage.
+482 passed in 8.31s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -141,7 +141,7 @@ src\app\services\risk\__init__.py - A (100.00)
 - Dependency hygiene: passed
 
 ```text
-Scanning 192 files...
+Scanning 193 files...
 
 Success! No dependency issues found.
 ```
@@ -240,7 +240,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-481 tests collected in 1.56s
+482 tests collected in 1.56s
 ```
 - Import-linter report-only: passed
 

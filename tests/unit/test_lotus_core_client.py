@@ -11,6 +11,7 @@ from app.integrations.lotus_core_client import (
     DEFAULT_LOTUS_CORE_BASE_URL,
     LotusCoreClient,
 )
+from app.integrations.lotus_core_transport import resolve_lotus_core_base_url
 from app.upstream_errors import UpstreamServiceError, extract_upstream_error_detail
 
 
@@ -226,3 +227,14 @@ def test_client_defaults_to_canonical_core_service_identity(
 
     assert DEFAULT_LOTUS_CORE_BASE_URL == "http://core-control.dev.lotus"
     assert client._base_url == DEFAULT_LOTUS_CORE_BASE_URL
+
+
+def test_resolve_lotus_core_base_url_prefers_explicit_then_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("LOTUS_CORE_BASE_URL", "http://env-core.local/")
+
+    assert resolve_lotus_core_base_url("http://explicit-core.local/") == (
+        "http://explicit-core.local"
+    )
+    assert resolve_lotus_core_base_url(None) == "http://env-core.local"
