@@ -12,6 +12,8 @@ from fastapi import FastAPI
 
 from app.contracts.audit import AuditMetadataFields
 from app.trust_telemetry import (
+    DeclaredProductTrustTelemetrySnapshot,
+    ProductTrustTelemetrySeed,
     build_declared_product_trust_telemetry_snapshot,
     build_product_trust_telemetry_seed,
 )
@@ -75,6 +77,13 @@ def test_risk_metrics_report_trust_telemetry_is_tied_to_repo_declaration() -> No
         == (declared_product["lineage_policy"]["evidence_access_class_ref"])
     )
     assert snapshot["blocking"]["blocked"] is False
+
+
+def test_trust_telemetry_facade_preserves_public_imports() -> None:
+    assert ProductTrustTelemetrySeed.__name__ == "ProductTrustTelemetrySeed"
+    assert DeclaredProductTrustTelemetrySnapshot.__name__ == "DeclaredProductTrustTelemetrySnapshot"
+    assert callable(build_product_trust_telemetry_seed)
+    assert callable(build_declared_product_trust_telemetry_snapshot)
 
 
 def test_build_product_trust_telemetry_seed_uses_runtime_and_lineage_inputs() -> None:

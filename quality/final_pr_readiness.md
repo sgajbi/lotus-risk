@@ -27,7 +27,7 @@ Current measured highlights:
 1. `src/app/main.py` moved from `980` lines and `22` route/middleware/handler decorators to `10`
    lines and `0` decorators.
 2. The latest quality baseline reports no C-or-worse cyclomatic-complexity candidates.
-3. The latest quality baseline collects `456` tests across `91` Python test files.
+3. The latest quality baseline collects `457` tests across `91` Python test files.
 4. OpenAPI governance now enforces operation IDs, mutation request examples, duplicate operation ID
    checks, and generated artifact policy.
 5. Security evidence now covers authorization headers, service identity, capability checks,
@@ -74,7 +74,7 @@ Evidence:
 1. Focused tests protect app factory wiring, router extraction, downstream client boundaries,
    OpenAPI governance, security evidence, observability contracts, upstream error mapping,
    enterprise readiness, and risk analytics behavior.
-2. The latest generated baseline records `456` collected tests and `97%` total coverage.
+2. The latest generated baseline records `457` collected tests and `97%` total coverage.
 3. The final PR should list exact local commands and GitHub check names that passed.
 
 ## Security Improvements
