@@ -48,7 +48,8 @@ Evidence:
 Remaining risk:
 
 1. Several service and contract modules remain large enough to deserve later cohesive extraction:
-   targeted rolling-input, scenario-output, drawdown, and remaining response contract fragments.
+   targeted scenario-output, drawdown, risk-event-cohort, and remaining metric/response contract
+   fragments.
 
 ## API And OpenAPI Improvements
 

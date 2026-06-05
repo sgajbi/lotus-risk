@@ -16,6 +16,9 @@ from app.contracts.rolling_outputs import RollingResponse as RollingResponseSour
 from app.contracts.rolling_metric_outputs import (
     RollingMetricSummary as RollingMetricSummarySource,
 )
+from app.contracts.rolling_request_inputs import (
+    RollingAnalyticsRequest as RollingAnalyticsRequestImplementation,
+)
 from app.contracts.rolling_response_outputs import (
     RollingResponse as RollingResponseImplementation,
 )
@@ -61,6 +64,7 @@ BASE_STATELESS_PAYLOAD = {
 
 def test_rolling_contract_module_preserves_public_import_surface() -> None:
     assert RollingAnalyticsRequest is RollingAnalyticsRequestSource
+    assert RollingAnalyticsRequest is RollingAnalyticsRequestImplementation
     assert RollingResponse is RollingResponseSource
     assert RollingResponse is RollingResponseImplementation
     assert RollingResponse is RollingResponseEnvelope
