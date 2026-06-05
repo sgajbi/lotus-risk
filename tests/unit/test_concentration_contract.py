@@ -20,6 +20,9 @@ from app.contracts.concentration_issuer_metric_outputs import (
 from app.contracts.concentration_response_outputs import (
     ConcentrationResponse as ConcentrationResponseImplementation,
 )
+from app.contracts.concentration_response_envelope_outputs import (
+    ConcentrationResponse as ConcentrationResponseEnvelope,
+)
 
 
 def test_concentration_contract_module_preserves_public_import_surface() -> None:
@@ -27,6 +30,7 @@ def test_concentration_contract_module_preserves_public_import_surface() -> None
     assert ConcentrationRequest is ConcentrationRequestImplementation
     assert ConcentrationResponse is ConcentrationResponseSource
     assert ConcentrationResponse is ConcentrationResponseImplementation
+    assert ConcentrationResponse is ConcentrationResponseEnvelope
     assert IssuerConcentration is IssuerConcentrationSource
     assert IssuerConcentration is IssuerConcentrationImplementation
 
