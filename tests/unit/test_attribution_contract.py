@@ -4,7 +4,17 @@ from typing import Any, cast
 import pytest
 from pydantic import ValidationError
 
-from app.contracts.attribution import AttributionInputMode, HistoricalAttributionRequest
+from app.contracts.attribution import (
+    AttributionInputMode,
+    HistoricalAttributionRequest,
+    HistoricalAttributionResponse,
+)
+from app.contracts.attribution_inputs import (
+    HistoricalAttributionRequest as HistoricalAttributionRequestSource,
+)
+from app.contracts.attribution_outputs import (
+    HistoricalAttributionResponse as HistoricalAttributionResponseSource,
+)
 
 
 BASE_STATELESS_PAYLOAD: dict[str, Any] = {
@@ -61,6 +71,11 @@ def test_attribution_contract_accepts_stateless_payload() -> None:
     request = HistoricalAttributionRequest.model_validate(BASE_STATELESS_PAYLOAD)
     assert request.input_mode == AttributionInputMode.STATELESS
     assert request.stateless_input is not None
+
+
+def test_attribution_contract_module_preserves_public_import_surface() -> None:
+    assert HistoricalAttributionRequest is HistoricalAttributionRequestSource
+    assert HistoricalAttributionResponse is HistoricalAttributionResponseSource
 
 
 def test_attribution_contract_requires_stateless_input() -> None:

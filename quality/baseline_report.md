@@ -10,7 +10,7 @@ documentation posture, and validation gates. It is not a completion claim.
 
 ## Code Size Baseline
 
-- Python source files under `src/`: 99
+- Python source files under `src/`: 101
 - Python test files under `tests/`: 91
 - Python packages under `src/`: 9
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
@@ -24,7 +24,6 @@ documentation posture, and validation gates. It is not a completion claim.
 | tests/e2e/test_smoke.py | 750 | 28373 |
 | tests/integration/test_historical_attribution_endpoint.py | 747 | 29645 |
 | tests/unit/test_attribution_mode_adapter.py | 600 | 21872 |
-| src/app/contracts/attribution.py | 598 | 23402 |
 | tests/integration/test_risk_calculate.py | 596 | 25093 |
 | tests/integration/test_rolling_metrics_endpoint.py | 566 | 22142 |
 | tests/unit/test_lotus_performance_client.py | 530 | 19686 |
@@ -39,6 +38,7 @@ documentation posture, and validation gates. It is not a completion claim.
 | src/app/services/drawdown_engine.py | 430 | 14308 |
 | src/app/contracts/risk_inputs.py | 428 | 14924 |
 | src/app/services/risk/calculation_orchestrator.py | 427 | 14612 |
+| tests/unit/test_drawdown_engine.py | 422 | 16234 |
 
 ### Largest Functions And Classes
 
@@ -58,12 +58,12 @@ documentation posture, and validation gates. It is not a completion claim.
 | src/app/contracts/rolling_outputs.py | RollingMetadata | ClassDef | 87 |
 | src/app/contracts/drawdown_outputs.py | DrawdownPeriodResult | ClassDef | 84 |
 | src/app/contracts/scenario.py | RegimeScenarioPackRequest | ClassDef | 84 |
-| src/app/contracts/attribution.py | HistoricalAttributionStatelessInput | ClassDef | 77 |
+| src/app/contracts/attribution_inputs.py | HistoricalAttributionStatelessInput | ClassDef | 77 |
 | src/app/contracts/drawdown_outputs.py | DrawdownResponse | ClassDef | 77 |
 | src/app/contracts/mandate_health.py | MandateRiskHealthContextResponse | ClassDef | 77 |
 | src/app/contracts/rolling_outputs.py | RollingMetricSummary | ClassDef | 76 |
 | src/app/contracts/concentration_inputs.py | ConcentrationRequest | ClassDef | 75 |
-| src/app/contracts/attribution.py | HistoricalAttributionMetadata | ClassDef | 71 |
+| src/app/contracts/attribution_outputs.py | HistoricalAttributionMetadata | ClassDef | 71 |
 
 ## Tool Baseline
 
@@ -89,12 +89,12 @@ All checks passed!
 - Ruff format check: passed
 
 ```text
-204 files already formatted
+206 files already formatted
 ```
 - Type checking: passed
 
 ```text
-Success: no issues found in 190 source files
+Success: no issues found in 192 source files
 ```
 - Unit coverage snapshot: passed
 
@@ -108,10 +108,10 @@ Success: no issues found in 190 source files
 ...
 src\app\upstream_errors.py                                 55      0     20      3    96%   181->194, 187->189, 192->194
 ---------------------------------------------------------------------------------------------------
-TOTAL                                                    4721     86    986     85    97%
+TOTAL                                                    4732     86    986     85    97%
 
-61 files skipped due to complete coverage.
-452 passed in 8.12s
+63 files skipped due to complete coverage.
+453 passed in 9.69s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -141,7 +141,7 @@ src\app\services\risk\__init__.py - A (100.00)
 - Dependency hygiene: passed
 
 ```text
-Scanning 99 files...
+Scanning 101 files...
 
 Success! No dependency issues found.
 ```
@@ -233,14 +233,14 @@ tests/unit/test_app_factory.py::test_create_app_registers_risk_analytics_routes
 tests/unit/test_app_runtime.py::test_override_app_runtime_restores_clients_and_classes_after_exit
 tests/unit/test_app_runtime.py::test_override_app_runtime_restores_state_after_exception
 tests/unit/test_attribution_contract.py::test_attribution_contract_accepts_stateless_payload
-tests/unit/test_attribution_contract.py::test_attribution_contract_requires_stateless_input
+tests/unit/test_attribution_contract.py::test_attribution_contract_module_preserves_public_import_surface
 ...
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc0-504-UPSTREAM_TIMEOUT-timeout]
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc1-503-UPSTREAM_UNAVAILABLE-transport]
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-452 tests collected in 1.59s
+453 tests collected in 1.70s
 ```
 - Import-linter report-only: passed
 

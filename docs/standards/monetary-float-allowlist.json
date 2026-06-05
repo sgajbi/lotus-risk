@@ -4,7 +4,7 @@
   "generated_at": "2026-06-04T12:48:19Z",
   "allowlist": [
     {
-      "finding": "src/app/contracts/attribution.py:395:total_value: float | None = Field(",
+      "finding": "src/app/contracts/attribution_outputs.py:72:total_value: float | None = Field(",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
       "review_by": "2026-11-12"
