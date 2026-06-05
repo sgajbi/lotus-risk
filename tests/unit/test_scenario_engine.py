@@ -16,6 +16,9 @@ from app.contracts.scenario_inputs import (
 from app.contracts.scenario_outputs import (
     RegimeScenarioPackResponse as RegimeScenarioPackResponseSource,
 )
+from app.contracts.scenario_response_outputs import (
+    RegimeScenarioPackResponse as RegimeScenarioPackResponseImplementation,
+)
 from app.services import scenario_engine
 from app.services.scenario_engine import evaluate_regime_scenario_pack
 
@@ -39,6 +42,7 @@ def _request(**overrides: object) -> RegimeScenarioPackRequest:
 def test_scenario_contract_module_preserves_public_import_surface() -> None:
     assert RegimeScenarioPackRequest is RegimeScenarioPackRequestSource
     assert RegimeScenarioPackResponse is RegimeScenarioPackResponseSource
+    assert RegimeScenarioPackResponse is RegimeScenarioPackResponseImplementation
 
 
 def test_regime_scenario_pack_evaluation_returns_source_owned_worst_case_loss() -> None:
