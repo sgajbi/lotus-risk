@@ -10,7 +10,7 @@ documentation posture, and validation gates. It is not a completion claim.
 
 ## Code Size Baseline
 
-- Python source files under `src/`: 103
+- Python source files under `src/`: 105
 - Python test files under `tests/`: 91
 - Python packages under `src/`: 9
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
@@ -32,13 +32,13 @@ documentation posture, and validation gates. It is not a completion claim.
 | src/app/services/attribution_decomposition.py | 485 | 16232 |
 | src/app/services/rolling_engine.py | 482 | 15804 |
 | tests/unit/test_rolling_mode_adapter.py | 444 | 16926 |
-| src/app/contracts/concentration_outputs.py | 436 | 17880 |
 | src/app/contracts/drawdown_outputs.py | 435 | 16933 |
 | src/app/services/drawdown_engine.py | 430 | 14308 |
 | src/app/contracts/risk_inputs.py | 428 | 14924 |
 | src/app/services/risk/calculation_orchestrator.py | 427 | 14612 |
 | tests/unit/test_drawdown_engine.py | 422 | 16234 |
 | tests/integration/test_rolling_live_characterization.py | 418 | 16694 |
+| tests/unit/test_risk_engine.py | 395 | 15947 |
 
 ### Largest Functions And Classes
 
@@ -47,8 +47,8 @@ documentation posture, and validation gates. It is not a completion claim.
 | src/app/integrations/lotus_core_client.py | LotusCoreClient | ClassDef | 156 |
 | src/app/integrations/lotus_performance_client.py | LotusPerformanceClient | ClassDef | 113 |
 | src/app/trust_telemetry.py | DeclaredProductTrustTelemetrySnapshot | ClassDef | 111 |
-| src/app/contracts/concentration_outputs.py | ConcentrationResponse | ClassDef | 105 |
-| src/app/contracts/concentration_outputs.py | IssuerConcentration | ClassDef | 97 |
+| src/app/contracts/concentration_response_outputs.py | ConcentrationResponse | ClassDef | 105 |
+| src/app/contracts/concentration_metric_outputs.py | IssuerConcentration | ClassDef | 97 |
 | src/app/contracts/risk_outputs.py | RiskResponseMetadata | ClassDef | 96 |
 | src/app/trust_telemetry.py | ProductTrustTelemetrySeed | ClassDef | 95 |
 | src/app/contracts/drawdown_inputs.py | DrawdownAnalyticsRequest | ClassDef | 91 |
@@ -89,12 +89,12 @@ All checks passed!
 - Ruff format check: passed
 
 ```text
-208 files already formatted
+210 files already formatted
 ```
 - Type checking: passed
 
 ```text
-Success: no issues found in 194 source files
+Success: no issues found in 196 source files
 ```
 - Unit coverage snapshot: passed
 
@@ -108,10 +108,10 @@ Success: no issues found in 194 source files
 ...
 src\app\upstream_errors.py                                 55      0     20      3    96%   181->194, 187->189, 192->194
 ---------------------------------------------------------------------------------------------------
-TOTAL                                                    4741     86    986     85    97%
+TOTAL                                                    4748     86    986     85    97%
 
-65 files skipped due to complete coverage.
-453 passed in 8.61s
+67 files skipped due to complete coverage.
+453 passed in 9.43s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -141,7 +141,7 @@ src\app\services\risk\__init__.py - A (100.00)
 - Dependency hygiene: passed
 
 ```text
-Scanning 103 files...
+Scanning 105 files...
 
 Success! No dependency issues found.
 ```
@@ -240,7 +240,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-453 tests collected in 1.99s
+453 tests collected in 1.59s
 ```
 - Import-linter report-only: passed
 
