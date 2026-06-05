@@ -158,7 +158,9 @@ async def test_client_polls_async_returns_series_result_until_complete(
     async def _no_sleep(*_: object) -> None:
         return None
 
-    monkeypatch.setattr("app.integrations.lotus_performance_client.asyncio.sleep", _no_sleep)
+    monkeypatch.setattr(
+        "app.integrations.performance_returns_series_async.asyncio.sleep", _no_sleep
+    )
 
     responses = iter(
         [
@@ -287,7 +289,9 @@ async def test_client_rejects_null_async_result_payload(monkeypatch: pytest.Monk
     async def _no_sleep(*_: object) -> None:
         return None
 
-    monkeypatch.setattr("app.integrations.lotus_performance_client.asyncio.sleep", _no_sleep)
+    monkeypatch.setattr(
+        "app.integrations.performance_returns_series_async.asyncio.sleep", _no_sleep
+    )
 
     responses = iter(
         [
@@ -385,7 +389,9 @@ async def test_client_times_out_async_returns_series_when_result_never_completes
     async def _no_sleep(*_: object) -> None:
         return None
 
-    monkeypatch.setattr("app.integrations.lotus_performance_client.asyncio.sleep", _no_sleep)
+    monkeypatch.setattr(
+        "app.integrations.performance_returns_series_async.asyncio.sleep", _no_sleep
+    )
 
     responses = iter(
         [
