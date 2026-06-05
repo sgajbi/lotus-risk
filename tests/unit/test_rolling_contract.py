@@ -4,7 +4,14 @@ import pytest
 from pydantic import ValidationError
 from typing import Any, cast
 
-from app.contracts.rolling import RollingAnalyticsRequest, RollingInputMode, RollingOptions
+from app.contracts.rolling import (
+    RollingAnalyticsRequest,
+    RollingInputMode,
+    RollingOptions,
+    RollingResponse,
+)
+from app.contracts.rolling_inputs import RollingAnalyticsRequest as RollingAnalyticsRequestSource
+from app.contracts.rolling_outputs import RollingResponse as RollingResponseSource
 
 
 BASE_STATELESS_PAYLOAD = {
@@ -40,6 +47,11 @@ BASE_STATELESS_PAYLOAD = {
         },
     },
 }
+
+
+def test_rolling_contract_module_preserves_public_import_surface() -> None:
+    assert RollingAnalyticsRequest is RollingAnalyticsRequestSource
+    assert RollingResponse is RollingResponseSource
 
 
 def test_rolling_contract_accepts_stateless_payload() -> None:

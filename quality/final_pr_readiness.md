@@ -48,7 +48,7 @@ Evidence:
 Remaining risk:
 
 1. Several service and contract modules remain large enough to deserve later cohesive extraction:
-   `rolling.py`, `risk.py`, `drawdown.py`, and targeted concentration request/response fragments.
+   `risk.py`, `drawdown.py`, `attribution.py`, and targeted concentration/rolling response fragments.
 
 ## API And OpenAPI Improvements
 

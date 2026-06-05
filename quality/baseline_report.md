@@ -10,7 +10,7 @@ documentation posture, and validation gates. It is not a completion claim.
 
 ## Code Size Baseline
 
-- Python source files under `src/`: 93
+- Python source files under `src/`: 95
 - Python test files under `tests/`: 91
 - Python packages under `src/`: 9
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
@@ -21,7 +21,6 @@ documentation posture, and validation gates. It is not a completion claim.
 | --- | --- | --- |
 | tests/integration/test_health.py | 843 | 36606 |
 | tests/unit/test_methodology_docs.py | 823 | 32953 |
-| src/app/contracts/rolling.py | 788 | 30023 |
 | src/app/contracts/risk.py | 752 | 27324 |
 | tests/e2e/test_smoke.py | 750 | 28373 |
 | tests/integration/test_historical_attribution_endpoint.py | 747 | 29645 |
@@ -32,6 +31,7 @@ documentation posture, and validation gates. It is not a completion claim.
 | tests/integration/test_rolling_metrics_endpoint.py | 566 | 22142 |
 | tests/unit/test_lotus_performance_client.py | 530 | 19686 |
 | src/app/trust_telemetry.py | 511 | 21683 |
+| src/app/contracts/rolling_outputs.py | 507 | 19487 |
 | src/app/services/rolling_stateful_inputs.py | 489 | 16731 |
 | src/app/services/attribution_decomposition.py | 485 | 16232 |
 | src/app/services/rolling_engine.py | 482 | 15804 |
@@ -52,16 +52,16 @@ documentation posture, and validation gates. It is not a completion claim.
 | src/app/contracts/risk.py | RiskResponseMetadata | ClassDef | 96 |
 | src/app/trust_telemetry.py | ProductTrustTelemetrySeed | ClassDef | 95 |
 | src/app/contracts/drawdown.py | DrawdownAnalyticsRequest | ClassDef | 91 |
-| src/app/contracts/rolling.py | RollingPeriodResult | ClassDef | 90 |
+| src/app/contracts/rolling_outputs.py | RollingPeriodResult | ClassDef | 90 |
 | src/app/contracts/scenario.py | RegimeScenarioPackResponse | ClassDef | 89 |
-| src/app/contracts/rolling.py | RollingResponse | ClassDef | 88 |
-| src/app/contracts/rolling.py | RollingMetadata | ClassDef | 87 |
+| src/app/contracts/rolling_outputs.py | RollingResponse | ClassDef | 88 |
+| src/app/contracts/rolling_outputs.py | RollingMetadata | ClassDef | 87 |
 | src/app/contracts/drawdown.py | DrawdownPeriodResult | ClassDef | 84 |
 | src/app/contracts/scenario.py | RegimeScenarioPackRequest | ClassDef | 84 |
 | src/app/contracts/attribution.py | HistoricalAttributionStatelessInput | ClassDef | 77 |
 | src/app/contracts/drawdown.py | DrawdownResponse | ClassDef | 77 |
 | src/app/contracts/mandate_health.py | MandateRiskHealthContextResponse | ClassDef | 77 |
-| src/app/contracts/rolling.py | RollingMetricSummary | ClassDef | 76 |
+| src/app/contracts/rolling_outputs.py | RollingMetricSummary | ClassDef | 76 |
 | src/app/contracts/concentration_inputs.py | ConcentrationRequest | ClassDef | 75 |
 | src/app/contracts/attribution.py | HistoricalAttributionMetadata | ClassDef | 71 |
 
@@ -89,12 +89,12 @@ All checks passed!
 - Ruff format check: passed
 
 ```text
-198 files already formatted
+200 files already formatted
 ```
 - Type checking: passed
 
 ```text
-Success: no issues found in 184 source files
+Success: no issues found in 186 source files
 ```
 - Unit coverage snapshot: passed
 
@@ -108,10 +108,10 @@ Success: no issues found in 184 source files
 ...
 src\app\upstream_errors.py                                 55      0     20      3    96%   181->194, 187->189, 192->194
 ---------------------------------------------------------------------------------------------------
-TOTAL                                                    4691     86    986     85    97%
+TOTAL                                                    4701     86    986     85    97%
 
-55 files skipped due to complete coverage.
-449 passed in 7.89s
+57 files skipped due to complete coverage.
+450 passed in 10.28s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -141,7 +141,7 @@ src\app\services\risk\__init__.py - A (100.00)
 - Dependency hygiene: passed
 
 ```text
-Scanning 93 files...
+Scanning 95 files...
 
 Success! No dependency issues found.
 ```
@@ -240,7 +240,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-449 tests collected in 1.81s
+450 tests collected in 1.91s
 ```
 - Import-linter report-only: passed
 
