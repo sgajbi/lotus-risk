@@ -2,6 +2,11 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
+from app.contracts.concentration_metric_field_examples import (
+    TOP_POSITION_CURRENT_EXAMPLE,
+    TOP_POSITION_PROPOSED_EXAMPLE,
+)
+
 
 class ConcentrationRiskProxy(BaseModel):
     hhi_current: float = Field(
@@ -87,23 +92,11 @@ class SinglePositionConcentration(BaseModel):
     )
     top_position_current: TopPositionDriver = Field(
         description="Top baseline position driver with identifier and display metadata.",
-        json_schema_extra={
-            "example": {
-                "security_id": "FO_FUND_PIMCO_INC",
-                "security_name": "PIMCO GIS Income Fund",
-                "weight": 0.23014,
-            }
-        },
+        json_schema_extra={"example": TOP_POSITION_CURRENT_EXAMPLE},
     )
     top_position_proposed: TopPositionDriver = Field(
         description="Top proposed position driver with identifier and display metadata.",
-        json_schema_extra={
-            "example": {
-                "security_id": "FO_FUND_PIMCO_INC",
-                "security_name": "PIMCO GIS Income Fund",
-                "weight": 0.22968,
-            }
-        },
+        json_schema_extra={"example": TOP_POSITION_PROPOSED_EXAMPLE},
     )
 
 
