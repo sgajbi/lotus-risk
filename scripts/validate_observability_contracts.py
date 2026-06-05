@@ -143,13 +143,23 @@ def validate_observability_contract(path: Path = CONTRACT_PATH) -> list[str]:
         if implemented_metric not in declared_metric_names:
             issues.append(f"{implemented_metric}: implemented metric is missing from contract")
 
-    for dashboard in payload.get("dashboards", []):
+    dashboards = payload.get("dashboards")
+    if not isinstance(dashboards, list) or not dashboards:
+        issues.append(f"{path}: dashboards must be a non-empty list")
+        dashboards = []
+
+    for dashboard in dashboards:
         for panel in dashboard.get("panels", []):
             metric_name = panel.get("metric")
             if metric_name not in declared_metric_names:
                 issues.append(f"{panel.get('panel_id')}: dashboard panel references {metric_name}")
 
-    for alert in payload.get("alerts", []):
+    alerts = payload.get("alerts")
+    if not isinstance(alerts, list) or not alerts:
+        issues.append(f"{path}: alerts must be a non-empty list")
+        alerts = []
+
+    for alert in alerts:
         metric_name = alert.get("metric")
         if metric_name not in declared_metric_names:
             issues.append(f"{alert.get('alert_id')}: alert references {metric_name}")

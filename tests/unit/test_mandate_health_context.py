@@ -4,7 +4,12 @@ from decimal import Decimal
 
 from fastapi.testclient import TestClient
 
-from app.contracts.mandate_health import MandateRiskHealthContextRequest
+from app.contracts.mandate_health import (
+    MandateRiskHealthContextRequest,
+    MandateRiskHealthContextResponse,
+    MandateRiskHealthMethodologyPosture,
+    MandateRiskHealthSourceMetric,
+)
 from app.main import app
 from app.services.mandate_health_context import evaluate_mandate_risk_health_context
 
@@ -57,6 +62,13 @@ def test_mandate_risk_health_context_uses_source_tracking_error_methodology() ->
     assert "RISK_METHODOLOGY_SOURCE_OWNED" in response.reason_codes
     assert "MANDATE_RISK_HEALTH_TRACKING_ERROR_SOURCE_READY" in response.reason_codes
     assert "MANDATE_RISK_HEALTH_TRACKING_ERROR_THRESHOLD_BREACHED" in response.reason_codes
+
+
+def test_mandate_health_contract_facade_preserves_public_imports() -> None:
+    assert MandateRiskHealthContextRequest.__name__ == "MandateRiskHealthContextRequest"
+    assert MandateRiskHealthContextResponse.__name__ == "MandateRiskHealthContextResponse"
+    assert MandateRiskHealthSourceMetric.__name__ == "MandateRiskHealthSourceMetric"
+    assert MandateRiskHealthMethodologyPosture.__name__ == "MandateRiskHealthMethodologyPosture"
 
 
 def test_mandate_risk_health_context_marks_ready_below_threshold() -> None:

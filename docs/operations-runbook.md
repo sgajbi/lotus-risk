@@ -22,3 +22,10 @@
 Quality baseline updates are report-only until thresholds are agreed and the largest route/service
 modules are split. Do not treat generated quality reports as enterprise-readiness proof by
 themselves; they are evidence for prioritization and regression control.
+
+## Enterprise Deployment Security
+
+Bank deployment mode requires the posture in `docs/security-deployment-policy.md`: authorization
+enforcement, runtime configuration enforcement, explicit key and secret-rotation configuration,
+endpoint capability rules, and ingress/server request body limits aligned to
+`ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES`.

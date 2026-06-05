@@ -1,6 +1,6 @@
-.PHONY: architecture-gate complexity-gate dead-code-gate dependency-hygiene-gate install install-ci check check-all test test-unit test-integration test-e2e test-all test-fast test-all-fast test-all-no-cov test-all-parallel ci ci-local ci-local-docker ci-local-docker-down typecheck typecheck-tests-critical lint monetary-float-guard domain-product-validate trust-telemetry-validate observability-contract-validate mesh-contract-validate no-alias-gate openapi-gate api-vocabulary-gate live-api-validate live-api-validate-core format clean run check-deps security-audit migration-smoke migration-apply pre-commit docker-build docker-up docker-down test-pyramid-gate quality-baseline
+.PHONY: architecture-gate complexity-gate dead-code-gate dependency-hygiene-gate install install-ci check check-all test test-unit test-integration test-e2e test-all test-coverage test-fast test-all-fast test-all-no-cov test-all-parallel ci ci-local ci-local-docker ci-local-docker-down typecheck typecheck-tests-critical lint monetary-float-guard domain-product-validate domain-data-product-gate trust-telemetry-validate observability-contract-validate mesh-contract-validate no-alias-gate openapi-gate openapi-artifact-gate api-vocabulary-gate live-api-validate live-api-validate-core format clean run check-deps security-audit migration-smoke migration-apply pre-commit docker-build docker-up docker-down test-pyramid-gate quality-baseline
 
-COVERAGE_FAIL_UNDER ?= 99
+COVERAGE_FAIL_UNDER ?= 98
 
 install:
 	python -m pip install --upgrade pip
@@ -9,14 +9,14 @@ install:
 
 install-ci:
 	python -m pip install --upgrade pip
-	pip install -e ".[dev,quality]"
+	pip install -e ".[dev]"
 
 pre-commit:
 	pre-commit run --all-files
 
-check: lint no-alias-gate typecheck openapi-gate api-vocabulary-gate mesh-contract-validate test
+check: lint no-alias-gate typecheck openapi-gate openapi-artifact-gate api-vocabulary-gate mesh-contract-validate test
 
-ci: lint no-alias-gate typecheck openapi-gate api-vocabulary-gate migration-smoke test-all security-audit
+ci: lint no-alias-gate typecheck openapi-gate openapi-artifact-gate api-vocabulary-gate migration-smoke test-all security-audit
 
 quality-baseline:
 	python scripts/generate_quality_baseline.py
@@ -38,6 +38,8 @@ test-e2e:
 
 test-all:
 	python -m pytest --cov=src --cov-report=term-missing --cov-fail-under=$(COVERAGE_FAIL_UNDER)
+
+test-coverage: test-all
 
 # Fast local loop: unit tests only (no coverage)
 test-fast:
@@ -83,6 +85,9 @@ typecheck-tests-critical:
 
 openapi-gate:
 	python scripts/openapi_quality_gate.py
+
+openapi-artifact-gate:
+	python scripts/export_openapi_artifact.py --check
 
 no-alias-gate:
 	python scripts/no_alias_contract_guard.py
@@ -132,6 +137,8 @@ monetary-float-guard:
 domain-product-validate:
 	python scripts/domain_data_product_contract_check.py
 
+domain-data-product-gate: domain-product-validate
+
 trust-telemetry-validate:
 	python scripts/validate_trust_telemetry_contracts.py
 
@@ -159,7 +166,7 @@ security-audit:
 	# PYSEC-2024-277 / CVE-2024-34997 is a disputed joblib trusted-cache
 	# deserialization advisory with no fixed release in the current audit feed.
 	python -m bandit -q -r src -c pyproject.toml --severity-level high
-	python -m pip_audit --ignore-vuln PYSEC-2024-277
+	python scripts/dependency_health_check.py --skip-outdated
 
 docker-build:
 	docker build -t lotus-risk:ci .

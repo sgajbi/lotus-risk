@@ -1,160 +1,46 @@
 from __future__ import annotations
 
-from datetime import datetime
+from dataclasses import dataclass
 from typing import Any
 
 from app.contracts.concentration import (
     ConcentrationInputMode,
+    ConcentrationMetadata,
     ConcentrationRequest,
     EnrichmentPolicy,
     IssuerGroupingLevel,
+    ConcentrationValuationContext,
+    StatefulConcentrationInput,
 )
 from app.services.audit_lineage import (
     ordered_source_services,
     upstream_request_fingerprint,
 )
-from app.service_metadata import SERVICE_NAME
 from app.services.concentration.datamodels import (
     ConcentrationComputationInput,
     IssuerIdentity,
 )
 from app.services.concentration.metadata import build_metadata
 from app.services.concentration.parsing import (
-    _as_datetime,
-    _as_int,
-    _as_str,
     _apply_snapshot_display_names,
     _caller_issuer_map,
     _extract_issuer_map,
     _extract_valuation_context,
-    _extract_values_from_stateless_payload,
     _extract_values_with_issuer_from_snapshot,
-    _issuer_key_from_position,
     _merge_issuer_maps,
-    _to_weighted_values,
 )
 from app.services.concentration.ports import LotusCoreClientProtocol
+from app.services.concentration.simulation_resolver import (
+    resolve_simulation as _resolve_simulation,
+)
 
 
-async def resolve_stateless(
-    request: ConcentrationRequest,
-    *,
-    core_client: LotusCoreClientProtocol | None,
-    correlation_id: str | None,
-) -> ConcentrationComputationInput:
-    stateless_input = request.stateless_input
-    if stateless_input is None:
-        raise ValueError("stateless_input is required when input_mode=stateless")
-
-    current_rows, proposed_rows = _extract_values_from_stateless_payload(stateless_input)
-
-    caller_issuer_map: dict[str, IssuerIdentity] = {}
-    for position in stateless_input.current_positions:
-        issuer_key = _issuer_key_from_position(
-            issuer_id=position.issuer_id,
-            issuer_name=None,
-            ultimate_parent_issuer_id=position.ultimate_parent_issuer_id,
-            ultimate_parent_issuer_name=None,
-            grouping_level=request.issuer_grouping_level,
-        )
-        if issuer_key:
-            caller_issuer_map[position.security_id] = issuer_key
-    for projected_position in stateless_input.projected_positions:
-        issuer_key = _issuer_key_from_position(
-            issuer_id=projected_position.issuer_id,
-            issuer_name=None,
-            ultimate_parent_issuer_id=projected_position.ultimate_parent_issuer_id,
-            ultimate_parent_issuer_name=None,
-            grouping_level=request.issuer_grouping_level,
-        )
-        if issuer_key:
-            caller_issuer_map[projected_position.security_id] = issuer_key
-
-    core_issuer_map: dict[str, IssuerIdentity] = {}
-    issuer_note: str | None = None
-    if request.enrichment_policy != EnrichmentPolicy.USE_CALLER_ONLY and core_client is not None:
-        security_ids = sorted(
-            {
-                row.security_id
-                for row in [*current_rows, *proposed_rows]
-                if row.security_id is not None
-            }
-        )
-        if security_ids:
-            try:
-                enrichment_payload = await core_client.get_instrument_enrichment(
-                    security_ids=security_ids,
-                    correlation_id=correlation_id,
-                )
-                records = enrichment_payload.get("records")
-                if isinstance(records, list):
-                    for record in records:
-                        if not isinstance(record, dict):
-                            continue
-                        security_id = _as_str(record.get("security_id"))
-                        if not security_id:
-                            continue
-                        if request.issuer_grouping_level == IssuerGroupingLevel.ULTIMATE_PARENT:
-                            issuer_id = _as_str(record.get("ultimate_parent_issuer_id")) or _as_str(
-                                record.get("issuer_id")
-                            )
-                            issuer_name = _as_str(
-                                record.get("ultimate_parent_issuer_name")
-                            ) or _as_str(record.get("issuer_name"))
-                        else:
-                            issuer_id = _as_str(record.get("issuer_id"))
-                            issuer_name = _as_str(record.get("issuer_name"))
-                        if issuer_id:
-                            core_issuer_map[security_id] = IssuerIdentity(
-                                issuer_id=issuer_id,
-                                issuer_name=issuer_name,
-                            )
-                else:
-                    issuer_note = "lotus-core enrichment payload missing records list"
-            except ValueError:
-                issuer_note = "lotus-core enrichment unavailable for stateless issuer mapping"
-
-    issuer_by_security = _merge_issuer_maps(
-        caller_map=caller_issuer_map,
-        core_map=core_issuer_map,
-        policy=request.enrichment_policy,
-    )
-
-    current_positions, current_issuers, covered_current, total_current = _to_weighted_values(
-        current_rows,
-        issuer_by_security=issuer_by_security,
-    )
-    proposed_positions, proposed_issuers, covered_proposed, total_proposed = _to_weighted_values(
-        proposed_rows,
-        issuer_by_security=issuer_by_security,
-    )
-    if (
-        issuer_note is None
-        and (total_current > 0 or total_proposed > 0)
-        and (covered_current == 0 and covered_proposed == 0)
-    ):
-        issuer_note = "issuer mapping unavailable for stateless payload"
-
-    return ConcentrationComputationInput(
-        input_mode=ConcentrationInputMode.STATELESS,
-        current_positions=current_positions,
-        proposed_positions=proposed_positions if proposed_positions else current_positions,
-        top_n=stateless_input.top_n,
-        current_issuers=current_issuers,
-        proposed_issuers=(proposed_issuers if proposed_issuers else current_issuers),
-        covered_position_count_current=covered_current,
-        covered_position_count_proposed=(
-            covered_proposed if proposed_positions else covered_current
-        ),
-        total_position_count_current=total_current,
-        total_position_count_proposed=(total_proposed if proposed_positions else total_current),
-        issuer_note=issuer_note,
-        metadata=build_metadata(
-            request=request,
-            include_cash_positions=None,
-            include_zero_quantity_positions=None,
-        ),
-    )
+@dataclass(frozen=True)
+class _StatefulSnapshotState:
+    sections: dict[str, Any]
+    issuer_by_security: dict[str, IssuerIdentity]
+    issuer_note: str | None
+    valuation_context: ConcentrationValuationContext | None
 
 
 async def resolve_stateful(
@@ -167,60 +53,23 @@ async def resolve_stateful(
     if stateful is None:
         raise ValueError("stateful_input is required when input_mode=stateful")
 
-    snapshot_payload: dict[str, Any] = {
-        "as_of_date": stateful.as_of_date.isoformat(),
-        "snapshot_mode": "BASELINE",
-        "sections": ["positions_baseline", "portfolio_totals", "instrument_enrichment"],
-        "options": {
-            "include_zero_quantity_positions": stateful.include_zero_quantity_positions,
-            "include_cash_positions": stateful.include_cash_positions,
-            "position_basis": "market_value_base",
-            "weight_basis": "total_market_value_base",
-        },
-    }
-    if stateful.reporting_currency:
-        snapshot_payload["reporting_currency"] = stateful.reporting_currency
-
-    snapshot = await core_client.get_core_snapshot(
-        portfolio_id=stateful.portfolio_id,
-        request_payload=snapshot_payload,
-        correlation_id=correlation_id,
-    )
-    sections = snapshot.get("sections")
-    if not isinstance(sections, dict):
-        raise ValueError("lotus-core stateful snapshot missing sections payload")
-
-    core_issuer_map, issuer_note = _extract_issuer_map(
-        sections, grouping_level=request.issuer_grouping_level
-    )
-    _apply_snapshot_display_names(sections, core_issuer_map)
-    caller_map = _caller_issuer_map(
-        mappings=stateful.issuer_mappings,
-        grouping_level=request.issuer_grouping_level,
-    )
-    issuer_by_security = _merge_issuer_maps(
-        caller_map=caller_map,
-        core_map=core_issuer_map,
-        policy=request.enrichment_policy,
-    )
-    metadata = build_metadata(
+    snapshot_payload = _stateful_snapshot_payload(stateful)
+    snapshot_state = await _fetch_stateful_snapshot_state(
         request=request,
-        as_of_date=stateful.as_of_date,
-        portfolio_id=stateful.portfolio_id,
-        include_cash_positions=stateful.include_cash_positions,
-        include_zero_quantity_positions=stateful.include_zero_quantity_positions,
+        stateful=stateful,
+        core_client=core_client,
+        correlation_id=correlation_id,
+        snapshot_payload=snapshot_payload,
     )
-    metadata.source_services = ordered_source_services("lotus-core")
-    metadata.upstream_request_fingerprints = upstream_request_fingerprint(
-        service="lotus-core",
-        operation=f"/integration/portfolios/{stateful.portfolio_id}/core-snapshot",
-        payload=snapshot_payload,
+    metadata = _stateful_metadata(
+        request=request,
+        stateful=stateful,
+        snapshot_payload=snapshot_payload,
     )
-
     baseline_positions, baseline_issuers, covered_baseline, total_baseline = (
         _extract_values_with_issuer_from_snapshot(
-            sections.get("positions_baseline"),
-            issuer_by_security,
+            snapshot_state.sections.get("positions_baseline"),
+            snapshot_state.issuer_by_security,
         )
     )
 
@@ -235,10 +84,102 @@ async def resolve_stateful(
         covered_position_count_proposed=covered_baseline,
         total_position_count_current=total_baseline,
         total_position_count_proposed=total_baseline,
-        issuer_note=issuer_note,
-        valuation_context=_extract_valuation_context(snapshot.get("valuation_context")),
+        issuer_note=snapshot_state.issuer_note,
+        valuation_context=snapshot_state.valuation_context,
         metadata=metadata,
     )
+
+
+def _stateful_snapshot_payload(stateful: StatefulConcentrationInput) -> dict[str, Any]:
+    snapshot_payload: dict[str, Any] = {
+        "as_of_date": stateful.as_of_date.isoformat(),
+        "snapshot_mode": "BASELINE",
+        "sections": ["positions_baseline", "portfolio_totals", "instrument_enrichment"],
+        "options": {
+            "include_zero_quantity_positions": stateful.include_zero_quantity_positions,
+            "include_cash_positions": stateful.include_cash_positions,
+            "position_basis": "market_value_base",
+            "weight_basis": "total_market_value_base",
+        },
+    }
+    if stateful.reporting_currency:
+        snapshot_payload["reporting_currency"] = stateful.reporting_currency
+    return snapshot_payload
+
+
+async def _fetch_stateful_snapshot_state(
+    *,
+    request: ConcentrationRequest,
+    stateful: StatefulConcentrationInput,
+    core_client: LotusCoreClientProtocol,
+    correlation_id: str | None,
+    snapshot_payload: dict[str, Any],
+) -> _StatefulSnapshotState:
+    snapshot = await core_client.get_core_snapshot(
+        portfolio_id=stateful.portfolio_id,
+        request_payload=snapshot_payload,
+        correlation_id=correlation_id,
+    )
+    sections = snapshot.get("sections")
+    if not isinstance(sections, dict):
+        raise ValueError("lotus-core stateful snapshot missing sections payload")
+
+    core_issuer_map, issuer_note = _extract_issuer_map(
+        sections, grouping_level=request.issuer_grouping_level
+    )
+    _apply_snapshot_display_names(sections, core_issuer_map)
+    issuer_by_security = _stateful_issuer_map(
+        stateful=stateful,
+        core_map=core_issuer_map,
+        grouping_level=request.issuer_grouping_level,
+        enrichment_policy=request.enrichment_policy,
+    )
+    return _StatefulSnapshotState(
+        sections=sections,
+        issuer_by_security=issuer_by_security,
+        issuer_note=issuer_note,
+        valuation_context=_extract_valuation_context(snapshot.get("valuation_context")),
+    )
+
+
+def _stateful_issuer_map(
+    *,
+    stateful: StatefulConcentrationInput,
+    core_map: dict[str, IssuerIdentity],
+    grouping_level: IssuerGroupingLevel,
+    enrichment_policy: EnrichmentPolicy,
+) -> dict[str, IssuerIdentity]:
+    caller_map = _caller_issuer_map(
+        mappings=stateful.issuer_mappings,
+        grouping_level=grouping_level,
+    )
+    return _merge_issuer_maps(
+        caller_map=caller_map,
+        core_map=core_map,
+        policy=enrichment_policy,
+    )
+
+
+def _stateful_metadata(
+    *,
+    request: ConcentrationRequest,
+    stateful: StatefulConcentrationInput,
+    snapshot_payload: dict[str, Any],
+) -> ConcentrationMetadata:
+    metadata = build_metadata(
+        request=request,
+        as_of_date=stateful.as_of_date,
+        portfolio_id=stateful.portfolio_id,
+        include_cash_positions=stateful.include_cash_positions,
+        include_zero_quantity_positions=stateful.include_zero_quantity_positions,
+    )
+    metadata.source_services = ordered_source_services("lotus-core")
+    metadata.upstream_request_fingerprints = upstream_request_fingerprint(
+        service="lotus-core",
+        operation=f"/integration/portfolios/{stateful.portfolio_id}/core-snapshot",
+        payload=snapshot_payload,
+    )
+    return metadata
 
 
 async def resolve_simulation(
@@ -248,149 +189,9 @@ async def resolve_simulation(
     correlation_id: str | None,
     actor_id: str | None,
 ) -> ConcentrationComputationInput:
-    simulation = request.simulation_input
-    if simulation is None:
-        raise ValueError("simulation_input is required when input_mode=simulation")
-
-    session_id = simulation.session_id
-    session_version: int | None = None
-    session_expires_at: datetime | None = None
-
-    should_create_session = simulation.start_new_session or not session_id
-    if should_create_session:
-        session_response = await core_client.create_simulation_session(
-            portfolio_id=simulation.portfolio_id,
-            ttl_hours=simulation.session_ttl_hours,
-            created_by=actor_id or SERVICE_NAME,
-            correlation_id=correlation_id,
-        )
-        session_record = session_response.get("session")
-        if not isinstance(session_record, dict):
-            raise ValueError(
-                "lotus-core create simulation session returned invalid response payload"
-            )
-        resolved_session_id = _as_str(session_record.get("session_id"))
-        if not resolved_session_id:
-            raise ValueError("lotus-core create simulation session response missing session_id")
-        session_id = resolved_session_id
-        session_version = _as_int(session_record.get("version"))
-        session_expires_at = _as_datetime(session_record.get("expires_at"))
-
-    if session_id is None:
-        raise ValueError("simulation session_id could not be resolved")
-
-    if simulation.simulation_changes:
-        payload = [
-            change.model_dump(mode="json", exclude_none=True)
-            for change in simulation.simulation_changes
-        ]
-        changes_response = await core_client.add_simulation_changes(
-            session_id=session_id,
-            changes=payload,
-            correlation_id=correlation_id,
-        )
-        session_version = _as_int(changes_response.get("version")) or session_version
-
-    expected_version = simulation.expected_version or session_version
-
-    snapshot_payload: dict[str, Any] = {
-        "as_of_date": simulation.as_of_date.isoformat(),
-        "snapshot_mode": "SIMULATION",
-        "sections": [
-            "positions_baseline",
-            "positions_projected",
-            "positions_delta",
-            "portfolio_totals",
-            "instrument_enrichment",
-        ],
-        "simulation": {
-            "session_id": session_id,
-        },
-        "options": {
-            "include_zero_quantity_positions": simulation.include_zero_quantity_positions,
-            "include_cash_positions": simulation.include_cash_positions,
-            "position_basis": "market_value_base",
-            "weight_basis": "total_market_value_base",
-        },
-    }
-    if expected_version is not None:
-        snapshot_payload["simulation"]["expected_version"] = expected_version
-    if simulation.reporting_currency:
-        snapshot_payload["reporting_currency"] = simulation.reporting_currency
-
-    snapshot = await core_client.get_core_snapshot(
-        portfolio_id=simulation.portfolio_id,
-        request_payload=snapshot_payload,
+    return await _resolve_simulation(
+        request,
+        core_client=core_client,
         correlation_id=correlation_id,
-    )
-    sections = snapshot.get("sections")
-    if not isinstance(sections, dict):
-        raise ValueError("lotus-core simulation snapshot missing sections payload")
-
-    core_issuer_map, issuer_note = _extract_issuer_map(
-        sections, grouping_level=request.issuer_grouping_level
-    )
-    _apply_snapshot_display_names(sections, core_issuer_map)
-    caller_map = _caller_issuer_map(
-        mappings=simulation.issuer_mappings,
-        grouping_level=request.issuer_grouping_level,
-    )
-    issuer_by_security = _merge_issuer_maps(
-        caller_map=caller_map,
-        core_map=core_issuer_map,
-        policy=request.enrichment_policy,
-    )
-
-    baseline_positions, baseline_issuers, covered_baseline, total_baseline = (
-        _extract_values_with_issuer_from_snapshot(
-            sections.get("positions_baseline"), issuer_by_security
-        )
-    )
-    projected_positions, projected_issuers, covered_projected, total_projected = (
-        _extract_values_with_issuer_from_snapshot(
-            sections.get("positions_projected"), issuer_by_security
-        )
-    )
-    if not projected_positions:
-        projected_positions = baseline_positions
-    if not projected_issuers:
-        projected_issuers = baseline_issuers
-        covered_projected = covered_baseline
-        total_projected = total_baseline
-
-    snapshot_simulation = snapshot.get("simulation")
-    if isinstance(snapshot_simulation, dict):
-        session_version = _as_int(snapshot_simulation.get("version")) or session_version
-
-    metadata = build_metadata(
-        request=request,
-        as_of_date=simulation.as_of_date,
-        portfolio_id=simulation.portfolio_id,
-        simulation_session_id=session_id,
-        simulation_session_version=session_version,
-        session_expires_at=session_expires_at,
-        include_cash_positions=simulation.include_cash_positions,
-        include_zero_quantity_positions=simulation.include_zero_quantity_positions,
-    )
-    metadata.source_services = ordered_source_services("lotus-core")
-    metadata.upstream_request_fingerprints = upstream_request_fingerprint(
-        service="lotus-core",
-        operation=f"/integration/portfolios/{simulation.portfolio_id}/core-snapshot",
-        payload=snapshot_payload,
-    )
-
-    return ConcentrationComputationInput(
-        input_mode=ConcentrationInputMode.SIMULATION,
-        current_positions=baseline_positions,
-        proposed_positions=projected_positions,
-        top_n=simulation.top_n,
-        current_issuers=baseline_issuers,
-        proposed_issuers=projected_issuers,
-        covered_position_count_current=covered_baseline,
-        covered_position_count_proposed=covered_projected,
-        total_position_count_current=total_baseline,
-        total_position_count_proposed=total_projected,
-        issuer_note=issuer_note,
-        valuation_context=_extract_valuation_context(snapshot.get("valuation_context")),
-        metadata=metadata,
+        actor_id=actor_id,
     )

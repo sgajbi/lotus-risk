@@ -4,7 +4,30 @@ import pytest
 from pydantic import ValidationError
 from typing import Any, cast
 
-from app.contracts.rolling import RollingAnalyticsRequest, RollingInputMode, RollingOptions
+from app.contracts.rolling import (
+    RollingAnalyticsRequest,
+    RollingInputMode,
+    RollingMetricSummary,
+    RollingOptions,
+    RollingResponse,
+)
+from app.contracts.rolling_inputs import RollingAnalyticsRequest as RollingAnalyticsRequestSource
+from app.contracts.rolling_outputs import RollingResponse as RollingResponseSource
+from app.contracts.rolling_metric_outputs import (
+    RollingMetricSummary as RollingMetricSummarySource,
+)
+from app.contracts.rolling_metric_summary_outputs import (
+    RollingMetricSummary as RollingMetricSummaryImplementation,
+)
+from app.contracts.rolling_request_inputs import (
+    RollingAnalyticsRequest as RollingAnalyticsRequestImplementation,
+)
+from app.contracts.rolling_response_outputs import (
+    RollingResponse as RollingResponseImplementation,
+)
+from app.contracts.rolling_response_envelope_outputs import (
+    RollingResponse as RollingResponseEnvelope,
+)
 
 
 BASE_STATELESS_PAYLOAD = {
@@ -40,6 +63,16 @@ BASE_STATELESS_PAYLOAD = {
         },
     },
 }
+
+
+def test_rolling_contract_module_preserves_public_import_surface() -> None:
+    assert RollingAnalyticsRequest is RollingAnalyticsRequestSource
+    assert RollingAnalyticsRequest is RollingAnalyticsRequestImplementation
+    assert RollingResponse is RollingResponseSource
+    assert RollingResponse is RollingResponseImplementation
+    assert RollingResponse is RollingResponseEnvelope
+    assert RollingMetricSummary is RollingMetricSummarySource
+    assert RollingMetricSummary is RollingMetricSummaryImplementation
 
 
 def test_rolling_contract_accepts_stateless_payload() -> None:

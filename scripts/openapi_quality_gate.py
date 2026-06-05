@@ -10,13 +10,17 @@ SCRIPT_PATH = str(PROJECT_ROOT / "scripts")
 if SCRIPT_PATH not in sys.path:
     sys.path.insert(0, SCRIPT_PATH)
 
-from _repo_imports import force_repo_src_first  # noqa: E402
+try:
+    from scripts._repo_imports import force_repo_src_first  # noqa: E402
+except ModuleNotFoundError:  # pragma: no cover - direct script execution path
+    from _repo_imports import force_repo_src_first  # type: ignore[import-not-found,no-redef]
 
 force_repo_src_first(PROJECT_ROOT)
 
 from app.main import app  # noqa: E402
 
 ALLOWED_METHODS = {"get", "post", "put", "patch", "delete"}
+JSON_MUTATION_METHODS = {"post", "put", "patch"}
 
 
 def _has_success_response(operation: dict[str, Any]) -> bool:
@@ -30,6 +34,11 @@ def _has_error_response(operation: dict[str, Any]) -> bool:
         str(code).startswith("4") or str(code).startswith("5") or str(code) == "default"
         for code in responses
     )
+
+
+def _has_json_request_examples(operation: dict[str, Any]) -> bool:
+    json_content = operation.get("requestBody", {}).get("content", {}).get("application/json", {})
+    return bool(json_content.get("examples") or json_content.get("example"))
 
 
 def _is_ref_only(prop_schema: dict[str, Any]) -> bool:
@@ -55,6 +64,8 @@ def evaluate_schema(schema: dict[str, Any], *, service_name: str) -> list[str]:
             operation_id = operation.get("operationId")
             if operation_id:
                 operation_ids.append(str(operation_id))
+            else:
+                missing_docs.append((method_upper, path, "operationId"))
 
             if not operation.get("summary"):
                 missing_docs.append((method_upper, path, "summary"))
@@ -70,6 +81,9 @@ def evaluate_schema(schema: dict[str, Any], *, service_name: str) -> list[str]:
                     missing_docs.append((method_upper, path, "2xx response"))
                 if not _has_error_response(operation):
                     missing_docs.append((method_upper, path, "error response (4xx/5xx/default)"))
+            if method.lower() in JSON_MUTATION_METHODS and operation.get("requestBody"):
+                if not _has_json_request_examples(operation):
+                    missing_docs.append((method_upper, path, "JSON request example"))
 
     schemas = schema.get("components", {}).get("schemas", {})
     if isinstance(schemas, dict):

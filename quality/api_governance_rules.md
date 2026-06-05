@@ -1,7 +1,8 @@
 # Lotus Risk API Governance Rules
 
 1. Every endpoint must define summary, description, tags, response model, operation ID, examples,
-   and standard error responses.
+   and standard error responses; the OpenAPI quality gate must fail missing operation IDs and
+   missing JSON request examples for mutation endpoints.
 2. POST calculation endpoints must document input mode, source ownership, lineage, supportability,
    and failure semantics.
 3. Any list endpoint must use consistent pagination, filtering, and sorting contracts before

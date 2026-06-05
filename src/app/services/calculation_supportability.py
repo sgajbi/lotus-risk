@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from typing import Any
 
 from app.contracts.risk import (
@@ -11,6 +12,13 @@ from app.contracts.risk import (
     RiskSupportabilityReason,
 )
 from app.observability import record_analytics_freshness_bucket, record_calculation_supportability
+
+
+@dataclass(frozen=True)
+class _PeriodSupportabilityAssessment:
+    degraded_reasons: list[RiskSupportabilityReason]
+    empty_period_count: int
+    degraded_result_count: int
 
 
 def default_calculation_supportability() -> RiskCalculationSupportability:
@@ -88,24 +96,13 @@ def _dependency_degradation_reason(period_result: Any) -> RiskSupportabilityReas
     return None
 
 
-def supportability_from_period_results(
-    *,
-    returns: Sequence[ReturnPoint],
-    as_of_date: dt.date,
+def _assess_period_results(
     results: Mapping[str, Any],
-) -> RiskCalculationSupportability:
-    freshness_bucket = freshness_bucket_from_returns(returns, as_of_date=as_of_date)
-    if not returns:
-        return RiskCalculationSupportability(
-            state="empty",
-            reason="no_return_observations",
-            freshness_bucket=freshness_bucket,
-            evaluated_period_count=len(results),
-        )
-
+) -> _PeriodSupportabilityAssessment:
     degraded_reasons: list[RiskSupportabilityReason] = []
     empty_period_count = 0
     degraded_result_count = 0
+
     for period_result in results.values():
         observation_count = _observation_count(period_result)
         if observation_count == 0:
@@ -121,23 +118,36 @@ def supportability_from_period_results(
             degraded_result_count += 1
             degraded_reasons.append(dependency_reason)
 
-    if degraded_result_count:
+    return _PeriodSupportabilityAssessment(
+        degraded_reasons=degraded_reasons,
+        empty_period_count=empty_period_count,
+        degraded_result_count=degraded_result_count,
+    )
+
+
+def _period_results_supportability_state(
+    *,
+    freshness_bucket: RiskFreshnessBucket,
+    assessment: _PeriodSupportabilityAssessment,
+    evaluated_period_count: int,
+) -> RiskCalculationSupportability:
+    if assessment.degraded_result_count:
         return RiskCalculationSupportability(
             state="degraded",
-            reason=_select_reason(degraded_reasons),
+            reason=_select_reason(assessment.degraded_reasons),
             freshness_bucket=freshness_bucket,
-            degraded_metric_count=degraded_result_count,
-            empty_period_count=empty_period_count,
-            evaluated_period_count=len(results),
+            degraded_metric_count=assessment.degraded_result_count,
+            empty_period_count=assessment.empty_period_count,
+            evaluated_period_count=evaluated_period_count,
         )
 
-    if empty_period_count:
+    if assessment.empty_period_count:
         return RiskCalculationSupportability(
             state="empty",
             reason="insufficient_observations",
             freshness_bucket=freshness_bucket,
-            empty_period_count=empty_period_count,
-            evaluated_period_count=len(results),
+            empty_period_count=assessment.empty_period_count,
+            evaluated_period_count=evaluated_period_count,
         )
 
     if freshness_bucket == "stale":
@@ -145,13 +155,35 @@ def supportability_from_period_results(
             state="stale",
             reason="stale_source_observations",
             freshness_bucket=freshness_bucket,
-            evaluated_period_count=len(results),
+            evaluated_period_count=evaluated_period_count,
         )
 
     return RiskCalculationSupportability(
         state="ready",
         reason="calculation_complete",
         freshness_bucket=freshness_bucket,
+        evaluated_period_count=evaluated_period_count,
+    )
+
+
+def supportability_from_period_results(
+    *,
+    returns: Sequence[ReturnPoint],
+    as_of_date: dt.date,
+    results: Mapping[str, Any],
+) -> RiskCalculationSupportability:
+    freshness_bucket = freshness_bucket_from_returns(returns, as_of_date=as_of_date)
+    if not returns:
+        return RiskCalculationSupportability(
+            state="empty",
+            reason="no_return_observations",
+            freshness_bucket=freshness_bucket,
+            evaluated_period_count=len(results),
+        )
+
+    return _period_results_supportability_state(
+        freshness_bucket=freshness_bucket,
+        assessment=_assess_period_results(results),
         evaluated_period_count=len(results),
     )
 

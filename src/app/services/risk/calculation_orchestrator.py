@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-from typing import Callable
-from collections.abc import Sequence
-
 import pandas as pd
+from prometheus_client import Histogram
 
 from app.contracts.risk import (
     BenchmarkRequestContext,
@@ -13,24 +11,12 @@ from app.contracts.risk import (
     RiskPeriodResult,
     RiskResponseMetadata,
     RiskStatelessCalculationInput,
-    RiskValue,
 )
 from app.services.audit_lineage import fingerprint_model
 from app.services.calculation_supportability import supportability_from_risk_metric_results
 from app.services.risk import helpers as risk_helpers
-from app.services.risk.metric_calculators import (
-    align_and_resample_benchmark,
-    calculate_drawdown,
-    calculate_sortino,
-    calculate_sharpe,
-    calculate_var,
-    calculate_volatility,
-    metric_error,
-    prepare_benchmark_context,
-    resolve_aligned_benchmark_series,
-    resolve_benchmark_metric_value,
-)
-from prometheus_client import Histogram
+from app.services.risk.period_metrics import calculate_period_metrics
+from app.services.risk.period_windows import risk_period_window
 
 BENCHMARK_METRICS = risk_helpers.BENCHMARK_METRICS
 RISK_FREE_METRICS = risk_helpers.RISK_METRICS_REQUIRING_RISK_FREE
@@ -137,136 +123,6 @@ def resolve_return_frames(
     return returns_df, benchmark_df
 
 
-def _build_non_benchmark_calculators(
-    *,
-    period_returns: pd.Series,
-    drawdown_series: pd.Series,
-    request: RiskStatelessCalculationInput,
-    annual_factor: int,
-    periodic_rf: float,
-    periodic_mar: float,
-) -> dict[str, Callable[[], RiskValue]]:
-    return {
-        "VOLATILITY": lambda: calculate_volatility(
-            metric_series=period_returns,
-            annual_factor=annual_factor,
-        ),
-        "DRAWDOWN": lambda: calculate_drawdown(
-            drawdown_series=drawdown_series,
-        ),
-        "SHARPE": lambda: calculate_sharpe(
-            metric_series=period_returns,
-            periodic_rf=periodic_rf,
-            annual_factor=annual_factor,
-        ),
-        "SORTINO": lambda: calculate_sortino(
-            metric_series=period_returns,
-            periodic_mar=periodic_mar,
-            annual_factor=annual_factor,
-            mar_annual_rate=request.options.mar_annual_rate,
-        ),
-        "VAR": lambda: calculate_var(
-            metric_series=period_returns,
-            method=request.options.var.method,
-            confidence=request.options.var.confidence,
-            horizon_days=request.options.var.horizon_days,
-            include_expected_shortfall=request.options.var.include_expected_shortfall,
-        ),
-    }
-
-
-def _calculate_period_metrics(
-    request: RiskStatelessCalculationInput,
-    *,
-    start: pd.Timestamp,
-    end: pd.Timestamp,
-    annual_factor: int,
-    periodic_rf: float,
-    periodic_mar: float,
-    period_returns: pd.Series,
-    benchmark_df: pd.DataFrame,
-    benchmark_metrics: Sequence[str],
-    duration_seconds: Histogram,
-) -> tuple[
-    dict[str, RiskValue],
-    dict[str, str | bool | int | list[str]] | None,
-    int,
-    int,
-]:
-    metric_series = risk_helpers._resample_returns(period_returns, request.options.frequency)
-    drawdown_series = period_returns
-    metric_map: dict[str, RiskValue] = {}
-    non_benchmark_calculators = _build_non_benchmark_calculators(
-        period_returns=metric_series,
-        drawdown_series=drawdown_series,
-        request=request,
-        annual_factor=annual_factor,
-        periodic_rf=periodic_rf,
-        periodic_mar=periodic_mar,
-    )
-
-    for metric_name, calculator in non_benchmark_calculators.items():
-        if metric_name not in request.metrics:
-            continue
-        with duration_seconds.labels(metric_name=metric_name).time():
-            try:
-                metric_map[metric_name] = calculator()
-            except ValueError as exc:
-                metric_map[metric_name] = metric_error(str(exc))
-
-    benchmark_context: dict[str, str | bool | int | list[str]] | None = None
-    aligned_count = 0
-    benchmark_observation_count = 0
-    if benchmark_metrics:
-        if benchmark_df.empty:
-            for metric_name in benchmark_metrics:
-                metric_map[metric_name] = metric_error(
-                    "Benchmark returns required for benchmark-dependent metric"
-                )
-        else:
-            benchmark_period = align_and_resample_benchmark(
-                benchmark_df=benchmark_df,
-                start=start.date(),
-                end=end.date(),
-                frequency=request.options.frequency,
-                use_log_returns=request.options.use_log_returns,
-            )
-            benchmark_observation_count = len(benchmark_period)
-            if benchmark_period.empty:
-                aligned_count = 0
-                for metric_name in benchmark_metrics:
-                    metric_map[metric_name] = metric_error("Insufficient aligned observations")
-            else:
-                aligned = resolve_aligned_benchmark_series(
-                    metric_series=metric_series,
-                    benchmark_series=benchmark_period,
-                )
-                aligned_count = int(len(aligned))
-                if aligned_count < 2:
-                    for metric_name in benchmark_metrics:
-                        metric_map[metric_name] = metric_error("Insufficient aligned observations")
-                else:
-                    portfolio_series = pd.Series(aligned["portfolio"])
-                    benchmark_aligned_series = pd.Series(aligned["benchmark"])
-                    for metric_name in benchmark_metrics:
-                        with duration_seconds.labels(metric_name=metric_name).time():
-                            try:
-                                metric_map[metric_name] = resolve_benchmark_metric_value(
-                                    metric_name=metric_name,
-                                    aligned_portfolio_series=portfolio_series,
-                                    aligned_benchmark_series=benchmark_aligned_series,
-                                    annual_factor=annual_factor,
-                                )
-                            except ValueError as exc:
-                                metric_map[metric_name] = metric_error(str(exc))
-        benchmark_context = prepare_benchmark_context(
-            benchmark_df_empty=benchmark_df.empty,
-            aligned_count=aligned_count,
-            benchmark_metrics=list(benchmark_metrics),
-        )
-    return metric_map, benchmark_context, aligned_count, benchmark_observation_count
-
-
 def build_period_results(
     request: RiskStatelessCalculationInput,
     *,
@@ -282,41 +138,31 @@ def build_period_results(
     ]
 
     results: dict[str, RiskPeriodResult] = {}
-    for period in request.periods:
-        start, end = risk_helpers._resolve_period(
-            period.type,
-            request.scope.as_of_date,
-            request.portfolio_open_date,
-            year=period.year,
-            from_date=period.from_date,
-            to_date=period.to_date,
+    for period_index, _period in enumerate(request.periods):
+        period_window = risk_period_window(
+            request=request,
+            period_index=period_index,
+            returns_df=returns_df,
         )
-        period_name = period.name or period.type
-
-        period_mask = (returns_df.index >= pd.Timestamp(start)) & (
-            returns_df.index <= pd.Timestamp(end)
-        )
-        period_returns = returns_df.loc[period_mask, "value"]
-
         metric_map, benchmark_context, aligned_count, benchmark_observation_count = (
-            _calculate_period_metrics(
+            calculate_period_metrics(
                 request,
-                start=pd.Timestamp(start),
-                end=pd.Timestamp(end),
+                start=period_window.start,
+                end=period_window.end,
                 annual_factor=annual_factor,
                 periodic_rf=periodic_rf,
                 periodic_mar=periodic_mar,
-                period_returns=period_returns,
+                period_returns=period_window.returns,
                 benchmark_df=benchmark_df,
                 benchmark_metrics=benchmark_metrics_for_request,
                 duration_seconds=duration_seconds,
             )
         )
 
-        results[period_name] = RiskPeriodResult(
-            start_date=start,
-            end_date=end,
-            portfolio_observation_count=len(period_returns),
+        results[period_window.name] = RiskPeriodResult(
+            start_date=period_window.start.date(),
+            end_date=period_window.end.date(),
+            portfolio_observation_count=len(period_window.returns),
             benchmark_observation_count=(
                 benchmark_observation_count
                 if (not benchmark_df.empty and benchmark_context is not None)

@@ -10,7 +10,8 @@
 
 ## Current State (After This Change Set)
 
-- Coverage gate threshold: `99%` in both `Makefile` and CI workflow.
+- Coverage gate threshold: `98%` in both `Makefile` and CI workflow, with
+  `COVERAGE_FAIL_UNDER` available for stricter local or release-candidate runs.
 - Test pyramid gate added and wired into CI:
   - Unit: `35` tests (`70%`)
   - Integration: `11` tests (`22%`)

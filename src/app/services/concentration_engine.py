@@ -10,8 +10,8 @@ from app.services.concentration.response_builder import _build_response
 from app.services.concentration.resolvers import (
     resolve_simulation,
     resolve_stateful,
-    resolve_stateless,
 )
+from app.services.concentration.stateless_resolver import resolve_stateless
 
 
 async def calculate_concentration(

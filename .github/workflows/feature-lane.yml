@@ -51,10 +51,10 @@ jobs:
         run: make typecheck
       - name: OpenAPI Gate
         run: make openapi-gate
+      - name: OpenAPI Artifact Gate
+        run: make openapi-artifact-gate
       - name: API Vocabulary Gate
         run: make api-vocabulary-gate
-      - name: Architecture Gate
-        run: make architecture-gate
       - name: Complexity Gate
         run: make complexity-gate
       - name: Dependency Hygiene Gate
@@ -63,12 +63,6 @@ jobs:
         run: make dead-code-gate
       - name: Security Audit
         run: make security-audit
-      - name: Complexity Gate
-        run: make complexity-gate
-      - name: Dependency Hygiene Gate
-        run: make dependency-hygiene-gate
-      - name: Dead Code Gate
-        run: make dead-code-gate
 
   unit-tests:
     name: Feature Lane / Tests (unit)

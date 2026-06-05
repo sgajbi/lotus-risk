@@ -2,19 +2,31 @@
 
 ## Current Slice
 
-This slice establishes the report-only enterprise quality baseline and progressive gate scaffolding.
+The branch has moved beyond report-only scaffolding into measured modularity,
+contract-size, client-boundary, complexity reduction, and generated OpenAPI
+schema certification. The current baseline shows no C-or-worse complexity
+candidates, while GitHub feature-lane checks are being used asynchronously
+after each pushed slice.
 
 ## Highest Priority Refactor Targets
 
 | Rank | Target | Evidence | Next action |
 | --- | --- | --- | --- |
-| 1 | API entry point | src/app/main.py has 10 lines and 0 app decorators | Extract routers and dependency providers |
-| 2 | Concentration module | Largest service and contract files are concentration-related | Split source resolution, issuer aggregation, and response assembly |
-| 3 | Risk calculation engine | Largest function is LotusPerformanceClient at 253 lines | Extract per-metric calculators behind stable service API |
+| 1 | Service module size | Concentration, attribution, rolling, risk calculation, drawdown calculation, and trust telemetry public adapters have been split from stateful, simulation, exposure-resolution, source-frame, period-window, period-metric, drawdown period/benchmark, window-calculation, telemetry-builder, and risk-free dependency helpers; remaining source-size pressure is concentrated in service orchestration modules | Continue extracting cohesive orchestration, response-building, and dependency-resolution helpers with characterization tests |
+| 2 | Contract module size | Concentration, rolling, risk, drawdown, attribution, scenario, mandate-health, and trust telemetry request/response contracts are split; concentration, rolling, drawdown, mandate-health, and trust telemetry response models are further split into metric/detail, schema, and top-level response modules; remaining contract-size pressure is concentrated in risk and residual nested output modules | Split reusable metadata or nested contract fragments only where it improves reviewability and preserves OpenAPI output |
+| 3 | OpenAPI and certification evidence | `make openapi-gate` evaluates the generated FastAPI schema; `make openapi-artifact-gate` exports `output/openapi/lotus-risk.openapi.json` and validates Spectral policy expectations; `quality/openapi_artifact_evidence.md` records current checksum evidence | Regenerate and attach the final current OpenAPI artifact evidence to the PR |
+| 4 | Security and abuse-control evidence | Authorization, audit, redaction, Bandit, pip-audit, payload-size limits, capability checks, threat-model evidence, and bank deployment policy are covered | Add gateway-backed token-validation evidence and final runtime configuration proof before release promotion |
+| 5 | Observability operations evidence | Metrics/correlation support, dashboard panels, alert definitions, and runbook anchors are governed by the observability monitoring contract | Keep alert thresholds aligned with production telemetry after deployment |
 
 ## Progressive Gate Posture
 
-1. Baseline/report-only: active in this slice.
-2. Fail only new regressions: next stage after baseline artifacts are stable.
-3. Enforce agreed thresholds: after monolithic routers and largest engines are reduced.
-4. Enterprise-readiness gates: final stage once API, security, observability, and docs are certified.
+1. Baseline/report-only: implemented and refreshed per slice.
+2. Fail only new regressions: partially active through lint, typecheck,
+   architecture gate, monetary-float guard, OpenAPI gate, focused tests, and
+   GitHub feature lane checks.
+3. Enforce agreed thresholds: not complete; complexity is clean, OpenAPI
+   generation is actively gated, security deployment policy is documented and
+   tested, and observability operations evidence is governed, but file-size
+   and production telemetry thresholds still need final policy.
+4. Enterprise-readiness gates: not complete; final PR still needs healthy PR
+   merge-gate CI plus current generated OpenAPI artifact and command evidence.

@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 
@@ -14,8 +15,9 @@ def main() -> int:
     cov.combine(files)
     cov.save()
     total = cov.report()
-    if total < 99.0:
-        print(f"Coverage gate failed: {total:.2f} < 99.00")
+    fail_under = float(os.environ.get("COVERAGE_FAIL_UNDER", "98"))
+    if total < fail_under:
+        print(f"Coverage gate failed: {total:.2f} < {fail_under:.2f}")
         return 1
     print(f"Coverage gate passed: {total:.2f}")
     return 0

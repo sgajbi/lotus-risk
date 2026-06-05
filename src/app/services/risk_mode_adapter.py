@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import date
 from typing import Any, Protocol
 
 from app.contracts.risk import (
     ReturnPoint,
+    RiskOptions,
     RiskRequestScope,
     RiskResponse,
     RiskStatelessCalculationInput,
@@ -32,6 +34,14 @@ class LotusPerformanceClientProtocol(Protocol):
 
 _BENCHMARK_METRICS = risk_helpers.BENCHMARK_METRICS
 _RISK_FREE_METRICS = risk_helpers.RISK_METRICS_REQUIRING_RISK_FREE
+
+
+@dataclass(frozen=True)
+class _StatefulRiskSource:
+    source_payload: dict[str, Any]
+    portfolio_points: list[ReturnPoint]
+    benchmark_points: list[ReturnPoint]
+    risk_free_points: list[ReturnPoint]
 
 
 def _portfolio_open_date(series_points: list[ReturnPoint], *, as_of_date: date) -> date:
@@ -70,12 +80,20 @@ def _annualized_rate_from_risk_free_returns(
     return (1.0 + mean_periodic_rate) ** annualization_factor - 1.0
 
 
-async def calculate_risk_stateful(
-    stateful: StatefulRiskInput,
+def _requires_benchmark(stateful: StatefulRiskInput) -> bool:
+    return any(metric in _BENCHMARK_METRICS for metric in stateful.metrics)
+
+
+def _requires_risk_free(stateful: StatefulRiskInput) -> bool:
+    return any(metric in _RISK_FREE_METRICS for metric in stateful.metrics)
+
+
+async def _fetch_stateful_risk_source(
     *,
+    stateful: StatefulRiskInput,
     performance_client: LotusPerformanceClientProtocol,
     correlation_id: str | None,
-) -> RiskResponse:
+) -> _StatefulRiskSource:
     source_payload = _build_stateful_source_request(stateful)
     source_response = await performance_client.get_returns_series(
         request_payload=source_payload,
@@ -84,11 +102,11 @@ async def calculate_risk_stateful(
     series, portfolio_points = extract_required_portfolio_returns(source_response)
 
     benchmark_points: list[ReturnPoint] = []
-    if any(metric in _BENCHMARK_METRICS for metric in stateful.metrics):
+    if _requires_benchmark(stateful):
         benchmark_points = to_return_points(series.get("benchmark_returns"))
 
     risk_free_points: list[ReturnPoint] = []
-    if any(metric in _RISK_FREE_METRICS for metric in stateful.metrics):
+    if _requires_risk_free(stateful):
         risk_free_points = to_return_points(series.get("risk_free_returns"))
         if not risk_free_points:
             raise missing_upstream_data(
@@ -100,7 +118,19 @@ async def calculate_risk_stateful(
                 ),
             )
 
-    options = stateful.options
+    return _StatefulRiskSource(
+        source_payload=source_payload,
+        portfolio_points=portfolio_points,
+        benchmark_points=benchmark_points,
+        risk_free_points=risk_free_points,
+    )
+
+
+def _options_with_sourced_risk_free(
+    *,
+    options: RiskOptions,
+    risk_free_points: list[ReturnPoint],
+) -> RiskOptions:
     risk_free_annual_rate = _annualized_rate_from_risk_free_returns(
         risk_free_points,
         annualization_factor=options.annualization_factor
@@ -110,15 +140,26 @@ async def calculate_risk_stateful(
             "MONTHLY": 12,
         }[options.frequency],
     )
-    if risk_free_annual_rate is not None:
-        options = options.model_copy(
-            update={
-                "risk_free_mode": "ANNUAL_RATE",
-                "risk_free_annual_rate": risk_free_annual_rate,
-            }
-        )
+    if risk_free_annual_rate is None:
+        return options
+    return options.model_copy(
+        update={
+            "risk_free_mode": "ANNUAL_RATE",
+            "risk_free_annual_rate": risk_free_annual_rate,
+        }
+    )
 
-    stateless_request = RiskStatelessCalculationInput(
+
+def _build_stateful_stateless_risk_input(
+    *,
+    stateful: StatefulRiskInput,
+    source: _StatefulRiskSource,
+) -> RiskStatelessCalculationInput:
+    options = _options_with_sourced_risk_free(
+        options=stateful.options,
+        risk_free_points=source.risk_free_points,
+    )
+    return RiskStatelessCalculationInput(
         scope=RiskRequestScope(
             as_of_date=stateful.as_of_date,
             reporting_currency=stateful.reporting_currency,
@@ -127,18 +168,50 @@ async def calculate_risk_stateful(
         periods=stateful.periods,
         metrics=stateful.metrics,
         options=options,
-        portfolio_open_date=_portfolio_open_date(portfolio_points, as_of_date=stateful.as_of_date),
-        returns=portfolio_points,
-        benchmark_returns=benchmark_points,
+        portfolio_open_date=_portfolio_open_date(
+            source.portfolio_points,
+            as_of_date=stateful.as_of_date,
+        ),
+        returns=source.portfolio_points,
+        benchmark_returns=source.benchmark_points,
     )
-    response = calculate_risk(stateless_request)
+
+
+def _attach_stateful_risk_lineage(
+    *,
+    response: RiskResponse,
+    source: _StatefulRiskSource,
+) -> RiskResponse:
     response.metadata.source_services = ordered_source_services(
         "lotus-performance",
-        *(("lotus-core",) if risk_free_points else ()),
+        *(("lotus-core",) if source.risk_free_points else ()),
     )
     response.metadata.upstream_request_fingerprints = upstream_request_fingerprint(
         service="lotus-performance",
         operation="/integration/returns/series",
-        payload=source_payload,
+        payload=source.source_payload,
     )
     return response
+
+
+async def calculate_risk_stateful(
+    stateful: StatefulRiskInput,
+    *,
+    performance_client: LotusPerformanceClientProtocol,
+    correlation_id: str | None,
+) -> RiskResponse:
+    source = await _fetch_stateful_risk_source(
+        stateful=stateful,
+        performance_client=performance_client,
+        correlation_id=correlation_id,
+    )
+    response = calculate_risk(
+        _build_stateful_stateless_risk_input(
+            stateful=stateful,
+            source=source,
+        )
+    )
+    return _attach_stateful_risk_lineage(
+        response=response,
+        source=source,
+    )

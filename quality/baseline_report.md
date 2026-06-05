@@ -10,8 +10,8 @@ documentation posture, and validation gates. It is not a completion claim.
 
 ## Code Size Baseline
 
-- Python source files under `src/`: 78
-- Python test files under `tests/`: 84
+- Python source files under `src/`: 179
+- Python test files under `tests/`: 91
 - Python packages under `src/`: 9
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
 
@@ -19,62 +19,65 @@ documentation posture, and validation gates. It is not a completion claim.
 
 | Path | Lines | Bytes |
 | --- | --- | --- |
-| src/app/contracts/concentration.py | 921 | 38075 |
-| src/app/contracts/rolling.py | 911 | 36547 |
-| src/app/contracts/risk.py | 885 | 33850 |
 | tests/integration/test_health.py | 843 | 36606 |
 | tests/unit/test_methodology_docs.py | 823 | 32953 |
-| src/app/contracts/drawdown.py | 816 | 32701 |
 | tests/e2e/test_smoke.py | 750 | 28373 |
 | tests/integration/test_historical_attribution_endpoint.py | 747 | 29645 |
-| src/app/contracts/attribution.py | 667 | 26911 |
 | tests/unit/test_attribution_mode_adapter.py | 600 | 21872 |
 | tests/integration/test_risk_calculate.py | 596 | 25093 |
-| src/app/services/rolling_engine.py | 569 | 21245 |
 | tests/integration/test_rolling_metrics_endpoint.py | 566 | 22142 |
 | tests/unit/test_lotus_performance_client.py | 530 | 19686 |
-| src/app/trust_telemetry.py | 476 | 20809 |
+| tests/unit/test_rolling_mode_adapter.py | 444 | 16926 |
 | tests/unit/test_drawdown_engine.py | 422 | 16234 |
+| src/app/services/attribution_decomposition.py | 420 | 13767 |
 | tests/integration/test_rolling_live_characterization.py | 418 | 16694 |
-| tests/unit/test_rolling_mode_adapter.py | 402 | 15406 |
-| src/app/services/attribution_mode_adapter.py | 401 | 14732 |
-| src/app/services/drawdown_engine.py | 400 | 15643 |
+| tests/unit/test_risk_engine.py | 395 | 15947 |
+| tests/unit/test_concentration_engine.py | 394 | 16053 |
+| src/app/services/scenario_engine.py | 364 | 12949 |
+| src/app/services/concentration/simulation_resolver.py | 360 | 12246 |
+| tests/unit/test_rolling_engine.py | 354 | 14341 |
+| tests/unit/test_risk_engine_branch_coverage.py | 353 | 13642 |
+| src/app/services/rolling_engine.py | 349 | 11473 |
+| tests/unit/test_concentration_engine_modes.py | 334 | 12149 |
 
 ### Largest Functions And Classes
 
 | Path | Symbol | Kind | Lines |
 | --- | --- | --- | --- |
-| src/app/integrations/lotus_performance_client.py | LotusPerformanceClient | ClassDef | 253 |
-| src/app/services/rolling_engine.py | calculate_rolling_metrics | FunctionDef | 230 |
-| src/app/contracts/rolling.py | RollingResponse | ClassDef | 220 |
-| src/app/contracts/risk.py | RiskResponse | ClassDef | 199 |
-| src/app/contracts/concentration.py | ConcentrationResponse | ClassDef | 181 |
-| src/app/services/drawdown_engine.py | calculate_drawdown | FunctionDef | 181 |
-| src/app/integrations/lotus_core_client.py | LotusCoreClient | ClassDef | 171 |
-| src/app/contracts/drawdown.py | DrawdownResponse | ClassDef | 159 |
-| src/app/services/concentration/resolvers.py | resolve_simulation | AsyncFunctionDef | 153 |
-| src/app/contracts/drawdown.py | DrawdownAnalyticsRequest | ClassDef | 148 |
-| src/app/services/rolling_mode_adapter.py | calculate_rolling_metrics_stateful | AsyncFunctionDef | 148 |
-| src/app/contracts/concentration.py | ConcentrationRequest | ClassDef | 143 |
-| src/app/services/attribution_engine.py | calculate_historical_attribution | FunctionDef | 139 |
-| src/app/contracts/attribution.py | HistoricalAttributionResponse | ClassDef | 123 |
-| src/app/services/concentration/response_builder.py | _build_response | FunctionDef | 122 |
-| src/app/services/concentration/resolvers.py | resolve_stateless | AsyncFunctionDef | 119 |
-| src/app/services/attribution_mode_adapter.py | calculate_historical_attribution_stateful | AsyncFunctionDef | 118 |
-| src/app/services/attribution_engine.py | _build_attribution_set | FunctionDef | 114 |
-| src/app/trust_telemetry.py | DeclaredProductTrustTelemetrySnapshot | ClassDef | 111 |
-| src/app/contracts/concentration.py | IssuerConcentration | ClassDef | 97 |
+| src/app/integrations/lotus_core_client.py | LotusCoreClient | ClassDef | 156 |
+| src/app/trust_telemetry_snapshot_models.py | DeclaredProductTrustTelemetrySnapshot | ClassDef | 115 |
+| src/app/integrations/lotus_performance_client.py | LotusPerformanceClient | ClassDef | 113 |
+| src/app/contracts/concentration_response_envelope_outputs.py | ConcentrationResponse | ClassDef | 105 |
+| src/app/contracts/concentration_issuer_metric_outputs.py | IssuerConcentration | ClassDef | 97 |
+| src/app/contracts/risk_response_outputs.py | RiskResponseMetadata | ClassDef | 96 |
+| src/app/trust_telemetry_product_models.py | ProductTrustTelemetrySeed | ClassDef | 95 |
+| src/app/contracts/drawdown_request_inputs.py | DrawdownAnalyticsRequest | ClassDef | 91 |
+| src/app/contracts/rolling_period_outputs.py | RollingPeriodResult | ClassDef | 90 |
+| src/app/contracts/scenario_response_outputs.py | RegimeScenarioPackResponse | ClassDef | 89 |
+| src/app/contracts/rolling_response_envelope_outputs.py | RollingResponse | ClassDef | 88 |
+| src/app/contracts/rolling_metadata_outputs.py | RollingMetadata | ClassDef | 87 |
+| src/app/contracts/drawdown_period_outputs.py | DrawdownPeriodResult | ClassDef | 84 |
+| src/app/contracts/scenario_inputs.py | RegimeScenarioPackRequest | ClassDef | 84 |
+| src/app/contracts/attribution_stateless_inputs.py | HistoricalAttributionStatelessInput | ClassDef | 77 |
+| src/app/contracts/drawdown_response_envelope_outputs.py | DrawdownResponse | ClassDef | 77 |
+| src/app/contracts/mandate_health_response_outputs.py | MandateRiskHealthContextResponse | ClassDef | 77 |
+| src/app/contracts/rolling_metric_summary_outputs.py | RollingMetricSummary | ClassDef | 76 |
+| src/app/contracts/concentration_request_inputs.py | ConcentrationRequest | ClassDef | 75 |
+| src/app/contracts/attribution_metadata_outputs.py | HistoricalAttributionMetadata | ClassDef | 71 |
 
 ## Tool Baseline
 
 - Ruff: configured in `pyproject.toml`; enforced by `make lint`.
 - mypy: configured in `mypy.ini`; enforced by `make typecheck`.
-- pytest/coverage: repo-native test commands exist; PR coverage floor remains 98%.
+- pytest/coverage: repo-native test commands exist; default local coverage floor is 98%.
 - pip-audit: enforced through `make security-audit`.
 - Bandit, radon, vulture, deptry, and import-linter are now declared as development
   tooling for progressive quality evidence.
-- Spectral config is present for OpenAPI governance; CI is report-only until generated OpenAPI
-  export is standardized for this repository.
+- The repo-native OpenAPI quality gate enforces endpoint summaries, descriptions, tags,
+  operation IDs, success and error responses, JSON mutation request examples, schema field
+  descriptions, schema field examples, and duplicate operation ID detection.
+- `make openapi-artifact-gate` exports `output/openapi/lotus-risk.openapi.json` and validates the
+  artifact against the repository's Spectral policy expectations from `.spectral.yaml`.
 
 ## Static Quality Snapshot
 
@@ -83,69 +86,52 @@ documentation posture, and validation gates. It is not a completion claim.
 ```text
 All checks passed!
 ```
-- Ruff format check: reported exit 1
+- Ruff format check: passed
 
 ```text
-Would reformat: src\app\services\risk_engine.py
-1 file would be reformatted, 174 files already formatted
+284 files already formatted
 ```
 - Type checking: passed
 
 ```text
-Success: no issues found in 162 source files
+Success: no issues found in 270 source files
 ```
 - Unit coverage snapshot: passed
 
 ```text
-........................................................................ [ 18%]
-........................................................................ [ 36%]
-........................................................................ [ 54%]
-........................................................................ [ 72%]
-........................................................................ [ 90%]
-......................................                                   [100%]
+........................................................................ [ 15%]
+........................................................................ [ 31%]
+........................................................................ [ 47%]
+........................................................................ [ 63%]
+........................................................................ [ 78%]
+........................................................................ [ 94%]
 ...
-src\app\upstream_errors.py                              55      0     20      3    96%   181->194, 187->189, 192->194
-------------------------------------------------------------------------------------------------
-TOTAL                                                 4041    172    998    113    94%
+src\app\upstream_errors.py                                 55      0     20      3    96%   181->194, 187->189, 192->194
+---------------------------------------------------------------------------------------------------
+TOTAL                                                    5145     86    986     85    97%
 
-42 files skipped due to complete coverage.
-398 passed in 8.88s
+139 files skipped due to complete coverage.
+457 passed in 9.79s
 ```
 
 ## Complexity And Maintainability Snapshot
 
 - Cyclomatic complexity C-or-worse candidates: passed
-
-```text
-src\app\enterprise_readiness.py
-    F 90:0 authorize_write_request - C (13)
-src\app\trust_telemetry.py
-    F 401:0 build_declared_product_trust_telemetry_snapshot - C (14)
-src\app\contracts\attribution.py
-    C 116:0 HistoricalAttributionStatelessInput - C (11)
-...
-src\app\services\concentration\response_builder.py
-    F 37:0 _build_response - C (14)
-src\app\services\risk\calculation_orchestrator.py
-    F 178:0 _calculate_period_metrics - C (12)
-src\app\services\risk\helpers.py
-    F 21:0 _resolve_period - C (13)
-```
 - Maintainability index summary: passed
 
 ```text
 src\app\api_errors.py - A (48.80)
 src\app\app_factory.py - A (100.00)
 src\app\domain_data_products.py - A (49.24)
-src\app\enterprise_readiness.py - A (33.14)
+src\app\enterprise_readiness.py - A (31.78)
 src\app\error_response.py - A (68.27)
 src\app\main.py - A (100.00)
 ...
-src\app\services\concentration\response_builder.py - A (45.12)
-src\app\services\concentration\__init__.py - A (100.00)
-src\app\services\risk\calculation_orchestrator.py - A (33.67)
-src\app\services\risk\helpers.py - A (24.91)
+src\app\services\risk\calculation_orchestrator.py - A (44.30)
+src\app\services\risk\helpers.py - A (24.37)
 src\app\services\risk\metric_calculators.py - A (39.28)
+src\app\services\risk\period_metrics.py - A (46.07)
+src\app\services\risk\period_windows.py - A (58.70)
 src\app\services\risk\__init__.py - A (100.00)
 ```
 
@@ -155,7 +141,7 @@ src\app\services\risk\__init__.py - A (100.00)
 - Dependency hygiene: passed
 
 ```text
-Scanning 78 files...
+Scanning 179 files...
 
 Success! No dependency issues found.
 ```
@@ -195,9 +181,10 @@ Known vulnerabilities: 0
 
 ## OpenAPI And API Governance Gaps
 
-1. Current OpenAPI operations define explicit operation IDs in route decorators, with a contract
-   test preserving uniqueness and stable names.
-2. Current POST operations publish request-body examples backed by Pydantic request-model validation.
+1. Current OpenAPI operations define explicit operation IDs in route decorators, and the
+   repo-native OpenAPI quality gate fails missing or duplicate operation IDs.
+2. Current POST operations publish JSON request-body examples backed by Pydantic request-model
+   validation, and the OpenAPI quality gate fails missing JSON mutation examples.
 3. Pagination/filtering/sorting governance is not broadly applicable to calculation POST endpoints,
    but any future list/read-model route must use an explicit shared contract.
 4. Health, liveness, readiness, metadata, metrics, and ops endpoints exist and are documented, but
@@ -213,23 +200,28 @@ Known vulnerabilities: 0
 4. Timeout, retry, and pooling posture are documented and enforced by shared adapter transport profile
    helpers in `src/app/integrations/_downstream_client_profile.py` and
    `docs/domain-apis/risk-upstream-failure-behavior.md`.
-5. API abuse controls beyond payload size and authorization headers need explicit threat-model
-   evidence before enterprise-readiness enforcement.
+5. API abuse controls for payload size, authorization headers, service identity, capability
+   checks, redaction, bounded downstream errors, and bounded metrics are documented in
+   `docs/security-threat-model.md`; bank deployment identity and body-limit posture is recorded in
+   `docs/security-deployment-policy.md`.
 
-## Observability Gaps
+## Observability Posture
 
 1. HTTP, endpoint execution, supportability, and freshness metrics exist.
 2. Metrics label bounds are tested for RFC-0108 supportability.
 3. Trace/correlation propagation exists through middleware, but route extraction should preserve
    the propagation contract in tests.
-4. Operational dashboards and alert contracts are documented locally only where previous RFCs
-   required them; this refactor program needs a consolidated observability page.
+4. Operational dashboard and alert contracts are documented in
+   `contracts/observability/lotus-risk-monitoring.v1.json`, validated by
+   `make observability-contract-validate`, and linked to runbook anchors in
+   `docs/runbooks/service-operations.md`.
 
-## Documentation Gaps
+## Documentation Posture
 
-The repository has deep domain-methodology documentation and domain API pages. The refactor program
-still needs consolidated enterprise pages for architecture, API governance, observability, security,
-operations, and supported features. Initial pages are added in this slice.
+The repository has domain-methodology documentation, domain API pages, and consolidated enterprise
+pages for architecture, API governance, observability, security, operations, and supported
+features. Draft PR packaging now lives in `quality/final_pr_readiness.md`; final PR creation still
+needs current CI status, generated OpenAPI artifact evidence, and reviewer-ready command output.
 
 ## Validation Snapshot
 
@@ -241,14 +233,14 @@ tests/unit/test_app_factory.py::test_create_app_registers_risk_analytics_routes
 tests/unit/test_app_runtime.py::test_override_app_runtime_restores_clients_and_classes_after_exit
 tests/unit/test_app_runtime.py::test_override_app_runtime_restores_state_after_exception
 tests/unit/test_attribution_contract.py::test_attribution_contract_accepts_stateless_payload
-tests/unit/test_attribution_contract.py::test_attribution_contract_requires_stateless_input
+tests/unit/test_attribution_contract.py::test_attribution_contract_module_preserves_public_import_surface
 ...
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc0-504-UPSTREAM_TIMEOUT-timeout]
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc1-503-UPSTREAM_UNAVAILABLE-transport]
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-398 tests collected in 1.84s
+457 tests collected in 2.01s
 ```
 - Import-linter report-only: passed
 

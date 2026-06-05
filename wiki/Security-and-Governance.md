@@ -32,6 +32,19 @@ The highest-value rules for this repo are:
 4. test-pyramid discipline is enforced,
 5. security audit and Docker build are part of the real CI contract.
 
+## Enterprise Deployment Security
+
+Bank deployment mode is stricter than local development mode:
+
+1. `ENTERPRISE_ENFORCE_AUTHZ=true` is required,
+2. `ENTERPRISE_ENFORCE_RUNTIME_CONFIG=true` is required,
+3. `ENTERPRISE_PRIMARY_KEY_ID`, `ENTERPRISE_SECRET_ROTATION_DAYS`, and
+   `ENTERPRISE_CAPABILITY_RULES_JSON` must be configured,
+4. ingress/proxy and ASGI/server request body limits must be aligned to
+   `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES`,
+5. gateway or platform ingress validates token integrity while `lotus-risk` enforces required
+   actor, tenant, role, correlation, service identity, and capability evidence.
+
 ## Upstream Boundary Discipline
 
 `lotus-risk` must not absorb authority that belongs elsewhere.
@@ -58,6 +71,7 @@ Current examples:
 - `docs/domain-apis/endpoint-matrix.md`
 - `docs/standards/risk-analytics-contract.md`
 - `docs/standards/platform-compliance-assessment.md`
+- `docs/security-deployment-policy.md`
 
 ## Read Next
 
