@@ -48,8 +48,8 @@ Evidence:
 Remaining risk:
 
 1. Several service and contract modules remain large enough to deserve later cohesive extraction:
-   `rolling_mode_adapter.py`, `attribution_mode_adapter.py`, `concentration/resolvers.py`,
-   `concentration.py`, `rolling.py`, `risk.py`, and `drawdown.py`.
+   `attribution_mode_adapter.py`, `concentration/resolvers.py`, `concentration.py`, `rolling.py`,
+   `risk.py`, and `drawdown.py`.
 
 ## API And OpenAPI Improvements
 
