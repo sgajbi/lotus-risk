@@ -10,6 +10,9 @@ from app.contracts.drawdown import (
 from app.contracts.drawdown_inputs import DrawdownAnalyticsRequest as DrawdownAnalyticsRequestSource
 from app.contracts.drawdown_outputs import DrawdownResponse as DrawdownResponseSource
 from app.contracts.drawdown_metric_outputs import DrawdownSummary as DrawdownSummarySource
+from app.contracts.drawdown_request_inputs import (
+    DrawdownAnalyticsRequest as DrawdownAnalyticsRequestImplementation,
+)
 from app.contracts.drawdown_response_outputs import (
     DrawdownResponse as DrawdownResponseImplementation,
 )
@@ -20,6 +23,7 @@ from app.contracts.drawdown_response_envelope_outputs import (
 
 def test_drawdown_contract_module_preserves_public_import_surface() -> None:
     assert DrawdownAnalyticsRequest is DrawdownAnalyticsRequestSource
+    assert DrawdownAnalyticsRequest is DrawdownAnalyticsRequestImplementation
     assert DrawdownResponse is DrawdownResponseSource
     assert DrawdownResponse is DrawdownResponseImplementation
     assert DrawdownResponse is DrawdownResponseEnvelope
