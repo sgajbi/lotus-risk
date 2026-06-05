@@ -20,6 +20,11 @@ from app.trust_telemetry import (
     build_declared_product_trust_telemetry_snapshot,
     build_product_trust_telemetry_seed,
 )
+from app.trust_telemetry_snapshot_examples import (
+    DECLARED_DEPENDENCY_EXAMPLES,
+    PRODUCT_TRUST_TELEMETRY_SEED_EXAMPLES,
+    TRUST_TELEMETRY_SUMMARY_EXAMPLE,
+)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -90,6 +95,15 @@ def test_trust_telemetry_facade_preserves_public_imports() -> None:
     assert DeclaredProductTrustTelemetrySnapshot.__name__ == "DeclaredProductTrustTelemetrySnapshot"
     assert callable(build_product_trust_telemetry_seed)
     assert callable(build_declared_product_trust_telemetry_snapshot)
+
+
+def test_trust_telemetry_snapshot_schema_uses_governed_examples() -> None:
+    schema = DeclaredProductTrustTelemetrySnapshot.model_json_schema()
+    properties = schema["properties"]
+
+    assert properties["declared_dependencies"]["example"] == DECLARED_DEPENDENCY_EXAMPLES
+    assert properties["summary"]["example"] == TRUST_TELEMETRY_SUMMARY_EXAMPLE
+    assert properties["products"]["example"] == PRODUCT_TRUST_TELEMETRY_SEED_EXAMPLES
 
 
 def test_build_product_trust_telemetry_seed_uses_runtime_and_lineage_inputs() -> None:
