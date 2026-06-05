@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-06-04T08:26:50.400747+00:00",
+  "generatedAt": "2026-06-05T10:49:13.165449+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.affected_portfolios",
@@ -2056,7 +2056,7 @@
           "product_name": "RiskMetricsReport",
           "product_version": "v1",
           "readiness_status": "degraded",
-          "request_fingerprint": "sha256:6f36c1f0f3f0f08c6f36c1f0f3f0f08c6f36c1f0f3f0f08c6f36c1f0f3f0f08c",
+          "request_fingerprint": "sha256:6f36c1f0f3f0f08c6f36c1f0f3f0f08c6f36c1f0f3f0f08c",
           "required_trust_metadata": [
             "product_name",
             "product_version",
