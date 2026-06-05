@@ -65,6 +65,13 @@ class _PortfolioApplicabilityDecision:
     supportability: ScenarioSupportabilityState
 
 
+@dataclass(frozen=True)
+class _GovernanceEvaluation:
+    evidence: ScenarioPackGovernanceEvidence
+    reason_codes: list[str]
+    supportability: ScenarioSupportabilityState
+
+
 SCENARIO_PACKS: dict[str, tuple[ScenarioDefinition, ...]] = {
     "CIO_REGIME_2026_Q2": (
         ScenarioDefinition(
@@ -128,12 +135,10 @@ def _evaluate_scenario_pack_context(
         if unsupported_buckets
         else ScenarioSupportabilityState.READY
     )
-    governance_evidence, governance_reason_codes, governance_supportability = (
-        _evaluate_governance_evidence(request)
-    )
+    governance = _evaluate_governance_evidence(request)
     supportability = _most_severe_supportability(
         supportability,
-        governance_supportability,
+        governance.supportability,
     )
     scenario_results = [
         _evaluate_scenario(
@@ -151,7 +156,7 @@ def _evaluate_scenario_pack_context(
     reason_codes = ["REGIME_SCENARIO_PACK_READY"]
     if unsupported_buckets:
         reason_codes.append("REGIME_SCENARIO_UNSUPPORTED_EXPOSURE_BUCKET")
-    reason_codes.extend(governance_reason_codes)
+    reason_codes.extend(governance.reason_codes)
     if breach:
         reason_codes.append("REGIME_SCENARIO_POLICY_THRESHOLD_BREACH")
         if supportability == ScenarioSupportabilityState.READY:
@@ -161,7 +166,7 @@ def _evaluate_scenario_pack_context(
         scenario_results=scenario_results,
         worst_case_loss=worst_case_loss,
         breach=breach,
-        governance_evidence=governance_evidence,
+        governance_evidence=governance.evidence,
         reason_codes=sorted(set(reason_codes)),
         supportability=supportability,
     )
@@ -244,7 +249,7 @@ def _portfolio_applicability_decision(
 
 def _evaluate_governance_evidence(
     request: RegimeScenarioPackRequest,
-) -> tuple[ScenarioPackGovernanceEvidence, list[str], ScenarioSupportabilityState]:
+) -> _GovernanceEvaluation:
     governance = SCENARIO_PACK_GOVERNANCE[request.scenario_pack_id]
     reason_codes: list[str] = []
     supportability = ScenarioSupportabilityState.READY
@@ -273,8 +278,8 @@ def _evaluate_governance_evidence(
         portfolio_applicability.supportability,
     )
 
-    return (
-        ScenarioPackGovernanceEvidence(
+    return _GovernanceEvaluation(
+        evidence=ScenarioPackGovernanceEvidence(
             cio_approval_status=governance.cio_approval_status,
             cio_approval_ref=governance.cio_approval_ref,
             approved_by=governance.approved_by,
@@ -287,8 +292,8 @@ def _evaluate_governance_evidence(
             portfolio_applicability_ref=portfolio_applicability.portfolio_applicability_ref,
             methodology_ref=governance.methodology_ref,
         ),
-        reason_codes,
-        supportability,
+        reason_codes=reason_codes,
+        supportability=supportability,
     )
 
 
