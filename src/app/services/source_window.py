@@ -4,7 +4,7 @@ from datetime import date
 from typing import Any
 
 from app.contracts.risk import RiskRequestPeriod
-from app.services.risk import helpers as risk_helpers
+from app.services.risk.period_resolution import resolve_period
 
 
 def build_returns_series_window(
@@ -14,7 +14,7 @@ def build_returns_series_window(
         return {"mode": "RELATIVE", "period": "SI"}
 
     resolved_ranges = [
-        risk_helpers._resolve_period(
+        resolve_period(
             period.type,
             as_of_date,
             date.min,

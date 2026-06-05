@@ -25,7 +25,7 @@ from app.services.drawdown_series import (
     drawdown_summary as _drawdown_summary,
     to_underwater_series as _to_underwater_series,
 )
-from app.services.risk import helpers as risk_helpers
+from app.services.risk.period_resolution import resolve_period
 
 
 @dataclass(frozen=True)
@@ -75,7 +75,7 @@ def _period_series(
     period: RiskRequestPeriod,
     open_date: date,
 ) -> DrawdownPeriodSeries:
-    start, end = risk_helpers._resolve_period(
+    start, end = resolve_period(
         period.type,
         request.scope.as_of_date,
         open_date,

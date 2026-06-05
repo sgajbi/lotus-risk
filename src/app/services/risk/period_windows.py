@@ -5,7 +5,7 @@ from dataclasses import dataclass
 import pandas as pd
 
 from app.contracts.risk import RiskStatelessCalculationInput
-from app.services.risk import helpers as risk_helpers
+from app.services.risk.period_resolution import resolve_period
 
 
 @dataclass(frozen=True)
@@ -23,7 +23,7 @@ def risk_period_window(
     returns_df: pd.DataFrame,
 ) -> RiskPeriodWindow:
     period = request.periods[period_index]
-    start, end = risk_helpers._resolve_period(
+    start, end = resolve_period(
         period.type,
         request.scope.as_of_date,
         request.portfolio_open_date,

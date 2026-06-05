@@ -26,7 +26,7 @@ from app.services.calculation_supportability import (
     supportability_from_attribution_results,
     supportability_from_period_results,
 )
-from app.services.risk import helpers as risk_helpers
+from app.services.risk.period_resolution import resolve_period
 
 
 def _period_name(period: RiskRequestPeriod) -> str:
@@ -83,7 +83,7 @@ def _resolved_period_window(
     request: HistoricalAttributionStatelessInput,
     open_date: pd.Timestamp,
 ) -> tuple[dt.date, dt.date, pd.Timestamp, pd.Timestamp]:
-    start_date, end_date = risk_helpers._resolve_period(
+    start_date, end_date = resolve_period(
         period.type,
         request.scope.as_of_date,
         open_date.date(),

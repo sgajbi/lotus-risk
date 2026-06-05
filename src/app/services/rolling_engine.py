@@ -22,7 +22,7 @@ from app.services.calculation_supportability import (
     record_operation_supportability,
     supportability_from_period_results,
 )
-from app.services.risk import helpers as risk_helpers
+from app.services.risk.period_resolution import resolve_period
 from app.services.rolling_dependency_context import benchmark_context, risk_free_context
 from app.services.rolling_metric_series import (
     ROLLING_SHARPE_METRIC,
@@ -127,7 +127,7 @@ def _period_series(
     period: RiskRequestPeriod,
     open_date: date,
 ) -> RollingPeriodSeries:
-    start, end = risk_helpers._resolve_period(
+    start, end = resolve_period(
         period.type,
         request.scope.as_of_date,
         open_date,
