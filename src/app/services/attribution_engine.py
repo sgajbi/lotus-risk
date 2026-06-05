@@ -16,10 +16,10 @@ from app.contracts.attribution import (
 from app.contracts.risk import RiskCalculationSupportability, RiskRequestPeriod
 from app.services.attribution_decomposition import (
     AttributionSourceFrames,
-    build_period_attribution_sets,
     build_source_frames,
     window_returns,
 )
+from app.services.attribution_period_sets import build_period_attribution_sets
 from app.services.audit_lineage import fingerprint_model
 from app.services.calculation_supportability import (
     record_operation_supportability,

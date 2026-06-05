@@ -21,7 +21,6 @@ from app.services.attribution_calculation import (
 from app.services.attribution_source_frames import (
     AttributionSourceFrames,
     build_source_frames,
-    pivot_exposure,
     window_returns,
 )
 
@@ -242,7 +241,9 @@ def build_attribution_set(
 
 
 def requires_benchmark_attribution(options: AttributionOptions) -> bool:
-    return "ACTIVE_RISK" in options.attribution_types or "TRACKING_ERROR" in options.metrics
+    from app.services.attribution_period_sets import requires_benchmark_attribution as _requires
+
+    return _requires(options)
 
 
 def build_period_attribution_sets(
@@ -254,42 +255,13 @@ def build_period_attribution_sets(
     start: pd.Timestamp,
     end: pd.Timestamp,
 ) -> list[AttributionSetResult]:
-    period_sets: list[AttributionSetResult] = []
-    benchmark_required = requires_benchmark_attribution(options)
+    from app.services.attribution_period_sets import build_period_attribution_sets as _build
 
-    for grouping_dimension in options.grouping_dimensions:
-        weights, labels, flags = pivot_exposure(
-            frames.exposure_df,
-            start=start,
-            end=end,
-            grouping_dimension=grouping_dimension,
-        )
-        if benchmark_required:
-            benchmark_weights, benchmark_labels, benchmark_flags = pivot_exposure(
-                frames.benchmark_exposure_df,
-                start=start,
-                end=end,
-                grouping_dimension=grouping_dimension,
-            )
-            labels = {**labels, **benchmark_labels}
-            flags = [*flags, *benchmark_flags]
-        else:
-            benchmark_weights = pd.DataFrame()
-
-        for attribution_type in options.attribution_types:
-            for metric in options.metrics:
-                period_sets.append(
-                    build_attribution_set(
-                        attribution_type=attribution_type,
-                        metric=metric,
-                        grouping_dimension=grouping_dimension,
-                        returns_series=returns_series,
-                        benchmark_series=benchmark_series,
-                        exposure_weights=weights,
-                        benchmark_weights=benchmark_weights,
-                        group_labels=labels,
-                        annualization_basis=options.annualization_basis,
-                        base_flags=flags,
-                    )
-                )
-    return period_sets
+    return _build(
+        options=options,
+        frames=frames,
+        returns_series=returns_series,
+        benchmark_series=benchmark_series,
+        start=start,
+        end=end,
+    )
