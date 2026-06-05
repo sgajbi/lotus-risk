@@ -7,11 +7,18 @@ from typing import Any, cast
 from app.contracts.rolling import (
     RollingAnalyticsRequest,
     RollingInputMode,
+    RollingMetricSummary,
     RollingOptions,
     RollingResponse,
 )
 from app.contracts.rolling_inputs import RollingAnalyticsRequest as RollingAnalyticsRequestSource
 from app.contracts.rolling_outputs import RollingResponse as RollingResponseSource
+from app.contracts.rolling_metric_outputs import (
+    RollingMetricSummary as RollingMetricSummarySource,
+)
+from app.contracts.rolling_response_outputs import (
+    RollingResponse as RollingResponseImplementation,
+)
 
 
 BASE_STATELESS_PAYLOAD = {
@@ -52,6 +59,8 @@ BASE_STATELESS_PAYLOAD = {
 def test_rolling_contract_module_preserves_public_import_surface() -> None:
     assert RollingAnalyticsRequest is RollingAnalyticsRequestSource
     assert RollingResponse is RollingResponseSource
+    assert RollingResponse is RollingResponseImplementation
+    assert RollingMetricSummary is RollingMetricSummarySource
 
 
 def test_rolling_contract_accepts_stateless_payload() -> None:
