@@ -1,7 +1,14 @@
 import pytest
 from pydantic import ValidationError
 
-from app.contracts.concentration import ConcentrationRequest
+from app.contracts.concentration import ConcentrationRequest, ConcentrationResponse
+from app.contracts.concentration_inputs import ConcentrationRequest as ConcentrationRequestSource
+from app.contracts.concentration_outputs import ConcentrationResponse as ConcentrationResponseSource
+
+
+def test_concentration_contract_module_preserves_public_import_surface() -> None:
+    assert ConcentrationRequest is ConcentrationRequestSource
+    assert ConcentrationResponse is ConcentrationResponseSource
 
 
 def test_simulation_input_rejects_ttl_when_reusing_session() -> None:
