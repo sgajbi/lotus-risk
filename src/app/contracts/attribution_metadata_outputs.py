@@ -1,0 +1,97 @@
+from __future__ import annotations
+
+from typing import Literal
+
+from pydantic import Field
+
+from app.contracts.audit import AuditMetadataFields
+from app.contracts.attribution_inputs import (
+    AttributionMetric,
+    AttributionType,
+    GroupingDimension,
+)
+from app.contracts.risk import RiskCalculationSupportability
+
+
+def _default_stateful_active_risk_supported_groupings() -> list[GroupingDimension]:
+    return ["POSITION", "SECTOR", "ASSET_CLASS", "ISSUER"]
+
+
+def _default_stateful_active_risk_gated_groupings() -> list[GroupingDimension]:
+    return []
+
+
+class HistoricalAttributionMetadata(AuditMetadataFields):
+    contract_version: str = Field(
+        default="v1",
+        description="Historical attribution contract version.",
+        json_schema_extra={"example": "v1"},
+    )
+    methodology_version: str = Field(
+        default="historical_attribution.v1",
+        description="Methodology version used for historical attribution formulas.",
+        json_schema_extra={"example": "historical_attribution.v1"},
+    )
+    covariance_method: Literal["EMPIRICAL"] = Field(
+        description="Covariance estimator used for attribution decomposition.",
+        json_schema_extra={"example": "EMPIRICAL"},
+    )
+    annualization_basis: int = Field(
+        description="Annualization basis used for annualized metrics.",
+        json_schema_extra={"example": 252},
+    )
+    requested_attribution_types: list[AttributionType] = Field(
+        default_factory=list,
+        description="Requested attribution decomposition types in canonical execution order.",
+        json_schema_extra={"example": ["TOTAL_RISK", "ACTIVE_RISK"]},
+    )
+    requested_metrics: list[AttributionMetric] = Field(
+        default_factory=list,
+        description="Requested attribution metrics in canonical execution order.",
+        json_schema_extra={"example": ["VOLATILITY", "TRACKING_ERROR"]},
+    )
+    requested_grouping_dimensions: list[GroupingDimension] = Field(
+        default_factory=list,
+        description="Requested grouping dimensions in canonical execution order.",
+        json_schema_extra={"example": ["POSITION", "SECTOR"]},
+    )
+    min_observations_policy: Literal["STRICT", "ALLOW_PARTIAL"] = Field(
+        description="Minimum observation policy used for attribution decomposition.",
+        json_schema_extra={"example": "STRICT"},
+    )
+    stateful_active_risk_supported_grouping_dimensions: list[GroupingDimension] = Field(
+        default_factory=_default_stateful_active_risk_supported_groupings,
+        description="Grouping dimensions currently supported for stateful ACTIVE_RISK attribution.",
+        json_schema_extra={"example": ["POSITION", "SECTOR", "ASSET_CLASS", "ISSUER"]},
+    )
+    stateful_active_risk_gated_grouping_dimensions: list[GroupingDimension] = Field(
+        default_factory=_default_stateful_active_risk_gated_groupings,
+        description="Grouping dimensions intentionally gated for stateful ACTIVE_RISK attribution.",
+        json_schema_extra={"example": []},
+    )
+    stateful_active_risk_gate_reason: str = Field(
+        default="none",
+        description="Deterministic reason for any gated stateful ACTIVE_RISK grouping dimensions.",
+        json_schema_extra={"example": "none"},
+    )
+    calculation_supportability: RiskCalculationSupportability = Field(
+        default_factory=lambda: RiskCalculationSupportability(
+            state="ready",
+            reason="calculation_complete",
+            freshness_bucket="unknown",
+        ),
+        description="Source-backed supportability posture for UI and operator consumption.",
+        json_schema_extra={
+            "example": {
+                "state": "ready",
+                "reason": "calculation_complete",
+                "freshness_bucket": "current",
+                "degraded_metric_count": 0,
+                "empty_period_count": 0,
+                "evaluated_period_count": 1,
+            }
+        },
+    )
+
+
+__all__ = ["HistoricalAttributionMetadata"]

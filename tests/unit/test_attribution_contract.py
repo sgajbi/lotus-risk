@@ -18,6 +18,9 @@ from app.contracts.attribution_outputs import (
 from app.contracts.attribution_request_inputs import (
     HistoricalAttributionRequest as HistoricalAttributionRequestImplementation,
 )
+from app.contracts.attribution_response_outputs import (
+    HistoricalAttributionResponse as HistoricalAttributionResponseImplementation,
+)
 
 
 BASE_STATELESS_PAYLOAD: dict[str, Any] = {
@@ -80,6 +83,7 @@ def test_attribution_contract_module_preserves_public_import_surface() -> None:
     assert HistoricalAttributionRequest is HistoricalAttributionRequestSource
     assert HistoricalAttributionRequest is HistoricalAttributionRequestImplementation
     assert HistoricalAttributionResponse is HistoricalAttributionResponseSource
+    assert HistoricalAttributionResponse is HistoricalAttributionResponseImplementation
 
 
 def test_attribution_contract_requires_stateless_input() -> None:
