@@ -306,6 +306,63 @@ def test_rolling_engine_returns_period_error_when_insufficient_period_data() -> 
     assert period.window_results == []
 
 
+def test_rolling_engine_reports_benchmark_no_aligned_observations() -> None:
+    request = RollingStatelessInput.model_validate(
+        {
+            "scope": {"as_of_date": "2026-01-05", "net_or_gross": "NET"},
+            "periods": [{"type": "YTD", "name": "YTD"}],
+            "returns": [
+                {"date": "2026-01-01", "value": 0.5},
+                {"date": "2026-01-03", "value": -0.2},
+                {"date": "2026-01-05", "value": 0.1},
+            ],
+            "benchmark_returns": [
+                {"date": "2026-01-02", "value": 0.4},
+                {"date": "2026-01-04", "value": -0.1},
+            ],
+            "rolling_options": {
+                "window_lengths": [3],
+                "metrics": ["ROLLING_BETA"],
+                "min_observations_policy": "STRICT",
+            },
+        }
+    )
+
+    response = calculate_rolling_metrics(request, input_mode=RollingInputMode.STATELESS)
+    context = response.results["YTD"].benchmark_context
+
+    assert context.requested is True
+    assert context.available is True
+    assert context.aligned is False
+    assert context.reason == "NO_ALIGNED_OBSERVATIONS"
+
+
+def test_rolling_engine_reports_risk_free_unavailable_for_sharpe() -> None:
+    request = RollingStatelessInput.model_validate(
+        {
+            "scope": {"as_of_date": "2026-01-03", "net_or_gross": "NET"},
+            "periods": [{"type": "YTD", "name": "YTD"}],
+            "returns": [
+                {"date": "2026-01-03", "value": -0.1},
+            ],
+            "risk_free_returns": [{"date": "2026-01-03", "value": 0.01}],
+            "rolling_options": {
+                "window_lengths": [3],
+                "metrics": ["ROLLING_SHARPE"],
+                "min_observations_policy": "STRICT",
+            },
+        }
+    )
+
+    response = calculate_rolling_metrics(request, input_mode=RollingInputMode.STATELESS)
+    context = response.results["YTD"].risk_free_context
+
+    assert context.requested is True
+    assert context.available is False
+    assert context.aligned is False
+    assert context.reason == "RISK_FREE_UNAVAILABLE"
+
+
 def test_rolling_engine_handles_empty_return_series() -> None:
     request = RollingStatelessInput.model_validate(
         {

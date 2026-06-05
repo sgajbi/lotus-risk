@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import date
-from typing import cast
+from typing import Literal, cast
 from collections.abc import Sequence
 
 import pandas as pd
@@ -32,6 +33,35 @@ from app.services.rolling_engine_models import RollingInputFrames, RollingPeriod
 from app.services.rolling_window_calculation import rolling_period_window_aggregate
 
 
+RollingDependencyReason = Literal[
+    "NOT_REQUESTED",
+    "BENCHMARK_UNAVAILABLE",
+    "RISK_FREE_UNAVAILABLE",
+    "NO_ALIGNED_OBSERVATIONS",
+    "APPLIED",
+]
+RollingBenchmarkReason = Literal[
+    "NOT_REQUESTED",
+    "BENCHMARK_UNAVAILABLE",
+    "NO_ALIGNED_OBSERVATIONS",
+    "APPLIED",
+]
+RollingRiskFreeReason = Literal[
+    "NOT_REQUESTED",
+    "RISK_FREE_UNAVAILABLE",
+    "NO_ALIGNED_OBSERVATIONS",
+    "APPLIED",
+]
+
+
+@dataclass(frozen=True)
+class _RollingDependencyDecision:
+    requested: bool
+    available: bool
+    aligned: bool
+    reason: RollingDependencyReason
+
+
 def _build_returns_df(returns: list[ReturnPoint]) -> pd.DataFrame:
     df = pd.DataFrame([{"date": point.date, "value": point.value} for point in returns])
     if df.empty:
@@ -48,38 +78,58 @@ def _filter_period(df: pd.DataFrame, *, start: date, end: date) -> pd.Series:
     return df.loc[(df.index >= pd.Timestamp(start)) & (df.index <= pd.Timestamp(end)), "value"]
 
 
-def _benchmark_context(
-    requested_metrics: Sequence[str],
-    benchmark_series_count: int,
-    aligned_benchmark_series_count: int,
-) -> RollingBenchmarkContext:
-    requested = any(metric in ROLLING_BENCHMARK_METRICS for metric in requested_metrics)
+def _dependency_decision(
+    *,
+    requested: bool,
+    source_series_count: int,
+    aligned_series_count: int,
+    unavailable_reason: RollingDependencyReason,
+) -> _RollingDependencyDecision:
     if not requested:
-        return RollingBenchmarkContext(
+        return _RollingDependencyDecision(
             requested=False,
             available=False,
             aligned=False,
             reason="NOT_REQUESTED",
         )
-    if benchmark_series_count == 0:
-        return RollingBenchmarkContext(
+    if source_series_count == 0:
+        return _RollingDependencyDecision(
             requested=True,
             available=False,
             aligned=False,
-            reason="BENCHMARK_UNAVAILABLE",
+            reason=unavailable_reason,
         )
-    if aligned_benchmark_series_count == 0:
-        return RollingBenchmarkContext(
+    if aligned_series_count == 0:
+        return _RollingDependencyDecision(
             requested=True,
             available=True,
             aligned=False,
             reason="NO_ALIGNED_OBSERVATIONS",
         )
-    return RollingBenchmarkContext(
+    return _RollingDependencyDecision(
         requested=True,
         available=True,
         aligned=True,
         reason="APPLIED",
+    )
+
+
+def _benchmark_context(
+    requested_metrics: Sequence[str],
+    benchmark_series_count: int,
+    aligned_benchmark_series_count: int,
+) -> RollingBenchmarkContext:
+    decision = _dependency_decision(
+        requested=any(metric in ROLLING_BENCHMARK_METRICS for metric in requested_metrics),
+        source_series_count=benchmark_series_count,
+        aligned_series_count=aligned_benchmark_series_count,
+        unavailable_reason="BENCHMARK_UNAVAILABLE",
+    )
+    return RollingBenchmarkContext(
+        requested=decision.requested,
+        available=decision.available,
+        aligned=decision.aligned,
+        reason=cast(RollingBenchmarkReason, decision.reason),
     )
 
 
@@ -88,33 +138,17 @@ def _risk_free_context(
     risk_free_series_count: int,
     aligned_risk_free_series_count: int,
 ) -> RollingRiskFreeContext:
-    requested = ROLLING_SHARPE_METRIC in requested_metrics
-    if not requested:
-        return RollingRiskFreeContext(
-            requested=False,
-            available=False,
-            aligned=False,
-            reason="NOT_REQUESTED",
-        )
-    if risk_free_series_count == 0:
-        return RollingRiskFreeContext(
-            requested=True,
-            available=False,
-            aligned=False,
-            reason="RISK_FREE_UNAVAILABLE",
-        )
-    if aligned_risk_free_series_count == 0:
-        return RollingRiskFreeContext(
-            requested=True,
-            available=True,
-            aligned=False,
-            reason="NO_ALIGNED_OBSERVATIONS",
-        )
+    decision = _dependency_decision(
+        requested=ROLLING_SHARPE_METRIC in requested_metrics,
+        source_series_count=risk_free_series_count,
+        aligned_series_count=aligned_risk_free_series_count,
+        unavailable_reason="RISK_FREE_UNAVAILABLE",
+    )
     return RollingRiskFreeContext(
-        requested=True,
-        available=True,
-        aligned=True,
-        reason="APPLIED",
+        requested=decision.requested,
+        available=decision.available,
+        aligned=decision.aligned,
+        reason=cast(RollingRiskFreeReason, decision.reason),
     )
 
 
