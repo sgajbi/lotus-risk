@@ -1,14 +1,25 @@
 import pytest
 from pydantic import ValidationError
 
-from app.contracts.drawdown import DrawdownAnalyticsRequest, DrawdownInputMode, DrawdownResponse
+from app.contracts.drawdown import (
+    DrawdownAnalyticsRequest,
+    DrawdownInputMode,
+    DrawdownResponse,
+    DrawdownSummary,
+)
 from app.contracts.drawdown_inputs import DrawdownAnalyticsRequest as DrawdownAnalyticsRequestSource
 from app.contracts.drawdown_outputs import DrawdownResponse as DrawdownResponseSource
+from app.contracts.drawdown_metric_outputs import DrawdownSummary as DrawdownSummarySource
+from app.contracts.drawdown_response_outputs import (
+    DrawdownResponse as DrawdownResponseImplementation,
+)
 
 
 def test_drawdown_contract_module_preserves_public_import_surface() -> None:
     assert DrawdownAnalyticsRequest is DrawdownAnalyticsRequestSource
     assert DrawdownResponse is DrawdownResponseSource
+    assert DrawdownResponse is DrawdownResponseImplementation
+    assert DrawdownSummary is DrawdownSummarySource
 
 
 def _stateless_payload() -> dict[str, object]:
