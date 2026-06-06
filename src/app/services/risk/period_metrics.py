@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import dataclass
 from typing import Callable
 
 import pandas as pd
@@ -23,6 +24,20 @@ from app.services.risk.metric_calculators import (
 
 
 BenchmarkContextPayload = dict[str, str | bool | int | list[str]]
+
+
+@dataclass(frozen=True)
+class _PeriodBenchmarkMetrics:
+    metric_map: dict[str, RiskValue]
+    benchmark_context: BenchmarkContextPayload
+    aligned_count: int
+    benchmark_observation_count: int
+
+
+@dataclass(frozen=True)
+class _PeriodNonBenchmarkMetrics:
+    metric_series: pd.Series
+    metric_map: dict[str, RiskValue]
 
 
 def _build_non_benchmark_calculators(
@@ -177,6 +192,67 @@ def _calculate_benchmark_metrics(
     return metric_map, benchmark_context, aligned_count, benchmark_observation_count
 
 
+def _period_non_benchmark_metrics(
+    *,
+    request: RiskStatelessCalculationInput,
+    annual_factor: int,
+    periodic_rf: float,
+    periodic_mar: float,
+    period_returns: pd.Series,
+    duration_seconds: Histogram,
+) -> _PeriodNonBenchmarkMetrics:
+    metric_series = risk_helpers._resample_returns(period_returns, request.options.frequency)
+    return _PeriodNonBenchmarkMetrics(
+        metric_series=metric_series,
+        metric_map=_calculate_requested_non_benchmark_metrics(
+            request=request,
+            non_benchmark_calculators=_build_non_benchmark_calculators(
+                period_returns=metric_series,
+                drawdown_series=period_returns,
+                request=request,
+                annual_factor=annual_factor,
+                periodic_rf=periodic_rf,
+                periodic_mar=periodic_mar,
+            ),
+            duration_seconds=duration_seconds,
+        ),
+    )
+
+
+def _period_benchmark_metrics(
+    *,
+    request: RiskStatelessCalculationInput,
+    metric_series: pd.Series,
+    start: pd.Timestamp,
+    end: pd.Timestamp,
+    benchmark_df: pd.DataFrame,
+    benchmark_metrics: Sequence[str],
+    annual_factor: int,
+    duration_seconds: Histogram,
+) -> _PeriodBenchmarkMetrics | None:
+    if not benchmark_metrics:
+        return None
+
+    metric_map, benchmark_context, aligned_count, benchmark_observation_count = (
+        _calculate_benchmark_metrics(
+            request=request,
+            metric_series=metric_series,
+            start=start,
+            end=end,
+            benchmark_df=benchmark_df,
+            benchmark_metrics=benchmark_metrics,
+            annual_factor=annual_factor,
+            duration_seconds=duration_seconds,
+        )
+    )
+    return _PeriodBenchmarkMetrics(
+        metric_map=metric_map,
+        benchmark_context=benchmark_context,
+        aligned_count=aligned_count,
+        benchmark_observation_count=benchmark_observation_count,
+    )
+
+
 def calculate_period_metrics(
     request: RiskStatelessCalculationInput,
     *,
@@ -195,36 +271,35 @@ def calculate_period_metrics(
     int,
     int,
 ]:
-    metric_series = risk_helpers._resample_returns(period_returns, request.options.frequency)
-    metric_map = _calculate_requested_non_benchmark_metrics(
+    non_benchmark_result = _period_non_benchmark_metrics(
         request=request,
-        non_benchmark_calculators=_build_non_benchmark_calculators(
-            period_returns=metric_series,
-            drawdown_series=period_returns,
-            request=request,
-            annual_factor=annual_factor,
-            periodic_rf=periodic_rf,
-            periodic_mar=periodic_mar,
-        ),
+        annual_factor=annual_factor,
+        periodic_rf=periodic_rf,
+        periodic_mar=periodic_mar,
+        period_returns=period_returns,
         duration_seconds=duration_seconds,
     )
-    if not benchmark_metrics:
-        return metric_map, None, 0, 0
-
-    benchmark_map, benchmark_context, aligned_count, benchmark_observation_count = (
-        _calculate_benchmark_metrics(
-            request=request,
-            metric_series=metric_series,
-            start=start,
-            end=end,
-            benchmark_df=benchmark_df,
-            benchmark_metrics=benchmark_metrics,
-            annual_factor=annual_factor,
-            duration_seconds=duration_seconds,
-        )
+    benchmark_result = _period_benchmark_metrics(
+        request=request,
+        metric_series=non_benchmark_result.metric_series,
+        start=start,
+        end=end,
+        benchmark_df=benchmark_df,
+        benchmark_metrics=benchmark_metrics,
+        annual_factor=annual_factor,
+        duration_seconds=duration_seconds,
     )
-    metric_map.update(benchmark_map)
-    return metric_map, benchmark_context, aligned_count, benchmark_observation_count
+    if benchmark_result is None:
+        return non_benchmark_result.metric_map, None, 0, 0
+
+    metric_map = non_benchmark_result.metric_map
+    metric_map.update(benchmark_result.metric_map)
+    return (
+        metric_map,
+        benchmark_result.benchmark_context,
+        benchmark_result.aligned_count,
+        benchmark_result.benchmark_observation_count,
+    )
 
 
 __all__ = ["BenchmarkContextPayload", "calculate_period_metrics"]
