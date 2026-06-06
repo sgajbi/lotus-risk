@@ -38,6 +38,15 @@ class _ScenarioPackEvaluation:
     supportability: ScenarioSupportabilityState
 
 
+@dataclass(frozen=True)
+class _ScenarioPackContext:
+    scenario_pack: tuple[ScenarioDefinition, ...]
+    exposure_by_bucket: dict[str, float]
+    governance_evidence: ScenarioPackGovernanceEvidence
+    reason_codes: list[str]
+    supportability: ScenarioSupportabilityState
+
+
 SCENARIO_PACKS: dict[str, tuple[ScenarioDefinition, ...]] = {
     "CIO_REGIME_2026_Q2": (
         ScenarioDefinition(
@@ -75,9 +84,9 @@ SCENARIO_PACKS: dict[str, tuple[ScenarioDefinition, ...]] = {
 SUPPORTED_BUCKETS = frozenset({"EQUITY", "FIXED_INCOME", "ALTERNATIVES", "CASH"})
 
 
-def _evaluate_scenario_pack_context(
+def _scenario_pack_context(
     request: RegimeScenarioPackRequest,
-) -> _ScenarioPackEvaluation:
+) -> _ScenarioPackContext:
     scenario_pack = SCENARIO_PACKS[request.scenario_pack_id]
     exposure_by_bucket = {
         exposure.bucket.upper(): exposure.weight for exposure in request.exposures
@@ -93,35 +102,71 @@ def _evaluate_scenario_pack_context(
         supportability,
         governance.supportability,
     )
-    scenario_results = [
+    reason_codes = ["REGIME_SCENARIO_PACK_READY"]
+    if unsupported_buckets:
+        reason_codes.append("REGIME_SCENARIO_UNSUPPORTED_EXPOSURE_BUCKET")
+    reason_codes.extend(governance.reason_codes)
+    return _ScenarioPackContext(
+        scenario_pack=scenario_pack,
+        exposure_by_bucket=exposure_by_bucket,
+        governance_evidence=governance.evidence,
+        reason_codes=reason_codes,
+        supportability=supportability,
+    )
+
+
+def _scenario_results(
+    *,
+    context: _ScenarioPackContext,
+    exposure_components: list[ScenarioExposureComponent],
+) -> list[ScenarioResult]:
+    return [
         _evaluate_scenario(
             scenario=scenario,
-            exposure_by_bucket=exposure_by_bucket,
-            exposure_components=request.exposure_components,
+            exposure_by_bucket=context.exposure_by_bucket,
+            exposure_components=exposure_components,
         )
-        for scenario in scenario_pack
+        for scenario in context.scenario_pack
     ]
+
+
+def _supportability_after_breach(
+    *,
+    breach: bool,
+    supportability: ScenarioSupportabilityState,
+) -> ScenarioSupportabilityState:
+    if breach and supportability == ScenarioSupportabilityState.READY:
+        return ScenarioSupportabilityState.PENDING_REVIEW
+    return supportability
+
+
+def _evaluate_scenario_pack_context(
+    request: RegimeScenarioPackRequest,
+) -> _ScenarioPackEvaluation:
+    context = _scenario_pack_context(request)
+    scenario_results = _scenario_results(
+        context=context,
+        exposure_components=request.exposure_components,
+    )
     worst_case_loss = max(
         (scenario.expected_loss_pct for scenario in scenario_results),
         default=0.0,
     )
     breach = worst_case_loss > request.maximum_allowed_loss_pct
-    reason_codes = ["REGIME_SCENARIO_PACK_READY"]
-    if unsupported_buckets:
-        reason_codes.append("REGIME_SCENARIO_UNSUPPORTED_EXPOSURE_BUCKET")
-    reason_codes.extend(governance.reason_codes)
+    reason_codes = [*context.reason_codes]
     if breach:
         reason_codes.append("REGIME_SCENARIO_POLICY_THRESHOLD_BREACH")
-        if supportability == ScenarioSupportabilityState.READY:
-            supportability = ScenarioSupportabilityState.PENDING_REVIEW
 
     return _ScenarioPackEvaluation(
         scenario_results=scenario_results,
         worst_case_loss=worst_case_loss,
         breach=breach,
-        governance_evidence=governance.evidence,
+        governance_evidence=context.governance_evidence,
         reason_codes=sorted(set(reason_codes)),
-        supportability=supportability,
+        supportability=_supportability_after_breach(
+            breach=breach,
+            supportability=context.supportability,
+        ),
     )
 
 
