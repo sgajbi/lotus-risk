@@ -21,6 +21,15 @@ class UpstreamServiceError(ValueError):
         return self.message
 
 
+@dataclass(frozen=True)
+class _UpstreamHttpErrorProfile:
+    response_status: int
+    code: str
+    category: str
+    verb: str
+    retryable: bool
+
+
 def _dependency_details(
     *,
     service: str,
@@ -119,36 +128,41 @@ def classify_upstream_http_error(
     detail: str,
 ) -> UpstreamServiceError:
     upstream_status = response.status_code
-    if upstream_status == HTTPStatus.TOO_MANY_REQUESTS:
-        return _classified_http_error(
-            service=service,
-            operation=operation,
-            upstream_status=upstream_status,
-            response_status=HTTPStatus.SERVICE_UNAVAILABLE,
-            code="UPSTREAM_THROTTLED",
-            message=f"{service} {operation} throttled ({upstream_status}): {detail}",
-            category="throttled",
-            retryable=True,
-        )
-    if upstream_status >= HTTPStatus.INTERNAL_SERVER_ERROR:
-        return _classified_http_error(
-            service=service,
-            operation=operation,
-            upstream_status=upstream_status,
-            response_status=HTTPStatus.BAD_GATEWAY,
-            code="UPSTREAM_FAILURE",
-            message=f"{service} {operation} failed ({upstream_status}): {detail}",
-            category="upstream_failure",
-            retryable=True,
-        )
+    profile = _upstream_http_error_profile(upstream_status)
     return _classified_http_error(
         service=service,
         operation=operation,
         upstream_status=upstream_status,
+        response_status=profile.response_status,
+        code=profile.code,
+        message=f"{service} {operation} {profile.verb} ({upstream_status}): {detail}",
+        category=profile.category,
+        retryable=profile.retryable,
+    )
+
+
+def _upstream_http_error_profile(upstream_status: int) -> _UpstreamHttpErrorProfile:
+    if upstream_status == HTTPStatus.TOO_MANY_REQUESTS:
+        return _UpstreamHttpErrorProfile(
+            response_status=HTTPStatus.SERVICE_UNAVAILABLE,
+            code="UPSTREAM_THROTTLED",
+            category="throttled",
+            verb="throttled",
+            retryable=True,
+        )
+    if upstream_status >= HTTPStatus.INTERNAL_SERVER_ERROR:
+        return _UpstreamHttpErrorProfile(
+            response_status=HTTPStatus.BAD_GATEWAY,
+            code="UPSTREAM_FAILURE",
+            category="upstream_failure",
+            verb="failed",
+            retryable=True,
+        )
+    return _UpstreamHttpErrorProfile(
         response_status=HTTPStatus.FAILED_DEPENDENCY,
         code="FAILED_DEPENDENCY",
-        message=f"{service} {operation} rejected request ({upstream_status}): {detail}",
         category="rejected_request",
+        verb="rejected request",
         retryable=False,
     )
 
