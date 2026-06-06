@@ -179,6 +179,33 @@ def _explicit_risk_free_request(
     )
 
 
+async def _fetch_returns_and_risk_free_responses(
+    *,
+    source_payload: dict[str, Any],
+    risk_free_request: dict[str, Any] | None,
+    performance_client: LotusPerformanceClientProtocol,
+    core_client: LotusCoreClientProtocol | None,
+    correlation_id: str | None,
+) -> tuple[dict[str, Any], dict[str, Any] | None]:
+    if risk_free_request is not None and core_client is not None:
+        source_response, risk_free_response = await asyncio.gather(
+            performance_client.get_returns_series(
+                request_payload=source_payload,
+                correlation_id=correlation_id,
+            ),
+            core_client.get_risk_free_series(
+                request_payload=risk_free_request,
+                correlation_id=correlation_id,
+            ),
+        )
+        return source_response, risk_free_response
+    source_response = await performance_client.get_returns_series(
+        request_payload=source_payload,
+        correlation_id=correlation_id,
+    )
+    return source_response, None
+
+
 async def _fetch_stateful_source_responses(
     stateful: RollingStatefulInput,
     *,
@@ -197,24 +224,13 @@ async def _fetch_stateful_source_responses(
         explicit_window=explicit_window,
         reporting_currency=reporting_currency,
     )
-    if risk_free_request is not None and checked_core_client is not None:
-        source_response, risk_free_response = await asyncio.gather(
-            performance_client.get_returns_series(
-                request_payload=source_payload,
-                correlation_id=correlation_id,
-            ),
-            checked_core_client.get_risk_free_series(
-                request_payload=risk_free_request,
-                correlation_id=correlation_id,
-            ),
-        )
-    else:
-        source_response = await performance_client.get_returns_series(
-            request_payload=source_payload,
-            correlation_id=correlation_id,
-        )
-        risk_free_response = None
-
+    source_response, risk_free_response = await _fetch_returns_and_risk_free_responses(
+        source_payload=source_payload,
+        risk_free_request=risk_free_request,
+        performance_client=performance_client,
+        core_client=checked_core_client,
+        correlation_id=correlation_id,
+    )
     return StatefulSourceResponses(
         source_payload=source_payload,
         source_response=source_response,
