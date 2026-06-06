@@ -47,6 +47,20 @@ class _BenchmarkPeriodMetrics:
     benchmark_observation_count: int
 
 
+@dataclass(frozen=True)
+class PeriodMetricCalculationRequest:
+    request: RiskStatelessCalculationInput
+    start: pd.Timestamp
+    end: pd.Timestamp
+    annual_factor: int
+    periodic_rf: float
+    periodic_mar: float
+    period_returns: pd.Series
+    benchmark_df: pd.DataFrame
+    benchmark_metrics: Sequence[str]
+    duration_seconds: Histogram
+
+
 def _build_non_benchmark_calculators(
     *,
     period_returns: pd.Series,
@@ -353,17 +367,7 @@ def _period_metric_result_tuple(
 
 
 def calculate_period_metrics(
-    request: RiskStatelessCalculationInput,
-    *,
-    start: pd.Timestamp,
-    end: pd.Timestamp,
-    annual_factor: int,
-    periodic_rf: float,
-    periodic_mar: float,
-    period_returns: pd.Series,
-    benchmark_df: pd.DataFrame,
-    benchmark_metrics: Sequence[str],
-    duration_seconds: Histogram,
+    calculation_request: PeriodMetricCalculationRequest,
 ) -> tuple[
     dict[str, RiskValue],
     BenchmarkContextPayload | None,
@@ -371,22 +375,22 @@ def calculate_period_metrics(
     int,
 ]:
     non_benchmark_result = _period_non_benchmark_metrics(
-        request=request,
-        annual_factor=annual_factor,
-        periodic_rf=periodic_rf,
-        periodic_mar=periodic_mar,
-        period_returns=period_returns,
-        duration_seconds=duration_seconds,
+        request=calculation_request.request,
+        annual_factor=calculation_request.annual_factor,
+        periodic_rf=calculation_request.periodic_rf,
+        periodic_mar=calculation_request.periodic_mar,
+        period_returns=calculation_request.period_returns,
+        duration_seconds=calculation_request.duration_seconds,
     )
     benchmark_result = _period_benchmark_metrics(
-        request=request,
+        request=calculation_request.request,
         metric_series=non_benchmark_result.metric_series,
-        start=start,
-        end=end,
-        benchmark_df=benchmark_df,
-        benchmark_metrics=benchmark_metrics,
-        annual_factor=annual_factor,
-        duration_seconds=duration_seconds,
+        start=calculation_request.start,
+        end=calculation_request.end,
+        benchmark_df=calculation_request.benchmark_df,
+        benchmark_metrics=calculation_request.benchmark_metrics,
+        annual_factor=calculation_request.annual_factor,
+        duration_seconds=calculation_request.duration_seconds,
     )
     return _period_metric_result_tuple(
         non_benchmark_result=non_benchmark_result,
@@ -394,4 +398,4 @@ def calculate_period_metrics(
     )
 
 
-__all__ = ["BenchmarkContextPayload", "calculate_period_metrics"]
+__all__ = ["BenchmarkContextPayload", "PeriodMetricCalculationRequest", "calculate_period_metrics"]

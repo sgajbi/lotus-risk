@@ -31,7 +31,7 @@ documentation posture, and validation gates. It is not a completion claim.
 | tests/unit/test_rolling_engine.py | 441 | 17565 |
 | tests/unit/test_drawdown_engine.py | 422 | 16234 |
 | tests/integration/test_rolling_live_characterization.py | 418 | 16694 |
-| src/app/services/risk/period_metrics.py | 397 | 12246 |
+| src/app/services/risk/period_metrics.py | 401 | 12644 |
 | tests/unit/test_risk_engine.py | 395 | 15947 |
 | tests/unit/test_concentration_engine.py | 394 | 16053 |
 | src/app/services/rolling_metric_series.py | 361 | 11066 |
@@ -108,10 +108,10 @@ Success: no issues found in 302 source files
 ...
 src\app\upstream_errors.py                                    57      0     20      3    96%   196->209, 202->204, 207->209
 ------------------------------------------------------------------------------------------------------
-TOTAL                                                       5761     84    998     73    98%
+TOTAL                                                       5773     84    998     73    98%
 
 167 files skipped due to complete coverage.
-500 passed in 8.47s
+500 passed in 8.42s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -129,7 +129,7 @@ src\app\main.py - A (100.00)
 ...
 src\app\services\risk\helpers.py - A (34.16)
 src\app\services\risk\metric_calculators.py - A (39.28)
-src\app\services\risk\period_metrics.py - A (40.67)
+src\app\services\risk\period_metrics.py - A (38.89)
 src\app\services\risk\period_resolution.py - A (47.21)
 src\app\services\risk\period_windows.py - A (58.70)
 src\app\services\risk\__init__.py - A (100.00)
@@ -240,7 +240,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-500 tests collected in 1.58s
+500 tests collected in 1.59s
 ```
 - Import-linter report-only: passed
 

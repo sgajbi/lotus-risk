@@ -20,7 +20,11 @@ from app.contracts.risk import (
 from app.services.audit_lineage import fingerprint_model
 from app.services.calculation_supportability import supportability_from_risk_metric_results
 from app.services.risk import helpers as risk_helpers
-from app.services.risk.period_metrics import BenchmarkContextPayload, calculate_period_metrics
+from app.services.risk.period_metrics import (
+    BenchmarkContextPayload,
+    PeriodMetricCalculationRequest,
+    calculate_period_metrics,
+)
 from app.services.risk.period_windows import RiskPeriodWindow, risk_period_window
 
 BENCHMARK_METRICS = risk_helpers.BENCHMARK_METRICS
@@ -199,16 +203,18 @@ def _period_metric_calculation(
 ) -> _PeriodMetricCalculation:
     return _period_metric_calculation_result(
         calculate_period_metrics(
-            request,
-            start=period_window.start,
-            end=period_window.end,
-            annual_factor=annual_factor,
-            periodic_rf=periodic_rf,
-            periodic_mar=periodic_mar,
-            period_returns=period_window.returns,
-            benchmark_df=benchmark_df,
-            benchmark_metrics=benchmark_metrics,
-            duration_seconds=duration_seconds,
+            PeriodMetricCalculationRequest(
+                request=request,
+                start=period_window.start,
+                end=period_window.end,
+                annual_factor=annual_factor,
+                periodic_rf=periodic_rf,
+                periodic_mar=periodic_mar,
+                period_returns=period_window.returns,
+                benchmark_df=benchmark_df,
+                benchmark_metrics=benchmark_metrics,
+                duration_seconds=duration_seconds,
+            )
         )
     )
 
