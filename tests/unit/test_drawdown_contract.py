@@ -19,6 +19,14 @@ from app.contracts.drawdown_request_field_examples import (
     DRAWDOWN_STATEFUL_INPUT_EXAMPLE,
     DRAWDOWN_STATELESS_INPUT_EXAMPLE,
 )
+from app.contracts.drawdown_period_field_examples import (
+    DRAWDOWN_PERIOD_EPISODES_EXAMPLE,
+    DRAWDOWN_PERIOD_RELATIVE_CONTEXT_EXAMPLE,
+    DRAWDOWN_PERIOD_RELATIVE_TO_BENCHMARK_EXAMPLE,
+    DRAWDOWN_PERIOD_SUMMARY_EXAMPLE,
+    DRAWDOWN_PERIOD_UNDERWATER_SERIES_EXAMPLE,
+)
+from app.contracts.drawdown_period_outputs import DrawdownPeriodResult
 from app.contracts.drawdown_response_outputs import (
     DrawdownResponse as DrawdownResponseImplementation,
 )
@@ -43,6 +51,22 @@ def test_drawdown_request_schema_uses_governed_field_examples() -> None:
     assert properties["stateful_input"]["example"] == DRAWDOWN_STATEFUL_INPUT_EXAMPLE
     assert properties["benchmark_policy"]["example"] == DRAWDOWN_BENCHMARK_POLICY_EXAMPLE
     assert properties["analysis_options"]["example"] == DRAWDOWN_ANALYSIS_OPTIONS_EXAMPLE
+
+
+def test_drawdown_period_schema_uses_governed_field_examples() -> None:
+    properties = DrawdownPeriodResult.model_json_schema()["properties"]
+
+    assert properties["summary"]["example"] == DRAWDOWN_PERIOD_SUMMARY_EXAMPLE
+    assert properties["episodes"]["example"] == DRAWDOWN_PERIOD_EPISODES_EXAMPLE
+    assert (
+        properties["relative_to_benchmark"]["example"]
+        == DRAWDOWN_PERIOD_RELATIVE_TO_BENCHMARK_EXAMPLE
+    )
+    assert (
+        properties["relative_to_benchmark_context"]["example"]
+        == DRAWDOWN_PERIOD_RELATIVE_CONTEXT_EXAMPLE
+    )
+    assert properties["underwater_series"]["example"] == DRAWDOWN_PERIOD_UNDERWATER_SERIES_EXAMPLE
 
 
 def _stateless_payload() -> dict[str, object]:
