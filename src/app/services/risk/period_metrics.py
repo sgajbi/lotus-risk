@@ -40,6 +40,13 @@ class _PeriodNonBenchmarkMetrics:
     metric_map: dict[str, RiskValue]
 
 
+@dataclass(frozen=True)
+class _BenchmarkPeriodMetrics:
+    metric_map: dict[str, RiskValue]
+    aligned_count: int
+    benchmark_observation_count: int
+
+
 def _build_non_benchmark_calculators(
     *,
     period_returns: pd.Series,
@@ -143,6 +150,49 @@ def _calculate_aligned_benchmark_metrics(
     return metric_map, aligned_count
 
 
+def _benchmark_period_metrics(
+    *,
+    request: RiskStatelessCalculationInput,
+    metric_series: pd.Series,
+    start: pd.Timestamp,
+    end: pd.Timestamp,
+    benchmark_df: pd.DataFrame,
+    benchmark_metrics: Sequence[str],
+    annual_factor: int,
+    duration_seconds: Histogram,
+) -> _BenchmarkPeriodMetrics:
+    benchmark_period = align_and_resample_benchmark(
+        benchmark_df=benchmark_df,
+        start=start.date(),
+        end=end.date(),
+        frequency=request.options.frequency,
+        use_log_returns=request.options.use_log_returns,
+    )
+    benchmark_observation_count = len(benchmark_period)
+    if benchmark_period.empty:
+        return _BenchmarkPeriodMetrics(
+            metric_map=_benchmark_metric_errors(
+                benchmark_metrics=benchmark_metrics,
+                message="Insufficient aligned observations",
+            ),
+            aligned_count=0,
+            benchmark_observation_count=benchmark_observation_count,
+        )
+
+    metric_map, aligned_count = _calculate_aligned_benchmark_metrics(
+        metric_series=metric_series,
+        benchmark_period=benchmark_period,
+        benchmark_metrics=benchmark_metrics,
+        annual_factor=annual_factor,
+        duration_seconds=duration_seconds,
+    )
+    return _BenchmarkPeriodMetrics(
+        metric_map=metric_map,
+        aligned_count=aligned_count,
+        benchmark_observation_count=benchmark_observation_count,
+    )
+
+
 def _calculate_benchmark_metrics(
     *,
     request: RiskStatelessCalculationInput,
@@ -154,42 +204,38 @@ def _calculate_benchmark_metrics(
     annual_factor: int,
     duration_seconds: Histogram,
 ) -> tuple[dict[str, RiskValue], BenchmarkContextPayload, int, int]:
-    aligned_count = 0
-    benchmark_observation_count = 0
     if benchmark_df.empty:
-        metric_map = _benchmark_metric_errors(
-            benchmark_metrics=benchmark_metrics,
-            message="Benchmark returns required for benchmark-dependent metric",
+        benchmark_result = _BenchmarkPeriodMetrics(
+            metric_map=_benchmark_metric_errors(
+                benchmark_metrics=benchmark_metrics,
+                message="Benchmark returns required for benchmark-dependent metric",
+            ),
+            aligned_count=0,
+            benchmark_observation_count=0,
         )
     else:
-        benchmark_period = align_and_resample_benchmark(
+        benchmark_result = _benchmark_period_metrics(
+            request=request,
+            metric_series=metric_series,
+            start=start,
+            end=end,
             benchmark_df=benchmark_df,
-            start=start.date(),
-            end=end.date(),
-            frequency=request.options.frequency,
-            use_log_returns=request.options.use_log_returns,
+            benchmark_metrics=benchmark_metrics,
+            annual_factor=annual_factor,
+            duration_seconds=duration_seconds,
         )
-        benchmark_observation_count = len(benchmark_period)
-        if benchmark_period.empty:
-            metric_map = _benchmark_metric_errors(
-                benchmark_metrics=benchmark_metrics,
-                message="Insufficient aligned observations",
-            )
-        else:
-            metric_map, aligned_count = _calculate_aligned_benchmark_metrics(
-                metric_series=metric_series,
-                benchmark_period=benchmark_period,
-                benchmark_metrics=benchmark_metrics,
-                annual_factor=annual_factor,
-                duration_seconds=duration_seconds,
-            )
 
     benchmark_context = prepare_benchmark_context(
         benchmark_df_empty=benchmark_df.empty,
-        aligned_count=aligned_count,
+        aligned_count=benchmark_result.aligned_count,
         benchmark_metrics=list(benchmark_metrics),
     )
-    return metric_map, benchmark_context, aligned_count, benchmark_observation_count
+    return (
+        benchmark_result.metric_map,
+        benchmark_context,
+        benchmark_result.aligned_count,
+        benchmark_result.benchmark_observation_count,
+    )
 
 
 def _period_non_benchmark_metrics(
@@ -253,6 +299,29 @@ def _period_benchmark_metrics(
     )
 
 
+def _period_metric_result_tuple(
+    *,
+    non_benchmark_result: _PeriodNonBenchmarkMetrics,
+    benchmark_result: _PeriodBenchmarkMetrics | None,
+) -> tuple[
+    dict[str, RiskValue],
+    BenchmarkContextPayload | None,
+    int,
+    int,
+]:
+    if benchmark_result is None:
+        return non_benchmark_result.metric_map, None, 0, 0
+
+    metric_map = non_benchmark_result.metric_map
+    metric_map.update(benchmark_result.metric_map)
+    return (
+        metric_map,
+        benchmark_result.benchmark_context,
+        benchmark_result.aligned_count,
+        benchmark_result.benchmark_observation_count,
+    )
+
+
 def calculate_period_metrics(
     request: RiskStatelessCalculationInput,
     *,
@@ -289,16 +358,9 @@ def calculate_period_metrics(
         annual_factor=annual_factor,
         duration_seconds=duration_seconds,
     )
-    if benchmark_result is None:
-        return non_benchmark_result.metric_map, None, 0, 0
-
-    metric_map = non_benchmark_result.metric_map
-    metric_map.update(benchmark_result.metric_map)
-    return (
-        metric_map,
-        benchmark_result.benchmark_context,
-        benchmark_result.aligned_count,
-        benchmark_result.benchmark_observation_count,
+    return _period_metric_result_tuple(
+        non_benchmark_result=non_benchmark_result,
+        benchmark_result=benchmark_result,
     )
 
 
