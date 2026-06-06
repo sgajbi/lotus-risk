@@ -61,6 +61,36 @@ def _period_exposure_inputs(
     )
 
 
+def _grouping_attribution_sets(
+    *,
+    options: AttributionOptions,
+    grouping_dimension: GroupingDimension,
+    exposure_inputs: _PeriodExposureInputs,
+    returns_series: pd.Series,
+    benchmark_series: pd.Series,
+) -> list[AttributionSetResult]:
+    attribution_sets: list[AttributionSetResult] = []
+    for attribution_type in options.attribution_types:
+        for metric in options.metrics:
+            attribution_sets.append(
+                build_attribution_set(
+                    AttributionSetBuildRequest(
+                        attribution_type=attribution_type,
+                        metric=metric,
+                        grouping_dimension=grouping_dimension,
+                        returns_series=returns_series,
+                        benchmark_series=benchmark_series,
+                        exposure_weights=exposure_inputs.weights,
+                        benchmark_weights=exposure_inputs.benchmark_weights,
+                        group_labels=exposure_inputs.labels,
+                        annualization_basis=options.annualization_basis,
+                        quality_flags=list(exposure_inputs.flags),
+                    )
+                )
+            )
+    return attribution_sets
+
+
 def build_period_attribution_sets(
     *,
     options: AttributionOptions,
@@ -81,24 +111,15 @@ def build_period_attribution_sets(
             end=end,
             benchmark_required=benchmark_required,
         )
-        for attribution_type in options.attribution_types:
-            for metric in options.metrics:
-                period_sets.append(
-                    build_attribution_set(
-                        AttributionSetBuildRequest(
-                            attribution_type=attribution_type,
-                            metric=metric,
-                            grouping_dimension=grouping_dimension,
-                            returns_series=returns_series,
-                            benchmark_series=benchmark_series,
-                            exposure_weights=exposure_inputs.weights,
-                            benchmark_weights=exposure_inputs.benchmark_weights,
-                            group_labels=exposure_inputs.labels,
-                            annualization_basis=options.annualization_basis,
-                            quality_flags=list(exposure_inputs.flags),
-                        )
-                    )
-                )
+        period_sets.extend(
+            _grouping_attribution_sets(
+                options=options,
+                grouping_dimension=grouping_dimension,
+                exposure_inputs=exposure_inputs,
+                returns_series=returns_series,
+                benchmark_series=benchmark_series,
+            )
+        )
     return period_sets
 
 
