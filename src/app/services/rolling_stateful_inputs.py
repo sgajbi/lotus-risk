@@ -40,6 +40,12 @@ class _RollingStatefulDependencySelection:
     reporting_currency: str | None
 
 
+@dataclass(frozen=True)
+class _RollingSourceResolution:
+    source_responses: StatefulSourceResponses
+    parsed_series: _ParsedRollingSourceSeries
+
+
 __all__ = [
     "LotusCoreClientProtocol",
     "LotusPerformanceClientProtocol",
@@ -291,18 +297,13 @@ def _resolved_stateful_inputs(
     )
 
 
-async def resolve_stateful_rolling_inputs(
-    stateful: RollingStatefulInput,
+async def _resolve_rolling_source_series(
     *,
+    dependency_selection: _RollingStatefulDependencySelection,
     performance_client: LotusPerformanceClientProtocol,
-    core_client: LotusCoreClientProtocol | None = None,
+    core_client: LotusCoreClientProtocol | None,
     correlation_id: str | None,
-) -> ResolvedStatefulRollingInputs:
-    dependency_selection = await _resolve_stateful_dependency_selection(
-        stateful,
-        core_client=core_client,
-        correlation_id=correlation_id,
-    )
+) -> _RollingSourceResolution:
     source_responses = await _fetch_stateful_source_responses(
         dependency_selection.stateful,
         performance_client=performance_client,
@@ -315,19 +316,61 @@ async def resolve_stateful_rolling_inputs(
         source_responses.source_response,
         include_benchmark=_requires_benchmark(dependency_selection.stateful),
     )
+    return _RollingSourceResolution(
+        source_responses=source_responses,
+        parsed_series=parsed_series,
+    )
+
+
+async def _resolve_rolling_risk_free_dependency(
+    *,
+    dependency_selection: _RollingStatefulDependencySelection,
+    source_responses: StatefulSourceResponses,
+    core_client: LotusCoreClientProtocol | None,
+    portfolio_points: list[ReturnPoint],
+    correlation_id: str | None,
+) -> list[ReturnPoint]:
     risk_free_dependency = await resolve_risk_free_dependency(
         include_risk_free=dependency_selection.include_risk_free,
         source_responses=source_responses,
         core_client=core_client,
         reporting_currency=dependency_selection.reporting_currency,
         stateful=dependency_selection.stateful,
-        portfolio_points=parsed_series.portfolio_points,
+        portfolio_points=portfolio_points,
+        correlation_id=correlation_id,
+    )
+    return risk_free_dependency.points
+
+
+async def resolve_stateful_rolling_inputs(
+    stateful: RollingStatefulInput,
+    *,
+    performance_client: LotusPerformanceClientProtocol,
+    core_client: LotusCoreClientProtocol | None = None,
+    correlation_id: str | None,
+) -> ResolvedStatefulRollingInputs:
+    dependency_selection = await _resolve_stateful_dependency_selection(
+        stateful,
+        core_client=core_client,
+        correlation_id=correlation_id,
+    )
+    source_resolution = await _resolve_rolling_source_series(
+        dependency_selection=dependency_selection,
+        performance_client=performance_client,
+        core_client=core_client,
+        correlation_id=correlation_id,
+    )
+    risk_free_points = await _resolve_rolling_risk_free_dependency(
+        dependency_selection=dependency_selection,
+        source_responses=source_resolution.source_responses,
+        core_client=core_client,
+        portfolio_points=source_resolution.parsed_series.portfolio_points,
         correlation_id=correlation_id,
     )
     return _resolved_stateful_inputs(
         stateful=dependency_selection.stateful,
         include_risk_free=dependency_selection.include_risk_free,
-        source_responses=source_responses,
-        parsed_series=parsed_series,
-        risk_free_points=risk_free_dependency.points,
+        source_responses=source_resolution.source_responses,
+        parsed_series=source_resolution.parsed_series,
+        risk_free_points=risk_free_points,
     )
