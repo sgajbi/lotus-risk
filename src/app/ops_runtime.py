@@ -30,15 +30,22 @@ def _resolve_dependency_status_override(
     return value if isinstance(value, dict) else None
 
 
-def resolve_dependency_runtime_views(app: FastAPI) -> list[DependencyRuntimeView]:
+def _dependency_clients(app: FastAPI) -> tuple[LotusCoreClient, LotusPerformanceClient]:
     performance_client = getattr(app.state, "lotus_performance_client", None)
     if performance_client is None:
         performance_client = LotusPerformanceClient()
     core_client = getattr(app.state, "lotus_core_client", None)
     if core_client is None:
         core_client = LotusCoreClient()
+    return core_client, performance_client
 
-    dependencies = [
+
+def _configured_dependency_views(
+    *,
+    core_client: LotusCoreClient,
+    performance_client: LotusPerformanceClient,
+) -> list[DependencyRuntimeView]:
+    return [
         DependencyRuntimeView(
             service="lotus-core",
             base_url=core_client.base_url,
@@ -53,29 +60,39 @@ def resolve_dependency_runtime_views(app: FastAPI) -> list[DependencyRuntimeView
         ),
     ]
 
-    resolved: list[DependencyRuntimeView] = []
-    for dependency in dependencies:
-        override = _resolve_dependency_status_override(app, dependency.service)
-        if override is None:
-            resolved.append(dependency)
-            continue
-        override_status = override.get("status")
-        override_detail = override.get("detail")
-        resolved.append(
-            DependencyRuntimeView(
-                service=dependency.service,
-                base_url=dependency.base_url,
-                status=override_status if isinstance(override_status, str) else dependency.status,
-                detail=override_detail if isinstance(override_detail, str) else dependency.detail,
-                category=override.get("category")
-                if isinstance(override.get("category"), str)
-                else None,
-                issue_code=override.get("issue_code")
-                if isinstance(override.get("issue_code"), str)
-                else None,
-            )
+
+def _dependency_view_with_override(
+    dependency: DependencyRuntimeView,
+    override: dict[str, Any] | None,
+) -> DependencyRuntimeView:
+    if override is None:
+        return dependency
+    override_status = override.get("status")
+    override_detail = override.get("detail")
+    override_category = override.get("category")
+    override_issue_code = override.get("issue_code")
+    return DependencyRuntimeView(
+        service=dependency.service,
+        base_url=dependency.base_url,
+        status=override_status if isinstance(override_status, str) else dependency.status,
+        detail=override_detail if isinstance(override_detail, str) else dependency.detail,
+        category=override_category if isinstance(override_category, str) else None,
+        issue_code=override_issue_code if isinstance(override_issue_code, str) else None,
+    )
+
+
+def resolve_dependency_runtime_views(app: FastAPI) -> list[DependencyRuntimeView]:
+    core_client, performance_client = _dependency_clients(app)
+    return [
+        _dependency_view_with_override(
+            dependency,
+            _resolve_dependency_status_override(app, dependency.service),
         )
-    return resolved
+        for dependency in _configured_dependency_views(
+            core_client=core_client,
+            performance_client=performance_client,
+        )
+    ]
 
 
 def resolve_readiness_status(app: FastAPI) -> tuple[int, str, list[DependencyRuntimeView]]:
