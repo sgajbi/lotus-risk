@@ -57,6 +57,26 @@ def calculate_window_result(
         min_obs=min_obs,
     )
 
+    return RollingWindowCalculation(
+        window_result=_rolling_window_result(
+            aggregate=aggregate,
+            options=options,
+            window_length=window_length,
+            min_obs=min_obs,
+        ),
+        quality_flags=aggregate.quality_flags,
+        aligned_benchmark_series_count=aggregate.aligned_benchmark_series_count,
+        aligned_risk_free_series_count=aggregate.aligned_risk_free_series_count,
+    )
+
+
+def _rolling_window_result(
+    *,
+    aggregate: _RollingWindowMetricAggregate,
+    options: RollingOptions,
+    window_length: int,
+    min_obs: int,
+) -> RollingWindowResult:
     summaries = {
         metric_name: rolling_metric_summary(series, min_obs=min_obs)
         for metric_name, series in aggregate.metric_series_map.items()
@@ -66,19 +86,14 @@ def calculate_window_result(
         if options.include_time_series
         else None
     )
-    return RollingWindowCalculation(
-        window_result=RollingWindowResult(
-            window_length=window_length,
-            metric_summaries=summaries,
-            metric_series=metric_points,
-            metric_series_context=rolling_metric_series_context(
-                include_time_series=options.include_time_series,
-                metric_points=metric_points,
-            ),
+    return RollingWindowResult(
+        window_length=window_length,
+        metric_summaries=summaries,
+        metric_series=metric_points,
+        metric_series_context=rolling_metric_series_context(
+            include_time_series=options.include_time_series,
+            metric_points=metric_points,
         ),
-        quality_flags=aggregate.quality_flags,
-        aligned_benchmark_series_count=aggregate.aligned_benchmark_series_count,
-        aligned_risk_free_series_count=aggregate.aligned_risk_free_series_count,
     )
 
 
