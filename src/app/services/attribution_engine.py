@@ -94,6 +94,65 @@ def _resolved_period_window(
     return start_date, end_date, pd.Timestamp(start_date), pd.Timestamp(end_date)
 
 
+def _period_returns_series(
+    *,
+    frames: AttributionSourceFrames,
+    start: pd.Timestamp,
+    end: pd.Timestamp,
+) -> pd.Series:
+    return window_returns(frames.returns_df, start, end) / 100.0
+
+
+def _period_benchmark_series(
+    *,
+    frames: AttributionSourceFrames,
+    start: pd.Timestamp,
+    end: pd.Timestamp,
+) -> pd.Series:
+    if frames.benchmark_df.empty:
+        return pd.Series(dtype="float64")
+    return window_returns(frames.benchmark_df, start, end) / 100.0
+
+
+def _insufficient_attribution_result(
+    *,
+    start_date: dt.date,
+    end_date: dt.date,
+) -> HistoricalAttributionPeriodResult:
+    return HistoricalAttributionPeriodResult(
+        start_date=start_date,
+        end_date=end_date,
+        attribution_sets=[],
+        error="Insufficient data",
+    )
+
+
+def _attribution_period_result(
+    *,
+    start_date: dt.date,
+    end_date: dt.date,
+    options: AttributionOptions,
+    frames: AttributionSourceFrames,
+    returns_series: pd.Series,
+    benchmark_series: pd.Series,
+    start: pd.Timestamp,
+    end: pd.Timestamp,
+) -> HistoricalAttributionPeriodResult:
+    return HistoricalAttributionPeriodResult(
+        start_date=start_date,
+        end_date=end_date,
+        attribution_sets=build_period_attribution_sets(
+            options=options,
+            frames=frames,
+            returns_series=returns_series,
+            benchmark_series=benchmark_series,
+            start=start,
+            end=end,
+        ),
+        error=None,
+    )
+
+
 def _calculate_period_attribution(
     *,
     period: RiskRequestPeriod,
@@ -108,32 +167,24 @@ def _calculate_period_attribution(
         open_date=open_timestamp,
     )
     name = _period_name(period)
-    returns_series = window_returns(frames.returns_df, start, end) / 100.0
-    benchmark_series = (
-        window_returns(frames.benchmark_df, start, end) / 100.0
-        if not frames.benchmark_df.empty
-        else pd.Series(dtype="float64")
+    returns_series = _period_returns_series(frames=frames, start=start, end=end)
+    benchmark_series = _period_benchmark_series(
+        frames=frames,
+        start=start,
+        end=end,
     )
     if len(returns_series.dropna()) < 2:
-        return name, HistoricalAttributionPeriodResult(
-            start_date=start_date,
-            end_date=end_date,
-            attribution_sets=[],
-            error="Insufficient data",
-        )
+        return name, _insufficient_attribution_result(start_date=start_date, end_date=end_date)
 
-    return name, HistoricalAttributionPeriodResult(
+    return name, _attribution_period_result(
         start_date=start_date,
         end_date=end_date,
-        attribution_sets=build_period_attribution_sets(
-            options=options,
-            frames=frames,
-            returns_series=returns_series,
-            benchmark_series=benchmark_series,
-            start=start,
-            end=end,
-        ),
-        error=None,
+        options=options,
+        frames=frames,
+        returns_series=returns_series,
+        benchmark_series=benchmark_series,
+        start=start,
+        end=end,
     )
 
 
