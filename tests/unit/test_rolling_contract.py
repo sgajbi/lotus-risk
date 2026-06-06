@@ -19,6 +19,13 @@ from app.contracts.rolling_metric_outputs import (
 from app.contracts.rolling_metric_summary_outputs import (
     RollingMetricSummary as RollingMetricSummaryImplementation,
 )
+from app.contracts.rolling_period_field_examples import (
+    ROLLING_PERIOD_BENCHMARK_CONTEXT_EXAMPLE,
+    ROLLING_PERIOD_QUALITY_FLAGS_EXAMPLE,
+    ROLLING_PERIOD_RISK_FREE_CONTEXT_EXAMPLE,
+    ROLLING_PERIOD_WINDOW_RESULTS_EXAMPLE,
+)
+from app.contracts.rolling_period_outputs import RollingPeriodResult
 from app.contracts.rolling_request_inputs import (
     RollingAnalyticsRequest as RollingAnalyticsRequestImplementation,
 )
@@ -99,6 +106,15 @@ def test_rolling_response_schema_uses_governed_field_examples() -> None:
         metadata_properties["calculation_supportability"]["example"]
         == ROLLING_CALCULATION_SUPPORTABILITY_EXAMPLE
     )
+
+
+def test_rolling_period_schema_uses_governed_field_examples() -> None:
+    properties = RollingPeriodResult.model_json_schema()["properties"]
+
+    assert properties["benchmark_context"]["example"] == ROLLING_PERIOD_BENCHMARK_CONTEXT_EXAMPLE
+    assert properties["risk_free_context"]["example"] == ROLLING_PERIOD_RISK_FREE_CONTEXT_EXAMPLE
+    assert properties["window_results"]["example"] == ROLLING_PERIOD_WINDOW_RESULTS_EXAMPLE
+    assert properties["quality_flags"]["example"] == ROLLING_PERIOD_QUALITY_FLAGS_EXAMPLE
 
 
 def test_rolling_contract_accepts_stateless_payload() -> None:
