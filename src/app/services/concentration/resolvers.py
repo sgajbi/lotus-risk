@@ -18,7 +18,9 @@ from app.services.audit_lineage import (
 )
 from app.services.concentration.datamodels import (
     ConcentrationComputationInput,
+    IssuerEntry,
     IssuerIdentity,
+    PositionEntry,
 )
 from app.services.concentration.metadata import build_metadata
 from app.services.concentration.parsing import (
@@ -41,6 +43,14 @@ class _StatefulSnapshotState:
     issuer_by_security: dict[str, IssuerIdentity]
     issuer_note: str | None
     valuation_context: ConcentrationValuationContext | None
+
+
+@dataclass(frozen=True)
+class _StatefulBaselineValues:
+    positions: list[PositionEntry]
+    issuers: list[IssuerEntry]
+    covered_position_count: int
+    total_position_count: int
 
 
 async def resolve_stateful(
@@ -66,27 +76,37 @@ async def resolve_stateful(
         stateful=stateful,
         snapshot_payload=snapshot_payload,
     )
-    baseline_positions, baseline_issuers, covered_baseline, total_baseline = (
-        _extract_values_with_issuer_from_snapshot(
-            snapshot_state.sections.get("positions_baseline"),
-            snapshot_state.issuer_by_security,
-        )
-    )
+    baseline = _stateful_baseline_values(snapshot_state)
 
     return ConcentrationComputationInput(
         input_mode=ConcentrationInputMode.STATEFUL,
-        current_positions=baseline_positions,
-        proposed_positions=baseline_positions,
+        current_positions=baseline.positions,
+        proposed_positions=baseline.positions,
         top_n=stateful.top_n,
-        current_issuers=baseline_issuers,
-        proposed_issuers=baseline_issuers,
-        covered_position_count_current=covered_baseline,
-        covered_position_count_proposed=covered_baseline,
-        total_position_count_current=total_baseline,
-        total_position_count_proposed=total_baseline,
+        current_issuers=baseline.issuers,
+        proposed_issuers=baseline.issuers,
+        covered_position_count_current=baseline.covered_position_count,
+        covered_position_count_proposed=baseline.covered_position_count,
+        total_position_count_current=baseline.total_position_count,
+        total_position_count_proposed=baseline.total_position_count,
         issuer_note=snapshot_state.issuer_note,
         valuation_context=snapshot_state.valuation_context,
         metadata=metadata,
+    )
+
+
+def _stateful_baseline_values(
+    snapshot_state: _StatefulSnapshotState,
+) -> _StatefulBaselineValues:
+    positions, issuers, covered_count, total_count = _extract_values_with_issuer_from_snapshot(
+        snapshot_state.sections.get("positions_baseline"),
+        snapshot_state.issuer_by_security,
+    )
+    return _StatefulBaselineValues(
+        positions=positions,
+        issuers=issuers,
+        covered_position_count=covered_count,
+        total_position_count=total_count,
     )
 
 
