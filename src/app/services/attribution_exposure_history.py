@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal, InvalidOperation
 from typing import Any, Protocol
@@ -61,41 +62,47 @@ def as_decimal(value: Any) -> Decimal:
         ) from exc
 
 
-def build_exposure_points(
-    *,
-    rows: list[dict[str, Any]],
-    grouping_dimensions: list[GroupingDimension],
-    issuer_map: dict[str, tuple[str, str | None]],
-) -> list[ExposurePoint]:
-    grouped_values: dict[tuple[date, GroupingDimension, str], Decimal] = {}
-    totals_by_date: dict[date, Decimal] = {}
-    labels: dict[tuple[GroupingDimension, str], str | None] = {}
+@dataclass
+class _ExposureAggregation:
+    grouped_values: dict[tuple[date, GroupingDimension, str], Decimal] = field(default_factory=dict)
+    totals_by_date: dict[date, Decimal] = field(default_factory=dict)
+    labels: dict[tuple[GroupingDimension, str], str | None] = field(default_factory=dict)
 
-    for row in rows:
-        valuation_date = row.get("valuation_date")
-        if not isinstance(valuation_date, str):
-            continue
-        obs_date = date.fromisoformat(valuation_date)
-        ending_reporting = row.get("ending_market_value_reporting_currency")
-        ending_portfolio = row.get("ending_market_value_portfolio_currency")
-        market_value = as_decimal(
-            ending_reporting if ending_reporting is not None else ending_portfolio
+    def add_row(
+        self,
+        *,
+        row: dict[str, Any],
+        obs_date: date,
+        market_value: Decimal,
+        grouping_dimensions: list[GroupingDimension],
+        issuer_map: dict[str, tuple[str, str | None]],
+    ) -> None:
+        self.totals_by_date[obs_date] = (
+            self.totals_by_date.get(obs_date, Decimal("0")) + market_value
         )
-        totals_by_date[obs_date] = totals_by_date.get(obs_date, Decimal("0")) + market_value
-
         for grouping_dimension in grouping_dimensions:
             group_key, group_label = group_key_and_label(
                 row=row,
                 grouping_dimension=grouping_dimension,
                 issuer_map=issuer_map,
             )
-            labels[(grouping_dimension, group_key)] = group_label
+            self.labels[(grouping_dimension, group_key)] = group_label
             key = (obs_date, grouping_dimension, group_key)
-            grouped_values[key] = grouped_values.get(key, Decimal("0")) + market_value
+            self.grouped_values[key] = self.grouped_values.get(key, Decimal("0")) + market_value
 
+
+def _market_value_from_position_row(row: dict[str, Any]) -> Decimal:
+    ending_reporting = row.get("ending_market_value_reporting_currency")
+    ending_portfolio = row.get("ending_market_value_portfolio_currency")
+    return as_decimal(ending_reporting if ending_reporting is not None else ending_portfolio)
+
+
+def _exposure_points_from_aggregation(
+    aggregation: _ExposureAggregation,
+) -> list[ExposurePoint]:
     points: list[ExposurePoint] = []
-    for (obs_date, grouping_dimension, group_key), numerator in grouped_values.items():
-        denominator = totals_by_date.get(obs_date, Decimal("0"))
+    for (obs_date, grouping_dimension, group_key), numerator in aggregation.grouped_values.items():
+        denominator = aggregation.totals_by_date.get(obs_date, Decimal("0"))
         if denominator == 0:
             continue
         points.append(
@@ -103,12 +110,33 @@ def build_exposure_points(
                 date=obs_date,
                 grouping_dimension=grouping_dimension,
                 group_key=group_key,
-                group_label=labels.get((grouping_dimension, group_key)),
+                group_label=aggregation.labels.get((grouping_dimension, group_key)),
                 weight=float(numerator / denominator),
             )
         )
     points.sort(key=lambda item: (item.date, item.grouping_dimension, item.group_key))
     return points
+
+
+def build_exposure_points(
+    *,
+    rows: list[dict[str, Any]],
+    grouping_dimensions: list[GroupingDimension],
+    issuer_map: dict[str, tuple[str, str | None]],
+) -> list[ExposurePoint]:
+    aggregation = _ExposureAggregation()
+    for row in rows:
+        valuation_date = row.get("valuation_date")
+        if not isinstance(valuation_date, str):
+            continue
+        aggregation.add_row(
+            row=row,
+            obs_date=date.fromisoformat(valuation_date),
+            market_value=_market_value_from_position_row(row),
+            grouping_dimensions=grouping_dimensions,
+            issuer_map=issuer_map,
+        )
+    return _exposure_points_from_aggregation(aggregation)
 
 
 def _security_ids_from_position_rows(rows: list[dict[str, Any]]) -> list[str]:
