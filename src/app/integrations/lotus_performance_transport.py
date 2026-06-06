@@ -42,23 +42,12 @@ async def execute_returns_series_request(
     url = f"{base_url}{RETURNS_SERIES_OPERATION}"
     started_at = observation_start()
     async with profile.make_client() as client:
-        status_code, payload = await execute_downstream_request_json(
-            dependency="lotus-performance",
-            operation=RETURNS_SERIES_OPERATION,
+        status_code, payload = await _execute_initial_returns_series_request(
+            client=client,
+            url=url,
+            request_payload=request_payload,
+            headers=headers,
             started_at=started_at,
-            request_factory=lambda: client.post(url, json=request_payload, headers=headers),
-            parse_response=lambda response: (
-                response.status_code,
-                ensure_dict_payload(
-                    response,
-                    invalid_message=(
-                        "lotus-performance returned invalid async accepted payload"
-                        if response.status_code == 202
-                        else "lotus-performance returned invalid JSON payload"
-                    ),
-                ),
-            ),
-            record_success=False,
         )
         return await _finalize_returns_series_payload(
             client=client,
@@ -70,6 +59,34 @@ async def execute_returns_series_request(
             async_max_polls=async_max_polls,
             async_poll_interval_seconds=async_poll_interval_seconds,
         )
+
+
+async def _execute_initial_returns_series_request(
+    *,
+    client: Any,
+    url: str,
+    request_payload: dict[str, Any],
+    headers: dict[str, str],
+    started_at: float,
+) -> tuple[int, dict[str, Any]]:
+    return await execute_downstream_request_json(
+        dependency="lotus-performance",
+        operation=RETURNS_SERIES_OPERATION,
+        started_at=started_at,
+        request_factory=lambda: client.post(url, json=request_payload, headers=headers),
+        parse_response=lambda response: (
+            response.status_code,
+            ensure_dict_payload(
+                response,
+                invalid_message=(
+                    "lotus-performance returned invalid async accepted payload"
+                    if response.status_code == 202
+                    else "lotus-performance returned invalid JSON payload"
+                ),
+            ),
+        ),
+        record_success=False,
+    )
 
 
 async def execute_benchmark_exposure_context_request(
