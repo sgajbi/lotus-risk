@@ -9,7 +9,7 @@ from app.contracts.attribution import (
     AttributionSetResult,
     GroupingDimension,
 )
-from app.services.attribution_decomposition import build_attribution_set
+from app.services.attribution_decomposition import AttributionSetBuildRequest, build_attribution_set
 from app.services.attribution_source_frames import AttributionSourceFrames, pivot_exposure
 
 
@@ -85,16 +85,18 @@ def build_period_attribution_sets(
             for metric in options.metrics:
                 period_sets.append(
                     build_attribution_set(
-                        attribution_type=attribution_type,
-                        metric=metric,
-                        grouping_dimension=grouping_dimension,
-                        returns_series=returns_series,
-                        benchmark_series=benchmark_series,
-                        exposure_weights=exposure_inputs.weights,
-                        benchmark_weights=exposure_inputs.benchmark_weights,
-                        group_labels=exposure_inputs.labels,
-                        annualization_basis=options.annualization_basis,
-                        base_flags=exposure_inputs.flags,
+                        AttributionSetBuildRequest(
+                            attribution_type=attribution_type,
+                            metric=metric,
+                            grouping_dimension=grouping_dimension,
+                            returns_series=returns_series,
+                            benchmark_series=benchmark_series,
+                            exposure_weights=exposure_inputs.weights,
+                            benchmark_weights=exposure_inputs.benchmark_weights,
+                            group_labels=exposure_inputs.labels,
+                            annualization_basis=options.annualization_basis,
+                            quality_flags=list(exposure_inputs.flags),
+                        )
                     )
                 )
     return period_sets

@@ -1,7 +1,7 @@
 import pandas as pd
 
 from app.contracts.attribution import AttributionOptions
-from app.services.attribution_decomposition import build_attribution_set
+from app.services.attribution_decomposition import AttributionSetBuildRequest, build_attribution_set
 from app.services.attribution_period_sets import (
     build_period_attribution_sets,
     requires_benchmark_attribution,
@@ -81,16 +81,18 @@ def test_build_period_attribution_sets_keeps_benchmark_flags_with_active_risk() 
 
 def test_build_attribution_set_rejects_unsupported_metric_before_calculation() -> None:
     attribution_set = build_attribution_set(
-        attribution_type="TOTAL_RISK",
-        metric="TRACKING_ERROR",
-        grouping_dimension="SECTOR",
-        returns_series=pd.Series(dtype="float64"),
-        benchmark_series=pd.Series(dtype="float64"),
-        exposure_weights=pd.DataFrame(),
-        benchmark_weights=pd.DataFrame(),
-        group_labels={},
-        annualization_basis=252,
-        base_flags=["source:fixture"],
+        AttributionSetBuildRequest(
+            attribution_type="TOTAL_RISK",
+            metric="TRACKING_ERROR",
+            grouping_dimension="SECTOR",
+            returns_series=pd.Series(dtype="float64"),
+            benchmark_series=pd.Series(dtype="float64"),
+            exposure_weights=pd.DataFrame(),
+            benchmark_weights=pd.DataFrame(),
+            group_labels={},
+            annualization_basis=252,
+            quality_flags=["source:fixture"],
+        )
     )
 
     assert attribution_set.total_value is None

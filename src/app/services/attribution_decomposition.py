@@ -234,31 +234,7 @@ def _resolve_attribution_precalculation(
     return _attribution_calculation_precalculation(request=request)
 
 
-def build_attribution_set(
-    *,
-    attribution_type: AttributionType,
-    metric: AttributionMetric,
-    grouping_dimension: GroupingDimension,
-    returns_series: pd.Series,
-    benchmark_series: pd.Series,
-    exposure_weights: pd.DataFrame,
-    benchmark_weights: pd.DataFrame,
-    group_labels: dict[str, str | None],
-    annualization_basis: int,
-    base_flags: list[str],
-) -> AttributionSetResult:
-    request = AttributionSetBuildRequest(
-        attribution_type=attribution_type,
-        metric=metric,
-        grouping_dimension=grouping_dimension,
-        returns_series=returns_series,
-        benchmark_series=benchmark_series,
-        exposure_weights=exposure_weights,
-        benchmark_weights=benchmark_weights,
-        group_labels=group_labels,
-        annualization_basis=annualization_basis,
-        quality_flags=list(base_flags),
-    )
+def build_attribution_set(request: AttributionSetBuildRequest) -> AttributionSetResult:
     precalculation = _resolve_attribution_precalculation(request)
     if precalculation.early_result is not None:
         return precalculation.early_result
