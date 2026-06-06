@@ -31,10 +31,10 @@ documentation posture, and validation gates. It is not a completion claim.
 | tests/unit/test_rolling_engine.py | 441 | 17565 |
 | tests/unit/test_drawdown_engine.py | 422 | 16234 |
 | tests/integration/test_rolling_live_characterization.py | 418 | 16694 |
+| src/app/services/risk/period_metrics.py | 397 | 12246 |
 | tests/unit/test_risk_engine.py | 395 | 15947 |
 | tests/unit/test_concentration_engine.py | 394 | 16053 |
 | src/app/services/rolling_metric_series.py | 382 | 11463 |
-| src/app/services/risk/period_metrics.py | 373 | 11662 |
 | tests/unit/test_risk_engine_branch_coverage.py | 353 | 13642 |
 | tests/unit/test_concentration_engine_modes.py | 334 | 12149 |
 | src/app/services/rolling_stateful_inputs.py | 333 | 12016 |
@@ -108,10 +108,10 @@ Success: no issues found in 302 source files
 ...
 src\app\upstream_errors.py                                    57      0     20      3    96%   196->209, 202->204, 207->209
 ------------------------------------------------------------------------------------------------------
-TOTAL                                                       5694     82    996     72    98%
+TOTAL                                                       5698     82    996     72    98%
 
 167 files skipped due to complete coverage.
-500 passed in 8.30s
+500 passed in 8.33s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -129,7 +129,7 @@ src\app\main.py - A (100.00)
 ...
 src\app\services\risk\helpers.py - A (34.16)
 src\app\services\risk\metric_calculators.py - A (39.28)
-src\app\services\risk\period_metrics.py - A (41.03)
+src\app\services\risk\period_metrics.py - A (40.67)
 src\app\services\risk\period_resolution.py - A (47.21)
 src\app\services\risk\period_windows.py - A (58.70)
 src\app\services\risk\__init__.py - A (100.00)

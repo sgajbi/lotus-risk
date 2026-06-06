@@ -161,21 +161,16 @@ def _benchmark_period_metrics(
     annual_factor: int,
     duration_seconds: Histogram,
 ) -> _BenchmarkPeriodMetrics:
-    benchmark_period = align_and_resample_benchmark(
+    benchmark_period = _benchmark_period_series(
+        request=request,
         benchmark_df=benchmark_df,
-        start=start.date(),
-        end=end.date(),
-        frequency=request.options.frequency,
-        use_log_returns=request.options.use_log_returns,
+        start=start,
+        end=end,
     )
     benchmark_observation_count = len(benchmark_period)
     if benchmark_period.empty:
-        return _BenchmarkPeriodMetrics(
-            metric_map=_benchmark_metric_errors(
-                benchmark_metrics=benchmark_metrics,
-                message="Insufficient aligned observations",
-            ),
-            aligned_count=0,
+        return _insufficient_benchmark_period_metrics(
+            benchmark_metrics=benchmark_metrics,
             benchmark_observation_count=benchmark_observation_count,
         )
 
@@ -193,16 +188,45 @@ def _benchmark_period_metrics(
     )
 
 
-def _empty_benchmark_period_metrics(
+def _benchmark_period_series(
+    *,
+    request: RiskStatelessCalculationInput,
+    benchmark_df: pd.DataFrame,
+    start: pd.Timestamp,
+    end: pd.Timestamp,
+) -> pd.Series:
+    return align_and_resample_benchmark(
+        benchmark_df=benchmark_df,
+        start=start.date(),
+        end=end.date(),
+        frequency=request.options.frequency,
+        use_log_returns=request.options.use_log_returns,
+    )
+
+
+def _insufficient_benchmark_period_metrics(
+    *,
     benchmark_metrics: Sequence[str],
+    benchmark_observation_count: int,
+    message: str = "Insufficient aligned observations",
 ) -> _BenchmarkPeriodMetrics:
     return _BenchmarkPeriodMetrics(
         metric_map=_benchmark_metric_errors(
             benchmark_metrics=benchmark_metrics,
-            message="Benchmark returns required for benchmark-dependent metric",
+            message=message,
         ),
         aligned_count=0,
+        benchmark_observation_count=benchmark_observation_count,
+    )
+
+
+def _empty_benchmark_period_metrics(
+    benchmark_metrics: Sequence[str],
+) -> _BenchmarkPeriodMetrics:
+    return _insufficient_benchmark_period_metrics(
+        benchmark_metrics=benchmark_metrics,
         benchmark_observation_count=0,
+        message="Benchmark returns required for benchmark-dependent metric",
     )
 
 
