@@ -42,6 +42,12 @@ class _PortfolioApplicabilityDecision:
 
 
 @dataclass(frozen=True)
+class _CioApprovalDecision:
+    reason_codes: list[str]
+    supportability: ScenarioSupportabilityState
+
+
+@dataclass(frozen=True)
 class GovernanceEvaluation:
     evidence: ScenarioPackGovernanceEvidence
     reason_codes: list[str]
@@ -61,6 +67,21 @@ SCENARIO_PACK_GOVERNANCE: dict[str, ScenarioPackGovernanceDefinition] = {
         methodology_ref="docs/methodologies/metrics/regime-scenario-pack-evaluation.md",
     )
 }
+
+
+def cio_approval_decision(
+    *,
+    governance: ScenarioPackGovernanceDefinition,
+) -> _CioApprovalDecision:
+    if governance.cio_approval_status != ScenarioPackApprovalStatus.APPROVED:
+        return _CioApprovalDecision(
+            reason_codes=["REGIME_SCENARIO_CIO_APPROVAL_NOT_CONFIRMED"],
+            supportability=ScenarioSupportabilityState.BLOCKED,
+        )
+    return _CioApprovalDecision(
+        reason_codes=[],
+        supportability=ScenarioSupportabilityState.READY,
+    )
 
 
 def effective_period_decision(
@@ -114,16 +135,34 @@ def portfolio_applicability_decision(
     )
 
 
+def _governance_evidence(
+    *,
+    governance: ScenarioPackGovernanceDefinition,
+    effective_period: _EffectivePeriodDecision,
+    portfolio_applicability: _PortfolioApplicabilityDecision,
+) -> ScenarioPackGovernanceEvidence:
+    return ScenarioPackGovernanceEvidence(
+        cio_approval_status=governance.cio_approval_status,
+        cio_approval_ref=governance.cio_approval_ref,
+        approved_by=governance.approved_by,
+        approved_at=governance.approved_at,
+        effective_from=governance.effective_from,
+        effective_to=governance.effective_to,
+        effective_period_status=effective_period.status,
+        applicability_status=portfolio_applicability.status,
+        applicability_scope=list(governance.applicability_scope),
+        portfolio_applicability_ref=portfolio_applicability.portfolio_applicability_ref,
+        methodology_ref=governance.methodology_ref,
+    )
+
+
 def evaluate_governance_evidence(
     request: RegimeScenarioPackRequest,
 ) -> GovernanceEvaluation:
     governance = SCENARIO_PACK_GOVERNANCE[request.scenario_pack_id]
-    reason_codes: list[str] = []
-    supportability = ScenarioSupportabilityState.READY
-
-    if governance.cio_approval_status != ScenarioPackApprovalStatus.APPROVED:
-        reason_codes.append("REGIME_SCENARIO_CIO_APPROVAL_NOT_CONFIRMED")
-        supportability = ScenarioSupportabilityState.BLOCKED
+    approval = cio_approval_decision(governance=governance)
+    reason_codes: list[str] = [*approval.reason_codes]
+    supportability = approval.supportability
 
     effective_period = effective_period_decision(
         governance=governance,
@@ -146,18 +185,10 @@ def evaluate_governance_evidence(
     )
 
     return GovernanceEvaluation(
-        evidence=ScenarioPackGovernanceEvidence(
-            cio_approval_status=governance.cio_approval_status,
-            cio_approval_ref=governance.cio_approval_ref,
-            approved_by=governance.approved_by,
-            approved_at=governance.approved_at,
-            effective_from=governance.effective_from,
-            effective_to=governance.effective_to,
-            effective_period_status=effective_period.status,
-            applicability_status=portfolio_applicability.status,
-            applicability_scope=list(governance.applicability_scope),
-            portfolio_applicability_ref=portfolio_applicability.portfolio_applicability_ref,
-            methodology_ref=governance.methodology_ref,
+        evidence=_governance_evidence(
+            governance=governance,
+            effective_period=effective_period,
+            portfolio_applicability=portfolio_applicability,
         ),
         reason_codes=reason_codes,
         supportability=supportability,

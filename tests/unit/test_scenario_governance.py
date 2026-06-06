@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+from dataclasses import replace
 
 from app.contracts.scenario import (
     RegimeScenarioPackRequest,
@@ -9,6 +10,7 @@ from app.contracts.scenario import (
 )
 from app.services.scenario_governance import (
     ScenarioPackGovernanceDefinition,
+    cio_approval_decision,
     effective_period_decision,
     evaluate_governance_evidence,
     most_severe_supportability,
@@ -44,6 +46,20 @@ def _request(**overrides: object) -> RegimeScenarioPackRequest:
     }
     payload.update(overrides)
     return RegimeScenarioPackRequest.model_validate(payload)
+
+
+def test_cio_approval_decision_covers_approved_and_not_approved_states() -> None:
+    approved = cio_approval_decision(governance=_governance())
+    not_approved = cio_approval_decision(
+        governance=replace(
+            _governance(), cio_approval_status=ScenarioPackApprovalStatus.NOT_APPROVED
+        )
+    )
+
+    assert approved.reason_codes == []
+    assert approved.supportability == ScenarioSupportabilityState.READY
+    assert not_approved.reason_codes == ["REGIME_SCENARIO_CIO_APPROVAL_NOT_CONFIRMED"]
+    assert not_approved.supportability == ScenarioSupportabilityState.BLOCKED
 
 
 def test_effective_period_decision_covers_active_not_yet_and_expired_states() -> None:
