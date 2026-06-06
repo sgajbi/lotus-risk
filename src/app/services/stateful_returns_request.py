@@ -7,6 +7,28 @@ from app.contracts.risk import RiskRequestPeriod
 from app.services.source_window import build_returns_series_window
 
 
+def _series_selection_payload(
+    *,
+    include_benchmark: bool,
+    include_risk_free: bool,
+) -> dict[str, bool]:
+    return {
+        "include_portfolio": True,
+        "include_benchmark": include_benchmark,
+        "include_risk_free": include_risk_free,
+    }
+
+
+def _data_policy_payload(
+    missing_data_policy: Literal["ALLOW_PARTIAL", "FAIL_FAST"],
+) -> dict[str, str]:
+    return {
+        "missing_data_policy": missing_data_policy,
+        "fill_method": "NONE",
+        "calendar_policy": "BUSINESS",
+    }
+
+
 def build_stateful_returns_series_request(
     *,
     portfolio_id: str,
@@ -30,16 +52,11 @@ def build_stateful_returns_series_request(
         "frequency": frequency,
         "metric_basis": metric_basis,
         "reporting_currency": reporting_currency,
-        "series_selection": {
-            "include_portfolio": True,
-            "include_benchmark": include_benchmark,
-            "include_risk_free": include_risk_free,
-        },
-        "data_policy": {
-            "missing_data_policy": missing_data_policy,
-            "fill_method": "NONE",
-            "calendar_policy": "BUSINESS",
-        },
+        "series_selection": _series_selection_payload(
+            include_benchmark=include_benchmark,
+            include_risk_free=include_risk_free,
+        ),
+        "data_policy": _data_policy_payload(missing_data_policy),
         "input_mode": "stateful",
         "stateful_input": {},
     }
