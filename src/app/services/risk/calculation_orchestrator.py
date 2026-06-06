@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 import pandas as pd
 from prometheus_client import Histogram
 
@@ -148,6 +150,48 @@ def _period_result(
     )
 
 
+def _build_single_period_result(
+    request: RiskStatelessCalculationInput,
+    *,
+    period_index: int,
+    annual_factor: int,
+    periodic_rf: float,
+    periodic_mar: float,
+    returns_df: pd.DataFrame,
+    benchmark_df: pd.DataFrame,
+    benchmark_metrics: Sequence[str],
+    duration_seconds: Histogram,
+) -> tuple[str, RiskPeriodResult]:
+    period_window = risk_period_window(
+        request=request,
+        period_index=period_index,
+        returns_df=returns_df,
+    )
+    metric_map, benchmark_context, aligned_count, benchmark_observation_count = (
+        calculate_period_metrics(
+            request,
+            start=period_window.start,
+            end=period_window.end,
+            annual_factor=annual_factor,
+            periodic_rf=periodic_rf,
+            periodic_mar=periodic_mar,
+            period_returns=period_window.returns,
+            benchmark_df=benchmark_df,
+            benchmark_metrics=benchmark_metrics,
+            duration_seconds=duration_seconds,
+        )
+    )
+
+    return period_window.name, _period_result(
+        period_window=period_window,
+        metric_map=metric_map,
+        benchmark_context=benchmark_context,
+        aligned_count=aligned_count,
+        benchmark_observation_count=benchmark_observation_count,
+        benchmark_df=benchmark_df,
+    )
+
+
 def build_period_results(
     request: RiskStatelessCalculationInput,
     *,
@@ -164,33 +208,17 @@ def build_period_results(
 
     results: dict[str, RiskPeriodResult] = {}
     for period_index, _period in enumerate(request.periods):
-        period_window = risk_period_window(
+        period_name, period_result = _build_single_period_result(
             request=request,
             period_index=period_index,
+            annual_factor=annual_factor,
+            periodic_rf=periodic_rf,
+            periodic_mar=periodic_mar,
             returns_df=returns_df,
-        )
-        metric_map, benchmark_context, aligned_count, benchmark_observation_count = (
-            calculate_period_metrics(
-                request,
-                start=period_window.start,
-                end=period_window.end,
-                annual_factor=annual_factor,
-                periodic_rf=periodic_rf,
-                periodic_mar=periodic_mar,
-                period_returns=period_window.returns,
-                benchmark_df=benchmark_df,
-                benchmark_metrics=benchmark_metrics_for_request,
-                duration_seconds=duration_seconds,
-            )
-        )
-
-        results[period_window.name] = _period_result(
-            period_window=period_window,
-            metric_map=metric_map,
-            benchmark_context=benchmark_context,
-            aligned_count=aligned_count,
-            benchmark_observation_count=benchmark_observation_count,
             benchmark_df=benchmark_df,
+            benchmark_metrics=benchmark_metrics_for_request,
+            duration_seconds=duration_seconds,
         )
+        results[period_name] = period_result
 
     return results
