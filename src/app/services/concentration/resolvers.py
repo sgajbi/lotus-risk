@@ -77,7 +77,21 @@ async def resolve_stateful(
         snapshot_payload=snapshot_payload,
     )
     baseline = _stateful_baseline_values(snapshot_state)
+    return _stateful_computation_input(
+        stateful=stateful,
+        snapshot_state=snapshot_state,
+        metadata=metadata,
+        baseline=baseline,
+    )
 
+
+def _stateful_computation_input(
+    *,
+    stateful: StatefulConcentrationInput,
+    snapshot_state: _StatefulSnapshotState,
+    metadata: ConcentrationMetadata,
+    baseline: _StatefulBaselineValues,
+) -> ConcentrationComputationInput:
     return ConcentrationComputationInput(
         input_mode=ConcentrationInputMode.STATEFUL,
         current_positions=baseline.positions,
