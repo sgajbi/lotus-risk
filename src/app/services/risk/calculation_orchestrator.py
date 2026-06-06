@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import Literal
 
 import pandas as pd
 from prometheus_client import Histogram
@@ -23,6 +24,7 @@ from app.services.risk.period_windows import RiskPeriodWindow, risk_period_windo
 
 BENCHMARK_METRICS = risk_helpers.BENCHMARK_METRICS
 RISK_FREE_METRICS = risk_helpers.RISK_METRICS_REQUIRING_RISK_FREE
+RiskFreeContextReason = Literal["NOT_REQUESTED", "ZERO_RATE", "ANNUAL_RATE_APPLIED"]
 
 
 def derive_annualization_factor(request: RiskStatelessCalculationInput) -> int:
@@ -61,8 +63,7 @@ def build_request_metadata(
     periodic_rf: float,
     calculation_supportability: RiskCalculationSupportability,
 ) -> RiskResponseMetadata:
-    risk_free_requested = any(metric in RISK_FREE_METRICS for metric in request.metrics)
-    benchmark_metrics = [str(metric) for metric in request.metrics if metric in BENCHMARK_METRICS]
+    benchmark_metrics = _requested_benchmark_metrics(request.metrics)
     return RiskResponseMetadata(
         request_fingerprint=fingerprint_model(request),
         frequency=request.options.frequency,
@@ -70,30 +71,56 @@ def build_request_metadata(
         use_log_returns=request.options.use_log_returns,
         risk_free_mode=request.options.risk_free_mode,
         risk_free_annual_rate=request.options.risk_free_annual_rate,
-        risk_free_context=RiskFreeContext(
-            requested=risk_free_requested,
-            applied=risk_free_requested,
-            reason=(
-                "NOT_REQUESTED"
-                if not risk_free_requested
-                else (
-                    "ANNUAL_RATE_APPLIED"
-                    if request.options.risk_free_mode == "ANNUAL_RATE"
-                    and request.options.risk_free_annual_rate is not None
-                    else "ZERO_RATE"
-                )
-            ),
-            periodic_rate=periodic_rf if risk_free_requested else 0.0,
+        risk_free_context=_risk_free_request_context(
+            request,
+            periodic_rf=periodic_rf,
         ),
-        benchmark_context=BenchmarkRequestContext(
-            requested=bool(benchmark_metrics),
-            requested_metrics=benchmark_metrics,
-        ),
+        benchmark_context=_benchmark_request_context(benchmark_metrics),
         calculation_supportability=calculation_supportability,
         mar_annual_rate=request.options.mar_annual_rate,
         var_method=request.options.var.method,
         var_confidence=request.options.var.confidence,
         var_horizon_days=request.options.var.horizon_days,
+    )
+
+
+def _risk_free_request_context(
+    request: RiskStatelessCalculationInput,
+    *,
+    periodic_rf: float,
+) -> RiskFreeContext:
+    requested = any(metric in RISK_FREE_METRICS for metric in request.metrics)
+    return RiskFreeContext(
+        requested=requested,
+        applied=requested,
+        reason=_risk_free_context_reason(request, requested=requested),
+        periodic_rate=periodic_rf if requested else 0.0,
+    )
+
+
+def _risk_free_context_reason(
+    request: RiskStatelessCalculationInput,
+    *,
+    requested: bool,
+) -> RiskFreeContextReason:
+    if not requested:
+        return "NOT_REQUESTED"
+    if (
+        request.options.risk_free_mode == "ANNUAL_RATE"
+        and request.options.risk_free_annual_rate is not None
+    ):
+        return "ANNUAL_RATE_APPLIED"
+    return "ZERO_RATE"
+
+
+def _requested_benchmark_metrics(metrics: Sequence[str]) -> list[str]:
+    return [str(metric) for metric in metrics if metric in BENCHMARK_METRICS]
+
+
+def _benchmark_request_context(benchmark_metrics: Sequence[str]) -> BenchmarkRequestContext:
+    return BenchmarkRequestContext(
+        requested=bool(benchmark_metrics),
+        requested_metrics=list(benchmark_metrics),
     )
 
 
