@@ -185,6 +185,35 @@ def _attribution_set_precalculation_result(
     )
 
 
+def _attribution_calculation_precalculation(
+    *,
+    attribution_type: AttributionType,
+    metric: AttributionMetric,
+    grouping_dimension: GroupingDimension,
+    returns_series: pd.Series,
+    benchmark_series: pd.Series,
+    exposure_weights: pd.DataFrame,
+    benchmark_weights: pd.DataFrame,
+    annualization_basis: int,
+    quality_flags: list[str],
+) -> AttributionPrecalculation:
+    calculation_inputs = attribution_calculation_inputs(
+        attribution_type=attribution_type,
+        returns_series=returns_series,
+        benchmark_series=benchmark_series,
+        exposure_weights=exposure_weights,
+        benchmark_weights=benchmark_weights,
+        annualization_basis=annualization_basis,
+    )
+    return _attribution_set_precalculation_result(
+        attribution_type=attribution_type,
+        metric=metric,
+        grouping_dimension=grouping_dimension,
+        calculation_inputs=calculation_inputs,
+        quality_flags=quality_flags,
+    )
+
+
 def build_attribution_set(
     *,
     attribution_type: AttributionType,
@@ -209,19 +238,15 @@ def build_attribution_set(
     if unsupported is not None:
         return unsupported
 
-    calculation_inputs = attribution_calculation_inputs(
+    precalculation = _attribution_calculation_precalculation(
         attribution_type=attribution_type,
+        metric=metric,
+        grouping_dimension=grouping_dimension,
         returns_series=returns_series,
         benchmark_series=benchmark_series,
         exposure_weights=exposure_weights,
         benchmark_weights=benchmark_weights,
         annualization_basis=annualization_basis,
-    )
-    precalculation = _attribution_set_precalculation_result(
-        attribution_type=attribution_type,
-        metric=metric,
-        grouping_dimension=grouping_dimension,
-        calculation_inputs=calculation_inputs,
         quality_flags=flags,
     )
     if precalculation.early_result is not None:

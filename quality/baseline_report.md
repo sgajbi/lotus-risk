@@ -38,7 +38,7 @@ documentation posture, and validation gates. It is not a completion claim.
 | src/app/services/concentration/parsing.py | 319 | 11074 |
 | tests/integration/test_risk_calculate_live_characterization.py | 314 | 12945 |
 | tests/integration/test_historical_attribution_live_characterization.py | 305 | 12343 |
-| tests/unit/test_trust_telemetry.py | 287 | 11497 |
+| src/app/services/attribution_decomposition.py | 292 | 9215 |
 
 ### Largest Functions And Classes
 
@@ -108,10 +108,10 @@ Success: no issues found in 302 source files
 ...
 src\app\upstream_errors.py                                    55      0     20      3    96%   181->194, 187->189, 192->194
 ------------------------------------------------------------------------------------------------------
-TOTAL                                                       5386     84    978     76    97%
+TOTAL                                                       5388     84    978     76    97%
 
 166 files skipped due to complete coverage.
-498 passed in 8.17s
+499 passed in 8.19s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -240,7 +240,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-498 tests collected in 1.50s
+499 tests collected in 1.51s
 ```
 - Import-linter report-only: passed
 
