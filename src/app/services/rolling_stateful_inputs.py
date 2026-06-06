@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
@@ -24,6 +25,12 @@ from app.services.stateful_returns_series_parser import (
     to_return_points,
 )
 from app.upstream_errors import missing_upstream_data
+
+
+@dataclass(frozen=True)
+class _ParsedRollingSourceSeries:
+    portfolio_points: list[ReturnPoint]
+    benchmark_points: list[ReturnPoint]
 
 
 __all__ = [
@@ -205,6 +212,40 @@ def _benchmark_points_or_raise(
     return benchmark_points
 
 
+def _parse_stateful_source_series(
+    source_response: dict[str, Any],
+    *,
+    include_benchmark: bool,
+) -> _ParsedRollingSourceSeries:
+    series, portfolio_points = extract_required_portfolio_returns(source_response)
+    return _ParsedRollingSourceSeries(
+        portfolio_points=portfolio_points,
+        benchmark_points=_benchmark_points_or_raise(
+            series,
+            include_benchmark=include_benchmark,
+        ),
+    )
+
+
+def _resolved_stateful_inputs(
+    *,
+    stateful: RollingStatefulInput,
+    include_risk_free: bool,
+    source_responses: StatefulSourceResponses,
+    parsed_series: _ParsedRollingSourceSeries,
+    risk_free_points: list[ReturnPoint],
+) -> ResolvedStatefulRollingInputs:
+    return ResolvedStatefulRollingInputs(
+        stateful=stateful,
+        include_risk_free=include_risk_free,
+        source_payload=source_responses.source_payload,
+        risk_free_request=source_responses.risk_free_request,
+        portfolio_points=parsed_series.portfolio_points,
+        benchmark_points=parsed_series.benchmark_points,
+        risk_free_points=risk_free_points,
+    )
+
+
 async def resolve_stateful_rolling_inputs(
     stateful: RollingStatefulInput,
     *,
@@ -230,9 +271,8 @@ async def resolve_stateful_rolling_inputs(
         include_risk_free=include_risk_free,
         reporting_currency=resolved_reporting_currency,
     )
-    series, portfolio_points = extract_required_portfolio_returns(source_responses.source_response)
-    benchmark_points = _benchmark_points_or_raise(
-        series,
+    parsed_series = _parse_stateful_source_series(
+        source_responses.source_response,
         include_benchmark=_requires_benchmark(stateful),
     )
     risk_free_dependency = await resolve_risk_free_dependency(
@@ -241,15 +281,13 @@ async def resolve_stateful_rolling_inputs(
         core_client=core_client,
         reporting_currency=resolved_reporting_currency,
         stateful=stateful,
-        portfolio_points=portfolio_points,
+        portfolio_points=parsed_series.portfolio_points,
         correlation_id=correlation_id,
     )
-    return ResolvedStatefulRollingInputs(
+    return _resolved_stateful_inputs(
         stateful=stateful,
         include_risk_free=include_risk_free,
-        source_payload=source_responses.source_payload,
-        risk_free_request=risk_free_dependency.request,
-        portfolio_points=portfolio_points,
-        benchmark_points=benchmark_points,
+        source_responses=source_responses,
+        parsed_series=parsed_series,
         risk_free_points=risk_free_dependency.points,
     )
