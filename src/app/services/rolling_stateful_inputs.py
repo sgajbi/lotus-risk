@@ -33,6 +33,13 @@ class _ParsedRollingSourceSeries:
     benchmark_points: list[ReturnPoint]
 
 
+@dataclass(frozen=True)
+class _RollingStatefulDependencySelection:
+    stateful: RollingStatefulInput
+    include_risk_free: bool
+    reporting_currency: str | None
+
+
 __all__ = [
     "LotusCoreClientProtocol",
     "LotusPerformanceClientProtocol",
@@ -119,6 +126,28 @@ def _requires_risk_free(stateful: RollingStatefulInput) -> bool:
 
 def _requires_benchmark(stateful: RollingStatefulInput) -> bool:
     return any(metric in ROLLING_BENCHMARK_METRICS for metric in stateful.rolling_options.metrics)
+
+
+async def _resolve_stateful_dependency_selection(
+    stateful: RollingStatefulInput,
+    *,
+    core_client: LotusCoreClientProtocol | None,
+    correlation_id: str | None,
+) -> _RollingStatefulDependencySelection:
+    include_risk_free = _requires_risk_free(stateful)
+    resolved_reporting_currency = await _resolve_reporting_currency(
+        stateful=stateful,
+        include_risk_free=include_risk_free,
+        core_client=core_client,
+        correlation_id=correlation_id,
+    )
+    if resolved_reporting_currency != stateful.reporting_currency:
+        stateful = stateful.model_copy(update={"reporting_currency": resolved_reporting_currency})
+    return _RollingStatefulDependencySelection(
+        stateful=stateful,
+        include_risk_free=include_risk_free,
+        reporting_currency=resolved_reporting_currency,
+    )
 
 
 def _explicit_risk_free_request(
@@ -253,40 +282,35 @@ async def resolve_stateful_rolling_inputs(
     core_client: LotusCoreClientProtocol | None = None,
     correlation_id: str | None,
 ) -> ResolvedStatefulRollingInputs:
-    include_risk_free = _requires_risk_free(stateful)
-    resolved_reporting_currency = await _resolve_reporting_currency(
-        stateful=stateful,
-        include_risk_free=include_risk_free,
+    dependency_selection = await _resolve_stateful_dependency_selection(
+        stateful,
         core_client=core_client,
         correlation_id=correlation_id,
     )
-    if resolved_reporting_currency != stateful.reporting_currency:
-        stateful = stateful.model_copy(update={"reporting_currency": resolved_reporting_currency})
-
     source_responses = await _fetch_stateful_source_responses(
-        stateful,
+        dependency_selection.stateful,
         performance_client=performance_client,
         core_client=core_client,
         correlation_id=correlation_id,
-        include_risk_free=include_risk_free,
-        reporting_currency=resolved_reporting_currency,
+        include_risk_free=dependency_selection.include_risk_free,
+        reporting_currency=dependency_selection.reporting_currency,
     )
     parsed_series = _parse_stateful_source_series(
         source_responses.source_response,
-        include_benchmark=_requires_benchmark(stateful),
+        include_benchmark=_requires_benchmark(dependency_selection.stateful),
     )
     risk_free_dependency = await resolve_risk_free_dependency(
-        include_risk_free=include_risk_free,
+        include_risk_free=dependency_selection.include_risk_free,
         source_responses=source_responses,
         core_client=core_client,
-        reporting_currency=resolved_reporting_currency,
-        stateful=stateful,
+        reporting_currency=dependency_selection.reporting_currency,
+        stateful=dependency_selection.stateful,
         portfolio_points=parsed_series.portfolio_points,
         correlation_id=correlation_id,
     )
     return _resolved_stateful_inputs(
-        stateful=stateful,
-        include_risk_free=include_risk_free,
+        stateful=dependency_selection.stateful,
+        include_risk_free=dependency_selection.include_risk_free,
         source_responses=source_responses,
         parsed_series=parsed_series,
         risk_free_points=risk_free_dependency.points,
