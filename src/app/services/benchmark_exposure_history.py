@@ -41,43 +41,59 @@ def _as_decimal(value: Any) -> Decimal:
 
 
 def _validate_lineage(response: dict[str, Any]) -> None:
-    if response.get("source_service") != "lotus-performance":
-        raise invalid_upstream_payload(
-            service="lotus-performance",
-            operation="/integration/benchmarks/exposure-context",
-            message=(
-                "lotus-performance benchmark exposure context missing "
-                "source_service=lotus-performance"
-            ),
-        )
-    if response.get("contract_version") != "v1":
-        raise invalid_upstream_payload(
-            service="lotus-performance",
-            operation="/integration/benchmarks/exposure-context",
-            message="lotus-performance benchmark exposure context missing contract_version=v1",
-        )
+    _require_context_value(
+        response,
+        field_name="source_service",
+        expected_value="lotus-performance",
+        message="source_service=lotus-performance",
+    )
+    _require_context_value(
+        response,
+        field_name="contract_version",
+        expected_value="v1",
+        message="contract_version=v1",
+    )
 
+    metadata = _metadata_object(response)
+    _require_context_value(
+        metadata,
+        field_name="source_system",
+        expected_value="lotus-core",
+        message="lotus-core lineage",
+    )
+    _require_context_value(
+        metadata,
+        field_name="served_by",
+        expected_value="lotus-performance",
+        message="served_by=lotus-performance",
+    )
+
+
+def _metadata_object(response: dict[str, Any]) -> dict[str, Any]:
     metadata = response.get("metadata")
-    if not isinstance(metadata, dict):
-        raise invalid_upstream_payload(
-            service="lotus-performance",
-            operation="/integration/benchmarks/exposure-context",
-            message="lotus-performance benchmark exposure context payload missing metadata object",
-        )
-    if metadata.get("source_system") != "lotus-core":
-        raise invalid_upstream_payload(
-            service="lotus-performance",
-            operation="/integration/benchmarks/exposure-context",
-            message="lotus-performance benchmark exposure context missing lotus-core lineage",
-        )
-    if metadata.get("served_by") != "lotus-performance":
-        raise invalid_upstream_payload(
-            service="lotus-performance",
-            operation="/integration/benchmarks/exposure-context",
-            message=(
-                "lotus-performance benchmark exposure context missing served_by=lotus-performance"
-            ),
-        )
+    if isinstance(metadata, dict):
+        return metadata
+    raise _invalid_benchmark_exposure_context("payload missing metadata object")
+
+
+def _require_context_value(
+    payload: dict[str, Any],
+    *,
+    field_name: str,
+    expected_value: str,
+    message: str,
+) -> None:
+    if payload.get(field_name) == expected_value:
+        return
+    raise _invalid_benchmark_exposure_context(f"missing {message}")
+
+
+def _invalid_benchmark_exposure_context(message: str) -> ValueError:
+    return invalid_upstream_payload(
+        service="lotus-performance",
+        operation="/integration/benchmarks/exposure-context",
+        message=f"lotus-performance benchmark exposure context {message}",
+    )
 
 
 def _build_request_payload(
