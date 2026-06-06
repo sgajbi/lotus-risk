@@ -137,18 +137,13 @@ def _calculate_period_attribution(
     )
 
 
-def calculate_historical_attribution(
-    request: HistoricalAttributionStatelessInput,
+def _historical_attribution_period_results(
     *,
-    input_mode: AttributionInputMode,
-) -> HistoricalAttributionResponse:
-    frames = build_source_frames(request)
-    if frames.returns_df.empty:
-        return _empty_attribution_response(request=request, input_mode=input_mode)
-
+    request: HistoricalAttributionStatelessInput,
+    frames: AttributionSourceFrames,
+    options: AttributionOptions,
+) -> dict[str, HistoricalAttributionPeriodResult]:
     open_timestamp = cast(pd.Timestamp, frames.returns_df.index.min())
-    options = request.attribution_options
-
     results: dict[str, HistoricalAttributionPeriodResult] = {}
     for period in request.periods:
         name, period_result = _calculate_period_attribution(
@@ -159,7 +154,24 @@ def calculate_historical_attribution(
             options=options,
         )
         results[name] = period_result
+    return results
 
+
+def calculate_historical_attribution(
+    request: HistoricalAttributionStatelessInput,
+    *,
+    input_mode: AttributionInputMode,
+) -> HistoricalAttributionResponse:
+    frames = build_source_frames(request)
+    if frames.returns_df.empty:
+        return _empty_attribution_response(request=request, input_mode=input_mode)
+
+    options = request.attribution_options
+    results = _historical_attribution_period_results(
+        request=request,
+        frames=frames,
+        options=options,
+    )
     calculation_supportability = supportability_from_attribution_results(
         returns=request.returns,
         as_of_date=request.scope.as_of_date,
