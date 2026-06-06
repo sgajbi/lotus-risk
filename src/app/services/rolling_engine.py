@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from typing import cast
 from collections.abc import Sequence
+from dataclasses import dataclass
+from typing import cast
 
 import pandas as pd
 
@@ -22,13 +23,25 @@ from app.services.calculation_supportability import (
     supportability_from_period_results,
 )
 from app.services.rolling_dependency_context import benchmark_context, risk_free_context
-from app.services.rolling_engine_models import RollingInputFrames, RollingPeriodSeries
+from app.services.rolling_engine_models import (
+    RollingInputFrames,
+    RollingPeriodSeries,
+    RollingPeriodWindowAggregate,
+)
 from app.services.rolling_metric_series import ROLLING_SHARPE_METRIC
 from app.services.rolling_period_series import (
     build_rolling_input_frames,
     rolling_period_series,
 )
 from app.services.rolling_window_calculation import rolling_period_window_aggregate
+
+
+@dataclass(frozen=True)
+class _RollingPeriodDependencyCounts:
+    benchmark_series_count: int
+    aligned_benchmark_series_count: int
+    risk_free_series_count: int
+    aligned_risk_free_series_count: int
 
 
 def _request_dependency_context(
@@ -148,32 +161,66 @@ def _calculate_period_result(
         options=options,
         requested_metrics=requested_metrics,
     )
+    return _calculated_period_result(
+        period_series,
+        aggregate=aggregate,
+        options=options,
+        requested_metrics=requested_metrics,
+    )
+
+
+def _calculated_period_result(
+    period_series: RollingPeriodSeries,
+    *,
+    aggregate: RollingPeriodWindowAggregate,
+    options: RollingOptions,
+    requested_metrics: Sequence[str],
+) -> RollingPeriodResult:
+    dependency_counts = _rolling_period_dependency_counts(
+        period_series=period_series,
+        aligned_benchmark_series_count=aggregate.aligned_benchmark_series_count,
+        aligned_risk_free_series_count=aggregate.aligned_risk_free_series_count,
+    )
 
     return RollingPeriodResult(
         start_date=period_series.start,
         end_date=period_series.end,
         series_count=len(period_series.portfolio_decimal),
-        benchmark_series_count=len(period_series.benchmark_decimal),
-        aligned_benchmark_series_count=aggregate.aligned_benchmark_series_count,
-        risk_free_series_count=len(period_series.risk_free_decimal),
-        aligned_risk_free_series_count=aggregate.aligned_risk_free_series_count,
+        benchmark_series_count=dependency_counts.benchmark_series_count,
+        aligned_benchmark_series_count=dependency_counts.aligned_benchmark_series_count,
+        risk_free_series_count=dependency_counts.risk_free_series_count,
+        aligned_risk_free_series_count=dependency_counts.aligned_risk_free_series_count,
         window_lengths_requested=list(options.window_lengths),
         window_count_requested=len(options.window_lengths),
         window_lengths_emitted=[result.window_length for result in aggregate.window_results],
         window_count_emitted=len(aggregate.window_results),
         benchmark_context=benchmark_context(
             requested_metrics,
-            benchmark_series_count=len(period_series.benchmark_decimal),
-            aligned_benchmark_series_count=aggregate.aligned_benchmark_series_count,
+            benchmark_series_count=dependency_counts.benchmark_series_count,
+            aligned_benchmark_series_count=dependency_counts.aligned_benchmark_series_count,
         ),
         risk_free_context=risk_free_context(
             requested_metrics,
-            risk_free_series_count=len(period_series.risk_free_decimal),
-            aligned_risk_free_series_count=aggregate.aligned_risk_free_series_count,
+            risk_free_series_count=dependency_counts.risk_free_series_count,
+            aligned_risk_free_series_count=dependency_counts.aligned_risk_free_series_count,
         ),
         window_results=aggregate.window_results,
         quality_flags=sorted(aggregate.quality_flags),
         error=None,
+    )
+
+
+def _rolling_period_dependency_counts(
+    *,
+    period_series: RollingPeriodSeries,
+    aligned_benchmark_series_count: int,
+    aligned_risk_free_series_count: int,
+) -> _RollingPeriodDependencyCounts:
+    return _RollingPeriodDependencyCounts(
+        benchmark_series_count=len(period_series.benchmark_decimal),
+        aligned_benchmark_series_count=aligned_benchmark_series_count,
+        risk_free_series_count=len(period_series.risk_free_decimal),
+        aligned_risk_free_series_count=aligned_risk_free_series_count,
     )
 
 
