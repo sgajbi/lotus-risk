@@ -44,13 +44,7 @@ def relative_benchmark_result(
             ),
         )
 
-    aligned = pd.merge(
-        series.portfolio_returns.to_frame("portfolio"),
-        series.benchmark_returns.to_frame("benchmark"),
-        left_index=True,
-        right_index=True,
-        how="inner",
-    )
+    aligned = _aligned_relative_returns(series)
     relative_context = _relative_benchmark_context(
         include_benchmark=include_benchmark,
         benchmark_available=series.benchmark_available,
@@ -59,16 +53,36 @@ def relative_benchmark_result(
     if aligned.empty:
         return RelativeBenchmarkResult(summary=None, context=relative_context)
 
+    return RelativeBenchmarkResult(
+        summary=_relative_drawdown_summary(
+            _active_drawdown_summary(aligned=aligned, analysis_options=analysis_options)
+        ),
+        context=relative_context,
+    )
+
+
+def _aligned_relative_returns(series: RelativeBenchmarkSeries) -> pd.DataFrame:
+    return pd.merge(
+        series.portfolio_returns.to_frame("portfolio"),
+        series.benchmark_returns.to_frame("benchmark"),
+        left_index=True,
+        right_index=True,
+        how="inner",
+    )
+
+
+def _active_drawdown_summary(
+    *,
+    aligned: pd.DataFrame,
+    analysis_options: DrawdownAnalysisOptions,
+) -> DrawdownSummary:
     active_drawdown = _drawdown_from_returns(aligned["portfolio"] - aligned["benchmark"])
     active_summary, _ = _drawdown_summary(
         active_drawdown,
         alpha=float(analysis_options.cdar_alpha),
         duration_unit=analysis_options.duration_unit,
     )
-    return RelativeBenchmarkResult(
-        summary=_relative_drawdown_summary(active_summary),
-        context=relative_context,
-    )
+    return active_summary
 
 
 def _relative_benchmark_context(
