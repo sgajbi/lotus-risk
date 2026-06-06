@@ -28,6 +28,13 @@ class RollingMetricCalculation:
     aligned_risk_free_series_count: int
 
 
+@dataclass(frozen=True)
+class _AlignedBenchmarkSeries:
+    portfolio: pd.Series
+    benchmark: pd.Series
+    observation_count: int
+
+
 def min_observations(window_length: int, policy: str) -> int:
     if policy == "ALLOW_PARTIAL":
         return 2
@@ -232,6 +239,14 @@ def _aligned_portfolio_benchmark(
     )
 
 
+def _aligned_benchmark_series(aligned: pd.DataFrame) -> _AlignedBenchmarkSeries:
+    return _AlignedBenchmarkSeries(
+        portfolio=aligned["portfolio"],
+        benchmark=aligned["benchmark"],
+        observation_count=int(aligned.shape[0]),
+    )
+
+
 def _active_rolling_returns(
     portfolio: pd.Series,
     benchmark: pd.Series,
@@ -290,6 +305,43 @@ def _rolling_beta_metric(
     return result, flags
 
 
+def _calculate_aligned_rolling_benchmark_metric(
+    metric_name: str,
+    aligned_series: _AlignedBenchmarkSeries,
+    *,
+    window_length: int,
+    annualization_basis: int,
+    min_obs: int,
+) -> tuple[pd.Series, list[str]]:
+    if metric_name == "ROLLING_TRACKING_ERROR":
+        return _rolling_tracking_error(
+            aligned_series.portfolio,
+            aligned_series.benchmark,
+            window_length=window_length,
+            annualization_basis=annualization_basis,
+            min_obs=min_obs,
+        )
+
+    if metric_name == "ROLLING_INFORMATION_RATIO":
+        return _rolling_information_ratio(
+            aligned_series.portfolio,
+            aligned_series.benchmark,
+            window_length=window_length,
+            annualization_basis=annualization_basis,
+            min_obs=min_obs,
+        )
+
+    if metric_name == "ROLLING_BETA":
+        return _rolling_beta_metric(
+            aligned_series.portfolio,
+            aligned_series.benchmark,
+            window_length=window_length,
+            min_obs=min_obs,
+        )
+
+    raise ValueError(f"Unsupported rolling benchmark metric: {metric_name}")
+
+
 def _rolling_benchmark_metrics(
     metric_name: str,
     portfolio_decimal: pd.Series,
@@ -303,39 +355,15 @@ def _rolling_benchmark_metrics(
     if aligned.empty:
         return pd.Series(dtype="float64"), [f"metric:{metric_name}:alignment_empty"], 0
 
-    portfolio = aligned["portfolio"]
-    benchmark = aligned["benchmark"]
-
-    if metric_name == "ROLLING_TRACKING_ERROR":
-        result, flags = _rolling_tracking_error(
-            portfolio,
-            benchmark,
-            window_length=window_length,
-            annualization_basis=annualization_basis,
-            min_obs=min_obs,
-        )
-        return result, flags, int(aligned.shape[0])
-
-    if metric_name == "ROLLING_INFORMATION_RATIO":
-        result, flags = _rolling_information_ratio(
-            portfolio,
-            benchmark,
-            window_length=window_length,
-            annualization_basis=annualization_basis,
-            min_obs=min_obs,
-        )
-        return result, flags, int(aligned.shape[0])
-
-    if metric_name == "ROLLING_BETA":
-        result, flags = _rolling_beta_metric(
-            portfolio,
-            benchmark,
-            window_length=window_length,
-            min_obs=min_obs,
-        )
-        return result, flags, int(aligned.shape[0])
-
-    raise ValueError(f"Unsupported rolling benchmark metric: {metric_name}")
+    aligned_series = _aligned_benchmark_series(aligned)
+    result, flags = _calculate_aligned_rolling_benchmark_metric(
+        metric_name,
+        aligned_series,
+        window_length=window_length,
+        annualization_basis=annualization_basis,
+        min_obs=min_obs,
+    )
+    return result, flags, aligned_series.observation_count
 
 
 def _rolling_max_drawdown_metric(
