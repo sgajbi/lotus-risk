@@ -194,6 +194,60 @@ async def build_issuer_map(
     return issuer_map
 
 
+def _position_timeseries_operation(portfolio_id: str) -> str:
+    return f"/integration/portfolios/{portfolio_id}/analytics/position-timeseries"
+
+
+def _require_position_timeseries_rows(
+    *,
+    rows: list[dict[str, Any]],
+    portfolio_id: str,
+) -> None:
+    if not rows:
+        raise missing_upstream_data(
+            service="lotus-core",
+            operation=_position_timeseries_operation(portfolio_id),
+            message="lotus-core position-timeseries returned no rows",
+        )
+
+
+async def _issuer_map_for_grouping_dimensions(
+    *,
+    core_client: LotusCoreClientProtocol,
+    rows: list[dict[str, Any]],
+    grouping_dimensions: list[GroupingDimension],
+    correlation_id: str | None,
+) -> dict[str, tuple[str, str | None]]:
+    if "ISSUER" not in grouping_dimensions:
+        return {}
+    return await build_issuer_map(
+        core_client=core_client,
+        rows=rows,
+        correlation_id=correlation_id,
+    )
+
+
+def _validated_exposure_history(
+    *,
+    rows: list[dict[str, Any]],
+    grouping_dimensions: list[GroupingDimension],
+    issuer_map: dict[str, tuple[str, str | None]],
+    portfolio_id: str,
+) -> list[ExposurePoint]:
+    exposure_history = build_exposure_points(
+        rows=rows,
+        grouping_dimensions=grouping_dimensions,
+        issuer_map=issuer_map,
+    )
+    if not exposure_history:
+        raise missing_upstream_data(
+            service="lotus-core",
+            operation=_position_timeseries_operation(portfolio_id),
+            message="unable to build exposure history from lotus-core position-timeseries",
+        )
+    return exposure_history
+
+
 async def fetch_stateful_exposure_history(
     *,
     stateful: HistoricalAttributionStatefulInput,
@@ -211,31 +265,16 @@ async def fetch_stateful_exposure_history(
         grouping_dimensions=grouping_dimensions,
         correlation_id=correlation_id,
     )
-    if not rows:
-        raise missing_upstream_data(
-            service="lotus-core",
-            operation=f"/integration/portfolios/{stateful.portfolio_id}/analytics/position-timeseries",
-            message="lotus-core position-timeseries returned no rows",
-        )
-
-    issuer_map = (
-        await build_issuer_map(
-            core_client=core_client,
-            rows=rows,
-            correlation_id=correlation_id,
-        )
-        if "ISSUER" in grouping_dimensions
-        else {}
+    _require_position_timeseries_rows(rows=rows, portfolio_id=stateful.portfolio_id)
+    issuer_map = await _issuer_map_for_grouping_dimensions(
+        core_client=core_client,
+        rows=rows,
+        grouping_dimensions=grouping_dimensions,
+        correlation_id=correlation_id,
     )
-    exposure_history = build_exposure_points(
+    return _validated_exposure_history(
         rows=rows,
         grouping_dimensions=grouping_dimensions,
         issuer_map=issuer_map,
+        portfolio_id=stateful.portfolio_id,
     )
-    if not exposure_history:
-        raise missing_upstream_data(
-            service="lotus-core",
-            operation=f"/integration/portfolios/{stateful.portfolio_id}/analytics/position-timeseries",
-            message="unable to build exposure history from lotus-core position-timeseries",
-        )
-    return exposure_history
