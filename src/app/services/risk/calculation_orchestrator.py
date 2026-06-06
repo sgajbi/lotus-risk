@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import dataclass
 from typing import Literal
 
 import pandas as pd
@@ -25,6 +26,14 @@ from app.services.risk.period_windows import RiskPeriodWindow, risk_period_windo
 BENCHMARK_METRICS = risk_helpers.BENCHMARK_METRICS
 RISK_FREE_METRICS = risk_helpers.RISK_METRICS_REQUIRING_RISK_FREE
 RiskFreeContextReason = Literal["NOT_REQUESTED", "ZERO_RATE", "ANNUAL_RATE_APPLIED"]
+
+
+@dataclass(frozen=True)
+class _PeriodMetricCalculation:
+    metric_map: dict[str, RiskValue]
+    benchmark_context: BenchmarkContextPayload | None
+    aligned_count: int
+    benchmark_observation_count: int
 
 
 def derive_annualization_factor(request: RiskStatelessCalculationInput) -> int:
@@ -177,6 +186,45 @@ def _period_result(
     )
 
 
+def _period_metric_calculation(
+    request: RiskStatelessCalculationInput,
+    *,
+    period_window: RiskPeriodWindow,
+    annual_factor: int,
+    periodic_rf: float,
+    periodic_mar: float,
+    benchmark_df: pd.DataFrame,
+    benchmark_metrics: Sequence[str],
+    duration_seconds: Histogram,
+) -> _PeriodMetricCalculation:
+    return _period_metric_calculation_result(
+        calculate_period_metrics(
+            request,
+            start=period_window.start,
+            end=period_window.end,
+            annual_factor=annual_factor,
+            periodic_rf=periodic_rf,
+            periodic_mar=periodic_mar,
+            period_returns=period_window.returns,
+            benchmark_df=benchmark_df,
+            benchmark_metrics=benchmark_metrics,
+            duration_seconds=duration_seconds,
+        )
+    )
+
+
+def _period_metric_calculation_result(
+    result: tuple[dict[str, RiskValue], BenchmarkContextPayload | None, int, int],
+) -> _PeriodMetricCalculation:
+    metric_map, benchmark_context, aligned_count, benchmark_observation_count = result
+    return _PeriodMetricCalculation(
+        metric_map=metric_map,
+        benchmark_context=benchmark_context,
+        aligned_count=aligned_count,
+        benchmark_observation_count=benchmark_observation_count,
+    )
+
+
 def _build_single_period_result(
     request: RiskStatelessCalculationInput,
     *,
@@ -194,27 +242,23 @@ def _build_single_period_result(
         period_index=period_index,
         returns_df=returns_df,
     )
-    metric_map, benchmark_context, aligned_count, benchmark_observation_count = (
-        calculate_period_metrics(
-            request,
-            start=period_window.start,
-            end=period_window.end,
-            annual_factor=annual_factor,
-            periodic_rf=periodic_rf,
-            periodic_mar=periodic_mar,
-            period_returns=period_window.returns,
-            benchmark_df=benchmark_df,
-            benchmark_metrics=benchmark_metrics,
-            duration_seconds=duration_seconds,
-        )
+    calculation = _period_metric_calculation(
+        request,
+        period_window=period_window,
+        annual_factor=annual_factor,
+        periodic_rf=periodic_rf,
+        periodic_mar=periodic_mar,
+        benchmark_df=benchmark_df,
+        benchmark_metrics=benchmark_metrics,
+        duration_seconds=duration_seconds,
     )
 
     return period_window.name, _period_result(
         period_window=period_window,
-        metric_map=metric_map,
-        benchmark_context=benchmark_context,
-        aligned_count=aligned_count,
-        benchmark_observation_count=benchmark_observation_count,
+        metric_map=calculation.metric_map,
+        benchmark_context=calculation.benchmark_context,
+        aligned_count=calculation.aligned_count,
+        benchmark_observation_count=calculation.benchmark_observation_count,
         benchmark_df=benchmark_df,
     )
 
