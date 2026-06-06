@@ -36,17 +36,10 @@ async def resolve_simulation_session(
             created_by=actor_id or SERVICE_NAME,
             correlation_id=correlation_id,
         )
-        session_record = session_response.get("session")
-        if not isinstance(session_record, dict):
-            raise ValueError(
-                "lotus-core create simulation session returned invalid response payload"
-            )
-        resolved_session_id = _as_str(session_record.get("session_id"))
-        if not resolved_session_id:
-            raise ValueError("lotus-core create simulation session response missing session_id")
-        session_id = resolved_session_id
-        session_version = _as_int(session_record.get("version"))
-        session_expires_at = _as_datetime(session_record.get("expires_at"))
+        created_session = _created_simulation_session(session_response)
+        session_id = created_session.session_id
+        session_version = created_session.version
+        session_expires_at = created_session.expires_at
 
     if session_id is None:
         raise ValueError("simulation session_id could not be resolved")
@@ -54,6 +47,20 @@ async def resolve_simulation_session(
         session_id=session_id,
         version=session_version,
         expires_at=session_expires_at,
+    )
+
+
+def _created_simulation_session(session_response: dict[str, Any]) -> SimulationSession:
+    session_record = session_response.get("session")
+    if not isinstance(session_record, dict):
+        raise ValueError("lotus-core create simulation session returned invalid response payload")
+    session_id = _as_str(session_record.get("session_id"))
+    if not session_id:
+        raise ValueError("lotus-core create simulation session response missing session_id")
+    return SimulationSession(
+        session_id=session_id,
+        version=_as_int(session_record.get("version")),
+        expires_at=_as_datetime(session_record.get("expires_at")),
     )
 
 
