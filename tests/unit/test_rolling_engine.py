@@ -1,7 +1,9 @@
 import pytest
+import pandas as pd
 
 from app.contracts.rolling import RollingInputMode, RollingStatelessInput
 from app.services.rolling_engine import calculate_rolling_metrics
+from app.services.rolling_metric_series import calculate_rolling_metric_values
 
 
 def _base_input() -> RollingStatelessInput:
@@ -70,6 +72,21 @@ def test_rolling_engine_returns_window_results_and_metadata() -> None:
     assert window.metric_summaries["ROLLING_MAX_DRAWDOWN"].minimum is not None
     assert window.metric_series is not None
     assert len(window.metric_series) > 0
+
+
+def test_rolling_metric_dispatch_rejects_unknown_metric() -> None:
+    series = pd.Series([0.01, 0.02, -0.01])
+
+    with pytest.raises(ValueError, match="Unsupported rolling metric"):
+        calculate_rolling_metric_values(
+            "ROLLING_UNKNOWN",
+            portfolio_decimal=series,
+            benchmark_decimal=pd.Series(dtype="float64"),
+            risk_free_decimal=pd.Series(dtype="float64"),
+            window_length=3,
+            annualization_basis=252,
+            min_obs=3,
+        )
 
 
 def test_rolling_volatility_matches_documented_decimal_methodology() -> None:

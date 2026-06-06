@@ -45,16 +45,13 @@ def calculate_rolling_metric_values(
     min_obs: int,
 ) -> RollingMetricCalculation:
     if metric_name == "ROLLING_VOLATILITY":
-        return RollingMetricCalculation(
-            values=_rolling_volatility(
+        return _without_dependency_counts(
+            _rolling_volatility(
                 portfolio_decimal,
                 window_length=window_length,
                 annualization_basis=annualization_basis,
                 min_obs=min_obs,
-            ),
-            quality_flags=[],
-            aligned_benchmark_series_count=0,
-            aligned_risk_free_series_count=0,
+            )
         )
     if metric_name == ROLLING_SHARPE_METRIC:
         metric_values, flags, aligned_count = _rolling_sharpe(
@@ -64,12 +61,7 @@ def calculate_rolling_metric_values(
             annualization_basis=annualization_basis,
             min_obs=min_obs,
         )
-        return RollingMetricCalculation(
-            values=metric_values,
-            quality_flags=flags,
-            aligned_benchmark_series_count=0,
-            aligned_risk_free_series_count=aligned_count,
-        )
+        return _with_risk_free_count(metric_values, flags, aligned_count)
     if metric_name in ROLLING_BENCHMARK_METRICS:
         metric_values, flags, aligned_count = _rolling_benchmark_metrics(
             metric_name,
@@ -79,24 +71,51 @@ def calculate_rolling_metric_values(
             annualization_basis=annualization_basis,
             min_obs=min_obs,
         )
-        return RollingMetricCalculation(
-            values=metric_values,
-            quality_flags=flags,
-            aligned_benchmark_series_count=aligned_count,
-            aligned_risk_free_series_count=0,
-        )
+        return _with_benchmark_count(metric_values, flags, aligned_count)
     if metric_name == ROLLING_MAX_DRAWDOWN_METRIC:
-        return RollingMetricCalculation(
-            values=_rolling_max_drawdown_metric(
+        return _without_dependency_counts(
+            _rolling_max_drawdown_metric(
                 portfolio_decimal,
                 window_length=window_length,
                 min_obs=min_obs,
-            ),
-            quality_flags=[],
-            aligned_benchmark_series_count=0,
-            aligned_risk_free_series_count=0,
+            )
         )
     raise ValueError(f"Unsupported rolling metric: {metric_name}")
+
+
+def _without_dependency_counts(values: pd.Series) -> RollingMetricCalculation:
+    return RollingMetricCalculation(
+        values=values,
+        quality_flags=[],
+        aligned_benchmark_series_count=0,
+        aligned_risk_free_series_count=0,
+    )
+
+
+def _with_benchmark_count(
+    values: pd.Series,
+    quality_flags: list[str],
+    aligned_count: int,
+) -> RollingMetricCalculation:
+    return RollingMetricCalculation(
+        values=values,
+        quality_flags=quality_flags,
+        aligned_benchmark_series_count=aligned_count,
+        aligned_risk_free_series_count=0,
+    )
+
+
+def _with_risk_free_count(
+    values: pd.Series,
+    quality_flags: list[str],
+    aligned_count: int,
+) -> RollingMetricCalculation:
+    return RollingMetricCalculation(
+        values=values,
+        quality_flags=quality_flags,
+        aligned_benchmark_series_count=0,
+        aligned_risk_free_series_count=aligned_count,
+    )
 
 
 def _rolling_volatility(

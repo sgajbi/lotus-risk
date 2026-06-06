@@ -28,9 +28,9 @@ documentation posture, and validation gates. It is not a completion claim.
 | tests/integration/test_rolling_metrics_endpoint.py | 566 | 22142 |
 | tests/unit/test_lotus_performance_client.py | 556 | 20504 |
 | tests/unit/test_rolling_mode_adapter.py | 444 | 16926 |
+| tests/unit/test_rolling_engine.py | 428 | 17052 |
 | tests/unit/test_drawdown_engine.py | 422 | 16234 |
 | tests/integration/test_rolling_live_characterization.py | 418 | 16694 |
-| tests/unit/test_rolling_engine.py | 411 | 16442 |
 | tests/unit/test_risk_engine.py | 395 | 15947 |
 | tests/unit/test_concentration_engine.py | 394 | 16053 |
 | tests/unit/test_risk_engine_branch_coverage.py | 353 | 13642 |
@@ -61,9 +61,9 @@ documentation posture, and validation gates. It is not a completion claim.
 | src/app/contracts/risk_stateful_inputs.py | StatefulRiskInput | ClassDef | 64 |
 | src/app/contracts/attribution_request_inputs.py | HistoricalAttributionRequest | ClassDef | 63 |
 | src/app/contracts/scenario_inputs.py | RegimeScenarioPackRequest | ClassDef | 63 |
-| src/app/services/rolling_metric_series.py | calculate_rolling_metric_values | FunctionDef | 63 |
 | src/app/contracts/concentration_metadata_outputs.py | ConcentrationMetadata | ClassDef | 62 |
 | src/app/contracts/drawdown_metric_outputs.py | DrawdownSummary | ClassDef | 61 |
+| src/app/contracts/risk_request_inputs.py | RiskAnalyticsRequest | ClassDef | 60 |
 
 ## Tool Baseline
 
@@ -100,18 +100,18 @@ Success: no issues found in 302 source files
 
 ```text
 ........................................................................ [ 14%]
-........................................................................ [ 29%]
+........................................................................ [ 28%]
 ........................................................................ [ 43%]
-........................................................................ [ 58%]
+........................................................................ [ 57%]
 ........................................................................ [ 72%]
-........................................................................ [ 87%]
+........................................................................ [ 86%]
 ...
 src\app\upstream_errors.py                                    55      0     20      3    96%   181->194, 187->189, 192->194
 ------------------------------------------------------------------------------------------------------
-TOTAL                                                       5371     85    978     77    97%
+TOTAL                                                       5377     84    978     76    97%
 
 166 files skipped due to complete coverage.
-496 passed in 8.11s
+497 passed in 8.49s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -240,7 +240,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-496 tests collected in 1.45s
+497 tests collected in 1.51s
 ```
 - Import-linter report-only: passed
 
