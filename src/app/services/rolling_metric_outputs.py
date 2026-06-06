@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import date
 from typing import cast
 
@@ -12,38 +13,28 @@ from app.contracts.rolling import (
 )
 
 
+@dataclass(frozen=True)
+class _RollingMetricSummaryCounts:
+    total_point_count: int
+    computed_point_count: int
+    warmup_point_count: int
+    non_computed_point_count: int
+    post_warmup_gap_point_count: int
+
+
 def rolling_metric_summary(values: pd.Series, *, min_obs: int) -> RollingMetricSummary:
     clean = values.dropna()
-    total_point_count = int(values.shape[0])
-    warmup_point_count = min(total_point_count, max(min_obs - 1, 0))
-    non_computed_point_count = total_point_count - int(clean.count())
-    post_warmup_gap_point_count = max(non_computed_point_count - warmup_point_count, 0)
+    counts = _rolling_metric_summary_counts(values=values, clean=clean, min_obs=min_obs)
     if clean.empty:
-        return RollingMetricSummary(
-            total_point_count=total_point_count,
-            computed_point_count=0,
-            coverage_ratio=0.0,
-            min_observations_required=min_obs,
-            warmup_point_count=warmup_point_count,
-            non_computed_point_count=non_computed_point_count,
-            post_warmup_gap_point_count=post_warmup_gap_point_count,
-            latest_observation_date=None,
-            latest=None,
-            average=None,
-            minimum=None,
-            maximum=None,
-            p05=None,
-            p50=None,
-            p95=None,
-        )
+        return _empty_rolling_metric_summary(counts=counts, min_obs=min_obs)
     return RollingMetricSummary(
-        total_point_count=total_point_count,
-        computed_point_count=int(clean.count()),
-        coverage_ratio=float(clean.count() / total_point_count) if total_point_count else 0.0,
+        total_point_count=counts.total_point_count,
+        computed_point_count=counts.computed_point_count,
+        coverage_ratio=_coverage_ratio(counts),
         min_observations_required=min_obs,
-        warmup_point_count=warmup_point_count,
-        non_computed_point_count=non_computed_point_count,
-        post_warmup_gap_point_count=post_warmup_gap_point_count,
+        warmup_point_count=counts.warmup_point_count,
+        non_computed_point_count=counts.non_computed_point_count,
+        post_warmup_gap_point_count=counts.post_warmup_gap_point_count,
         latest_observation_date=cast(pd.Timestamp, clean.index[-1]).date(),
         latest=float(clean.iloc[-1]),
         average=float(clean.mean()),
@@ -52,6 +43,55 @@ def rolling_metric_summary(values: pd.Series, *, min_obs: int) -> RollingMetricS
         p05=float(clean.quantile(0.05)),
         p50=float(clean.quantile(0.50)),
         p95=float(clean.quantile(0.95)),
+    )
+
+
+def _rolling_metric_summary_counts(
+    *,
+    values: pd.Series,
+    clean: pd.Series,
+    min_obs: int,
+) -> _RollingMetricSummaryCounts:
+    total_point_count = int(values.shape[0])
+    warmup_point_count = min(total_point_count, max(min_obs - 1, 0))
+    computed_point_count = int(clean.count())
+    non_computed_point_count = total_point_count - computed_point_count
+    return _RollingMetricSummaryCounts(
+        total_point_count=total_point_count,
+        computed_point_count=computed_point_count,
+        warmup_point_count=warmup_point_count,
+        non_computed_point_count=non_computed_point_count,
+        post_warmup_gap_point_count=max(non_computed_point_count - warmup_point_count, 0),
+    )
+
+
+def _coverage_ratio(counts: _RollingMetricSummaryCounts) -> float:
+    if counts.total_point_count == 0:
+        return 0.0
+    return float(counts.computed_point_count / counts.total_point_count)
+
+
+def _empty_rolling_metric_summary(
+    *,
+    counts: _RollingMetricSummaryCounts,
+    min_obs: int,
+) -> RollingMetricSummary:
+    return RollingMetricSummary(
+        total_point_count=counts.total_point_count,
+        computed_point_count=0,
+        coverage_ratio=0.0,
+        min_observations_required=min_obs,
+        warmup_point_count=counts.warmup_point_count,
+        non_computed_point_count=counts.non_computed_point_count,
+        post_warmup_gap_point_count=counts.post_warmup_gap_point_count,
+        latest_observation_date=None,
+        latest=None,
+        average=None,
+        minimum=None,
+        maximum=None,
+        p05=None,
+        p50=None,
+        p95=None,
     )
 
 
