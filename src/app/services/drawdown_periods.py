@@ -11,11 +11,13 @@ from app.contracts.drawdown import (
     DrawdownAnalysisOptions,
     DrawdownEpisode,
     DrawdownPeriodResult,
+    DrawdownSummary,
     RelativeDrawdownContext,
     DrawdownStatelessInput,
 )
 from app.contracts.risk import ReturnPoint, RiskRequestPeriod
 from app.services.drawdown_relative_benchmark import (
+    RelativeBenchmarkResult,
     RelativeBenchmarkSeries,
     relative_benchmark_result,
 )
@@ -168,7 +170,28 @@ def _calculate_period_result(
         alpha=float(analysis_options.cdar_alpha),
         duration_unit=analysis_options.duration_unit,
     )
-    relative = relative_benchmark_result(
+    relative = _period_relative_benchmark_result(
+        period_series,
+        analysis_options=analysis_options,
+        include_benchmark=include_benchmark,
+    )
+    return _calculated_period_result(
+        period_series,
+        analysis_options=analysis_options,
+        drawdown=drawdown,
+        summary=summary,
+        episodes=episodes,
+        relative=relative,
+    )
+
+
+def _period_relative_benchmark_result(
+    period_series: DrawdownPeriodSeries,
+    *,
+    analysis_options: DrawdownAnalysisOptions,
+    include_benchmark: bool | None,
+) -> RelativeBenchmarkResult:
+    return relative_benchmark_result(
         RelativeBenchmarkSeries(
             portfolio_returns=period_series.portfolio_returns,
             benchmark_returns=period_series.benchmark_returns,
@@ -177,6 +200,17 @@ def _calculate_period_result(
         include_benchmark=include_benchmark,
         analysis_options=analysis_options,
     )
+
+
+def _calculated_period_result(
+    period_series: DrawdownPeriodSeries,
+    *,
+    analysis_options: DrawdownAnalysisOptions,
+    drawdown: pd.Series,
+    summary: DrawdownSummary,
+    episodes: list[EpisodeRecord],
+    relative: RelativeBenchmarkResult,
+) -> DrawdownPeriodResult:
     return DrawdownPeriodResult(
         start_date=period_series.start,
         end_date=period_series.end,
