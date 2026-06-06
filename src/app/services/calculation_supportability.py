@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from typing import Any
 
 from app.contracts.risk import (
@@ -17,6 +18,13 @@ from app.services.supportability_periods import (
     select_supportability_reason,
     supportability_reason_for_error,
 )
+
+
+@dataclass(frozen=True)
+class _RiskMetricSupportabilityScan:
+    degraded_reasons: list[RiskSupportabilityReason]
+    empty_period_count: int
+    degraded_metric_count: int
 
 
 def default_calculation_supportability() -> RiskCalculationSupportability:
@@ -117,6 +125,23 @@ def supportability_from_risk_metric_results(
     if supportability.state == "empty":
         return supportability
 
+    scan = _scan_risk_metric_supportability(results)
+    if scan.degraded_metric_count:
+        freshness_bucket = freshness_bucket_from_returns(returns, as_of_date=as_of_date)
+        return RiskCalculationSupportability(
+            state="degraded",
+            reason=select_supportability_reason(scan.degraded_reasons),
+            freshness_bucket=freshness_bucket,
+            degraded_metric_count=scan.degraded_metric_count,
+            empty_period_count=scan.empty_period_count,
+            evaluated_period_count=len(results),
+        )
+    return supportability
+
+
+def _scan_risk_metric_supportability(
+    results: Mapping[str, Any],
+) -> _RiskMetricSupportabilityScan:
     degraded_reasons: list[RiskSupportabilityReason] = []
     empty_period_count = 0
     degraded_metric_count = 0
@@ -135,17 +160,11 @@ def supportability_from_risk_metric_results(
                 degraded_metric_count += 1
                 degraded_reasons.append(supportability_reason_for_error(error))
 
-    if degraded_metric_count:
-        freshness_bucket = freshness_bucket_from_returns(returns, as_of_date=as_of_date)
-        return RiskCalculationSupportability(
-            state="degraded",
-            reason=select_supportability_reason(degraded_reasons),
-            freshness_bucket=freshness_bucket,
-            degraded_metric_count=degraded_metric_count,
-            empty_period_count=empty_period_count,
-            evaluated_period_count=len(results),
-        )
-    return supportability
+    return _RiskMetricSupportabilityScan(
+        degraded_reasons=degraded_reasons,
+        empty_period_count=empty_period_count,
+        degraded_metric_count=degraded_metric_count,
+    )
 
 
 def supportability_from_concentration_response(
