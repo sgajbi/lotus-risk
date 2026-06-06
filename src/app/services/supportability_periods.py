@@ -8,6 +8,7 @@ from app.contracts.risk import (
     RiskCalculationSupportability,
     RiskFreshnessBucket,
     RiskSupportabilityReason,
+    RiskSupportabilityState,
 )
 
 
@@ -16,6 +17,14 @@ class PeriodSupportabilityAssessment:
     degraded_reasons: list[RiskSupportabilityReason]
     empty_period_count: int
     degraded_result_count: int
+
+
+@dataclass(frozen=True)
+class _PeriodSupportabilityOutcome:
+    state: RiskSupportabilityState
+    reason: RiskSupportabilityReason
+    degraded_metric_count: int = 0
+    empty_period_count: int = 0
 
 
 _SUPPORTABILITY_REASON_PRECEDENCE: tuple[RiskSupportabilityReason, ...] = (
@@ -83,37 +92,58 @@ def period_results_supportability_state(
     assessment: PeriodSupportabilityAssessment,
     evaluated_period_count: int,
 ) -> RiskCalculationSupportability:
+    outcome = _period_supportability_outcome(
+        freshness_bucket=freshness_bucket,
+        assessment=assessment,
+    )
+    return _risk_calculation_supportability(
+        outcome=outcome,
+        freshness_bucket=freshness_bucket,
+        evaluated_period_count=evaluated_period_count,
+    )
+
+
+def _period_supportability_outcome(
+    *,
+    freshness_bucket: RiskFreshnessBucket,
+    assessment: PeriodSupportabilityAssessment,
+) -> _PeriodSupportabilityOutcome:
     if assessment.degraded_result_count:
-        return RiskCalculationSupportability(
+        return _PeriodSupportabilityOutcome(
             state="degraded",
             reason=select_supportability_reason(assessment.degraded_reasons),
-            freshness_bucket=freshness_bucket,
             degraded_metric_count=assessment.degraded_result_count,
             empty_period_count=assessment.empty_period_count,
-            evaluated_period_count=evaluated_period_count,
         )
 
     if assessment.empty_period_count:
-        return RiskCalculationSupportability(
+        return _PeriodSupportabilityOutcome(
             state="empty",
             reason="insufficient_observations",
-            freshness_bucket=freshness_bucket,
             empty_period_count=assessment.empty_period_count,
-            evaluated_period_count=evaluated_period_count,
         )
 
     if freshness_bucket == "stale":
-        return RiskCalculationSupportability(
+        return _PeriodSupportabilityOutcome(
             state="stale",
             reason="stale_source_observations",
-            freshness_bucket=freshness_bucket,
-            evaluated_period_count=evaluated_period_count,
         )
 
+    return _PeriodSupportabilityOutcome(state="ready", reason="calculation_complete")
+
+
+def _risk_calculation_supportability(
+    *,
+    outcome: _PeriodSupportabilityOutcome,
+    freshness_bucket: RiskFreshnessBucket,
+    evaluated_period_count: int,
+) -> RiskCalculationSupportability:
     return RiskCalculationSupportability(
-        state="ready",
-        reason="calculation_complete",
+        state=outcome.state,
+        reason=outcome.reason,
         freshness_bucket=freshness_bucket,
+        degraded_metric_count=outcome.degraded_metric_count,
+        empty_period_count=outcome.empty_period_count,
         evaluated_period_count=evaluated_period_count,
     )
 
