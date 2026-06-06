@@ -34,11 +34,11 @@ documentation posture, and validation gates. It is not a completion claim.
 | tests/unit/test_risk_engine.py | 395 | 15947 |
 | tests/unit/test_concentration_engine.py | 394 | 16053 |
 | src/app/services/risk/period_metrics.py | 367 | 11521 |
+| src/app/services/rolling_metric_series.py | 354 | 10670 |
 | tests/unit/test_risk_engine_branch_coverage.py | 353 | 13642 |
 | tests/unit/test_concentration_engine_modes.py | 334 | 12149 |
 | src/app/services/concentration/parsing.py | 319 | 11074 |
 | tests/integration/test_risk_calculate_live_characterization.py | 314 | 12945 |
-| tests/integration/test_historical_attribution_live_characterization.py | 305 | 12343 |
 
 ### Largest Functions And Classes
 
@@ -108,10 +108,10 @@ Success: no issues found in 302 source files
 ...
 src\app\upstream_errors.py                                    57      0     20      3    96%   196->209, 202->204, 207->209
 ------------------------------------------------------------------------------------------------------
-TOTAL                                                       5532     82    988     72    98%
+TOTAL                                                       5540     82    988     72    98%
 
 167 files skipped due to complete coverage.
-500 passed in 8.19s
+500 passed in 8.11s
 ```
 
 ## Complexity And Maintainability Snapshot

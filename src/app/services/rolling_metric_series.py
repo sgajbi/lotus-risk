@@ -45,42 +45,106 @@ def calculate_rolling_metric_values(
     min_obs: int,
 ) -> RollingMetricCalculation:
     if metric_name == "ROLLING_VOLATILITY":
-        return _without_dependency_counts(
-            _rolling_volatility(
-                portfolio_decimal,
-                window_length=window_length,
-                annualization_basis=annualization_basis,
-                min_obs=min_obs,
-            )
+        return _rolling_volatility_calculation(
+            portfolio_decimal=portfolio_decimal,
+            window_length=window_length,
+            annualization_basis=annualization_basis,
+            min_obs=min_obs,
         )
     if metric_name == ROLLING_SHARPE_METRIC:
-        metric_values, flags, aligned_count = _rolling_sharpe(
-            portfolio_decimal,
-            risk_free_decimal,
+        return _rolling_sharpe_calculation(
+            portfolio_decimal=portfolio_decimal,
+            risk_free_decimal=risk_free_decimal,
             window_length=window_length,
             annualization_basis=annualization_basis,
             min_obs=min_obs,
         )
-        return _with_risk_free_count(metric_values, flags, aligned_count)
     if metric_name in ROLLING_BENCHMARK_METRICS:
-        metric_values, flags, aligned_count = _rolling_benchmark_metrics(
-            metric_name,
-            portfolio_decimal,
-            benchmark_decimal,
+        return _rolling_benchmark_calculation(
+            metric_name=metric_name,
+            portfolio_decimal=portfolio_decimal,
+            benchmark_decimal=benchmark_decimal,
             window_length=window_length,
             annualization_basis=annualization_basis,
             min_obs=min_obs,
         )
-        return _with_benchmark_count(metric_values, flags, aligned_count)
     if metric_name == ROLLING_MAX_DRAWDOWN_METRIC:
-        return _without_dependency_counts(
-            _rolling_max_drawdown_metric(
-                portfolio_decimal,
-                window_length=window_length,
-                min_obs=min_obs,
-            )
+        return _rolling_max_drawdown_calculation(
+            portfolio_decimal=portfolio_decimal,
+            window_length=window_length,
+            min_obs=min_obs,
         )
     raise ValueError(f"Unsupported rolling metric: {metric_name}")
+
+
+def _rolling_volatility_calculation(
+    *,
+    portfolio_decimal: pd.Series,
+    window_length: int,
+    annualization_basis: int,
+    min_obs: int,
+) -> RollingMetricCalculation:
+    return _without_dependency_counts(
+        _rolling_volatility(
+            portfolio_decimal,
+            window_length=window_length,
+            annualization_basis=annualization_basis,
+            min_obs=min_obs,
+        )
+    )
+
+
+def _rolling_sharpe_calculation(
+    *,
+    portfolio_decimal: pd.Series,
+    risk_free_decimal: pd.Series,
+    window_length: int,
+    annualization_basis: int,
+    min_obs: int,
+) -> RollingMetricCalculation:
+    metric_values, flags, aligned_count = _rolling_sharpe(
+        portfolio_decimal,
+        risk_free_decimal,
+        window_length=window_length,
+        annualization_basis=annualization_basis,
+        min_obs=min_obs,
+    )
+    return _with_risk_free_count(metric_values, flags, aligned_count)
+
+
+def _rolling_benchmark_calculation(
+    *,
+    metric_name: str,
+    portfolio_decimal: pd.Series,
+    benchmark_decimal: pd.Series,
+    window_length: int,
+    annualization_basis: int,
+    min_obs: int,
+) -> RollingMetricCalculation:
+    metric_values, flags, aligned_count = _rolling_benchmark_metrics(
+        metric_name,
+        portfolio_decimal,
+        benchmark_decimal,
+        window_length=window_length,
+        annualization_basis=annualization_basis,
+        min_obs=min_obs,
+    )
+    return _with_benchmark_count(metric_values, flags, aligned_count)
+
+
+def _rolling_max_drawdown_calculation(
+    *,
+    portfolio_decimal: pd.Series,
+    window_length: int,
+    min_obs: int,
+) -> RollingMetricCalculation:
+    return _without_dependency_counts(
+        _rolling_max_drawdown_metric(
+            portfolio_decimal,
+            window_length=window_length,
+            min_obs=min_obs,
+        )
+    )
 
 
 def _without_dependency_counts(values: pd.Series) -> RollingMetricCalculation:
