@@ -114,6 +114,35 @@ def _requires_benchmark(stateful: RollingStatefulInput) -> bool:
     return any(metric in ROLLING_BENCHMARK_METRICS for metric in stateful.rolling_options.metrics)
 
 
+def _explicit_risk_free_request(
+    *,
+    stateful: RollingStatefulInput,
+    core_client: LotusCoreClientProtocol | None,
+    include_risk_free: bool,
+    explicit_window: tuple[date, date] | None,
+    reporting_currency: str | None,
+) -> tuple[dict[str, Any] | None, LotusCoreClientProtocol | None]:
+    if not include_risk_free:
+        return None, None
+    if core_client is None:
+        raise ValueError(
+            "lotus-core client is required for rolling Sharpe stateful risk-free sourcing"
+        )
+    if explicit_window is None:
+        return None, core_client
+    if reporting_currency is None:
+        raise ValueError("reporting currency is required for rolling risk-free sourcing")
+    return (
+        build_risk_free_series_request(
+            currency=reporting_currency,
+            as_of_date=stateful.as_of_date,
+            start_date=explicit_window[0],
+            end_date=explicit_window[1],
+        ),
+        core_client,
+    )
+
+
 async def _fetch_stateful_source_responses(
     stateful: RollingStatefulInput,
     *,
@@ -125,26 +154,14 @@ async def _fetch_stateful_source_responses(
 ) -> StatefulSourceResponses:
     source_payload = build_stateful_source_request(stateful)
     explicit_window = explicit_window_bounds(source_payload)
-    risk_free_request: dict[str, Any] | None = None
-    risk_free_response: dict[str, Any] | None = None
-
-    if include_risk_free and core_client is None:
-        raise ValueError(
-            "lotus-core client is required for rolling Sharpe stateful risk-free sourcing"
-        )
-
-    if include_risk_free and explicit_window is not None:
-        if reporting_currency is None:
-            raise ValueError("reporting currency is required for rolling risk-free sourcing")
-        checked_core_client = core_client
-        if checked_core_client is None:
-            raise ValueError("lotus-core client is required for rolling risk-free sourcing")
-        risk_free_request = build_risk_free_series_request(
-            currency=reporting_currency,
-            as_of_date=stateful.as_of_date,
-            start_date=explicit_window[0],
-            end_date=explicit_window[1],
-        )
+    risk_free_request, checked_core_client = _explicit_risk_free_request(
+        stateful=stateful,
+        core_client=core_client,
+        include_risk_free=include_risk_free,
+        explicit_window=explicit_window,
+        reporting_currency=reporting_currency,
+    )
+    if risk_free_request is not None and checked_core_client is not None:
         source_response, risk_free_response = await asyncio.gather(
             performance_client.get_returns_series(
                 request_payload=source_payload,
@@ -160,6 +177,7 @@ async def _fetch_stateful_source_responses(
             request_payload=source_payload,
             correlation_id=correlation_id,
         )
+        risk_free_response = None
 
     return StatefulSourceResponses(
         source_payload=source_payload,
