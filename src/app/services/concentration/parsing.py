@@ -264,6 +264,19 @@ def _apply_display_names_to_rows(
             row["instrument_name"] = security_names[security_id]
 
 
+def _snapshot_position_entry(position: dict[str, Any]) -> PositionEntry | None:
+    candidate = _to_decimal(position.get("market_value_base"))
+    if candidate is None:
+        candidate = _to_decimal(position.get("quantity"))
+    if candidate is None:
+        return None
+    return PositionEntry(
+        security_id=_as_str(position.get("security_id")),
+        security_name=_as_str(position.get("instrument_name")),
+        value=float(candidate),  # monetary-float-allow: concentration exposure value.
+    )
+
+
 def _extract_values_with_issuer_from_snapshot(
     positions: list[dict[str, Any]] | None,
     issuer_by_security: dict[str, IssuerIdentity],
@@ -277,22 +290,12 @@ def _extract_values_with_issuer_from_snapshot(
     for position in positions:
         if not isinstance(position, dict):
             continue
-        security_id = _as_str(position.get("security_id"))
-        security_name = _as_str(position.get("instrument_name"))
-        candidate = _to_decimal(position.get("market_value_base"))
-        if candidate is None:
-            candidate = _to_decimal(position.get("quantity"))
-        if candidate is None:
+        position_entry = _snapshot_position_entry(position)
+        if position_entry is None:
             continue
-        numeric_value = float(candidate)
-        position_entries.append(
-            PositionEntry(
-                security_id=security_id,
-                security_name=security_name,
-                value=numeric_value,
-            )
-        )
+        position_entries.append(position_entry)
         total += 1
+        security_id = position_entry.security_id
         if security_id and security_id in issuer_by_security:
             issuer = issuer_by_security[security_id]
             existing = issuer_totals.get(issuer.issuer_id)
@@ -300,10 +303,10 @@ def _extract_values_with_issuer_from_snapshot(
                 issuer_totals[issuer.issuer_id] = IssuerEntry(
                     issuer_id=issuer.issuer_id,
                     issuer_name=issuer.issuer_name,
-                    value=numeric_value,
+                    value=position_entry.value,
                 )
             else:
-                existing.value += numeric_value
+                existing.value += position_entry.value
             covered += 1
     return position_entries, list(issuer_totals.values()), covered, total
 
