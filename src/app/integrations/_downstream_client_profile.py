@@ -69,23 +69,8 @@ async def execute_downstream_request(
         )
         raise
     except httpx.HTTPStatusError as exc:
-        detail = extract_upstream_error_detail(exc.response)
-        error = classify_upstream_http_error(
-            service=dependency,
-            operation=operation,
-            response=exc.response,
-            detail=detail,
-        )
-        _record_upstream_failure(
+        error = _http_status_upstream_error(
             dependency=dependency,
-            operation=operation,
-            started_at=started_at,
-            exc=error,
-        )
-        raise error from exc
-    except httpx.HTTPError as exc:
-        error = classify_upstream_transport_error(
-            service=dependency,
             operation=operation,
             exc=exc,
         )
@@ -96,6 +81,42 @@ async def execute_downstream_request(
             exc=error,
         )
         raise error from exc
+    except httpx.HTTPError as exc:
+        error = _transport_upstream_error(dependency=dependency, operation=operation, exc=exc)
+        _record_upstream_failure(
+            dependency=dependency,
+            operation=operation,
+            started_at=started_at,
+            exc=error,
+        )
+        raise error from exc
+
+
+def _http_status_upstream_error(
+    *,
+    dependency: str,
+    operation: str,
+    exc: httpx.HTTPStatusError,
+) -> UpstreamServiceError:
+    return classify_upstream_http_error(
+        service=dependency,
+        operation=operation,
+        response=exc.response,
+        detail=extract_upstream_error_detail(exc.response),
+    )
+
+
+def _transport_upstream_error(
+    *,
+    dependency: str,
+    operation: str,
+    exc: httpx.HTTPError,
+) -> UpstreamServiceError:
+    return classify_upstream_transport_error(
+        service=dependency,
+        operation=operation,
+        exc=exc,
+    )
 
 
 async def execute_downstream_request_json(
@@ -157,7 +178,7 @@ def _env_float_with_default(name: str, default: float) -> float:
     if raw_value is None:
         return default
     try:
-        value = float(raw_value)
+        value = float(raw_value)  # monetary-float-allow: timeout/keepalive seconds, not money.
     except ValueError:
         return default
     return value if value > 0 else default
