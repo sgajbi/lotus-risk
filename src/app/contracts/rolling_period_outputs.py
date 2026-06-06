@@ -9,6 +9,12 @@ from app.contracts.rolling_metric_outputs import (
     RollingRiskFreeContext,
     RollingWindowResult,
 )
+from app.contracts.rolling_period_field_examples import (
+    ROLLING_PERIOD_BENCHMARK_CONTEXT_EXAMPLE,
+    ROLLING_PERIOD_QUALITY_FLAGS_EXAMPLE,
+    ROLLING_PERIOD_RISK_FREE_CONTEXT_EXAMPLE,
+    ROLLING_PERIOD_WINDOW_RESULTS_EXAMPLE,
+)
 
 
 class RollingPeriodResult(BaseModel):
@@ -66,35 +72,21 @@ class RollingPeriodResult(BaseModel):
     )
     benchmark_context: RollingBenchmarkContext = Field(
         description="Benchmark application context for benchmark-dependent rolling metrics in this period.",
-        json_schema_extra={
-            "example": {
-                "requested": True,
-                "available": True,
-                "aligned": True,
-                "reason": "APPLIED",
-            }
-        },
+        json_schema_extra={"example": ROLLING_PERIOD_BENCHMARK_CONTEXT_EXAMPLE},
     )
     risk_free_context: RollingRiskFreeContext = Field(
         description="Risk-free application context for rolling Sharpe in this period.",
-        json_schema_extra={
-            "example": {
-                "requested": False,
-                "available": False,
-                "aligned": False,
-                "reason": "NOT_REQUESTED",
-            }
-        },
+        json_schema_extra={"example": ROLLING_PERIOD_RISK_FREE_CONTEXT_EXAMPLE},
     )
     window_results: list[RollingWindowResult] = Field(
         default_factory=list,
         description="Rolling window results for this period.",
-        json_schema_extra={"example": [{"window_length": 63, "metric_summaries": {}}]},
+        json_schema_extra={"example": ROLLING_PERIOD_WINDOW_RESULTS_EXAMPLE},
     )
     quality_flags: list[str] = Field(
         default_factory=list,
         description="Deterministic quality/coverage flags for this period.",
-        json_schema_extra={"example": ["metric:ROLLING_BETA:benchmark_variance_zero"]},
+        json_schema_extra={"example": ROLLING_PERIOD_QUALITY_FLAGS_EXAMPLE},
     )
     error: str | None = Field(
         default=None,

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal, InvalidOperation
 from typing import Any, Protocol
@@ -9,18 +10,14 @@ from app.contracts.attribution import (
     GroupingDimension,
     HistoricalAttributionStatefulInput,
 )
+from app.services.attribution_position_timeseries import (
+    LotusCorePositionTimeseriesClient,
+    fetch_position_timeseries_rows,
+)
 from app.upstream_errors import invalid_upstream_payload, missing_upstream_data
 
 
-class LotusCoreClientProtocol(Protocol):
-    async def get_position_analytics_timeseries(
-        self,
-        *,
-        portfolio_id: str,
-        request_payload: dict[str, Any],
-        correlation_id: str | None,
-    ) -> dict[str, Any]: ...
-
+class LotusCoreClientProtocol(LotusCorePositionTimeseriesClient, Protocol):
     async def get_instrument_enrichment(
         self,
         *,
@@ -65,41 +62,47 @@ def as_decimal(value: Any) -> Decimal:
         ) from exc
 
 
-def build_exposure_points(
-    *,
-    rows: list[dict[str, Any]],
-    grouping_dimensions: list[GroupingDimension],
-    issuer_map: dict[str, tuple[str, str | None]],
-) -> list[ExposurePoint]:
-    grouped_values: dict[tuple[date, GroupingDimension, str], Decimal] = {}
-    totals_by_date: dict[date, Decimal] = {}
-    labels: dict[tuple[GroupingDimension, str], str | None] = {}
+@dataclass
+class _ExposureAggregation:
+    grouped_values: dict[tuple[date, GroupingDimension, str], Decimal] = field(default_factory=dict)
+    totals_by_date: dict[date, Decimal] = field(default_factory=dict)
+    labels: dict[tuple[GroupingDimension, str], str | None] = field(default_factory=dict)
 
-    for row in rows:
-        valuation_date = row.get("valuation_date")
-        if not isinstance(valuation_date, str):
-            continue
-        obs_date = date.fromisoformat(valuation_date)
-        ending_reporting = row.get("ending_market_value_reporting_currency")
-        ending_portfolio = row.get("ending_market_value_portfolio_currency")
-        market_value = as_decimal(
-            ending_reporting if ending_reporting is not None else ending_portfolio
+    def add_row(
+        self,
+        *,
+        row: dict[str, Any],
+        obs_date: date,
+        market_value: Decimal,
+        grouping_dimensions: list[GroupingDimension],
+        issuer_map: dict[str, tuple[str, str | None]],
+    ) -> None:
+        self.totals_by_date[obs_date] = (
+            self.totals_by_date.get(obs_date, Decimal("0")) + market_value
         )
-        totals_by_date[obs_date] = totals_by_date.get(obs_date, Decimal("0")) + market_value
-
         for grouping_dimension in grouping_dimensions:
             group_key, group_label = group_key_and_label(
                 row=row,
                 grouping_dimension=grouping_dimension,
                 issuer_map=issuer_map,
             )
-            labels[(grouping_dimension, group_key)] = group_label
+            self.labels[(grouping_dimension, group_key)] = group_label
             key = (obs_date, grouping_dimension, group_key)
-            grouped_values[key] = grouped_values.get(key, Decimal("0")) + market_value
+            self.grouped_values[key] = self.grouped_values.get(key, Decimal("0")) + market_value
 
+
+def _market_value_from_position_row(row: dict[str, Any]) -> Decimal:
+    ending_reporting = row.get("ending_market_value_reporting_currency")
+    ending_portfolio = row.get("ending_market_value_portfolio_currency")
+    return as_decimal(ending_reporting if ending_reporting is not None else ending_portfolio)
+
+
+def _exposure_points_from_aggregation(
+    aggregation: _ExposureAggregation,
+) -> list[ExposurePoint]:
     points: list[ExposurePoint] = []
-    for (obs_date, grouping_dimension, group_key), numerator in grouped_values.items():
-        denominator = totals_by_date.get(obs_date, Decimal("0"))
+    for (obs_date, grouping_dimension, group_key), numerator in aggregation.grouped_values.items():
+        denominator = aggregation.totals_by_date.get(obs_date, Decimal("0"))
         if denominator == 0:
             continue
         points.append(
@@ -107,7 +110,7 @@ def build_exposure_points(
                 date=obs_date,
                 grouping_dimension=grouping_dimension,
                 group_key=group_key,
-                group_label=labels.get((grouping_dimension, group_key)),
+                group_label=aggregation.labels.get((grouping_dimension, group_key)),
                 weight=float(numerator / denominator),
             )
         )
@@ -115,90 +118,25 @@ def build_exposure_points(
     return points
 
 
-def _position_timeseries_dimensions(grouping_dimensions: list[GroupingDimension]) -> list[str]:
-    dimensions: list[str] = []
-    if "SECTOR" in grouping_dimensions:
-        dimensions.append("sector")
-    if "ASSET_CLASS" in grouping_dimensions:
-        dimensions.append("asset_class")
-    return dimensions
-
-
-def _position_timeseries_payload(
+def build_exposure_points(
     *,
-    as_of_date: date,
-    start_date: date,
-    reporting_currency: str | None,
-    dimensions: list[str],
-    page_token: str | None,
-) -> dict[str, Any]:
-    payload: dict[str, Any] = {
-        "as_of_date": as_of_date.isoformat(),
-        "window": {
-            "start_date": start_date.isoformat(),
-            "end_date": as_of_date.isoformat(),
-        },
-        "frequency": "daily",
-        "dimensions": dimensions,
-        "consumer_system": "lotus-risk",
-        "page": {"page_size": 5000, "page_token": page_token},
-    }
-    if reporting_currency:
-        payload["reporting_currency"] = reporting_currency
-    return payload
-
-
-def _extract_position_rows_batch(
-    *,
-    response: dict[str, Any],
-    portfolio_id: str,
-) -> list[dict[str, Any]]:
-    batch = response.get("rows")
-    if not isinstance(batch, list):
-        raise invalid_upstream_payload(
-            service="lotus-core",
-            operation=f"/integration/portfolios/{portfolio_id}/analytics/position-timeseries",
-            message="lotus-core position-timeseries payload missing 'rows' list",
-        )
-    return [row for row in batch if isinstance(row, dict)]
-
-
-def _next_position_page_token(response: dict[str, Any]) -> str | None:
-    page = response.get("page")
-    next_page_token = page.get("next_page_token") if isinstance(page, dict) else None
-    return next_page_token if isinstance(next_page_token, str) and next_page_token else None
-
-
-async def _fetch_position_timeseries_rows(
-    *,
-    core_client: LotusCoreClientProtocol,
-    portfolio_id: str,
-    as_of_date: date,
-    start_date: date,
-    reporting_currency: str | None,
+    rows: list[dict[str, Any]],
     grouping_dimensions: list[GroupingDimension],
-    correlation_id: str | None,
-) -> list[dict[str, Any]]:
-    dimensions = _position_timeseries_dimensions(grouping_dimensions)
-    page_token: str | None = None
-    rows: list[dict[str, Any]] = []
-    while True:
-        response = await core_client.get_position_analytics_timeseries(
-            portfolio_id=portfolio_id,
-            request_payload=_position_timeseries_payload(
-                as_of_date=as_of_date,
-                start_date=start_date,
-                reporting_currency=reporting_currency,
-                dimensions=dimensions,
-                page_token=page_token,
-            ),
-            correlation_id=correlation_id,
+    issuer_map: dict[str, tuple[str, str | None]],
+) -> list[ExposurePoint]:
+    aggregation = _ExposureAggregation()
+    for row in rows:
+        valuation_date = row.get("valuation_date")
+        if not isinstance(valuation_date, str):
+            continue
+        aggregation.add_row(
+            row=row,
+            obs_date=date.fromisoformat(valuation_date),
+            market_value=_market_value_from_position_row(row),
+            grouping_dimensions=grouping_dimensions,
+            issuer_map=issuer_map,
         )
-        rows.extend(_extract_position_rows_batch(response=response, portfolio_id=portfolio_id))
-        page_token = _next_position_page_token(response)
-        if page_token is None:
-            break
-    return rows
+    return _exposure_points_from_aggregation(aggregation)
 
 
 def _security_ids_from_position_rows(rows: list[dict[str, Any]]) -> list[str]:
@@ -256,39 +194,46 @@ async def build_issuer_map(
     return issuer_map
 
 
-async def fetch_stateful_exposure_history(
+def _position_timeseries_operation(portfolio_id: str) -> str:
+    return f"/integration/portfolios/{portfolio_id}/analytics/position-timeseries"
+
+
+def _require_position_timeseries_rows(
     *,
-    stateful: HistoricalAttributionStatefulInput,
-    core_client: LotusCoreClientProtocol,
-    start_date: date,
-    grouping_dimensions: list[GroupingDimension],
-    correlation_id: str | None,
-) -> list[ExposurePoint]:
-    rows = await _fetch_position_timeseries_rows(
-        core_client=core_client,
-        portfolio_id=stateful.portfolio_id,
-        as_of_date=stateful.as_of_date,
-        start_date=start_date,
-        reporting_currency=stateful.reporting_currency,
-        grouping_dimensions=grouping_dimensions,
-        correlation_id=correlation_id,
-    )
+    rows: list[dict[str, Any]],
+    portfolio_id: str,
+) -> None:
     if not rows:
         raise missing_upstream_data(
             service="lotus-core",
-            operation=f"/integration/portfolios/{stateful.portfolio_id}/analytics/position-timeseries",
+            operation=_position_timeseries_operation(portfolio_id),
             message="lotus-core position-timeseries returned no rows",
         )
 
-    issuer_map = (
-        await build_issuer_map(
-            core_client=core_client,
-            rows=rows,
-            correlation_id=correlation_id,
-        )
-        if "ISSUER" in grouping_dimensions
-        else {}
+
+async def _issuer_map_for_grouping_dimensions(
+    *,
+    core_client: LotusCoreClientProtocol,
+    rows: list[dict[str, Any]],
+    grouping_dimensions: list[GroupingDimension],
+    correlation_id: str | None,
+) -> dict[str, tuple[str, str | None]]:
+    if "ISSUER" not in grouping_dimensions:
+        return {}
+    return await build_issuer_map(
+        core_client=core_client,
+        rows=rows,
+        correlation_id=correlation_id,
     )
+
+
+def _validated_exposure_history(
+    *,
+    rows: list[dict[str, Any]],
+    grouping_dimensions: list[GroupingDimension],
+    issuer_map: dict[str, tuple[str, str | None]],
+    portfolio_id: str,
+) -> list[ExposurePoint]:
     exposure_history = build_exposure_points(
         rows=rows,
         grouping_dimensions=grouping_dimensions,
@@ -297,7 +242,39 @@ async def fetch_stateful_exposure_history(
     if not exposure_history:
         raise missing_upstream_data(
             service="lotus-core",
-            operation=f"/integration/portfolios/{stateful.portfolio_id}/analytics/position-timeseries",
+            operation=_position_timeseries_operation(portfolio_id),
             message="unable to build exposure history from lotus-core position-timeseries",
         )
     return exposure_history
+
+
+async def fetch_stateful_exposure_history(
+    *,
+    stateful: HistoricalAttributionStatefulInput,
+    core_client: LotusCoreClientProtocol,
+    start_date: date,
+    grouping_dimensions: list[GroupingDimension],
+    correlation_id: str | None,
+) -> list[ExposurePoint]:
+    rows = await fetch_position_timeseries_rows(
+        core_client=core_client,
+        portfolio_id=stateful.portfolio_id,
+        as_of_date=stateful.as_of_date,
+        start_date=start_date,
+        reporting_currency=stateful.reporting_currency,
+        grouping_dimensions=grouping_dimensions,
+        correlation_id=correlation_id,
+    )
+    _require_position_timeseries_rows(rows=rows, portfolio_id=stateful.portfolio_id)
+    issuer_map = await _issuer_map_for_grouping_dimensions(
+        core_client=core_client,
+        rows=rows,
+        grouping_dimensions=grouping_dimensions,
+        correlation_id=correlation_id,
+    )
+    return _validated_exposure_history(
+        rows=rows,
+        grouping_dimensions=grouping_dimensions,
+        issuer_map=issuer_map,
+        portfolio_id=stateful.portfolio_id,
+    )

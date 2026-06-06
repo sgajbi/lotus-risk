@@ -1,10 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from math import sqrt
-from typing import TypedDict
 
-import numpy as np
 import pandas as pd
 
 from app.contracts.attribution import (
@@ -15,10 +12,15 @@ from app.contracts.attribution import (
     AttributionType,
     GroupingDimension,
 )
+from app.services.attribution_calculation import (
+    AttributionCalculationInputs,
+    DecompositionRow,
+    attribution_calculation_inputs,
+    component_decomposition,
+)
 from app.services.attribution_source_frames import (
     AttributionSourceFrames,
     build_source_frames,
-    pivot_exposure,
     window_returns,
 )
 
@@ -32,67 +34,24 @@ __all__ = [
 ]
 
 
-class DecompositionRow(TypedDict):
-    group_key: str
-    weight_average: float | None
-    marginal_contribution: float | None
-    component_contribution: float | None
-    percent_contribution: float | None
-
-
-@dataclass(frozen=True)
-class AttributionCalculationInputs:
-    metric_series: pd.Series
-    group_matrix: pd.DataFrame
-    risk_total: float
-
-
 @dataclass(frozen=True)
 class AttributionPrecalculation:
     calculation_inputs: AttributionCalculationInputs | None
     early_result: AttributionSetResult | None
 
 
-def _component_decomposition(
-    *,
-    group_matrix: pd.DataFrame,
-    metric_series: pd.Series,
-    contribution_denominator: float,
-    annualization_basis: int,
-) -> list[DecompositionRow]:
-    if group_matrix.empty or metric_series.empty:
-        return []
-
-    std = float(metric_series.std(ddof=1))
-    if np.isclose(std, 0.0):
-        return []
-
-    metric_mean = group_matrix.mean(axis=0)
-    decomposition: list[DecompositionRow] = []
-    for group_key in group_matrix.columns:
-        group_series = group_matrix[group_key]
-        cov = float(np.cov(group_series, metric_series, ddof=1)[0, 1])
-        component = float((cov / std) * sqrt(annualization_basis))
-        marginal = (
-            float(component / metric_mean[group_key])
-            if not np.isclose(metric_mean[group_key], 0.0)
-            else None
-        )
-        percent = (
-            float(component / contribution_denominator)
-            if not np.isclose(contribution_denominator, 0.0)
-            else None
-        )
-        decomposition.append(
-            {
-                "group_key": str(group_key),
-                "weight_average": float(metric_mean[group_key]),
-                "marginal_contribution": marginal,
-                "component_contribution": component,
-                "percent_contribution": percent,
-            }
-        )
-    return decomposition
+@dataclass(frozen=True)
+class AttributionSetBuildRequest:
+    attribution_type: AttributionType
+    metric: AttributionMetric
+    grouping_dimension: GroupingDimension
+    returns_series: pd.Series
+    benchmark_series: pd.Series
+    exposure_weights: pd.DataFrame
+    benchmark_weights: pd.DataFrame
+    group_labels: dict[str, str | None]
+    annualization_basis: int
+    quality_flags: list[str]
 
 
 def _empty_attribution_set(
@@ -138,53 +97,6 @@ def _unsupported_metric_set(
     return None
 
 
-def _total_risk_inputs(
-    *,
-    returns_series: pd.Series,
-    exposure_weights: pd.DataFrame,
-    annualization_basis: int,
-) -> AttributionCalculationInputs:
-    metric_series = returns_series
-    aligned_weights = exposure_weights.reindex(index=metric_series.index, fill_value=0.0)
-    return AttributionCalculationInputs(
-        metric_series=metric_series,
-        group_matrix=aligned_weights.mul(metric_series, axis=0),
-        risk_total=float(metric_series.std(ddof=1) * sqrt(annualization_basis)),
-    )
-
-
-def _active_risk_inputs(
-    *,
-    returns_series: pd.Series,
-    benchmark_series: pd.Series,
-    exposure_weights: pd.DataFrame,
-    benchmark_weights: pd.DataFrame,
-    annualization_basis: int,
-) -> AttributionCalculationInputs | None:
-    aligned = pd.merge(
-        returns_series.to_frame("portfolio"),
-        benchmark_series.to_frame("benchmark"),
-        left_index=True,
-        right_index=True,
-        how="inner",
-    )
-    if aligned.empty:
-        return None
-
-    metric_series = aligned["portfolio"] - aligned["benchmark"]
-    common_cols = sorted(set(exposure_weights.columns).union(set(benchmark_weights.columns)))
-    p_w = exposure_weights.reindex(columns=common_cols, fill_value=0.0)
-    b_w = benchmark_weights.reindex(columns=common_cols, fill_value=0.0)
-    p_w = p_w.reindex(index=metric_series.index, fill_value=0.0)
-    b_w = b_w.reindex(index=metric_series.index, fill_value=0.0)
-    active_w = p_w - b_w
-    return AttributionCalculationInputs(
-        metric_series=metric_series,
-        group_matrix=active_w.mul(metric_series, axis=0),
-        risk_total=float(metric_series.std(ddof=1) * sqrt(annualization_basis)),
-    )
-
-
 def _attribution_contributors(
     *,
     rows: list[DecompositionRow],
@@ -226,30 +138,6 @@ def _reconciled_attribution_set(
     )
 
 
-def _attribution_calculation_inputs(
-    *,
-    attribution_type: AttributionType,
-    returns_series: pd.Series,
-    benchmark_series: pd.Series,
-    exposure_weights: pd.DataFrame,
-    benchmark_weights: pd.DataFrame,
-    annualization_basis: int,
-) -> AttributionCalculationInputs | None:
-    if attribution_type == "TOTAL_RISK":
-        return _total_risk_inputs(
-            returns_series=returns_series,
-            exposure_weights=exposure_weights,
-            annualization_basis=annualization_basis,
-        )
-    return _active_risk_inputs(
-        returns_series=returns_series,
-        benchmark_series=benchmark_series,
-        exposure_weights=exposure_weights,
-        benchmark_weights=benchmark_weights,
-        annualization_basis=annualization_basis,
-    )
-
-
 def _calculated_attribution_set(
     *,
     attribution_type: AttributionType,
@@ -260,7 +148,7 @@ def _calculated_attribution_set(
     annualization_basis: int,
     quality_flags: list[str],
 ) -> AttributionSetResult:
-    rows = _component_decomposition(
+    rows = component_decomposition(
         group_matrix=calculation_inputs.group_matrix,
         metric_series=calculation_inputs.metric_series,
         contribution_denominator=calculation_inputs.risk_total,
@@ -311,63 +199,63 @@ def _attribution_set_precalculation_result(
     )
 
 
-def build_attribution_set(
+def _attribution_calculation_precalculation(
     *,
-    attribution_type: AttributionType,
-    metric: AttributionMetric,
-    grouping_dimension: GroupingDimension,
-    returns_series: pd.Series,
-    benchmark_series: pd.Series,
-    exposure_weights: pd.DataFrame,
-    benchmark_weights: pd.DataFrame,
-    group_labels: dict[str, str | None],
-    annualization_basis: int,
-    base_flags: list[str],
-) -> AttributionSetResult:
-    flags = list(base_flags)
+    request: AttributionSetBuildRequest,
+) -> AttributionPrecalculation:
+    calculation_inputs = attribution_calculation_inputs(
+        attribution_type=request.attribution_type,
+        returns_series=request.returns_series,
+        benchmark_series=request.benchmark_series,
+        exposure_weights=request.exposure_weights,
+        benchmark_weights=request.benchmark_weights,
+        annualization_basis=request.annualization_basis,
+    )
+    return _attribution_set_precalculation_result(
+        attribution_type=request.attribution_type,
+        metric=request.metric,
+        grouping_dimension=request.grouping_dimension,
+        calculation_inputs=calculation_inputs,
+        quality_flags=request.quality_flags,
+    )
 
+
+def _resolve_attribution_precalculation(
+    request: AttributionSetBuildRequest,
+) -> AttributionPrecalculation:
     unsupported = _unsupported_metric_set(
-        attribution_type=attribution_type,
-        metric=metric,
-        grouping_dimension=grouping_dimension,
-        base_flags=flags,
+        attribution_type=request.attribution_type,
+        metric=request.metric,
+        grouping_dimension=request.grouping_dimension,
+        base_flags=request.quality_flags,
     )
     if unsupported is not None:
-        return unsupported
+        return AttributionPrecalculation(calculation_inputs=None, early_result=unsupported)
+    return _attribution_calculation_precalculation(request=request)
 
-    calculation_inputs = _attribution_calculation_inputs(
-        attribution_type=attribution_type,
-        returns_series=returns_series,
-        benchmark_series=benchmark_series,
-        exposure_weights=exposure_weights,
-        benchmark_weights=benchmark_weights,
-        annualization_basis=annualization_basis,
-    )
-    precalculation = _attribution_set_precalculation_result(
-        attribution_type=attribution_type,
-        metric=metric,
-        grouping_dimension=grouping_dimension,
-        calculation_inputs=calculation_inputs,
-        quality_flags=flags,
-    )
+
+def build_attribution_set(request: AttributionSetBuildRequest) -> AttributionSetResult:
+    precalculation = _resolve_attribution_precalculation(request)
     if precalculation.early_result is not None:
         return precalculation.early_result
     if precalculation.calculation_inputs is None:
         raise RuntimeError("attribution precalculation returned no calculation inputs")
 
     return _calculated_attribution_set(
-        attribution_type=attribution_type,
-        metric=metric,
-        grouping_dimension=grouping_dimension,
+        attribution_type=request.attribution_type,
+        metric=request.metric,
+        grouping_dimension=request.grouping_dimension,
         calculation_inputs=precalculation.calculation_inputs,
-        group_labels=group_labels,
-        annualization_basis=annualization_basis,
-        quality_flags=flags,
+        group_labels=request.group_labels,
+        annualization_basis=request.annualization_basis,
+        quality_flags=request.quality_flags,
     )
 
 
 def requires_benchmark_attribution(options: AttributionOptions) -> bool:
-    return "ACTIVE_RISK" in options.attribution_types or "TRACKING_ERROR" in options.metrics
+    from app.services.attribution_period_sets import requires_benchmark_attribution as _requires
+
+    return _requires(options)
 
 
 def build_period_attribution_sets(
@@ -379,42 +267,13 @@ def build_period_attribution_sets(
     start: pd.Timestamp,
     end: pd.Timestamp,
 ) -> list[AttributionSetResult]:
-    period_sets: list[AttributionSetResult] = []
-    benchmark_required = requires_benchmark_attribution(options)
+    from app.services.attribution_period_sets import build_period_attribution_sets as _build
 
-    for grouping_dimension in options.grouping_dimensions:
-        weights, labels, flags = pivot_exposure(
-            frames.exposure_df,
-            start=start,
-            end=end,
-            grouping_dimension=grouping_dimension,
-        )
-        if benchmark_required:
-            benchmark_weights, benchmark_labels, benchmark_flags = pivot_exposure(
-                frames.benchmark_exposure_df,
-                start=start,
-                end=end,
-                grouping_dimension=grouping_dimension,
-            )
-            labels = {**labels, **benchmark_labels}
-            flags = [*flags, *benchmark_flags]
-        else:
-            benchmark_weights = pd.DataFrame()
-
-        for attribution_type in options.attribution_types:
-            for metric in options.metrics:
-                period_sets.append(
-                    build_attribution_set(
-                        attribution_type=attribution_type,
-                        metric=metric,
-                        grouping_dimension=grouping_dimension,
-                        returns_series=returns_series,
-                        benchmark_series=benchmark_series,
-                        exposure_weights=weights,
-                        benchmark_weights=benchmark_weights,
-                        group_labels=labels,
-                        annualization_basis=options.annualization_basis,
-                        base_flags=flags,
-                    )
-                )
-    return period_sets
+    return _build(
+        options=options,
+        frames=frames,
+        returns_series=returns_series,
+        benchmark_series=benchmark_series,
+        start=start,
+        end=end,
+    )

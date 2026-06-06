@@ -14,7 +14,10 @@ from app.contracts.risk import ReturnPoint, RiskRequestScope
 from app.services.attribution_exposure_history import (
     fetch_stateful_exposure_history,
 )
-from app.services.benchmark_exposure_history import fetch_benchmark_exposure_history
+from app.services.benchmark_exposure_history import (
+    BenchmarkExposureHistoryRequest,
+    fetch_benchmark_exposure_history,
+)
 from app.services.stateful_returns_request import build_stateful_returns_series_request
 from app.services.stateful_returns_series_parser import (
     extract_required_portfolio_returns,
@@ -68,6 +71,12 @@ class StatefulReturnsContext:
 class ResolvedStatefulAttributionInputs:
     stateless_input: HistoricalAttributionStatelessInput
     returns_request: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class _StatefulExposureHistories:
+    exposure_history: list[ExposurePoint]
+    benchmark_exposure_history: list[ExposurePoint]
 
 
 def requires_active_attribution(stateful: HistoricalAttributionStatefulInput) -> bool:
@@ -156,13 +165,15 @@ async def _fetch_active_benchmark_exposure_history(
     correlation_id: str | None,
 ) -> list[ExposurePoint]:
     benchmark_exposure_history = await fetch_benchmark_exposure_history(
-        performance_client=performance_client,
-        portfolio_id=stateful.portfolio_id,
-        as_of_date=stateful.as_of_date,
-        start_date=start_date,
-        reporting_currency=stateful.reporting_currency,
-        grouping_dimensions=grouping_dimensions,
-        correlation_id=correlation_id,
+        BenchmarkExposureHistoryRequest(
+            performance_client=performance_client,
+            portfolio_id=stateful.portfolio_id,
+            as_of_date=stateful.as_of_date,
+            start_date=start_date,
+            reporting_currency=stateful.reporting_currency,
+            grouping_dimensions=grouping_dimensions,
+            correlation_id=correlation_id,
+        )
     )
     _validate_benchmark_exposure_alignment(
         benchmark_returns=benchmark_returns,
@@ -193,6 +204,41 @@ def build_stateful_stateless_input(
     )
 
 
+async def _stateful_exposure_histories(
+    *,
+    stateful: HistoricalAttributionStatefulInput,
+    core_client: LotusCoreClientProtocol,
+    performance_client: LotusPerformanceClientProtocol,
+    returns_context: StatefulReturnsContext,
+    grouping_dimensions: list[GroupingDimension],
+    requires_active: bool,
+    correlation_id: str | None,
+) -> _StatefulExposureHistories:
+    exposure_history = await fetch_stateful_exposure_history(
+        stateful=stateful,
+        core_client=core_client,
+        start_date=returns_context.start_date,
+        grouping_dimensions=grouping_dimensions,
+        correlation_id=correlation_id,
+    )
+    benchmark_exposure_history = (
+        await _fetch_active_benchmark_exposure_history(
+            stateful=stateful,
+            performance_client=performance_client,
+            benchmark_returns=returns_context.benchmark_returns,
+            start_date=returns_context.start_date,
+            grouping_dimensions=grouping_dimensions,
+            correlation_id=correlation_id,
+        )
+        if requires_active
+        else []
+    )
+    return _StatefulExposureHistories(
+        exposure_history=exposure_history,
+        benchmark_exposure_history=benchmark_exposure_history,
+    )
+
+
 async def resolve_stateful_attribution_inputs(
     stateful: HistoricalAttributionStatefulInput,
     *,
@@ -210,32 +256,21 @@ async def resolve_stateful_attribution_inputs(
         performance_client=performance_client,
         correlation_id=correlation_id,
     )
-    exposure_history = await fetch_stateful_exposure_history(
+    exposure_histories = await _stateful_exposure_histories(
         stateful=stateful,
         core_client=core_client,
-        start_date=returns_context.start_date,
+        performance_client=performance_client,
+        returns_context=returns_context,
         grouping_dimensions=requested_groupings,
+        requires_active=requires_active,
         correlation_id=correlation_id,
-    )
-
-    benchmark_exposure_history = (
-        await _fetch_active_benchmark_exposure_history(
-            stateful=stateful,
-            performance_client=performance_client,
-            benchmark_returns=returns_context.benchmark_returns,
-            start_date=returns_context.start_date,
-            grouping_dimensions=requested_groupings,
-            correlation_id=correlation_id,
-        )
-        if requires_active
-        else []
     )
     return ResolvedStatefulAttributionInputs(
         stateless_input=build_stateful_stateless_input(
             stateful=stateful,
             returns_context=returns_context,
-            exposure_history=exposure_history,
-            benchmark_exposure_history=benchmark_exposure_history,
+            exposure_history=exposure_histories.exposure_history,
+            benchmark_exposure_history=exposure_histories.benchmark_exposure_history,
         ),
         returns_request=returns_context.returns_request,
     )

@@ -12,13 +12,19 @@ from app.contracts.risk import (
     RiskSupportabilityReason,
 )
 from app.observability import record_analytics_freshness_bucket, record_calculation_supportability
+from app.services.supportability_periods import (
+    assess_period_results,
+    period_results_supportability_state,
+    select_supportability_reason,
+    supportability_reason_for_error,
+)
 
 
 @dataclass(frozen=True)
-class _PeriodSupportabilityAssessment:
+class _RiskMetricSupportabilityScan:
     degraded_reasons: list[RiskSupportabilityReason]
     empty_period_count: int
-    degraded_result_count: int
+    degraded_metric_count: int
 
 
 def default_calculation_supportability() -> RiskCalculationSupportability:
@@ -45,127 +51,6 @@ def freshness_bucket_from_returns(
     return "stale"
 
 
-def _supportability_reason_for_error(error: str) -> RiskSupportabilityReason:
-    if error in {
-        "Benchmark returns required for benchmark-dependent metric",
-        "BENCHMARK_UNAVAILABLE",
-    }:
-        return "benchmark_unavailable"
-    if error in {"Insufficient aligned observations", "NO_ALIGNED_OBSERVATIONS"}:
-        return "insufficient_aligned_observations"
-    if error == "Insufficient data":
-        return "insufficient_observations"
-    return "calculation_quality_issue"
-
-
-def _select_reason(reasons: Sequence[RiskSupportabilityReason]) -> RiskSupportabilityReason:
-    reason_order: tuple[RiskSupportabilityReason, ...] = (
-        "benchmark_unavailable",
-        "insufficient_aligned_observations",
-        "insufficient_observations",
-        "calculation_quality_issue",
-    )
-    return next(reason for reason in reason_order if reason in set(reasons))
-
-
-def _observation_count(period_result: Any) -> int | None:
-    for attribute_name in ("portfolio_observation_count", "series_count"):
-        value = getattr(period_result, attribute_name, None)
-        if isinstance(value, int):
-            return value
-    return None
-
-
-def _dependency_degradation_reason(period_result: Any) -> RiskSupportabilityReason | None:
-    for attribute_name in (
-        "relative_to_benchmark_context",
-        "benchmark_context",
-        "risk_free_context",
-    ):
-        context = getattr(period_result, attribute_name, None)
-        if context is None or getattr(context, "requested", False) is not True:
-            continue
-        reason = getattr(context, "reason", None)
-        applied = getattr(context, "applied", None)
-        available = getattr(context, "available", None)
-        aligned = getattr(context, "aligned", None)
-        if applied is False or available is False:
-            return _supportability_reason_for_error(str(reason))
-        if aligned is False:
-            return "insufficient_aligned_observations"
-    return None
-
-
-def _assess_period_results(
-    results: Mapping[str, Any],
-) -> _PeriodSupportabilityAssessment:
-    degraded_reasons: list[RiskSupportabilityReason] = []
-    empty_period_count = 0
-    degraded_result_count = 0
-
-    for period_result in results.values():
-        observation_count = _observation_count(period_result)
-        if observation_count == 0:
-            empty_period_count += 1
-
-        error = getattr(period_result, "error", None)
-        if isinstance(error, str):
-            degraded_result_count += 1
-            degraded_reasons.append(_supportability_reason_for_error(error))
-            continue
-        dependency_reason = _dependency_degradation_reason(period_result)
-        if dependency_reason is not None:
-            degraded_result_count += 1
-            degraded_reasons.append(dependency_reason)
-
-    return _PeriodSupportabilityAssessment(
-        degraded_reasons=degraded_reasons,
-        empty_period_count=empty_period_count,
-        degraded_result_count=degraded_result_count,
-    )
-
-
-def _period_results_supportability_state(
-    *,
-    freshness_bucket: RiskFreshnessBucket,
-    assessment: _PeriodSupportabilityAssessment,
-    evaluated_period_count: int,
-) -> RiskCalculationSupportability:
-    if assessment.degraded_result_count:
-        return RiskCalculationSupportability(
-            state="degraded",
-            reason=_select_reason(assessment.degraded_reasons),
-            freshness_bucket=freshness_bucket,
-            degraded_metric_count=assessment.degraded_result_count,
-            empty_period_count=assessment.empty_period_count,
-            evaluated_period_count=evaluated_period_count,
-        )
-
-    if assessment.empty_period_count:
-        return RiskCalculationSupportability(
-            state="empty",
-            reason="insufficient_observations",
-            freshness_bucket=freshness_bucket,
-            empty_period_count=assessment.empty_period_count,
-            evaluated_period_count=evaluated_period_count,
-        )
-
-    if freshness_bucket == "stale":
-        return RiskCalculationSupportability(
-            state="stale",
-            reason="stale_source_observations",
-            freshness_bucket=freshness_bucket,
-            evaluated_period_count=evaluated_period_count,
-        )
-
-    return RiskCalculationSupportability(
-        state="ready",
-        reason="calculation_complete",
-        freshness_bucket=freshness_bucket,
-        evaluated_period_count=evaluated_period_count,
-    )
-
-
 def supportability_from_period_results(
     *,
     returns: Sequence[ReturnPoint],
@@ -181,9 +66,9 @@ def supportability_from_period_results(
             evaluated_period_count=len(results),
         )
 
-    return _period_results_supportability_state(
+    return period_results_supportability_state(
         freshness_bucket=freshness_bucket,
-        assessment=_assess_period_results(results),
+        assessment=assess_period_results(results),
         evaluated_period_count=len(results),
     )
 
@@ -240,6 +125,23 @@ def supportability_from_risk_metric_results(
     if supportability.state == "empty":
         return supportability
 
+    scan = _scan_risk_metric_supportability(results)
+    if scan.degraded_metric_count:
+        freshness_bucket = freshness_bucket_from_returns(returns, as_of_date=as_of_date)
+        return RiskCalculationSupportability(
+            state="degraded",
+            reason=select_supportability_reason(scan.degraded_reasons),
+            freshness_bucket=freshness_bucket,
+            degraded_metric_count=scan.degraded_metric_count,
+            empty_period_count=scan.empty_period_count,
+            evaluated_period_count=len(results),
+        )
+    return supportability
+
+
+def _scan_risk_metric_supportability(
+    results: Mapping[str, Any],
+) -> _RiskMetricSupportabilityScan:
     degraded_reasons: list[RiskSupportabilityReason] = []
     empty_period_count = 0
     degraded_metric_count = 0
@@ -256,19 +158,13 @@ def supportability_from_risk_metric_results(
             error = details.get("error")
             if isinstance(error, str):
                 degraded_metric_count += 1
-                degraded_reasons.append(_supportability_reason_for_error(error))
+                degraded_reasons.append(supportability_reason_for_error(error))
 
-    if degraded_metric_count:
-        freshness_bucket = freshness_bucket_from_returns(returns, as_of_date=as_of_date)
-        return RiskCalculationSupportability(
-            state="degraded",
-            reason=_select_reason(degraded_reasons),
-            freshness_bucket=freshness_bucket,
-            degraded_metric_count=degraded_metric_count,
-            empty_period_count=empty_period_count,
-            evaluated_period_count=len(results),
-        )
-    return supportability
+    return _RiskMetricSupportabilityScan(
+        degraded_reasons=degraded_reasons,
+        empty_period_count=empty_period_count,
+        degraded_metric_count=degraded_metric_count,
+    )
 
 
 def supportability_from_concentration_response(

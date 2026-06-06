@@ -4,6 +4,11 @@ import datetime as dt
 
 from pydantic import BaseModel, Field, model_validator
 
+from app.contracts.scenario_request_field_examples import (
+    SCENARIO_EXPOSURE_COMPONENTS_EXAMPLE,
+    SCENARIO_EXPOSURES_EXAMPLE,
+)
+
 
 class ScenarioExposure(BaseModel):
     bucket: str = Field(
@@ -54,13 +59,7 @@ class RegimeScenarioPackRequest(BaseModel):
     )
     exposures: list[ScenarioExposure] = Field(
         description="Caller-supplied portfolio exposure weights by scenario bucket.",
-        json_schema_extra={
-            "example": [
-                {"bucket": "EQUITY", "weight": 0.55},
-                {"bucket": "FIXED_INCOME", "weight": 0.35},
-                {"bucket": "CASH", "weight": 0.10},
-            ]
-        },
+        json_schema_extra={"example": SCENARIO_EXPOSURES_EXAMPLE},
     )
     exposure_components: list[ScenarioExposureComponent] = Field(
         default_factory=list,
@@ -69,22 +68,7 @@ class RegimeScenarioPackRequest(BaseModel):
             "contribution rows. When supplied, component weights must reconcile to the bucket "
             "weights in exposures."
         ),
-        json_schema_extra={
-            "example": [
-                {
-                    "security_id": "FO_EQ_AAPL_US",
-                    "display_name": "Apple Inc.",
-                    "bucket": "EQUITY",
-                    "weight": 0.18,
-                },
-                {
-                    "security_id": "FO_BOND_UST_2030",
-                    "display_name": "United States Treasury 3.875% 2030",
-                    "bucket": "FIXED_INCOME",
-                    "weight": 0.35,
-                },
-            ]
-        },
+        json_schema_extra={"example": SCENARIO_EXPOSURE_COMPONENTS_EXAMPLE},
     )
     maximum_allowed_loss_pct: float = Field(
         ge=0.0,

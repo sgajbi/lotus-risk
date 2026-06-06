@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
 from typing import Any
 
 from app.contracts.concentration import (
@@ -11,7 +10,6 @@ from app.contracts.concentration import (
     ConcentrationValuationContext,
     SimulationConcentrationInput,
 )
-from app.service_metadata import SERVICE_NAME
 from app.services.audit_lineage import ordered_source_services, upstream_request_fingerprint
 from app.services.concentration.datamodels import (
     ConcentrationComputationInput,
@@ -22,9 +20,6 @@ from app.services.concentration.datamodels import (
 from app.services.concentration.metadata import build_metadata
 from app.services.concentration.parsing import (
     _apply_snapshot_display_names,
-    _as_datetime,
-    _as_int,
-    _as_str,
     _caller_issuer_map,
     _extract_issuer_map,
     _extract_valuation_context,
@@ -32,13 +27,13 @@ from app.services.concentration.parsing import (
     _merge_issuer_maps,
 )
 from app.services.concentration.ports import LotusCoreClientProtocol
-
-
-@dataclass(frozen=True)
-class _SimulationSession:
-    session_id: str
-    version: int | None
-    expires_at: datetime | None
+from app.services.concentration.simulation_session import (
+    SimulationSession,
+    apply_simulation_changes,
+    resolve_simulation_session,
+    session_with_snapshot_version,
+    simulation_snapshot_payload,
+)
 
 
 @dataclass(frozen=True)
@@ -53,106 +48,6 @@ class _SimulationSnapshotState:
     total_projected: int
     issuer_note: str | None
     valuation_context: ConcentrationValuationContext | None
-
-
-async def _resolve_simulation_session(
-    simulation: SimulationConcentrationInput,
-    *,
-    core_client: LotusCoreClientProtocol,
-    correlation_id: str | None,
-    actor_id: str | None,
-) -> _SimulationSession:
-    session_id = simulation.session_id
-    session_version: int | None = None
-    session_expires_at: datetime | None = None
-
-    should_create_session = simulation.start_new_session or not session_id
-    if should_create_session:
-        session_response = await core_client.create_simulation_session(
-            portfolio_id=simulation.portfolio_id,
-            ttl_hours=simulation.session_ttl_hours,
-            created_by=actor_id or SERVICE_NAME,
-            correlation_id=correlation_id,
-        )
-        session_record = session_response.get("session")
-        if not isinstance(session_record, dict):
-            raise ValueError(
-                "lotus-core create simulation session returned invalid response payload"
-            )
-        resolved_session_id = _as_str(session_record.get("session_id"))
-        if not resolved_session_id:
-            raise ValueError("lotus-core create simulation session response missing session_id")
-        session_id = resolved_session_id
-        session_version = _as_int(session_record.get("version"))
-        session_expires_at = _as_datetime(session_record.get("expires_at"))
-
-    if session_id is None:
-        raise ValueError("simulation session_id could not be resolved")
-    return _SimulationSession(
-        session_id=session_id,
-        version=session_version,
-        expires_at=session_expires_at,
-    )
-
-
-async def _apply_simulation_changes(
-    simulation: SimulationConcentrationInput,
-    *,
-    session: _SimulationSession,
-    core_client: LotusCoreClientProtocol,
-    correlation_id: str | None,
-) -> _SimulationSession:
-    if not simulation.simulation_changes:
-        return session
-
-    payload = [
-        change.model_dump(mode="json", exclude_none=True)
-        for change in simulation.simulation_changes
-    ]
-    changes_response = await core_client.add_simulation_changes(
-        session_id=session.session_id,
-        changes=payload,
-        correlation_id=correlation_id,
-    )
-    session_version = _as_int(changes_response.get("version")) or session.version
-    return _SimulationSession(
-        session_id=session.session_id,
-        version=session_version,
-        expires_at=session.expires_at,
-    )
-
-
-def _simulation_snapshot_payload(
-    simulation: SimulationConcentrationInput,
-    *,
-    session: _SimulationSession,
-) -> dict[str, Any]:
-    expected_version = simulation.expected_version or session.version
-    snapshot_payload: dict[str, Any] = {
-        "as_of_date": simulation.as_of_date.isoformat(),
-        "snapshot_mode": "SIMULATION",
-        "sections": [
-            "positions_baseline",
-            "positions_projected",
-            "positions_delta",
-            "portfolio_totals",
-            "instrument_enrichment",
-        ],
-        "simulation": {
-            "session_id": session.session_id,
-        },
-        "options": {
-            "include_zero_quantity_positions": simulation.include_zero_quantity_positions,
-            "include_cash_positions": simulation.include_cash_positions,
-            "position_basis": "market_value_base",
-            "weight_basis": "total_market_value_base",
-        },
-    }
-    if expected_version is not None:
-        snapshot_payload["simulation"]["expected_version"] = expected_version
-    if simulation.reporting_currency:
-        snapshot_payload["reporting_currency"] = simulation.reporting_currency
-    return snapshot_payload
 
 
 def _issuer_map_from_snapshot_sections(
@@ -217,26 +112,11 @@ def _simulation_snapshot_state(
     )
 
 
-def _session_with_snapshot_version(
-    session: _SimulationSession,
-    *,
-    snapshot: dict[str, Any],
-) -> _SimulationSession:
-    snapshot_simulation = snapshot.get("simulation")
-    if not isinstance(snapshot_simulation, dict):
-        return session
-    return _SimulationSession(
-        session_id=session.session_id,
-        version=_as_int(snapshot_simulation.get("version")) or session.version,
-        expires_at=session.expires_at,
-    )
-
-
 def _simulation_metadata(
     request: ConcentrationRequest,
     *,
     simulation: SimulationConcentrationInput,
-    session: _SimulationSession,
+    session: SimulationSession,
     snapshot_payload: dict[str, Any],
 ) -> ConcentrationMetadata:
     metadata = build_metadata(
@@ -262,11 +142,11 @@ async def _fetch_simulation_snapshot_state(
     *,
     request: ConcentrationRequest,
     simulation: SimulationConcentrationInput,
-    session: _SimulationSession,
+    session: SimulationSession,
     core_client: LotusCoreClientProtocol,
     correlation_id: str | None,
     snapshot_payload: dict[str, Any],
-) -> tuple[_SimulationSnapshotState, _SimulationSession]:
+) -> tuple[_SimulationSnapshotState, SimulationSession]:
     snapshot = await core_client.get_core_snapshot(
         portfolio_id=simulation.portfolio_id,
         request_payload=snapshot_payload,
@@ -288,7 +168,28 @@ async def _fetch_simulation_snapshot_state(
             issuer_by_security=issuer_by_security,
             issuer_note=issuer_note,
         ),
-        _session_with_snapshot_version(session, snapshot=snapshot),
+        session_with_snapshot_version(session, snapshot=snapshot),
+    )
+
+
+async def _resolve_applied_simulation_session(
+    *,
+    simulation: SimulationConcentrationInput,
+    core_client: LotusCoreClientProtocol,
+    correlation_id: str | None,
+    actor_id: str | None,
+) -> SimulationSession:
+    session = await resolve_simulation_session(
+        simulation,
+        core_client=core_client,
+        correlation_id=correlation_id,
+        actor_id=actor_id,
+    )
+    return await apply_simulation_changes(
+        simulation,
+        session=session,
+        core_client=core_client,
+        correlation_id=correlation_id,
     )
 
 
@@ -326,19 +227,13 @@ async def resolve_simulation(
     if simulation is None:
         raise ValueError("simulation_input is required when input_mode=simulation")
 
-    session = await _resolve_simulation_session(
-        simulation,
+    session = await _resolve_applied_simulation_session(
+        simulation=simulation,
         core_client=core_client,
         correlation_id=correlation_id,
         actor_id=actor_id,
     )
-    session = await _apply_simulation_changes(
-        simulation,
-        session=session,
-        core_client=core_client,
-        correlation_id=correlation_id,
-    )
-    snapshot_payload = _simulation_snapshot_payload(simulation, session=session)
+    snapshot_payload = simulation_snapshot_payload(simulation, session=session)
     snapshot_state, session = await _fetch_simulation_snapshot_state(
         request=request,
         simulation=simulation,

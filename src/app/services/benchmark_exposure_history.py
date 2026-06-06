@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal, InvalidOperation
 from typing import Any, Protocol
@@ -17,6 +18,17 @@ class BenchmarkExposurePerformanceClientProtocol(Protocol):
     ) -> dict[str, Any]: ...
 
 
+@dataclass(frozen=True)
+class BenchmarkExposureHistoryRequest:
+    performance_client: BenchmarkExposurePerformanceClientProtocol
+    portfolio_id: str
+    as_of_date: date
+    start_date: date
+    reporting_currency: str | None
+    grouping_dimensions: list[GroupingDimension]
+    correlation_id: str | None
+
+
 def _as_decimal(value: Any) -> Decimal:
     try:
         return Decimal(str(value))
@@ -29,67 +41,79 @@ def _as_decimal(value: Any) -> Decimal:
 
 
 def _validate_lineage(response: dict[str, Any]) -> None:
-    if response.get("source_service") != "lotus-performance":
-        raise invalid_upstream_payload(
-            service="lotus-performance",
-            operation="/integration/benchmarks/exposure-context",
-            message=(
-                "lotus-performance benchmark exposure context missing "
-                "source_service=lotus-performance"
-            ),
-        )
-    if response.get("contract_version") != "v1":
-        raise invalid_upstream_payload(
-            service="lotus-performance",
-            operation="/integration/benchmarks/exposure-context",
-            message="lotus-performance benchmark exposure context missing contract_version=v1",
-        )
+    _require_context_value(
+        response,
+        field_name="source_service",
+        expected_value="lotus-performance",
+        message="source_service=lotus-performance",
+    )
+    _require_context_value(
+        response,
+        field_name="contract_version",
+        expected_value="v1",
+        message="contract_version=v1",
+    )
 
+    metadata = _metadata_object(response)
+    _require_context_value(
+        metadata,
+        field_name="source_system",
+        expected_value="lotus-core",
+        message="lotus-core lineage",
+    )
+    _require_context_value(
+        metadata,
+        field_name="served_by",
+        expected_value="lotus-performance",
+        message="served_by=lotus-performance",
+    )
+
+
+def _metadata_object(response: dict[str, Any]) -> dict[str, Any]:
     metadata = response.get("metadata")
-    if not isinstance(metadata, dict):
-        raise invalid_upstream_payload(
-            service="lotus-performance",
-            operation="/integration/benchmarks/exposure-context",
-            message="lotus-performance benchmark exposure context payload missing metadata object",
-        )
-    if metadata.get("source_system") != "lotus-core":
-        raise invalid_upstream_payload(
-            service="lotus-performance",
-            operation="/integration/benchmarks/exposure-context",
-            message="lotus-performance benchmark exposure context missing lotus-core lineage",
-        )
-    if metadata.get("served_by") != "lotus-performance":
-        raise invalid_upstream_payload(
-            service="lotus-performance",
-            operation="/integration/benchmarks/exposure-context",
-            message=(
-                "lotus-performance benchmark exposure context missing served_by=lotus-performance"
-            ),
-        )
+    if isinstance(metadata, dict):
+        return metadata
+    raise _invalid_benchmark_exposure_context("payload missing metadata object")
+
+
+def _require_context_value(
+    payload: dict[str, Any],
+    *,
+    field_name: str,
+    expected_value: str,
+    message: str,
+) -> None:
+    if payload.get(field_name) == expected_value:
+        return
+    raise _invalid_benchmark_exposure_context(f"missing {message}")
+
+
+def _invalid_benchmark_exposure_context(message: str) -> ValueError:
+    return invalid_upstream_payload(
+        service="lotus-performance",
+        operation="/integration/benchmarks/exposure-context",
+        message=f"lotus-performance benchmark exposure context {message}",
+    )
 
 
 def _build_request_payload(
     *,
-    portfolio_id: str,
-    as_of_date: date,
-    start_date: date,
-    reporting_currency: str | None,
-    grouping_dimensions: list[GroupingDimension],
+    request: BenchmarkExposureHistoryRequest,
     page_token: str | None,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
-        "portfolio_id": portfolio_id,
-        "as_of_date": as_of_date.isoformat(),
+        "portfolio_id": request.portfolio_id,
+        "as_of_date": request.as_of_date.isoformat(),
         "window": {
-            "start_date": start_date.isoformat(),
-            "end_date": as_of_date.isoformat(),
+            "start_date": request.start_date.isoformat(),
+            "end_date": request.as_of_date.isoformat(),
         },
         "frequency": "DAILY",
-        "grouping_dimensions": grouping_dimensions,
+        "grouping_dimensions": request.grouping_dimensions,
         "page": {"page_size": 1000, "page_token": page_token},
     }
-    if reporting_currency:
-        payload["reporting_currency"] = reporting_currency
+    if request.reporting_currency:
+        payload["reporting_currency"] = request.reporting_currency
     return payload
 
 
@@ -126,25 +150,15 @@ def _rows_to_exposure_points(rows: list[Any]) -> list[ExposurePoint]:
 
 async def _fetch_benchmark_exposure_page(
     *,
-    performance_client: BenchmarkExposurePerformanceClientProtocol,
-    portfolio_id: str,
-    as_of_date: date,
-    start_date: date,
-    reporting_currency: str | None,
-    grouping_dimensions: list[GroupingDimension],
+    request: BenchmarkExposureHistoryRequest,
     page_token: str | None,
-    correlation_id: str | None,
 ) -> tuple[list[ExposurePoint], str | None]:
-    response = await performance_client.get_benchmark_exposure_context(
+    response = await request.performance_client.get_benchmark_exposure_context(
         request_payload=_build_request_payload(
-            portfolio_id=portfolio_id,
-            as_of_date=as_of_date,
-            start_date=start_date,
-            reporting_currency=reporting_currency,
-            grouping_dimensions=grouping_dimensions,
+            request=request,
             page_token=page_token,
         ),
-        correlation_id=correlation_id,
+        correlation_id=request.correlation_id,
     )
     _validate_lineage(response)
 
@@ -178,29 +192,16 @@ def _validate_supported_grouping_dimensions(
 
 
 async def fetch_benchmark_exposure_history(
-    *,
-    performance_client: BenchmarkExposurePerformanceClientProtocol,
-    portfolio_id: str,
-    as_of_date: date,
-    start_date: date,
-    reporting_currency: str | None,
-    grouping_dimensions: list[GroupingDimension],
-    correlation_id: str | None,
+    request: BenchmarkExposureHistoryRequest,
 ) -> list[ExposurePoint]:
-    _validate_supported_grouping_dimensions(grouping_dimensions)
+    _validate_supported_grouping_dimensions(request.grouping_dimensions)
 
     page_token: str | None = None
     benchmark_exposures: list[ExposurePoint] = []
     while True:
         exposure_points, next_page_token = await _fetch_benchmark_exposure_page(
-            performance_client=performance_client,
-            portfolio_id=portfolio_id,
-            as_of_date=as_of_date,
-            start_date=start_date,
-            reporting_currency=reporting_currency,
-            grouping_dimensions=grouping_dimensions,
+            request=request,
             page_token=page_token,
-            correlation_id=correlation_id,
         )
         benchmark_exposures.extend(exposure_points)
         if next_page_token is None:

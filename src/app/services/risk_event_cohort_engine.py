@@ -31,6 +31,12 @@ class _PortfolioRiskEventEvaluation:
     unsupported_buckets: list[str]
 
 
+@dataclass(frozen=True)
+class _RiskEventCohortMembership:
+    affected: list[RiskEventAffectedPortfolio]
+    excluded: list[RiskEventExcludedPortfolio]
+
+
 RISK_EVENTS: dict[str, RiskEventDefinition] = {
     "RISK_EVENT_2026_Q2_RATES_UP": RiskEventDefinition(
         risk_event_id="RISK_EVENT_2026_Q2_RATES_UP",
@@ -62,6 +68,32 @@ def evaluate_risk_event_affected_cohort(
     if risk_event is None:
         raise ValueError(f"Unsupported risk_event_id: {request.risk_event_id}")
 
+    membership = _risk_event_cohort_membership(request=request, risk_event=risk_event)
+    request_fingerprint = _request_fingerprint(request)
+    supportability, reason_codes = _supportability_state(
+        affected=membership.affected,
+        excluded=membership.excluded,
+    )
+    return RiskEventAffectedCohortResponse(
+        cohort_id=_cohort_id(request_fingerprint),
+        risk_event_id=request.risk_event_id,
+        display_name=risk_event.display_name,
+        as_of_date=request.as_of_date,
+        affected_portfolios=membership.affected,
+        excluded_portfolios=membership.excluded,
+        reason_codes=sorted(set(reason_codes)),
+        metadata=RiskEventCohortMetadata(
+            request_fingerprint=request_fingerprint,
+            calculation_supportability=supportability,
+        ),
+    )
+
+
+def _risk_event_cohort_membership(
+    *,
+    request: RiskEventAffectedCohortRequest,
+    risk_event: RiskEventDefinition,
+) -> _RiskEventCohortMembership:
     affected: list[RiskEventAffectedPortfolio] = []
     excluded: list[RiskEventExcludedPortfolio] = []
     supported_buckets = set(risk_event.shock_by_bucket)
@@ -76,25 +108,7 @@ def evaluate_risk_event_affected_cohort(
             affected.append(_affected_portfolio(request=request, evaluation=evaluation))
             continue
         excluded.append(_excluded_portfolio(evaluation))
-
-    request_fingerprint = _request_fingerprint(request)
-    supportability, reason_codes = _supportability_state(
-        affected=affected,
-        excluded=excluded,
-    )
-    return RiskEventAffectedCohortResponse(
-        cohort_id=_cohort_id(request_fingerprint),
-        risk_event_id=request.risk_event_id,
-        display_name=risk_event.display_name,
-        as_of_date=request.as_of_date,
-        affected_portfolios=affected,
-        excluded_portfolios=excluded,
-        reason_codes=sorted(set(reason_codes)),
-        metadata=RiskEventCohortMetadata(
-            request_fingerprint=request_fingerprint,
-            calculation_supportability=supportability,
-        ),
-    )
+    return _RiskEventCohortMembership(affected=affected, excluded=excluded)
 
 
 def _evaluate_portfolio_exposure(

@@ -11,19 +11,23 @@ from app.contracts.drawdown import (
     DrawdownAnalysisOptions,
     DrawdownEpisode,
     DrawdownPeriodResult,
+    DrawdownSummary,
     RelativeDrawdownContext,
     DrawdownStatelessInput,
-    DrawdownSummary,
-    RelativeDrawdownSummary,
 )
 from app.contracts.risk import ReturnPoint, RiskRequestPeriod
+from app.services.drawdown_relative_benchmark import (
+    RelativeBenchmarkResult,
+    RelativeBenchmarkSeries,
+    relative_benchmark_result,
+)
 from app.services.drawdown_series import (
     EpisodeRecord,
     drawdown_from_returns as _drawdown_from_returns,
     drawdown_summary as _drawdown_summary,
     to_underwater_series as _to_underwater_series,
 )
-from app.services.risk import helpers as risk_helpers
+from app.services.risk.period_resolution import resolve_period
 
 
 @dataclass(frozen=True)
@@ -40,12 +44,6 @@ class DrawdownPeriodSeries:
     portfolio_returns: pd.Series
     benchmark_returns: pd.Series
     benchmark_available: bool
-
-
-@dataclass(frozen=True)
-class RelativeBenchmarkResult:
-    summary: RelativeDrawdownSummary | None
-    context: RelativeDrawdownContext
 
 
 def _build_returns_df(returns: Sequence[ReturnPoint]) -> pd.DataFrame:
@@ -79,7 +77,7 @@ def _period_series(
     period: RiskRequestPeriod,
     open_date: date,
 ) -> DrawdownPeriodSeries:
-    start, end = risk_helpers._resolve_period(
+    start, end = resolve_period(
         period.type,
         request.scope.as_of_date,
         open_date,
@@ -154,89 +152,6 @@ def _episode_models(
     ]
 
 
-def _relative_benchmark_context(
-    *,
-    include_benchmark: bool | None,
-    benchmark_available: bool,
-    aligned_observation_count: int | None = None,
-) -> RelativeDrawdownContext:
-    requested = include_benchmark is True
-    if aligned_observation_count is not None:
-        return RelativeDrawdownContext(
-            requested=requested,
-            applied=aligned_observation_count > 0,
-            reason="APPLIED" if aligned_observation_count > 0 else "NO_ALIGNED_OBSERVATIONS",
-            aligned_observation_count=aligned_observation_count,
-        )
-    return RelativeDrawdownContext(
-        requested=requested,
-        applied=False,
-        reason=(
-            "NO_ALIGNED_OBSERVATIONS"
-            if benchmark_available
-            else "NOT_REQUESTED"
-            if not requested
-            else "BENCHMARK_UNAVAILABLE"
-        ),
-        aligned_observation_count=0,
-    )
-
-
-def _relative_drawdown_summary(active_summary: DrawdownSummary) -> RelativeDrawdownSummary:
-    return RelativeDrawdownSummary(
-        max_drawdown=active_summary.max_drawdown,
-        max_drawdown_peak_date=active_summary.max_drawdown_peak_date,
-        max_drawdown_trough_date=active_summary.max_drawdown_trough_date,
-        max_drawdown_recovery_date=active_summary.max_drawdown_recovery_date,
-        is_recovered=active_summary.is_recovered,
-        days_to_trough=active_summary.days_to_trough,
-        days_to_recovery=active_summary.days_to_recovery,
-        time_under_water_days=active_summary.time_under_water_days or 0,
-    )
-
-
-def _relative_benchmark_result(
-    period_series: DrawdownPeriodSeries,
-    *,
-    include_benchmark: bool | None,
-    analysis_options: DrawdownAnalysisOptions,
-) -> RelativeBenchmarkResult:
-    if period_series.benchmark_returns.empty:
-        return RelativeBenchmarkResult(
-            summary=None,
-            context=_relative_benchmark_context(
-                include_benchmark=include_benchmark,
-                benchmark_available=period_series.benchmark_available,
-            ),
-        )
-
-    aligned = pd.merge(
-        period_series.portfolio_returns.to_frame("portfolio"),
-        period_series.benchmark_returns.to_frame("benchmark"),
-        left_index=True,
-        right_index=True,
-        how="inner",
-    )
-    relative_context = _relative_benchmark_context(
-        include_benchmark=include_benchmark,
-        benchmark_available=period_series.benchmark_available,
-        aligned_observation_count=len(aligned),
-    )
-    if aligned.empty:
-        return RelativeBenchmarkResult(summary=None, context=relative_context)
-
-    active_drawdown = _drawdown_from_returns(aligned["portfolio"] - aligned["benchmark"])
-    active_summary, _ = _drawdown_summary(
-        active_drawdown,
-        alpha=float(analysis_options.cdar_alpha),
-        duration_unit=analysis_options.duration_unit,
-    )
-    return RelativeBenchmarkResult(
-        summary=_relative_drawdown_summary(active_summary),
-        context=relative_context,
-    )
-
-
 def _calculate_period_result(
     period_series: DrawdownPeriodSeries,
     *,
@@ -255,11 +170,47 @@ def _calculate_period_result(
         alpha=float(analysis_options.cdar_alpha),
         duration_unit=analysis_options.duration_unit,
     )
-    relative = _relative_benchmark_result(
+    relative = _period_relative_benchmark_result(
         period_series,
+        analysis_options=analysis_options,
+        include_benchmark=include_benchmark,
+    )
+    return _calculated_period_result(
+        period_series,
+        analysis_options=analysis_options,
+        drawdown=drawdown,
+        summary=summary,
+        episodes=episodes,
+        relative=relative,
+    )
+
+
+def _period_relative_benchmark_result(
+    period_series: DrawdownPeriodSeries,
+    *,
+    analysis_options: DrawdownAnalysisOptions,
+    include_benchmark: bool | None,
+) -> RelativeBenchmarkResult:
+    return relative_benchmark_result(
+        RelativeBenchmarkSeries(
+            portfolio_returns=period_series.portfolio_returns,
+            benchmark_returns=period_series.benchmark_returns,
+            benchmark_available=period_series.benchmark_available,
+        ),
         include_benchmark=include_benchmark,
         analysis_options=analysis_options,
     )
+
+
+def _calculated_period_result(
+    period_series: DrawdownPeriodSeries,
+    *,
+    analysis_options: DrawdownAnalysisOptions,
+    drawdown: pd.Series,
+    summary: DrawdownSummary,
+    episodes: list[EpisodeRecord],
+    relative: RelativeBenchmarkResult,
+) -> DrawdownPeriodResult:
     return DrawdownPeriodResult(
         start_date=period_series.start,
         end_date=period_series.end,

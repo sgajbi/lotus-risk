@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
+from dataclasses import dataclass
+from typing import Literal
+
 import pandas as pd
 from prometheus_client import Histogram
 
@@ -11,15 +15,29 @@ from app.contracts.risk import (
     RiskPeriodResult,
     RiskResponseMetadata,
     RiskStatelessCalculationInput,
+    RiskValue,
 )
 from app.services.audit_lineage import fingerprint_model
 from app.services.calculation_supportability import supportability_from_risk_metric_results
 from app.services.risk import helpers as risk_helpers
-from app.services.risk.period_metrics import calculate_period_metrics
-from app.services.risk.period_windows import risk_period_window
+from app.services.risk.period_metrics import (
+    BenchmarkContextPayload,
+    PeriodMetricCalculationRequest,
+    calculate_period_metrics,
+)
+from app.services.risk.period_windows import RiskPeriodWindow, risk_period_window
 
 BENCHMARK_METRICS = risk_helpers.BENCHMARK_METRICS
 RISK_FREE_METRICS = risk_helpers.RISK_METRICS_REQUIRING_RISK_FREE
+RiskFreeContextReason = Literal["NOT_REQUESTED", "ZERO_RATE", "ANNUAL_RATE_APPLIED"]
+
+
+@dataclass(frozen=True)
+class _PeriodMetricCalculation:
+    metric_map: dict[str, RiskValue]
+    benchmark_context: BenchmarkContextPayload | None
+    aligned_count: int
+    benchmark_observation_count: int
 
 
 def derive_annualization_factor(request: RiskStatelessCalculationInput) -> int:
@@ -58,8 +76,7 @@ def build_request_metadata(
     periodic_rf: float,
     calculation_supportability: RiskCalculationSupportability,
 ) -> RiskResponseMetadata:
-    risk_free_requested = any(metric in RISK_FREE_METRICS for metric in request.metrics)
-    benchmark_metrics = [str(metric) for metric in request.metrics if metric in BENCHMARK_METRICS]
+    benchmark_metrics = _requested_benchmark_metrics(request.metrics)
     return RiskResponseMetadata(
         request_fingerprint=fingerprint_model(request),
         frequency=request.options.frequency,
@@ -67,30 +84,56 @@ def build_request_metadata(
         use_log_returns=request.options.use_log_returns,
         risk_free_mode=request.options.risk_free_mode,
         risk_free_annual_rate=request.options.risk_free_annual_rate,
-        risk_free_context=RiskFreeContext(
-            requested=risk_free_requested,
-            applied=risk_free_requested,
-            reason=(
-                "NOT_REQUESTED"
-                if not risk_free_requested
-                else (
-                    "ANNUAL_RATE_APPLIED"
-                    if request.options.risk_free_mode == "ANNUAL_RATE"
-                    and request.options.risk_free_annual_rate is not None
-                    else "ZERO_RATE"
-                )
-            ),
-            periodic_rate=periodic_rf if risk_free_requested else 0.0,
+        risk_free_context=_risk_free_request_context(
+            request,
+            periodic_rf=periodic_rf,
         ),
-        benchmark_context=BenchmarkRequestContext(
-            requested=bool(benchmark_metrics),
-            requested_metrics=benchmark_metrics,
-        ),
+        benchmark_context=_benchmark_request_context(benchmark_metrics),
         calculation_supportability=calculation_supportability,
         mar_annual_rate=request.options.mar_annual_rate,
         var_method=request.options.var.method,
         var_confidence=request.options.var.confidence,
         var_horizon_days=request.options.var.horizon_days,
+    )
+
+
+def _risk_free_request_context(
+    request: RiskStatelessCalculationInput,
+    *,
+    periodic_rf: float,
+) -> RiskFreeContext:
+    requested = any(metric in RISK_FREE_METRICS for metric in request.metrics)
+    return RiskFreeContext(
+        requested=requested,
+        applied=requested,
+        reason=_risk_free_context_reason(request, requested=requested),
+        periodic_rate=periodic_rf if requested else 0.0,
+    )
+
+
+def _risk_free_context_reason(
+    request: RiskStatelessCalculationInput,
+    *,
+    requested: bool,
+) -> RiskFreeContextReason:
+    if not requested:
+        return "NOT_REQUESTED"
+    if (
+        request.options.risk_free_mode == "ANNUAL_RATE"
+        and request.options.risk_free_annual_rate is not None
+    ):
+        return "ANNUAL_RATE_APPLIED"
+    return "ZERO_RATE"
+
+
+def _requested_benchmark_metrics(metrics: Sequence[str]) -> list[str]:
+    return [str(metric) for metric in metrics if metric in BENCHMARK_METRICS]
+
+
+def _benchmark_request_context(benchmark_metrics: Sequence[str]) -> BenchmarkRequestContext:
+    return BenchmarkRequestContext(
+        requested=bool(benchmark_metrics),
+        requested_metrics=list(benchmark_metrics),
     )
 
 
@@ -123,6 +166,109 @@ def resolve_return_frames(
     return returns_df, benchmark_df
 
 
+def _period_result(
+    *,
+    period_window: RiskPeriodWindow,
+    metric_map: dict[str, RiskValue],
+    benchmark_context: BenchmarkContextPayload | None,
+    aligned_count: int,
+    benchmark_observation_count: int,
+    benchmark_df: pd.DataFrame,
+) -> RiskPeriodResult:
+    return RiskPeriodResult(
+        start_date=period_window.start.date(),
+        end_date=period_window.end.date(),
+        portfolio_observation_count=len(period_window.returns),
+        benchmark_observation_count=(
+            benchmark_observation_count
+            if (not benchmark_df.empty and benchmark_context is not None)
+            else 0
+        ),
+        aligned_benchmark_observation_count=(aligned_count if benchmark_context else 0),
+        benchmark_context=benchmark_context,
+        metrics=metric_map,
+    )
+
+
+def _period_metric_calculation(
+    request: RiskStatelessCalculationInput,
+    *,
+    period_window: RiskPeriodWindow,
+    annual_factor: int,
+    periodic_rf: float,
+    periodic_mar: float,
+    benchmark_df: pd.DataFrame,
+    benchmark_metrics: Sequence[str],
+    duration_seconds: Histogram,
+) -> _PeriodMetricCalculation:
+    return _period_metric_calculation_result(
+        calculate_period_metrics(
+            PeriodMetricCalculationRequest(
+                request=request,
+                start=period_window.start,
+                end=period_window.end,
+                annual_factor=annual_factor,
+                periodic_rf=periodic_rf,
+                periodic_mar=periodic_mar,
+                period_returns=period_window.returns,
+                benchmark_df=benchmark_df,
+                benchmark_metrics=benchmark_metrics,
+                duration_seconds=duration_seconds,
+            )
+        )
+    )
+
+
+def _period_metric_calculation_result(
+    result: tuple[dict[str, RiskValue], BenchmarkContextPayload | None, int, int],
+) -> _PeriodMetricCalculation:
+    metric_map, benchmark_context, aligned_count, benchmark_observation_count = result
+    return _PeriodMetricCalculation(
+        metric_map=metric_map,
+        benchmark_context=benchmark_context,
+        aligned_count=aligned_count,
+        benchmark_observation_count=benchmark_observation_count,
+    )
+
+
+def _build_single_period_result(
+    request: RiskStatelessCalculationInput,
+    *,
+    period_index: int,
+    annual_factor: int,
+    periodic_rf: float,
+    periodic_mar: float,
+    returns_df: pd.DataFrame,
+    benchmark_df: pd.DataFrame,
+    benchmark_metrics: Sequence[str],
+    duration_seconds: Histogram,
+) -> tuple[str, RiskPeriodResult]:
+    period_window = risk_period_window(
+        request=request,
+        period_index=period_index,
+        returns_df=returns_df,
+    )
+    calculation = _period_metric_calculation(
+        request,
+        period_window=period_window,
+        annual_factor=annual_factor,
+        periodic_rf=periodic_rf,
+        periodic_mar=periodic_mar,
+        benchmark_df=benchmark_df,
+        benchmark_metrics=benchmark_metrics,
+        duration_seconds=duration_seconds,
+    )
+
+    return period_window.name, _period_result(
+        period_window=period_window,
+        metric_map=calculation.metric_map,
+        benchmark_context=calculation.benchmark_context,
+        aligned_count=calculation.aligned_count,
+        benchmark_observation_count=calculation.benchmark_observation_count,
+        benchmark_df=benchmark_df,
+    )
+
+
 def build_period_results(
     request: RiskStatelessCalculationInput,
     *,
@@ -139,38 +285,17 @@ def build_period_results(
 
     results: dict[str, RiskPeriodResult] = {}
     for period_index, _period in enumerate(request.periods):
-        period_window = risk_period_window(
+        period_name, period_result = _build_single_period_result(
             request=request,
             period_index=period_index,
+            annual_factor=annual_factor,
+            periodic_rf=periodic_rf,
+            periodic_mar=periodic_mar,
             returns_df=returns_df,
+            benchmark_df=benchmark_df,
+            benchmark_metrics=benchmark_metrics_for_request,
+            duration_seconds=duration_seconds,
         )
-        metric_map, benchmark_context, aligned_count, benchmark_observation_count = (
-            calculate_period_metrics(
-                request,
-                start=period_window.start,
-                end=period_window.end,
-                annual_factor=annual_factor,
-                periodic_rf=periodic_rf,
-                periodic_mar=periodic_mar,
-                period_returns=period_window.returns,
-                benchmark_df=benchmark_df,
-                benchmark_metrics=benchmark_metrics_for_request,
-                duration_seconds=duration_seconds,
-            )
-        )
-
-        results[period_window.name] = RiskPeriodResult(
-            start_date=period_window.start.date(),
-            end_date=period_window.end.date(),
-            portfolio_observation_count=len(period_window.returns),
-            benchmark_observation_count=(
-                benchmark_observation_count
-                if (not benchmark_df.empty and benchmark_context is not None)
-                else 0
-            ),
-            aligned_benchmark_observation_count=(aligned_count if benchmark_context else 0),
-            benchmark_context=benchmark_context,
-            metrics=metric_map,
-        )
+        results[period_name] = period_result
 
     return results

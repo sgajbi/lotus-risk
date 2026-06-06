@@ -100,6 +100,10 @@ def function_sizes(symbol_sizes: list[SymbolSize]) -> list[SymbolSize]:
     return [item for item in symbol_sizes if item.kind in {"FunctionDef", "AsyncFunctionDef"}]
 
 
+def symbol_size(symbol_sizes: list[SymbolSize], *, path: str, name: str) -> SymbolSize:
+    return next(item for item in symbol_sizes if item.path == path and item.name == name)
+
+
 def count_route_decorators() -> int:
     main_path = SRC_DIR / "app" / "main.py"
     return sum(
@@ -294,6 +298,11 @@ def write_health_reports(
     unit_tests_collected = collected_test_count(unit_collection_evidence)
     largest_functions = function_sizes(symbol_sizes)
     largest_function = largest_functions[0]
+    lotus_performance_client = symbol_size(
+        symbol_sizes,
+        path="src/app/integrations/lotus_performance_client.py",
+        name="LotusPerformanceClient",
+    )
     scorecard = f"""# Lotus Risk Quality Scorecard
 
 This scorecard tracks measurable movement from the enterprise refactor baseline
@@ -304,7 +313,7 @@ evidence for PR readiness, not a completion claim.
 | --- | --- | --- | --- | --- |
 | API modularity | `src/app/main.py` had 22 route/middleware/handler decorators and 980 lines | `src/app/main.py` has 0 route/middleware/handler decorators and {main_lines} lines | App construction, routers, middleware, errors, and downstream dependency resolution are split into modules | Keep router boundaries green and prevent app-entry-point regression |
 | Code size | Largest files included `src/app/services/concentration_engine.py` at 981 lines and `src/app/main.py` at 980 lines | Largest source files are contract/service modules; no source file over 800 lines after the latest baseline | Monolithic API, concentration service, concentration input/output contracts, concentration metric/response output contracts, rolling input/output contracts, rolling metric/response output contracts, risk input/output contracts, drawdown input/output contracts, drawdown metric/response output contracts, attribution input/output contracts, scenario input/output contracts, concentration stateless resolution, concentration simulation resolution, attribution decomposition, attribution stateful exposure sourcing, drawdown series math, rolling metric-series, rolling stateful input resolution, and contract example payloads were split | Continue reducing service and contract hotspots over 600 lines |
-| Largest behavior units | Largest function/class included `calculate_risk` at 284 lines, `calculate_rolling_metrics` at 230 lines, and `LotusPerformanceClient` at 256 lines | Largest remaining function is `{largest_function.name}` at {largest_function.lines} lines; `LotusPerformanceClient` is 113 lines | Large engines and clients were decomposed into helpers, services, routers, and polling/parsing functions | Continue reducing engine-level orchestration hotspots |
+| Largest behavior units | Largest function/class included `calculate_risk` at 284 lines, `calculate_rolling_metrics` at 230 lines, and `LotusPerformanceClient` at 256 lines | Largest remaining function is `{largest_function.name}` at {largest_function.lines} lines; `LotusPerformanceClient` is {lotus_performance_client.lines} lines | Large engines and clients were decomposed into helpers, services, routers, and polling/parsing functions | Continue reducing engine-level orchestration hotspots |
 | Complexity | Baseline reported C-or-worse candidates across large service, contract, and readiness code | Current baseline reports no C-or-worse candidates in the complexity snapshot | C-level candidates in concentration parsing, risk period resolution, rolling/attribution validation, and enterprise authorization were removed | Keep radon report-only evidence clean while thresholds are tightened |
 | Architecture enforcement | Import-linter, architecture docs, and quality workflow were introduced as report-only baseline | `make architecture-gate` is green locally and in feature-lane CI | Architecture boundary checks are now part of routine slice validation | Extend contracts as service boundaries mature |
 | OpenAPI governance | Operation IDs were not visibly standardized; route-level examples needed certification after router extraction | Operation IDs are explicit; JSON mutation request examples are modularized and enforced by `make openapi-gate`; generated artifact policy is enforced by `make openapi-artifact-gate`; current artifact checksum evidence is recorded in `quality/openapi_artifact_evidence.md` | OpenAPI metadata is easier to review, no longer buried in large contract classes, and now fails missing operation IDs/request examples and missing generated artifact evidence in CI lanes | Regenerate and attach the final current OpenAPI artifact in the PR |

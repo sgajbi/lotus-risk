@@ -11,6 +11,8 @@ from app.integrations.lotus_core_client import (
     DEFAULT_LOTUS_CORE_BASE_URL,
     LotusCoreClient,
 )
+from app.integrations.lotus_core_operations import build_simulation_session_payload
+from app.integrations.lotus_core_transport import resolve_lotus_core_base_url
 from app.upstream_errors import UpstreamServiceError, extract_upstream_error_detail
 
 
@@ -53,6 +55,16 @@ def _ok_response(
         json=payload,
         request=httpx.Request("POST", url),
     )
+
+
+def test_build_simulation_session_payload_omits_empty_optional_fields() -> None:
+    payload = build_simulation_session_payload(
+        portfolio_id="DEMO_DPM_EUR_001",
+        ttl_hours=None,
+        created_by="",
+    )
+
+    assert payload == {"portfolio_id": "DEMO_DPM_EUR_001"}
 
 
 @pytest.mark.asyncio
@@ -226,3 +238,14 @@ def test_client_defaults_to_canonical_core_service_identity(
 
     assert DEFAULT_LOTUS_CORE_BASE_URL == "http://core-control.dev.lotus"
     assert client._base_url == DEFAULT_LOTUS_CORE_BASE_URL
+
+
+def test_resolve_lotus_core_base_url_prefers_explicit_then_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("LOTUS_CORE_BASE_URL", "http://env-core.local/")
+
+    assert resolve_lotus_core_base_url("http://explicit-core.local/") == (
+        "http://explicit-core.local"
+    )
+    assert resolve_lotus_core_base_url(None) == "http://env-core.local"

@@ -9,6 +9,7 @@ from app.contracts.concentration import (
     ConcentrationRequest,
     EnrichmentPolicy,
     IssuerGroupingLevel,
+    StatelessConcentrationInput,
 )
 from app.services.concentration.datamodels import (
     ConcentrationComputationInput,
@@ -132,6 +133,27 @@ async def _stateless_core_issuer_map(
     )
 
 
+async def _stateless_issuer_map(
+    request: ConcentrationRequest,
+    *,
+    rows: Sequence[PositionEntry],
+    core_client: LotusCoreClientProtocol | None,
+    correlation_id: str | None,
+) -> tuple[dict[str, IssuerIdentity], str | None]:
+    core_issuer_map, issuer_note = await _stateless_core_issuer_map(
+        request,
+        rows=rows,
+        core_client=core_client,
+        correlation_id=correlation_id,
+    )
+    issuer_by_security = _merge_issuer_maps(
+        caller_map=_stateless_caller_issuer_map(request),
+        core_map=core_issuer_map,
+        policy=request.enrichment_policy,
+    )
+    return issuer_by_security, issuer_note
+
+
 def _weighted_stateless_state(
     *,
     current_rows: list[PositionEntry],
@@ -167,36 +189,12 @@ def _weighted_stateless_state(
     )
 
 
-async def resolve_stateless(
-    request: ConcentrationRequest,
+def _stateless_computation_input(
     *,
-    core_client: LotusCoreClientProtocol | None,
-    correlation_id: str | None,
+    request: ConcentrationRequest,
+    stateless_input: StatelessConcentrationInput,
+    weighted_state: _WeightedConcentrationState,
 ) -> ConcentrationComputationInput:
-    stateless_input = request.stateless_input
-    if stateless_input is None:
-        raise ValueError("stateless_input is required when input_mode=stateless")
-
-    current_rows, proposed_rows = _extract_values_from_stateless_payload(stateless_input)
-    all_rows = [*current_rows, *proposed_rows]
-    core_issuer_map, issuer_note = await _stateless_core_issuer_map(
-        request,
-        rows=all_rows,
-        core_client=core_client,
-        correlation_id=correlation_id,
-    )
-    issuer_by_security = _merge_issuer_maps(
-        caller_map=_stateless_caller_issuer_map(request),
-        core_map=core_issuer_map,
-        policy=request.enrichment_policy,
-    )
-    weighted_state = _weighted_stateless_state(
-        current_rows=current_rows,
-        proposed_rows=proposed_rows,
-        issuer_by_security=issuer_by_security,
-        issuer_note=issuer_note,
-    )
-
     return ConcentrationComputationInput(
         input_mode=ConcentrationInputMode.STATELESS,
         current_positions=weighted_state.current_positions,
@@ -214,4 +212,35 @@ async def resolve_stateless(
             include_cash_positions=None,
             include_zero_quantity_positions=None,
         ),
+    )
+
+
+async def resolve_stateless(
+    request: ConcentrationRequest,
+    *,
+    core_client: LotusCoreClientProtocol | None,
+    correlation_id: str | None,
+) -> ConcentrationComputationInput:
+    stateless_input = request.stateless_input
+    if stateless_input is None:
+        raise ValueError("stateless_input is required when input_mode=stateless")
+
+    current_rows, proposed_rows = _extract_values_from_stateless_payload(stateless_input)
+    all_rows = [*current_rows, *proposed_rows]
+    issuer_by_security, issuer_note = await _stateless_issuer_map(
+        request,
+        rows=all_rows,
+        core_client=core_client,
+        correlation_id=correlation_id,
+    )
+    weighted_state = _weighted_stateless_state(
+        current_rows=current_rows,
+        proposed_rows=proposed_rows,
+        issuer_by_security=issuer_by_security,
+        issuer_note=issuer_note,
+    )
+    return _stateless_computation_input(
+        request=request,
+        stateless_input=stateless_input,
+        weighted_state=weighted_state,
     )

@@ -10,8 +10,8 @@ documentation posture, and validation gates. It is not a completion claim.
 
 ## Code Size Baseline
 
-- Python source files under `src/`: 179
-- Python test files under `tests/`: 91
+- Python source files under `src/`: 206
+- Python test files under `tests/`: 96
 - Python packages under `src/`: 9
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
 
@@ -26,44 +26,44 @@ documentation posture, and validation gates. It is not a completion claim.
 | tests/unit/test_attribution_mode_adapter.py | 600 | 21872 |
 | tests/integration/test_risk_calculate.py | 596 | 25093 |
 | tests/integration/test_rolling_metrics_endpoint.py | 566 | 22142 |
-| tests/unit/test_lotus_performance_client.py | 530 | 19686 |
+| tests/unit/test_lotus_performance_client.py | 556 | 20504 |
 | tests/unit/test_rolling_mode_adapter.py | 444 | 16926 |
+| tests/unit/test_rolling_engine.py | 441 | 17565 |
 | tests/unit/test_drawdown_engine.py | 422 | 16234 |
-| src/app/services/attribution_decomposition.py | 420 | 13767 |
 | tests/integration/test_rolling_live_characterization.py | 418 | 16694 |
+| src/app/services/risk/period_metrics.py | 401 | 12644 |
 | tests/unit/test_risk_engine.py | 395 | 15947 |
 | tests/unit/test_concentration_engine.py | 394 | 16053 |
-| src/app/services/scenario_engine.py | 364 | 12949 |
-| src/app/services/concentration/simulation_resolver.py | 360 | 12246 |
-| tests/unit/test_rolling_engine.py | 354 | 14341 |
+| src/app/services/rolling_stateful_inputs.py | 376 | 13506 |
+| src/app/services/rolling_metric_series.py | 361 | 11066 |
 | tests/unit/test_risk_engine_branch_coverage.py | 353 | 13642 |
-| src/app/services/rolling_engine.py | 349 | 11473 |
 | tests/unit/test_concentration_engine_modes.py | 334 | 12149 |
+| src/app/services/concentration/parsing.py | 322 | 11235 |
 
 ### Largest Functions And Classes
 
 | Path | Symbol | Kind | Lines |
 | --- | --- | --- | --- |
-| src/app/integrations/lotus_core_client.py | LotusCoreClient | ClassDef | 156 |
-| src/app/trust_telemetry_snapshot_models.py | DeclaredProductTrustTelemetrySnapshot | ClassDef | 115 |
-| src/app/integrations/lotus_performance_client.py | LotusPerformanceClient | ClassDef | 113 |
-| src/app/contracts/concentration_response_envelope_outputs.py | ConcentrationResponse | ClassDef | 105 |
-| src/app/contracts/concentration_issuer_metric_outputs.py | IssuerConcentration | ClassDef | 97 |
-| src/app/contracts/risk_response_outputs.py | RiskResponseMetadata | ClassDef | 96 |
-| src/app/trust_telemetry_product_models.py | ProductTrustTelemetrySeed | ClassDef | 95 |
-| src/app/contracts/drawdown_request_inputs.py | DrawdownAnalyticsRequest | ClassDef | 91 |
-| src/app/contracts/rolling_period_outputs.py | RollingPeriodResult | ClassDef | 90 |
-| src/app/contracts/scenario_response_outputs.py | RegimeScenarioPackResponse | ClassDef | 89 |
-| src/app/contracts/rolling_response_envelope_outputs.py | RollingResponse | ClassDef | 88 |
-| src/app/contracts/rolling_metadata_outputs.py | RollingMetadata | ClassDef | 87 |
-| src/app/contracts/drawdown_period_outputs.py | DrawdownPeriodResult | ClassDef | 84 |
-| src/app/contracts/scenario_inputs.py | RegimeScenarioPackRequest | ClassDef | 84 |
+| src/app/integrations/lotus_core_client.py | LotusCoreClient | ClassDef | 119 |
+| src/app/contracts/concentration_issuer_metric_outputs.py | IssuerConcentration | ClassDef | 85 |
+| src/app/trust_telemetry_product_models.py | ProductTrustTelemetrySeed | ClassDef | 79 |
 | src/app/contracts/attribution_stateless_inputs.py | HistoricalAttributionStatelessInput | ClassDef | 77 |
 | src/app/contracts/drawdown_response_envelope_outputs.py | DrawdownResponse | ClassDef | 77 |
 | src/app/contracts/mandate_health_response_outputs.py | MandateRiskHealthContextResponse | ClassDef | 77 |
 | src/app/contracts/rolling_metric_summary_outputs.py | RollingMetricSummary | ClassDef | 76 |
+| src/app/contracts/rolling_period_outputs.py | RollingPeriodResult | ClassDef | 76 |
 | src/app/contracts/concentration_request_inputs.py | ConcentrationRequest | ClassDef | 75 |
+| src/app/contracts/risk_response_outputs.py | RiskResponseMetadata | ClassDef | 75 |
 | src/app/contracts/attribution_metadata_outputs.py | HistoricalAttributionMetadata | ClassDef | 71 |
+| src/app/contracts/drawdown_metadata_outputs.py | DrawdownMetadata | ClassDef | 69 |
+| src/app/contracts/risk_common_inputs.py | RiskRequestPeriod | ClassDef | 68 |
+| src/app/contracts/risk_event_cohort_response.py | RiskEventAffectedCohortResponse | ClassDef | 66 |
+| src/app/contracts/risk_stateful_inputs.py | StatefulRiskInput | ClassDef | 64 |
+| src/app/contracts/attribution_request_inputs.py | HistoricalAttributionRequest | ClassDef | 63 |
+| src/app/contracts/scenario_inputs.py | RegimeScenarioPackRequest | ClassDef | 63 |
+| src/app/contracts/concentration_metadata_outputs.py | ConcentrationMetadata | ClassDef | 62 |
+| src/app/contracts/drawdown_metric_outputs.py | DrawdownSummary | ClassDef | 61 |
+| src/app/contracts/risk_request_inputs.py | RiskAnalyticsRequest | ClassDef | 60 |
 
 ## Tool Baseline
 
@@ -89,29 +89,29 @@ All checks passed!
 - Ruff format check: passed
 
 ```text
-284 files already formatted
+316 files already formatted
 ```
 - Type checking: passed
 
 ```text
-Success: no issues found in 270 source files
+Success: no issues found in 302 source files
 ```
 - Unit coverage snapshot: passed
 
 ```text
-........................................................................ [ 15%]
-........................................................................ [ 31%]
-........................................................................ [ 47%]
-........................................................................ [ 63%]
-........................................................................ [ 78%]
-........................................................................ [ 94%]
+........................................................................ [ 14%]
+........................................................................ [ 28%]
+........................................................................ [ 43%]
+........................................................................ [ 57%]
+........................................................................ [ 72%]
+........................................................................ [ 86%]
 ...
-src\app\upstream_errors.py                                 55      0     20      3    96%   181->194, 187->189, 192->194
----------------------------------------------------------------------------------------------------
-TOTAL                                                    5145     86    986     85    97%
+src\app\upstream_errors.py                                    67      0     20      3    97%   210->223, 216->218, 221->223
+------------------------------------------------------------------------------------------------------
+TOTAL                                                       5851     85    994     74    98%
 
-139 files skipped due to complete coverage.
-457 passed in 9.79s
+167 files skipped due to complete coverage.
+500 passed in 8.32s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -123,14 +123,14 @@ TOTAL                                                    5145     86    986     
 src\app\api_errors.py - A (48.80)
 src\app\app_factory.py - A (100.00)
 src\app\domain_data_products.py - A (49.24)
-src\app\enterprise_readiness.py - A (31.78)
+src\app\enterprise_readiness.py - A (30.24)
 src\app\error_response.py - A (68.27)
 src\app\main.py - A (100.00)
 ...
-src\app\services\risk\calculation_orchestrator.py - A (44.30)
-src\app\services\risk\helpers.py - A (24.37)
+src\app\services\risk\helpers.py - A (34.16)
 src\app\services\risk\metric_calculators.py - A (39.28)
-src\app\services\risk\period_metrics.py - A (46.07)
+src\app\services\risk\period_metrics.py - A (38.89)
+src\app\services\risk\period_resolution.py - A (47.21)
 src\app\services\risk\period_windows.py - A (58.70)
 src\app\services\risk\__init__.py - A (100.00)
 ```
@@ -141,7 +141,7 @@ src\app\services\risk\__init__.py - A (100.00)
 - Dependency hygiene: passed
 
 ```text
-Scanning 179 files...
+Scanning 206 files...
 
 Success! No dependency issues found.
 ```
@@ -240,7 +240,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-457 tests collected in 2.01s
+500 tests collected in 1.58s
 ```
 - Import-linter report-only: passed
 

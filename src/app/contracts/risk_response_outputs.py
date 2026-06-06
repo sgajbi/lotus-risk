@@ -13,6 +13,14 @@ from app.contracts.risk_response_contexts import (
     RiskCalculationSupportability,
     RiskFreeContext,
 )
+from app.contracts.risk_response_field_examples import (
+    RISK_BENCHMARK_CONTEXT_EXAMPLE,
+    RISK_CALCULATION_SUPPORTABILITY_EXAMPLE,
+    RISK_FREE_CONTEXT_EXAMPLE,
+    RISK_RESPONSE_METADATA_EXAMPLE,
+    RISK_RESPONSE_RESULTS_EXAMPLE,
+    RISK_RESPONSE_SCOPE_EXAMPLE,
+)
 
 
 class RiskResponseMetadata(AuditMetadataFields):
@@ -54,24 +62,12 @@ class RiskResponseMetadata(AuditMetadataFields):
     risk_free_context: RiskFreeContext = Field(
         default_factory=RiskFreeContext,
         description="Applied risk-free interpretation context for Sharpe calculations.",
-        json_schema_extra={
-            "example": {
-                "requested": True,
-                "applied": True,
-                "reason": "ANNUAL_RATE_APPLIED",
-                "periodic_rate": 0.00003949,
-            }
-        },
+        json_schema_extra={"example": RISK_FREE_CONTEXT_EXAMPLE},
     )
     benchmark_context: BenchmarkRequestContext = Field(
         default_factory=BenchmarkRequestContext,
         description="Benchmark dependency request context for this response.",
-        json_schema_extra={
-            "example": {
-                "requested": True,
-                "requested_metrics": ["BETA", "TRACKING_ERROR", "INFORMATION_RATIO"],
-            }
-        },
+        json_schema_extra={"example": RISK_BENCHMARK_CONTEXT_EXAMPLE},
     )
     calculation_supportability: RiskCalculationSupportability = Field(
         default_factory=lambda: RiskCalculationSupportability(
@@ -80,16 +76,7 @@ class RiskResponseMetadata(AuditMetadataFields):
             freshness_bucket="unknown",
         ),
         description="Source-backed supportability posture for UI and operator consumption.",
-        json_schema_extra={
-            "example": {
-                "state": "ready",
-                "reason": "calculation_complete",
-                "freshness_bucket": "current",
-                "degraded_metric_count": 0,
-                "empty_period_count": 0,
-                "evaluated_period_count": 1,
-            }
-        },
+        json_schema_extra={"example": RISK_CALCULATION_SUPPORTABILITY_EXAMPLE},
     )
     mar_annual_rate: float = Field(
         default=0.0,
@@ -116,65 +103,16 @@ class RiskResponseMetadata(AuditMetadataFields):
 class RiskResponse(BaseModel):
     scope: RiskRequestScope = Field(
         description="Echoed normalized scope context used for calculation.",
-        json_schema_extra={
-            "example": {
-                "as_of_date": "2025-03-31",
-                "reporting_currency": "USD",
-                "net_or_gross": "NET",
-            }
-        },
+        json_schema_extra={"example": RISK_RESPONSE_SCOPE_EXAMPLE},
     )
     results: dict[str, RiskPeriodResult] = Field(
         description="Risk results keyed by period name or period type.",
-        json_schema_extra={
-            "example": {
-                "explicit_q1_2025": {
-                    "start_date": "2025-01-01",
-                    "end_date": "2025-03-31",
-                    "portfolio_observation_count": 64,
-                    "benchmark_observation_count": 64,
-                    "aligned_benchmark_observation_count": 61,
-                    "benchmark_context": {
-                        "requested": True,
-                        "available": True,
-                        "aligned": True,
-                        "reason": "APPLIED",
-                        "requested_metric_count": 3,
-                        "requested_metrics": ["BETA", "TRACKING_ERROR", "INFORMATION_RATIO"],
-                    },
-                    "metrics": {"VOLATILITY": {"value": 0.23}},
-                }
-            }
-        },
+        json_schema_extra={"example": RISK_RESPONSE_RESULTS_EXAMPLE},
     )
     metadata: RiskResponseMetadata = Field(
         default_factory=RiskResponseMetadata,
         description="Risk contract and applied option metadata.",
-        json_schema_extra={
-            "example": {
-                "contract_version": "v1",
-                "methodology_version": "risk.v1",
-                "frequency": "DAILY",
-                "annualization_factor": 252,
-                "use_log_returns": False,
-                "risk_free_mode": "ANNUAL_RATE",
-                "risk_free_annual_rate": 0.025518911987694626,
-                "risk_free_context": {
-                    "requested": True,
-                    "applied": True,
-                    "reason": "ANNUAL_RATE_APPLIED",
-                    "periodic_rate": 0.0001,
-                },
-                "benchmark_context": {
-                    "requested": True,
-                    "requested_metrics": ["BETA", "TRACKING_ERROR", "INFORMATION_RATIO"],
-                },
-                "mar_annual_rate": 0.0,
-                "var_method": "HISTORICAL",
-                "var_confidence": 0.95,
-                "var_horizon_days": 1,
-            }
-        },
+        json_schema_extra={"example": RISK_RESPONSE_METADATA_EXAMPLE},
     )
 
     model_config = ConfigDict(json_schema_extra={"example": cast(Any, RISK_RESPONSE_EXAMPLE)})

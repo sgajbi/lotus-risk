@@ -56,26 +56,41 @@ def _resolve_calculation_supportability(
     return risk_orchestrator.resolve_calculation_supportability(request, results)
 
 
+def _risk_response(
+    request: RiskStatelessCalculationInput,
+    *,
+    annual_factor: int,
+    periodic_rf: float,
+    results: dict[str, RiskPeriodResult],
+) -> RiskResponse:
+    calculation_supportability = _resolve_calculation_supportability(request, results)
+    record_operation_supportability(
+        operation="risk/calculate",
+        supportability=calculation_supportability,
+    )
+    return RiskResponse(
+        scope=request.scope,
+        results=results,
+        metadata=_build_metadata(
+            request,
+            annual_factor=annual_factor,
+            periodic_rf=periodic_rf,
+            calculation_supportability=calculation_supportability,
+        ),
+    )
+
+
 def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
     _record_metric_request(request.metrics)
     annual_factor = risk_orchestrator.derive_annualization_factor(request)
 
     returns_df, benchmark_df = risk_orchestrator.resolve_return_frames(request)
     if returns_df.empty:
-        calculation_supportability = _resolve_calculation_supportability(request, {})
-        record_operation_supportability(
-            operation="risk/calculate",
-            supportability=calculation_supportability,
-        )
-        return RiskResponse(
-            scope=request.scope,
+        return _risk_response(
+            request,
+            annual_factor=annual_factor,
+            periodic_rf=0.0,
             results={},
-            metadata=_build_metadata(
-                request,
-                annual_factor=annual_factor,
-                periodic_rf=0.0,
-                calculation_supportability=calculation_supportability,
-            ),
         )
 
     periodic_rf, periodic_mar = risk_orchestrator.resolve_periodic_rates(
@@ -93,18 +108,9 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
         duration_seconds=RISK_METRIC_DURATION_SECONDS,
     )
 
-    calculation_supportability = _resolve_calculation_supportability(request, results)
-    record_operation_supportability(
-        operation="risk/calculate",
-        supportability=calculation_supportability,
-    )
-    return RiskResponse(
-        scope=request.scope,
+    return _risk_response(
+        request,
+        annual_factor=annual_factor,
+        periodic_rf=periodic_rf,
         results=results,
-        metadata=_build_metadata(
-            request,
-            annual_factor=annual_factor,
-            periodic_rf=periodic_rf,
-            calculation_supportability=calculation_supportability,
-        ),
     )

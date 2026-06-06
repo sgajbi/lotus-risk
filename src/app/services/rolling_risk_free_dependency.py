@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Any
+from typing import Any, NoReturn
 
 from app.contracts.risk import ReturnPoint
 from app.contracts.rolling import RollingStatefulInput
@@ -162,13 +162,10 @@ async def _risk_free_points_or_raise(
     portfolio_points: list[ReturnPoint],
     correlation_id: str | None,
 ) -> list[ReturnPoint]:
-    risk_free_points = (
-        to_risk_free_return_points(
-            risk_free_response,
-            annualization_basis=annualization_basis,
-        )
-        if include_risk_free and risk_free_response is not None
-        else []
+    risk_free_points = _risk_free_points_from_response(
+        include_risk_free=include_risk_free,
+        risk_free_response=risk_free_response,
+        annualization_basis=annualization_basis,
     )
     if not include_risk_free or risk_free_points:
         return risk_free_points
@@ -183,6 +180,24 @@ async def _risk_free_points_or_raise(
         end_date=max(point.date for point in portfolio_points),
         correlation_id=correlation_id,
     )
+    _raise_missing_risk_free_points(coverage_details)
+
+
+def _risk_free_points_from_response(
+    *,
+    include_risk_free: bool,
+    risk_free_response: dict[str, Any] | None,
+    annualization_basis: int,
+) -> list[ReturnPoint]:
+    if not include_risk_free or risk_free_response is None:
+        return []
+    return to_risk_free_return_points(
+        risk_free_response,
+        annualization_basis=annualization_basis,
+    )
+
+
+def _raise_missing_risk_free_points(coverage_details: dict[str, Any]) -> NoReturn:
     raise missing_upstream_data(
         service="lotus-core",
         operation="/integration/reference/risk-free-series",

@@ -4,6 +4,11 @@ from enum import Enum
 
 from pydantic import BaseModel, Field
 
+from app.contracts.concentration_metric_field_examples import (
+    TOP_ISSUER_CURRENT_EXAMPLE,
+    TOP_ISSUER_PROPOSED_EXAMPLE,
+)
+
 
 class TopIssuerDriver(BaseModel):
     issuer_id: str | None = Field(
@@ -107,23 +112,11 @@ class IssuerConcentration(BaseModel):
     )
     top_issuer_current: TopIssuerDriver = Field(
         description="Top baseline issuer concentration driver with identifier and display metadata.",
-        json_schema_extra={
-            "example": {
-                "issuer_id": "ULTIMATE_PIMCO",
-                "issuer_name": "Pacific Investment Management Company LLC",
-                "weight": 0.245075,
-            }
-        },
+        json_schema_extra={"example": TOP_ISSUER_CURRENT_EXAMPLE},
     )
     top_issuer_proposed: TopIssuerDriver = Field(
         description="Top proposed issuer concentration driver with identifier and display metadata.",
-        json_schema_extra={
-            "example": {
-                "issuer_id": "ULTIMATE_PIMCO",
-                "issuer_name": "Pacific Investment Management Company LLC",
-                "weight": 0.244585,
-            }
-        },
+        json_schema_extra={"example": TOP_ISSUER_PROPOSED_EXAMPLE},
     )
 
 

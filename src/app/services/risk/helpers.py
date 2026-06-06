@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import date, timedelta
+from dataclasses import dataclass
+from datetime import date
 from math import sqrt
 from statistics import NormalDist
 from typing import SupportsFloat, cast
@@ -8,10 +9,23 @@ from typing import SupportsFloat, cast
 import numpy as np
 import pandas as pd
 
+from app.services.risk.period_resolution import (
+    resolve_period,
+    resolve_period_bounds,
+)
+
 RiskMetricDetails = dict[str, str | float | int | bool | None]
 
 RISK_METRICS_REQUIRING_BENCHMARK = {"BETA", "TRACKING_ERROR", "INFORMATION_RATIO"}
 RISK_METRICS_REQUIRING_RISK_FREE = {"SHARPE"}
+
+
+@dataclass(frozen=True)
+class _DrawdownRecovery:
+    recovery_date: str | None
+    is_recovered: bool
+    days_to_recovery: int | None
+    time_under_water_days: int
 
 
 def _as_number(number: SupportsFloat) -> float:
@@ -27,7 +41,7 @@ def _resolve_period(
     from_date: date | None = None,
     to_date: date | None = None,
 ) -> tuple[date, date]:
-    start, end = _resolve_period_bounds(
+    return resolve_period(
         period_type,
         as_of,
         open_date,
@@ -35,7 +49,6 @@ def _resolve_period(
         from_date=from_date,
         to_date=to_date,
     )
-    return max(start, open_date), end
 
 
 def _resolve_period_bounds(
@@ -47,47 +60,14 @@ def _resolve_period_bounds(
     from_date: date | None,
     to_date: date | None,
 ) -> tuple[date, date]:
-    if period_type == "EXPLICIT":
-        return _resolve_explicit_period(from_date=from_date, to_date=to_date)
-    if period_type == "YEAR":
-        return _resolve_year_period(year)
-    if period_type == "YTD":
-        return date(as_of.year, 1, 1), as_of
-    if period_type == "QTD":
-        return _resolve_quarter_to_date_period(as_of)
-    if period_type == "MTD":
-        return date(as_of.year, as_of.month, 1), as_of
-    if period_type in {"1Y", "3Y", "5Y"}:
-        return _resolve_trailing_year_period(period_type, as_of)
-    if period_type == "SI":
-        return open_date, as_of
-    raise ValueError(f"Unsupported period type: {period_type}")
-
-
-def _resolve_explicit_period(
-    *,
-    from_date: date | None,
-    to_date: date | None,
-) -> tuple[date, date]:
-    if from_date is None or to_date is None:
-        raise ValueError("EXPLICIT period requires from/to dates")
-    return from_date, to_date
-
-
-def _resolve_year_period(year: int | None) -> tuple[date, date]:
-    if year is None:
-        raise ValueError("YEAR period requires year")
-    return date(year, 1, 1), date(year, 12, 31)
-
-
-def _resolve_quarter_to_date_period(as_of: date) -> tuple[date, date]:
-    quarter_start_month = (as_of.month - 1) // 3 * 3 + 1
-    return date(as_of.year, quarter_start_month, 1), as_of
-
-
-def _resolve_trailing_year_period(period_type: str, as_of: date) -> tuple[date, date]:
-    years = {"1Y": 1, "3Y": 3, "5Y": 5}[period_type]
-    return as_of - timedelta(days=365 * years) + timedelta(days=1), as_of
+    return resolve_period_bounds(
+        period_type,
+        as_of,
+        open_date,
+        year=year,
+        from_date=from_date,
+        to_date=to_date,
+    )
 
 
 def _resample_returns(returns: pd.Series, frequency: str) -> pd.Series:
@@ -114,52 +94,78 @@ def _annual_to_periodic(rate: float, annual_factor: int) -> float:
     return float((1.0 + float(rate)) ** (1.0 / float(annual_factor)) - 1.0)
 
 
-def _drawdown(returns: pd.Series) -> dict[str, str | float | None]:
-    wealth = (1 + returns / 100).cumprod()
-    peak = wealth.cummax()
-    drawdown = wealth / peak - 1
-    if drawdown.empty:
-        return {
-            "max_drawdown": 0.0,
-            "peak_date": None,
-            "trough_date": None,
-            "max_drawdown_date": None,
-            "recovery_date": None,
-            "is_recovered": True,
-            "days_to_trough": None,
-            "days_to_recovery": None,
-            "time_under_water_days": 0,
-        }
+def _empty_drawdown_details() -> dict[str, str | float | None]:
+    return {
+        "max_drawdown": 0.0,
+        "peak_date": None,
+        "trough_date": None,
+        "max_drawdown_date": None,
+        "recovery_date": None,
+        "is_recovered": True,
+        "days_to_trough": None,
+        "days_to_recovery": None,
+        "time_under_water_days": 0,
+    }
 
-    trough_idx = cast(pd.Timestamp, drawdown.idxmin())
-    peak_idx = cast(pd.Timestamp, wealth.loc[:trough_idx].idxmax())
-    max_drawdown = _as_number(cast(float, drawdown.loc[trough_idx] * 100))
-    peak_value = _as_number(cast(float, peak.loc[trough_idx]))
+
+def _drawdown_recovery(
+    *,
+    wealth: pd.Series,
+    peak_idx: pd.Timestamp,
+    trough_idx: pd.Timestamp,
+    peak_value: float,  # monetary-float-allow: drawdown wealth ratio peak, not money.
+) -> _DrawdownRecovery:
     post_trough_wealth = wealth.loc[trough_idx:]
     recovery_candidates = post_trough_wealth[post_trough_wealth >= peak_value]
     recovery_idx = (
         cast(pd.Timestamp, recovery_candidates.index[0]) if not recovery_candidates.empty else None
     )
+    if recovery_idx is None:
+        return _DrawdownRecovery(
+            recovery_date=None,
+            is_recovered=False,
+            days_to_recovery=None,
+            time_under_water_days=int((wealth.index[-1] - peak_idx).days),
+        )
+    return _DrawdownRecovery(
+        recovery_date=str(recovery_idx.date()),
+        is_recovered=True,
+        days_to_recovery=int((recovery_idx - trough_idx).days),
+        time_under_water_days=int((recovery_idx - peak_idx).days),
+    )
+
+
+def _drawdown(returns: pd.Series) -> dict[str, str | float | None]:
+    wealth = (1 + returns / 100).cumprod()
+    peak = wealth.cummax()
+    drawdown = wealth / peak - 1
+    if drawdown.empty:
+        return _empty_drawdown_details()
+
+    trough_idx = cast(pd.Timestamp, drawdown.idxmin())
+    peak_idx = cast(pd.Timestamp, wealth.loc[:trough_idx].idxmax())
+    max_drawdown = _as_number(cast(float, drawdown.loc[trough_idx] * 100))
+    peak_value = _as_number(
+        cast(float, peak.loc[trough_idx])
+    )  # monetary-float-allow: drawdown wealth ratio peak, not money.
+    recovery = _drawdown_recovery(
+        wealth=wealth,
+        peak_idx=peak_idx,
+        trough_idx=trough_idx,
+        peak_value=peak_value,
+    )
     days_to_trough = int((trough_idx - peak_idx).days)
-    if recovery_idx is not None:
-        days_to_recovery = int((recovery_idx - trough_idx).days)
-        time_under_water_days = int((recovery_idx - peak_idx).days)
-        recovery_date = str(recovery_idx.date())
-    else:
-        days_to_recovery = None
-        time_under_water_days = int((wealth.index[-1] - peak_idx).days)
-        recovery_date = None
     trough_date = str(trough_idx.date())
     return {
         "max_drawdown": max_drawdown,
         "peak_date": str(peak_idx.date()),
         "trough_date": trough_date,
         "max_drawdown_date": trough_date,
-        "recovery_date": recovery_date,
-        "is_recovered": recovery_idx is not None,
+        "recovery_date": recovery.recovery_date,
+        "is_recovered": recovery.is_recovered,
         "days_to_trough": days_to_trough,
-        "days_to_recovery": days_to_recovery,
-        "time_under_water_days": time_under_water_days,
+        "days_to_recovery": recovery.days_to_recovery,
+        "time_under_water_days": recovery.time_under_water_days,
     }
 
 
@@ -196,7 +202,10 @@ def _calculate_var_by_method(returns: pd.Series, method: str, confidence: float)
     raise ValueError(f"Unsupported VaR method: {method}")
 
 
-def _expected_shortfall(returns: pd.Series, var_value: float) -> float:
+def _expected_shortfall(
+    returns: pd.Series,
+    var_value: float,  # monetary-float-allow: VaR threshold in return percentage points, not money.
+) -> float:
     tail = returns[returns <= var_value]
     if tail.empty:
         return _as_number(var_value)

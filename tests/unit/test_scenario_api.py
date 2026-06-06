@@ -2,6 +2,18 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
+from app.contracts.scenario_inputs import RegimeScenarioPackRequest
+from app.contracts.scenario_request_field_examples import (
+    SCENARIO_EXPOSURE_COMPONENTS_EXAMPLE,
+    SCENARIO_EXPOSURES_EXAMPLE,
+)
+from app.contracts.scenario_response_field_examples import (
+    SCENARIO_GOVERNANCE_EVIDENCE_EXAMPLE,
+    SCENARIO_METADATA_EXAMPLE,
+    SCENARIO_REASON_CODES_EXAMPLE,
+    SCENARIO_RESULTS_EXAMPLE,
+)
+from app.contracts.scenario_response_outputs import RegimeScenarioPackResponse
 from app.main import app
 
 
@@ -76,6 +88,22 @@ def test_regime_scenario_pack_endpoint_returns_evaluation_contract() -> None:
         "shock_pct": -0.12,
         "contribution_loss_pct": 0.036,
     }
+
+
+def test_regime_scenario_pack_response_schema_uses_governed_field_examples() -> None:
+    properties = RegimeScenarioPackResponse.model_json_schema()["properties"]
+
+    assert properties["scenario_results"]["example"] == SCENARIO_RESULTS_EXAMPLE
+    assert properties["governance_evidence"]["example"] == SCENARIO_GOVERNANCE_EVIDENCE_EXAMPLE
+    assert properties["reason_codes"]["example"] == SCENARIO_REASON_CODES_EXAMPLE
+    assert properties["metadata"]["example"] == SCENARIO_METADATA_EXAMPLE
+
+
+def test_regime_scenario_pack_request_schema_uses_governed_field_examples() -> None:
+    properties = RegimeScenarioPackRequest.model_json_schema()["properties"]
+
+    assert properties["exposures"]["example"] == SCENARIO_EXPOSURES_EXAMPLE
+    assert properties["exposure_components"]["example"] == SCENARIO_EXPOSURE_COMPONENTS_EXAMPLE
 
 
 def test_capabilities_include_regime_scenario_pack_workflow() -> None:

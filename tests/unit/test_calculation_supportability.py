@@ -82,6 +82,27 @@ def test_period_supportability_prioritizes_benchmark_degradation() -> None:
     assert supportability.degraded_metric_count == 1
 
 
+def test_period_supportability_applies_reason_precedence_across_errors() -> None:
+    supportability = supportability_from_period_results(
+        returns=[ReturnPoint(date=dt.date(2026, 1, 5), value=1.2)],
+        as_of_date=dt.date(2026, 1, 5),
+        results={
+            "YTD": _PeriodResult(
+                portfolio_observation_count=3,
+                error="unexpected calculation warning",
+            ),
+            "1Y": _PeriodResult(
+                portfolio_observation_count=3,
+                error="NO_ALIGNED_OBSERVATIONS",
+            ),
+        },
+    )
+
+    assert supportability.state == "degraded"
+    assert supportability.reason == "insufficient_aligned_observations"
+    assert supportability.degraded_metric_count == 2
+
+
 def test_attribution_supportability_degrades_when_sets_emit_quality_flags() -> None:
     supportability = supportability_from_attribution_results(
         returns=[ReturnPoint(date=dt.date(2026, 1, 5), value=1.2)],
@@ -142,6 +163,28 @@ def test_risk_metric_supportability_counts_metric_errors_and_empty_periods() -> 
     assert supportability.reason == "benchmark_unavailable"
     assert supportability.degraded_metric_count == 1
     assert supportability.empty_period_count == 1
+
+
+def test_risk_metric_supportability_applies_reason_precedence_across_metric_errors() -> None:
+    supportability = supportability_from_risk_metric_results(
+        returns=[ReturnPoint(date=dt.date(2026, 1, 5), value=1.2)],
+        as_of_date=dt.date(2026, 1, 5),
+        results={
+            "YTD": SimpleNamespace(
+                portfolio_observation_count=2,
+                metrics={
+                    "VOLATILITY": SimpleNamespace(
+                        details={"error": "unexpected calculation warning"}
+                    ),
+                    "BETA": SimpleNamespace(details={"error": "BENCHMARK_UNAVAILABLE"}),
+                },
+            )
+        },
+    )
+
+    assert supportability.state == "degraded"
+    assert supportability.reason == "benchmark_unavailable"
+    assert supportability.degraded_metric_count == 2
 
 
 def cast_metrics_object() -> Any:
