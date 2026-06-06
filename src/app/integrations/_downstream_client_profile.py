@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Final, TypeVar
+from typing import Final, NoReturn, TypeVar
 
 import httpx
 import os
@@ -59,35 +59,26 @@ async def execute_downstream_request(
     try:
         return await _successful_downstream_response(request_factory)
     except UpstreamServiceError as exc:
-        _record_upstream_failure(
+        _raise_recorded_upstream_error(
             dependency=dependency,
             operation=operation,
             started_at=started_at,
             exc=exc,
         )
-        raise
     except httpx.HTTPStatusError as exc:
-        error = _http_status_upstream_error(
+        _raise_recorded_http_status_error(
             dependency=dependency,
             operation=operation,
+            started_at=started_at,
             exc=exc,
         )
-        _record_upstream_failure(
-            dependency=dependency,
-            operation=operation,
-            started_at=started_at,
-            exc=error,
-        )
-        raise error from exc
     except httpx.HTTPError as exc:
-        error = _transport_upstream_error(dependency=dependency, operation=operation, exc=exc)
-        _record_upstream_failure(
+        _raise_recorded_transport_error(
             dependency=dependency,
             operation=operation,
             started_at=started_at,
-            exc=error,
+            exc=exc,
         )
-        raise error from exc
 
 
 async def _successful_downstream_response(
@@ -96,6 +87,60 @@ async def _successful_downstream_response(
     response = await request_factory()
     response.raise_for_status()
     return response
+
+
+def _raise_recorded_upstream_error(
+    *,
+    dependency: str,
+    operation: str,
+    started_at: float,
+    exc: UpstreamServiceError,
+) -> NoReturn:
+    _record_upstream_failure(
+        dependency=dependency,
+        operation=operation,
+        started_at=started_at,
+        exc=exc,
+    )
+    raise exc
+
+
+def _raise_recorded_http_status_error(
+    *,
+    dependency: str,
+    operation: str,
+    started_at: float,
+    exc: httpx.HTTPStatusError,
+) -> NoReturn:
+    error = _http_status_upstream_error(
+        dependency=dependency,
+        operation=operation,
+        exc=exc,
+    )
+    _record_upstream_failure(
+        dependency=dependency,
+        operation=operation,
+        started_at=started_at,
+        exc=error,
+    )
+    raise error from exc
+
+
+def _raise_recorded_transport_error(
+    *,
+    dependency: str,
+    operation: str,
+    started_at: float,
+    exc: httpx.HTTPError,
+) -> NoReturn:
+    error = _transport_upstream_error(dependency=dependency, operation=operation, exc=exc)
+    _record_upstream_failure(
+        dependency=dependency,
+        operation=operation,
+        started_at=started_at,
+        exc=error,
+    )
+    raise error from exc
 
 
 def _http_status_upstream_error(
