@@ -8,12 +8,14 @@ import pandas as pd
 
 from app.contracts.rolling import (
     ROLLING_BENCHMARK_METRICS,
+    RollingBenchmarkContext,
     RollingInputMode,
     RollingMetadata,
     RollingOptions,
     RollingPeriodResult,
     RollingRequestDependencyContext,
     RollingResponse,
+    RollingRiskFreeContext,
     RollingStatelessInput,
 )
 from app.contracts.risk import RiskCalculationSupportability
@@ -42,6 +44,12 @@ class _RollingPeriodDependencyCounts:
     aligned_benchmark_series_count: int
     risk_free_series_count: int
     aligned_risk_free_series_count: int
+
+
+@dataclass(frozen=True)
+class _RollingPeriodDependencyContexts:
+    benchmark: RollingBenchmarkContext
+    risk_free: RollingRiskFreeContext
 
 
 def _request_dependency_context(
@@ -181,6 +189,10 @@ def _calculated_period_result(
         aligned_benchmark_series_count=aggregate.aligned_benchmark_series_count,
         aligned_risk_free_series_count=aggregate.aligned_risk_free_series_count,
     )
+    dependency_contexts = _rolling_period_dependency_contexts(
+        requested_metrics=requested_metrics,
+        dependency_counts=dependency_counts,
+    )
 
     return RollingPeriodResult(
         start_date=period_series.start,
@@ -194,19 +206,30 @@ def _calculated_period_result(
         window_count_requested=len(options.window_lengths),
         window_lengths_emitted=[result.window_length for result in aggregate.window_results],
         window_count_emitted=len(aggregate.window_results),
-        benchmark_context=benchmark_context(
+        benchmark_context=dependency_contexts.benchmark,
+        risk_free_context=dependency_contexts.risk_free,
+        window_results=aggregate.window_results,
+        quality_flags=sorted(aggregate.quality_flags),
+        error=None,
+    )
+
+
+def _rolling_period_dependency_contexts(
+    *,
+    requested_metrics: Sequence[str],
+    dependency_counts: _RollingPeriodDependencyCounts,
+) -> _RollingPeriodDependencyContexts:
+    return _RollingPeriodDependencyContexts(
+        benchmark=benchmark_context(
             requested_metrics,
             benchmark_series_count=dependency_counts.benchmark_series_count,
             aligned_benchmark_series_count=dependency_counts.aligned_benchmark_series_count,
         ),
-        risk_free_context=risk_free_context(
+        risk_free=risk_free_context(
             requested_metrics,
             risk_free_series_count=dependency_counts.risk_free_series_count,
             aligned_risk_free_series_count=dependency_counts.aligned_risk_free_series_count,
         ),
-        window_results=aggregate.window_results,
-        quality_flags=sorted(aggregate.quality_flags),
-        error=None,
     )
 
 
