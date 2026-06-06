@@ -40,6 +40,20 @@ class AttributionPrecalculation:
     early_result: AttributionSetResult | None
 
 
+@dataclass(frozen=True)
+class AttributionSetBuildRequest:
+    attribution_type: AttributionType
+    metric: AttributionMetric
+    grouping_dimension: GroupingDimension
+    returns_series: pd.Series
+    benchmark_series: pd.Series
+    exposure_weights: pd.DataFrame
+    benchmark_weights: pd.DataFrame
+    group_labels: dict[str, str | None]
+    annualization_basis: int
+    quality_flags: list[str]
+
+
 def _empty_attribution_set(
     *,
     attribution_type: AttributionType,
@@ -187,31 +201,37 @@ def _attribution_set_precalculation_result(
 
 def _attribution_calculation_precalculation(
     *,
-    attribution_type: AttributionType,
-    metric: AttributionMetric,
-    grouping_dimension: GroupingDimension,
-    returns_series: pd.Series,
-    benchmark_series: pd.Series,
-    exposure_weights: pd.DataFrame,
-    benchmark_weights: pd.DataFrame,
-    annualization_basis: int,
-    quality_flags: list[str],
+    request: AttributionSetBuildRequest,
 ) -> AttributionPrecalculation:
     calculation_inputs = attribution_calculation_inputs(
-        attribution_type=attribution_type,
-        returns_series=returns_series,
-        benchmark_series=benchmark_series,
-        exposure_weights=exposure_weights,
-        benchmark_weights=benchmark_weights,
-        annualization_basis=annualization_basis,
+        attribution_type=request.attribution_type,
+        returns_series=request.returns_series,
+        benchmark_series=request.benchmark_series,
+        exposure_weights=request.exposure_weights,
+        benchmark_weights=request.benchmark_weights,
+        annualization_basis=request.annualization_basis,
     )
     return _attribution_set_precalculation_result(
-        attribution_type=attribution_type,
-        metric=metric,
-        grouping_dimension=grouping_dimension,
+        attribution_type=request.attribution_type,
+        metric=request.metric,
+        grouping_dimension=request.grouping_dimension,
         calculation_inputs=calculation_inputs,
-        quality_flags=quality_flags,
+        quality_flags=request.quality_flags,
     )
+
+
+def _resolve_attribution_precalculation(
+    request: AttributionSetBuildRequest,
+) -> AttributionPrecalculation:
+    unsupported = _unsupported_metric_set(
+        attribution_type=request.attribution_type,
+        metric=request.metric,
+        grouping_dimension=request.grouping_dimension,
+        base_flags=request.quality_flags,
+    )
+    if unsupported is not None:
+        return AttributionPrecalculation(calculation_inputs=None, early_result=unsupported)
+    return _attribution_calculation_precalculation(request=request)
 
 
 def build_attribution_set(
@@ -227,18 +247,7 @@ def build_attribution_set(
     annualization_basis: int,
     base_flags: list[str],
 ) -> AttributionSetResult:
-    flags = list(base_flags)
-
-    unsupported = _unsupported_metric_set(
-        attribution_type=attribution_type,
-        metric=metric,
-        grouping_dimension=grouping_dimension,
-        base_flags=flags,
-    )
-    if unsupported is not None:
-        return unsupported
-
-    precalculation = _attribution_calculation_precalculation(
+    request = AttributionSetBuildRequest(
         attribution_type=attribution_type,
         metric=metric,
         grouping_dimension=grouping_dimension,
@@ -246,22 +255,24 @@ def build_attribution_set(
         benchmark_series=benchmark_series,
         exposure_weights=exposure_weights,
         benchmark_weights=benchmark_weights,
+        group_labels=group_labels,
         annualization_basis=annualization_basis,
-        quality_flags=flags,
+        quality_flags=list(base_flags),
     )
+    precalculation = _resolve_attribution_precalculation(request)
     if precalculation.early_result is not None:
         return precalculation.early_result
     if precalculation.calculation_inputs is None:
         raise RuntimeError("attribution precalculation returned no calculation inputs")
 
     return _calculated_attribution_set(
-        attribution_type=attribution_type,
-        metric=metric,
-        grouping_dimension=grouping_dimension,
+        attribution_type=request.attribution_type,
+        metric=request.metric,
+        grouping_dimension=request.grouping_dimension,
         calculation_inputs=precalculation.calculation_inputs,
-        group_labels=group_labels,
-        annualization_basis=annualization_basis,
-        quality_flags=flags,
+        group_labels=request.group_labels,
+        annualization_basis=request.annualization_basis,
+        quality_flags=request.quality_flags,
     )
 
 
