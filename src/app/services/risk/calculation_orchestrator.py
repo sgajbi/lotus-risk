@@ -11,12 +11,13 @@ from app.contracts.risk import (
     RiskPeriodResult,
     RiskResponseMetadata,
     RiskStatelessCalculationInput,
+    RiskValue,
 )
 from app.services.audit_lineage import fingerprint_model
 from app.services.calculation_supportability import supportability_from_risk_metric_results
 from app.services.risk import helpers as risk_helpers
-from app.services.risk.period_metrics import calculate_period_metrics
-from app.services.risk.period_windows import risk_period_window
+from app.services.risk.period_metrics import BenchmarkContextPayload, calculate_period_metrics
+from app.services.risk.period_windows import RiskPeriodWindow, risk_period_window
 
 BENCHMARK_METRICS = risk_helpers.BENCHMARK_METRICS
 RISK_FREE_METRICS = risk_helpers.RISK_METRICS_REQUIRING_RISK_FREE
@@ -123,6 +124,30 @@ def resolve_return_frames(
     return returns_df, benchmark_df
 
 
+def _period_result(
+    *,
+    period_window: RiskPeriodWindow,
+    metric_map: dict[str, RiskValue],
+    benchmark_context: BenchmarkContextPayload | None,
+    aligned_count: int,
+    benchmark_observation_count: int,
+    benchmark_df: pd.DataFrame,
+) -> RiskPeriodResult:
+    return RiskPeriodResult(
+        start_date=period_window.start.date(),
+        end_date=period_window.end.date(),
+        portfolio_observation_count=len(period_window.returns),
+        benchmark_observation_count=(
+            benchmark_observation_count
+            if (not benchmark_df.empty and benchmark_context is not None)
+            else 0
+        ),
+        aligned_benchmark_observation_count=(aligned_count if benchmark_context else 0),
+        benchmark_context=benchmark_context,
+        metrics=metric_map,
+    )
+
+
 def build_period_results(
     request: RiskStatelessCalculationInput,
     *,
@@ -159,18 +184,13 @@ def build_period_results(
             )
         )
 
-        results[period_window.name] = RiskPeriodResult(
-            start_date=period_window.start.date(),
-            end_date=period_window.end.date(),
-            portfolio_observation_count=len(period_window.returns),
-            benchmark_observation_count=(
-                benchmark_observation_count
-                if (not benchmark_df.empty and benchmark_context is not None)
-                else 0
-            ),
-            aligned_benchmark_observation_count=(aligned_count if benchmark_context else 0),
+        results[period_window.name] = _period_result(
+            period_window=period_window,
+            metric_map=metric_map,
             benchmark_context=benchmark_context,
-            metrics=metric_map,
+            aligned_count=aligned_count,
+            benchmark_observation_count=benchmark_observation_count,
+            benchmark_df=benchmark_df,
         )
 
     return results
