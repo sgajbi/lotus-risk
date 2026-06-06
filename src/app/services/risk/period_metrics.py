@@ -193,6 +193,19 @@ def _benchmark_period_metrics(
     )
 
 
+def _empty_benchmark_period_metrics(
+    benchmark_metrics: Sequence[str],
+) -> _BenchmarkPeriodMetrics:
+    return _BenchmarkPeriodMetrics(
+        metric_map=_benchmark_metric_errors(
+            benchmark_metrics=benchmark_metrics,
+            message="Benchmark returns required for benchmark-dependent metric",
+        ),
+        aligned_count=0,
+        benchmark_observation_count=0,
+    )
+
+
 def _calculate_benchmark_metrics(
     *,
     request: RiskStatelessCalculationInput,
@@ -205,14 +218,7 @@ def _calculate_benchmark_metrics(
     duration_seconds: Histogram,
 ) -> tuple[dict[str, RiskValue], BenchmarkContextPayload, int, int]:
     if benchmark_df.empty:
-        benchmark_result = _BenchmarkPeriodMetrics(
-            metric_map=_benchmark_metric_errors(
-                benchmark_metrics=benchmark_metrics,
-                message="Benchmark returns required for benchmark-dependent metric",
-            ),
-            aligned_count=0,
-            benchmark_observation_count=0,
-        )
+        benchmark_result = _empty_benchmark_period_metrics(benchmark_metrics)
     else:
         benchmark_result = _benchmark_period_metrics(
             request=request,
