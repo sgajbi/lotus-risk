@@ -172,6 +172,27 @@ async def _fetch_simulation_snapshot_state(
     )
 
 
+async def _resolve_applied_simulation_session(
+    *,
+    simulation: SimulationConcentrationInput,
+    core_client: LotusCoreClientProtocol,
+    correlation_id: str | None,
+    actor_id: str | None,
+) -> SimulationSession:
+    session = await resolve_simulation_session(
+        simulation,
+        core_client=core_client,
+        correlation_id=correlation_id,
+        actor_id=actor_id,
+    )
+    return await apply_simulation_changes(
+        simulation,
+        session=session,
+        core_client=core_client,
+        correlation_id=correlation_id,
+    )
+
+
 def _simulation_computation_input(
     *,
     simulation: SimulationConcentrationInput,
@@ -206,17 +227,11 @@ async def resolve_simulation(
     if simulation is None:
         raise ValueError("simulation_input is required when input_mode=simulation")
 
-    session = await resolve_simulation_session(
-        simulation,
+    session = await _resolve_applied_simulation_session(
+        simulation=simulation,
         core_client=core_client,
         correlation_id=correlation_id,
         actor_id=actor_id,
-    )
-    session = await apply_simulation_changes(
-        simulation,
-        session=session,
-        core_client=core_client,
-        correlation_id=correlation_id,
     )
     snapshot_payload = simulation_snapshot_payload(simulation, session=session)
     snapshot_state, session = await _fetch_simulation_snapshot_state(
