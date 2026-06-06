@@ -35,6 +35,13 @@ class DrawdownExtremeFields:
     days_to_recovery: int | None
 
 
+@dataclass(frozen=True)
+class _EpisodeBuildContext:
+    dates: list[date]
+    values: list[float]
+    duration_unit: str
+
+
 def duration_days(start: date, end: date, *, unit: str) -> int:
     if end < start:
         return 0
@@ -134,6 +141,11 @@ def episode_records_from_values(
     values: list[float],
     duration_unit: str,
 ) -> list[EpisodeRecord]:
+    context = _EpisodeBuildContext(
+        dates=dates,
+        values=values,
+        duration_unit=duration_unit,
+    )
     episodes: list[EpisodeRecord] = []
     in_episode = False
     start_index = 0
@@ -142,33 +154,38 @@ def episode_records_from_values(
         if not in_episode and dd_value < 0:
             in_episode = True
             start_index = idx
-            peak_date = dates[idx - 1] if idx > 0 else dates[idx]
+            peak_date = _episode_peak_date(dates, idx)
             continue
         if in_episode and dd_value >= 0:
-            episodes.append(
-                episode_record_from_segment(
-                    dates=dates,
-                    values=values,
-                    start_index=start_index,
-                    peak_date=peak_date,
-                    duration_unit=duration_unit,
-                    recovery_index=idx,
-                )
-            )
+            _append_episode_record(episodes, context, start_index, peak_date, idx)
             in_episode = False
 
     if in_episode:
-        episodes.append(
-            episode_record_from_segment(
-                dates=dates,
-                values=values,
-                start_index=start_index,
-                peak_date=peak_date,
-                duration_unit=duration_unit,
-                recovery_index=None,
-            )
-        )
+        _append_episode_record(episodes, context, start_index, peak_date, None)
     return episodes
+
+
+def _episode_peak_date(dates: list[date], index: int) -> date:
+    return dates[index - 1] if index > 0 else dates[index]
+
+
+def _append_episode_record(
+    episodes: list[EpisodeRecord],
+    context: _EpisodeBuildContext,
+    start_index: int,
+    peak_date: date,
+    recovery_index: int | None,
+) -> None:
+    episodes.append(
+        episode_record_from_segment(
+            dates=context.dates,
+            values=context.values,
+            start_index=start_index,
+            peak_date=peak_date,
+            duration_unit=context.duration_unit,
+            recovery_index=recovery_index,
+        )
+    )
 
 
 def episode_record_from_segment(
