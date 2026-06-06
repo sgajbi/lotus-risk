@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any, Protocol
 
 from app.contracts.drawdown import (
@@ -10,6 +11,7 @@ from app.contracts.drawdown import (
     DrawdownStatelessInput,
 )
 from app.contracts.risk import RiskRequestScope
+from app.contracts.risk import ReturnPoint
 from app.services.audit_lineage import ordered_source_services, upstream_request_fingerprint
 from app.services.drawdown_engine import calculate_drawdown
 from app.services.stateful_returns_request import build_stateful_returns_series_request
@@ -26,6 +28,12 @@ class LotusPerformanceClientProtocol(Protocol):
         request_payload: dict[str, Any],
         correlation_id: str | None,
     ) -> dict[str, Any]: ...
+
+
+@dataclass(frozen=True)
+class _DrawdownSourceSeries:
+    portfolio_points: list[ReturnPoint]
+    benchmark_points: list[ReturnPoint]
 
 
 def _build_stateful_source_request(
@@ -52,6 +60,40 @@ def _build_stateful_source_request(
     )
 
 
+def _parse_drawdown_source_series(
+    source_response: dict[str, Any],
+    *,
+    stateful: DrawdownStatefulInput,
+) -> _DrawdownSourceSeries:
+    series, portfolio_points = extract_required_portfolio_returns(source_response)
+    benchmark_points = to_return_points(series.get("benchmark_returns"))
+    if stateful.benchmark_policy.include_benchmark and not benchmark_points:
+        if stateful.benchmark_policy.missing_benchmark_policy == "REQUIRE":
+            raise ValueError(
+                "lotus-performance returns-series returned no benchmark returns while benchmark was required"
+            )
+    return _DrawdownSourceSeries(
+        portfolio_points=portfolio_points,
+        benchmark_points=benchmark_points,
+    )
+
+
+def _drawdown_stateless_request(
+    stateful: DrawdownStatefulInput,
+    source_series: _DrawdownSourceSeries,
+) -> DrawdownStatelessInput:
+    return DrawdownStatelessInput(
+        scope=RiskRequestScope(
+            as_of_date=stateful.as_of_date,
+            reporting_currency=stateful.reporting_currency,
+            net_or_gross=stateful.net_or_gross,
+        ),
+        periods=stateful.periods,
+        returns=source_series.portfolio_points,
+        benchmark_returns=source_series.benchmark_points,
+    )
+
+
 async def calculate_drawdown_stateful(
     stateful: DrawdownStatefulInput,
     *,
@@ -64,24 +106,11 @@ async def calculate_drawdown_stateful(
         request_payload=source_payload,
         correlation_id=correlation_id,
     )
-    series, portfolio_points = extract_required_portfolio_returns(source_response)
-    benchmark_points = to_return_points(series.get("benchmark_returns"))
-    if stateful.benchmark_policy.include_benchmark and not benchmark_points:
-        if stateful.benchmark_policy.missing_benchmark_policy == "REQUIRE":
-            raise ValueError(
-                "lotus-performance returns-series returned no benchmark returns while benchmark was required"
-            )
-
-    stateless = DrawdownStatelessInput(
-        scope=RiskRequestScope(
-            as_of_date=stateful.as_of_date,
-            reporting_currency=stateful.reporting_currency,
-            net_or_gross=stateful.net_or_gross,
-        ),
-        periods=stateful.periods,
-        returns=portfolio_points,
-        benchmark_returns=benchmark_points,
+    source_series = _parse_drawdown_source_series(
+        source_response,
+        stateful=stateful,
     )
+    stateless = _drawdown_stateless_request(stateful, source_series)
     response = calculate_drawdown(
         stateless,
         input_mode=DrawdownInputMode.STATEFUL,
