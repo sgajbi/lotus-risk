@@ -42,29 +42,49 @@ def component_decomposition(
     metric_mean = group_matrix.mean(axis=0)
     decomposition: list[DecompositionRow] = []
     for group_key in group_matrix.columns:
-        group_series = group_matrix[group_key]
-        cov = float(np.cov(group_series, metric_series, ddof=1)[0, 1])
-        component = float((cov / std) * sqrt(annualization_basis))
-        marginal = (
-            float(component / metric_mean[group_key])
-            if not np.isclose(metric_mean[group_key], 0.0)
-            else None
-        )
-        percent = (
-            float(component / contribution_denominator)
-            if not np.isclose(contribution_denominator, 0.0)
-            else None
-        )
         decomposition.append(
-            {
-                "group_key": str(group_key),
-                "weight_average": float(metric_mean[group_key]),
-                "marginal_contribution": marginal,
-                "component_contribution": component,
-                "percent_contribution": percent,
-            }
+            _component_decomposition_row(
+                group_key=str(group_key),
+                group_series=group_matrix[group_key],
+                group_weight_average=float(metric_mean[group_key]),
+                metric_series=metric_series,
+                contribution_denominator=contribution_denominator,
+                annualization_basis=annualization_basis,
+                metric_std=std,
+            )
         )
     return decomposition
+
+
+def _component_decomposition_row(
+    *,
+    group_key: str,
+    group_series: pd.Series,
+    group_weight_average: float,
+    metric_series: pd.Series,
+    contribution_denominator: float,
+    annualization_basis: int,
+    metric_std: float,
+) -> DecompositionRow:
+    cov = float(np.cov(group_series, metric_series, ddof=1)[0, 1])
+    component = float((cov / metric_std) * sqrt(annualization_basis))
+    marginal = (
+        float(component / group_weight_average)
+        if not np.isclose(group_weight_average, 0.0)
+        else None
+    )
+    percent = (
+        float(component / contribution_denominator)
+        if not np.isclose(contribution_denominator, 0.0)
+        else None
+    )
+    return {
+        "group_key": group_key,
+        "weight_average": group_weight_average,
+        "marginal_contribution": marginal,
+        "component_contribution": component,
+        "percent_contribution": percent,
+    }
 
 
 def attribution_calculation_inputs(
