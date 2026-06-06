@@ -22,8 +22,8 @@ from app.services.calculation_supportability import (
     supportability_from_period_results,
 )
 from app.services.rolling_dependency_context import benchmark_context, risk_free_context
+from app.services.rolling_engine_models import RollingInputFrames, RollingPeriodSeries
 from app.services.rolling_metric_series import ROLLING_SHARPE_METRIC
-from app.services.rolling_engine_models import RollingPeriodSeries
 from app.services.rolling_period_series import (
     build_rolling_input_frames,
     rolling_period_series,
@@ -177,19 +177,14 @@ def _calculate_period_result(
     )
 
 
-def calculate_rolling_metrics(
+def _rolling_period_results(
     request: RollingStatelessInput,
     *,
-    input_mode: RollingInputMode,
-) -> RollingResponse:
-    frames = build_rolling_input_frames(request)
-    if frames.portfolio.empty:
-        return _empty_response(request, input_mode=input_mode)
-
+    frames: RollingInputFrames,
+    options: RollingOptions,
+    requested_metrics: Sequence[str],
+) -> dict[str, RollingPeriodResult]:
     open_date = cast(pd.Timestamp, frames.portfolio.index.min()).date()
-    options = request.rolling_options
-    requested_metrics = [str(metric) for metric in options.metrics]
-
     results: dict[str, RollingPeriodResult] = {}
     for period in request.periods:
         period_series = rolling_period_series(
@@ -203,6 +198,26 @@ def calculate_rolling_metrics(
             options=options,
             requested_metrics=requested_metrics,
         )
+    return results
+
+
+def calculate_rolling_metrics(
+    request: RollingStatelessInput,
+    *,
+    input_mode: RollingInputMode,
+) -> RollingResponse:
+    frames = build_rolling_input_frames(request)
+    if frames.portfolio.empty:
+        return _empty_response(request, input_mode=input_mode)
+
+    options = request.rolling_options
+    requested_metrics = [str(metric) for metric in options.metrics]
+    results = _rolling_period_results(
+        request,
+        frames=frames,
+        options=options,
+        requested_metrics=requested_metrics,
+    )
 
     calculation_supportability = supportability_from_period_results(
         returns=request.returns,
