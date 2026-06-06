@@ -186,52 +186,77 @@ def emit_audit_event(
     )
 
 
+def _content_length(request: Request) -> int:
+    try:
+        return int(request.headers.get("content-length", "0"))
+    except ValueError:
+        return 0
+
+
+def _payload_limit_response(request: Request) -> Response | None:
+    max_write_payload_bytes = _env_int("ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES", 1_048_576)
+    if request.method not in _WRITE_METHODS:
+        return None
+    if _content_length(request) <= max_write_payload_bytes:
+        return None
+    return error_response(
+        request,
+        status_code=413,
+        code="PAYLOAD_TOO_LARGE",
+        message="payload_too_large",
+    )
+
+
+def _authorization_denied_response(
+    request: Request,
+    *,
+    reason: str | None,
+) -> Response:
+    emit_audit_event(
+        action=f"DENY {request.method} {request.url.path}",
+        actor_id=request.headers.get("X-Actor-Id", "unknown"),
+        tenant_id=request.headers.get("X-Tenant-Id", "default"),
+        role=request.headers.get("X-Role", "unknown"),
+        correlation_id=request.headers.get("X-Correlation-Id"),
+        metadata={"reason": reason},
+    )
+    return error_response(
+        request,
+        status_code=403,
+        code="AUTHORIZATION_DENIED",
+        message="authorization_policy_denied",
+        details={"reason": reason},
+    )
+
+
+def _emit_write_audit_event(request: Request, response: Response) -> None:
+    if request.method not in _WRITE_METHODS:
+        return
+    emit_audit_event(
+        action=f"{request.method} {request.url.path}",
+        actor_id=request.headers.get("X-Actor-Id", "unknown"),
+        tenant_id=request.headers.get("X-Tenant-Id", "default"),
+        role=request.headers.get("X-Role", "unknown"),
+        correlation_id=request.headers.get("X-Correlation-Id"),
+        metadata={"status_code": response.status_code},
+    )
+
+
 def build_enterprise_audit_middleware() -> MiddlewareCallable:
     async def middleware(request: Request, call_next: MiddlewareNext) -> Response:
-        max_write_payload_bytes = _env_int("ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES", 1_048_576)
-        try:
-            content_length = int(request.headers.get("content-length", "0"))
-        except ValueError:
-            content_length = 0
-        if request.method in _WRITE_METHODS and content_length > max_write_payload_bytes:
-            return error_response(
-                request,
-                status_code=413,
-                code="PAYLOAD_TOO_LARGE",
-                message="payload_too_large",
-            )
+        payload_limit_response = _payload_limit_response(request)
+        if payload_limit_response is not None:
+            return payload_limit_response
 
         authorized, reason = authorize_write_request(
             request.method, request.url.path, dict(request.headers)
         )
         if not authorized:
-            emit_audit_event(
-                action=f"DENY {request.method} {request.url.path}",
-                actor_id=request.headers.get("X-Actor-Id", "unknown"),
-                tenant_id=request.headers.get("X-Tenant-Id", "default"),
-                role=request.headers.get("X-Role", "unknown"),
-                correlation_id=request.headers.get("X-Correlation-Id"),
-                metadata={"reason": reason},
-            )
-            return error_response(
-                request,
-                status_code=403,
-                code="AUTHORIZATION_DENIED",
-                message="authorization_policy_denied",
-                details={"reason": reason},
-            )
+            return _authorization_denied_response(request, reason=reason)
 
         response = await call_next(request)
         response.headers["X-Enterprise-Policy-Version"] = enterprise_policy_version()
-        if request.method in _WRITE_METHODS:
-            emit_audit_event(
-                action=f"{request.method} {request.url.path}",
-                actor_id=request.headers.get("X-Actor-Id", "unknown"),
-                tenant_id=request.headers.get("X-Tenant-Id", "default"),
-                role=request.headers.get("X-Role", "unknown"),
-                correlation_id=request.headers.get("X-Correlation-Id"),
-                metadata={"status_code": response.status_code},
-            )
+        _emit_write_audit_event(request, response)
         return response
 
     return middleware
