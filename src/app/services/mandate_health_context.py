@@ -22,6 +22,12 @@ class _TrackingErrorHealth:
     reason_codes: list[str]
 
 
+@dataclass(frozen=True)
+class _TrackingErrorSource:
+    annualized_tracking_error: Decimal | None
+    aligned_observation_count: int
+
+
 def _to_decimal(value: Any) -> Decimal | None:
     if value is None:
         return None
@@ -57,22 +63,12 @@ def evaluate_mandate_risk_health_context(
     request: MandateRiskHealthContextRequest,
 ) -> MandateRiskHealthContextResponse:
     period_name = request.period.name or request.period.type
-    risk_request = StatelessRiskInput(
-        scope=request.scope,
-        periods=[request.period],
-        metrics=["TRACKING_ERROR"],
-        portfolio_open_date=request.portfolio_open_date,
-        returns=request.returns,
-        benchmark_returns=request.benchmark_returns,
+    risk_response = calculate_risk(_tracking_error_risk_request(request))
+    tracking_error_source = _tracking_error_source_metric(
+        risk_response.results[period_name].metrics["TRACKING_ERROR"].details or {}
     )
-    risk_response = calculate_risk(risk_request)
-    period_result = risk_response.results[period_name]
-    metric = period_result.metrics["TRACKING_ERROR"]
-    details = metric.details or {}
-    annualized_tracking_error = _to_decimal(details.get("annualized_tracking_error"))
-    aligned_observation_count = int(details.get("aligned_observation_count") or 0)
     tracking_error_health = _tracking_error_health(
-        annualized_tracking_error=annualized_tracking_error,
+        annualized_tracking_error=tracking_error_source.annualized_tracking_error,
         attention_threshold=request.tracking_error_attention_threshold,
     )
 
@@ -84,10 +80,32 @@ def evaluate_mandate_risk_health_context(
         threshold_breached=tracking_error_health.threshold_breached,
         tracking_error_attention_threshold=request.tracking_error_attention_threshold,
         source_metric=MandateRiskHealthSourceMetric(
-            annualized_tracking_error=annualized_tracking_error,
-            aligned_observation_count=aligned_observation_count,
+            annualized_tracking_error=tracking_error_source.annualized_tracking_error,
+            aligned_observation_count=tracking_error_source.aligned_observation_count,
         ),
         request_fingerprint=fingerprint_model(request),
         source_request_fingerprint=risk_response.metadata.request_fingerprint or "",
         reason_codes=tracking_error_health.reason_codes,
+    )
+
+
+def _tracking_error_risk_request(
+    request: MandateRiskHealthContextRequest,
+) -> StatelessRiskInput:
+    return StatelessRiskInput(
+        scope=request.scope,
+        periods=[request.period],
+        metrics=["TRACKING_ERROR"],
+        portfolio_open_date=request.portfolio_open_date,
+        returns=request.returns,
+        benchmark_returns=request.benchmark_returns,
+    )
+
+
+def _tracking_error_source_metric(
+    details: dict[str, Any],
+) -> _TrackingErrorSource:
+    return _TrackingErrorSource(
+        annualized_tracking_error=_to_decimal(details.get("annualized_tracking_error")),
+        aligned_observation_count=int(details.get("aligned_observation_count") or 0),
     )
