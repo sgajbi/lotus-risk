@@ -29,6 +29,29 @@ def _utc_now() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
+def _dependency_telemetry_signals(
+    dependencies: list[DependencyRuntimeView],
+) -> list[DependencyTelemetrySignal]:
+    return [
+        DependencyTelemetrySignal(
+            service=dependency.service,
+            status=dependency.status,
+            detail=dependency.detail,
+            category=dependency.category,
+            issue_code=dependency.issue_code,
+        )
+        for dependency in dependencies
+    ]
+
+
+def _source_services_from_metadata(metadata: AuditMetadataFields | None) -> list[str]:
+    return list(metadata.source_services) if metadata is not None else []
+
+
+def _upstream_fingerprints_from_metadata(metadata: AuditMetadataFields | None) -> dict[str, str]:
+    return dict(metadata.upstream_request_fingerprints) if metadata is not None else {}
+
+
 def build_product_trust_telemetry_seed(
     *,
     app: FastAPI,
@@ -58,20 +81,9 @@ def build_product_trust_telemetry_seed(
         draining=bool(getattr(app.state, "is_draining", False)),
         lineage_version=metadata.lineage_version if metadata is not None else None,
         request_fingerprint=metadata.request_fingerprint if metadata is not None else None,
-        source_services=list(metadata.source_services) if metadata is not None else [],
-        upstream_request_fingerprints=(
-            dict(metadata.upstream_request_fingerprints) if metadata is not None else {}
-        ),
-        dependency_signals=[
-            DependencyTelemetrySignal(
-                service=dependency.service,
-                status=dependency.status,
-                detail=dependency.detail,
-                category=dependency.category,
-                issue_code=dependency.issue_code,
-            )
-            for dependency in dependencies
-        ],
+        source_services=_source_services_from_metadata(metadata),
+        upstream_request_fingerprints=_upstream_fingerprints_from_metadata(metadata),
+        dependency_signals=_dependency_telemetry_signals(dependencies),
     )
 
 
