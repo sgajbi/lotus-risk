@@ -57,9 +57,7 @@ async def execute_downstream_request(
 ) -> httpx.Response:
     """Execute one outbound request and normalize failures into upstream errors."""
     try:
-        response = await request_factory()
-        response.raise_for_status()
-        return response
+        return await _successful_downstream_response(request_factory)
     except UpstreamServiceError as exc:
         _record_upstream_failure(
             dependency=dependency,
@@ -90,6 +88,14 @@ async def execute_downstream_request(
             exc=error,
         )
         raise error from exc
+
+
+async def _successful_downstream_response(
+    request_factory: Callable[[], Awaitable[httpx.Response]],
+) -> httpx.Response:
+    response = await request_factory()
+    response.raise_for_status()
+    return response
 
 
 def _http_status_upstream_error(
