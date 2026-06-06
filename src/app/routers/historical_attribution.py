@@ -38,37 +38,53 @@ async def analytics_risk_historical_attribution(
     request_payload: HistoricalAttributionRequest,
     request: Request,
 ) -> HistoricalAttributionResponse:
-    input_mode = request_payload.input_mode.value
     if request_payload.input_mode == AttributionInputMode.STATELESS:
-        stateless_input = request_payload.stateless_input
-        if stateless_input is None:
-            raise ValueError("stateless_input is required when input_mode=stateless")
-        return await observed_endpoint(
-            endpoint="historical-attribution",
-            input_mode=input_mode,
-            operation=lambda: calculate_historical_attribution(
-                stateless_input,
-                input_mode=AttributionInputMode.STATELESS,
-            ),
-        )
+        return await _stateless_historical_attribution_response(request_payload)
 
     if request_payload.input_mode == AttributionInputMode.STATEFUL:
-        stateful_input = request_payload.stateful_input
-        if stateful_input is None:
-            raise ValueError("stateful_input is required when input_mode=stateful")
-        performance_client = resolve_lotus_performance_client(request)
-        core_client = resolve_lotus_core_client(request)
-        return await observed_endpoint(
-            endpoint="historical-attribution",
-            input_mode=input_mode,
-            operation=lambda: calculate_historical_attribution_stateful(
-                stateful_input,
-                performance_client=performance_client,
-                core_client=core_client,
-                correlation_id=request_correlation_id(request),
-            ),
+        return await _stateful_historical_attribution_response(
+            request_payload=request_payload,
+            request=request,
         )
 
     raise ValueError(
         f"Unsupported input_mode={request_payload.input_mode.value} for /analytics/risk/historical-attribution"
+    )
+
+
+async def _stateless_historical_attribution_response(
+    request_payload: HistoricalAttributionRequest,
+) -> HistoricalAttributionResponse:
+    stateless_input = request_payload.stateless_input
+    if stateless_input is None:
+        raise ValueError("stateless_input is required when input_mode=stateless")
+    return await observed_endpoint(
+        endpoint="historical-attribution",
+        input_mode=request_payload.input_mode.value,
+        operation=lambda: calculate_historical_attribution(
+            stateless_input,
+            input_mode=AttributionInputMode.STATELESS,
+        ),
+    )
+
+
+async def _stateful_historical_attribution_response(
+    *,
+    request_payload: HistoricalAttributionRequest,
+    request: Request,
+) -> HistoricalAttributionResponse:
+    stateful_input = request_payload.stateful_input
+    if stateful_input is None:
+        raise ValueError("stateful_input is required when input_mode=stateful")
+    performance_client = resolve_lotus_performance_client(request)
+    core_client = resolve_lotus_core_client(request)
+    return await observed_endpoint(
+        endpoint="historical-attribution",
+        input_mode=request_payload.input_mode.value,
+        operation=lambda: calculate_historical_attribution_stateful(
+            stateful_input,
+            performance_client=performance_client,
+            core_client=core_client,
+            correlation_id=request_correlation_id(request),
+        ),
     )
