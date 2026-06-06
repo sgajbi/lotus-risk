@@ -3,7 +3,9 @@ from datetime import date
 
 import pytest
 
+from app.contracts.attribution import GroupingDimension
 from app.services.benchmark_exposure_history import (
+    BenchmarkExposureHistoryRequest,
     _rows_to_exposure_points,
     fetch_benchmark_exposure_history,
 )
@@ -18,6 +20,24 @@ def _performance_client(
     return RecordingLotusPerformanceClient(
         response_payload=build_returns_series_response(portfolio_returns=[]),
         benchmark_exposure_context_payload=payload or build_benchmark_exposure_context_response(),
+    )
+
+
+def _benchmark_request(
+    performance: RecordingLotusPerformanceClient,
+    *,
+    reporting_currency: str | None = None,
+    grouping_dimensions: list[GroupingDimension] | None = None,
+    correlation_id: str | None = None,
+) -> BenchmarkExposureHistoryRequest:
+    return BenchmarkExposureHistoryRequest(
+        performance_client=performance,
+        portfolio_id="DEMO_DPM_EUR_001",
+        as_of_date=date(2026, 1, 4),
+        start_date=date(2026, 1, 2),
+        reporting_currency=reporting_currency,
+        grouping_dimensions=grouping_dimensions or ["SECTOR"],
+        correlation_id=correlation_id,
     )
 
 
@@ -54,13 +74,11 @@ def test_fetch_benchmark_exposure_history_uses_performance_context_contract() ->
 
     points = asyncio.run(
         fetch_benchmark_exposure_history(
-            performance_client=performance,
-            portfolio_id="DEMO_DPM_EUR_001",
-            as_of_date=date(2026, 1, 4),
-            start_date=date(2026, 1, 2),
-            reporting_currency="USD",
-            grouping_dimensions=["SECTOR"],
-            correlation_id="corr-benchmark-exposure",
+            _benchmark_request(
+                performance,
+                reporting_currency="USD",
+                correlation_id="corr-benchmark-exposure",
+            )
         )
     )
 
@@ -86,13 +104,7 @@ def test_fetch_benchmark_exposure_history_omits_currency_when_not_requested() ->
 
     asyncio.run(
         fetch_benchmark_exposure_history(
-            performance_client=performance,
-            portfolio_id="DEMO_DPM_EUR_001",
-            as_of_date=date(2026, 1, 4),
-            start_date=date(2026, 1, 2),
-            reporting_currency=None,
-            grouping_dimensions=["POSITION"],
-            correlation_id=None,
+            _benchmark_request(performance, grouping_dimensions=["POSITION"])
         )
     )
 
@@ -123,17 +135,7 @@ def test_fetch_benchmark_exposure_history_follows_performance_pagination() -> No
         response_payload=build_returns_series_response(portfolio_returns=[])
     )
 
-    points = asyncio.run(
-        fetch_benchmark_exposure_history(
-            performance_client=performance,
-            portfolio_id="DEMO_DPM_EUR_001",
-            as_of_date=date(2026, 1, 4),
-            start_date=date(2026, 1, 2),
-            reporting_currency=None,
-            grouping_dimensions=["SECTOR"],
-            correlation_id=None,
-        )
-    )
+    points = asyncio.run(fetch_benchmark_exposure_history(_benchmark_request(performance)))
 
     assert len(performance.benchmark_exposure_context_calls) == 2
     assert (
@@ -150,13 +152,7 @@ def test_fetch_benchmark_exposure_history_accepts_issuer_grouping() -> None:
 
     points = asyncio.run(
         fetch_benchmark_exposure_history(
-            performance_client=performance,
-            portfolio_id="DEMO_DPM_EUR_001",
-            as_of_date=date(2026, 1, 4),
-            start_date=date(2026, 1, 2),
-            reporting_currency=None,
-            grouping_dimensions=["ISSUER"],
-            correlation_id=None,
+            _benchmark_request(performance, grouping_dimensions=["ISSUER"])
         )
     )
 
@@ -171,17 +167,7 @@ def test_fetch_benchmark_exposure_history_rejects_empty_performance_payload() ->
     performance = _performance_client({**build_benchmark_exposure_context_response(), "rows": []})
 
     with pytest.raises(ValueError, match="unable to build benchmark exposure history"):
-        asyncio.run(
-            fetch_benchmark_exposure_history(
-                performance_client=performance,
-                portfolio_id="DEMO_DPM_EUR_001",
-                as_of_date=date(2026, 1, 4),
-                start_date=date(2026, 1, 2),
-                reporting_currency=None,
-                grouping_dimensions=["SECTOR"],
-                correlation_id=None,
-            )
-        )
+        asyncio.run(fetch_benchmark_exposure_history(_benchmark_request(performance)))
 
 
 def test_fetch_benchmark_exposure_history_rejects_bad_performance_contract_shapes() -> None:
@@ -207,15 +193,7 @@ def test_fetch_benchmark_exposure_history_rejects_bad_performance_contract_shape
     for payload, expected in cases:
         with pytest.raises(ValueError, match=expected):
             asyncio.run(
-                fetch_benchmark_exposure_history(
-                    performance_client=_performance_client(payload),
-                    portfolio_id="DEMO_DPM_EUR_001",
-                    as_of_date=date(2026, 1, 4),
-                    start_date=date(2026, 1, 2),
-                    reporting_currency=None,
-                    grouping_dimensions=["SECTOR"],
-                    correlation_id=None,
-                )
+                fetch_benchmark_exposure_history(_benchmark_request(_performance_client(payload)))
             )
 
 
@@ -237,12 +215,6 @@ def test_fetch_benchmark_exposure_history_rejects_custom_grouping() -> None:
     with pytest.raises(ValueError, match="cannot source benchmark exposure history"):
         asyncio.run(
             fetch_benchmark_exposure_history(
-                performance_client=_performance_client(),
-                portfolio_id="DEMO_DPM_EUR_001",
-                as_of_date=date(2026, 1, 4),
-                start_date=date(2026, 1, 2),
-                reporting_currency=None,
-                grouping_dimensions=["CUSTOM"],
-                correlation_id=None,
+                _benchmark_request(_performance_client(), grouping_dimensions=["CUSTOM"])
             )
         )

@@ -14,7 +14,10 @@ from app.contracts.risk import ReturnPoint, RiskRequestScope
 from app.services.attribution_exposure_history import (
     fetch_stateful_exposure_history,
 )
-from app.services.benchmark_exposure_history import fetch_benchmark_exposure_history
+from app.services.benchmark_exposure_history import (
+    BenchmarkExposureHistoryRequest,
+    fetch_benchmark_exposure_history,
+)
 from app.services.stateful_returns_request import build_stateful_returns_series_request
 from app.services.stateful_returns_series_parser import (
     extract_required_portfolio_returns,
@@ -162,13 +165,15 @@ async def _fetch_active_benchmark_exposure_history(
     correlation_id: str | None,
 ) -> list[ExposurePoint]:
     benchmark_exposure_history = await fetch_benchmark_exposure_history(
-        performance_client=performance_client,
-        portfolio_id=stateful.portfolio_id,
-        as_of_date=stateful.as_of_date,
-        start_date=start_date,
-        reporting_currency=stateful.reporting_currency,
-        grouping_dimensions=grouping_dimensions,
-        correlation_id=correlation_id,
+        BenchmarkExposureHistoryRequest(
+            performance_client=performance_client,
+            portfolio_id=stateful.portfolio_id,
+            as_of_date=stateful.as_of_date,
+            start_date=start_date,
+            reporting_currency=stateful.reporting_currency,
+            grouping_dimensions=grouping_dimensions,
+            correlation_id=correlation_id,
+        )
     )
     _validate_benchmark_exposure_alignment(
         benchmark_returns=benchmark_returns,

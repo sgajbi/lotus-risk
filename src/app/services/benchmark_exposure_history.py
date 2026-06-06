@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal, InvalidOperation
 from typing import Any, Protocol
@@ -15,6 +16,17 @@ class BenchmarkExposurePerformanceClientProtocol(Protocol):
         request_payload: dict[str, Any],
         correlation_id: str | None,
     ) -> dict[str, Any]: ...
+
+
+@dataclass(frozen=True)
+class BenchmarkExposureHistoryRequest:
+    performance_client: BenchmarkExposurePerformanceClientProtocol
+    portfolio_id: str
+    as_of_date: date
+    start_date: date
+    reporting_currency: str | None
+    grouping_dimensions: list[GroupingDimension]
+    correlation_id: str | None
 
 
 def _as_decimal(value: Any) -> Decimal:
@@ -70,26 +82,22 @@ def _validate_lineage(response: dict[str, Any]) -> None:
 
 def _build_request_payload(
     *,
-    portfolio_id: str,
-    as_of_date: date,
-    start_date: date,
-    reporting_currency: str | None,
-    grouping_dimensions: list[GroupingDimension],
+    request: BenchmarkExposureHistoryRequest,
     page_token: str | None,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
-        "portfolio_id": portfolio_id,
-        "as_of_date": as_of_date.isoformat(),
+        "portfolio_id": request.portfolio_id,
+        "as_of_date": request.as_of_date.isoformat(),
         "window": {
-            "start_date": start_date.isoformat(),
-            "end_date": as_of_date.isoformat(),
+            "start_date": request.start_date.isoformat(),
+            "end_date": request.as_of_date.isoformat(),
         },
         "frequency": "DAILY",
-        "grouping_dimensions": grouping_dimensions,
+        "grouping_dimensions": request.grouping_dimensions,
         "page": {"page_size": 1000, "page_token": page_token},
     }
-    if reporting_currency:
-        payload["reporting_currency"] = reporting_currency
+    if request.reporting_currency:
+        payload["reporting_currency"] = request.reporting_currency
     return payload
 
 
@@ -126,25 +134,15 @@ def _rows_to_exposure_points(rows: list[Any]) -> list[ExposurePoint]:
 
 async def _fetch_benchmark_exposure_page(
     *,
-    performance_client: BenchmarkExposurePerformanceClientProtocol,
-    portfolio_id: str,
-    as_of_date: date,
-    start_date: date,
-    reporting_currency: str | None,
-    grouping_dimensions: list[GroupingDimension],
+    request: BenchmarkExposureHistoryRequest,
     page_token: str | None,
-    correlation_id: str | None,
 ) -> tuple[list[ExposurePoint], str | None]:
-    response = await performance_client.get_benchmark_exposure_context(
+    response = await request.performance_client.get_benchmark_exposure_context(
         request_payload=_build_request_payload(
-            portfolio_id=portfolio_id,
-            as_of_date=as_of_date,
-            start_date=start_date,
-            reporting_currency=reporting_currency,
-            grouping_dimensions=grouping_dimensions,
+            request=request,
             page_token=page_token,
         ),
-        correlation_id=correlation_id,
+        correlation_id=request.correlation_id,
     )
     _validate_lineage(response)
 
@@ -178,29 +176,16 @@ def _validate_supported_grouping_dimensions(
 
 
 async def fetch_benchmark_exposure_history(
-    *,
-    performance_client: BenchmarkExposurePerformanceClientProtocol,
-    portfolio_id: str,
-    as_of_date: date,
-    start_date: date,
-    reporting_currency: str | None,
-    grouping_dimensions: list[GroupingDimension],
-    correlation_id: str | None,
+    request: BenchmarkExposureHistoryRequest,
 ) -> list[ExposurePoint]:
-    _validate_supported_grouping_dimensions(grouping_dimensions)
+    _validate_supported_grouping_dimensions(request.grouping_dimensions)
 
     page_token: str | None = None
     benchmark_exposures: list[ExposurePoint] = []
     while True:
         exposure_points, next_page_token = await _fetch_benchmark_exposure_page(
-            performance_client=performance_client,
-            portfolio_id=portfolio_id,
-            as_of_date=as_of_date,
-            start_date=start_date,
-            reporting_currency=reporting_currency,
-            grouping_dimensions=grouping_dimensions,
+            request=request,
             page_token=page_token,
-            correlation_id=correlation_id,
         )
         benchmark_exposures.extend(exposure_points)
         if next_page_token is None:
