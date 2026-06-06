@@ -74,6 +74,19 @@ def test_rolling_engine_returns_window_results_and_metadata() -> None:
     assert len(window.metric_series) > 0
 
 
+def test_rolling_engine_preserves_dependency_alignment_counts() -> None:
+    response = calculate_rolling_metrics(_base_input(), input_mode=RollingInputMode.STATELESS)
+
+    period = response.results["YTD"]
+
+    assert period.benchmark_series_count == 7
+    assert period.aligned_benchmark_series_count == 7
+    assert period.risk_free_series_count == 7
+    assert period.aligned_risk_free_series_count == 7
+    assert period.benchmark_context.aligned is True
+    assert period.risk_free_context.aligned is True
+
+
 def test_rolling_metric_dispatch_rejects_unknown_metric() -> None:
     series = pd.Series([0.01, 0.02, -0.01])
 
