@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any
+from typing import Any, NoReturn
 
 import httpx
 
@@ -90,34 +90,63 @@ async def poll_returns_series_result(
     result_path, poll_path = _async_returns_series_paths(accepted_payload)
     last_status = "pending"
     for _ in range(async_max_polls):
-        if poll_path:
-            last_status = await _poll_returns_series_status(
-                client=client,
-                base_url=base_url,
-                poll_path=poll_path,
-                headers=headers,
-                started_at=started_at,
-                last_status=last_status,
-            )
-
-        result_status, result_payload = await _get_returns_series_result(
+        result_payload, last_status = await _poll_returns_series_once(
             client=client,
             base_url=base_url,
             result_path=result_path,
+            poll_path=poll_path,
             headers=headers,
             started_at=started_at,
+            last_status=last_status,
         )
-        if result_status == 200:
-            if result_payload is None:
-                raise missing_upstream_data(
-                    service="lotus-performance",
-                    operation=RETURNS_SERIES_OPERATION,
-                    message="lotus-performance async returns-series result returned no payload",
-                )
+        if result_payload is not None:
             return result_payload
 
         await asyncio.sleep(async_poll_interval_seconds)
 
+    _raise_returns_series_poll_timeout(last_status)
+
+
+async def _poll_returns_series_once(
+    *,
+    client: httpx.AsyncClient,
+    base_url: str,
+    result_path: str,
+    poll_path: str | None,
+    headers: dict[str, str],
+    started_at: float,
+    last_status: str,
+) -> tuple[dict[str, Any] | None, str]:
+    next_status = last_status
+    if poll_path:
+        next_status = await _poll_returns_series_status(
+            client=client,
+            base_url=base_url,
+            poll_path=poll_path,
+            headers=headers,
+            started_at=started_at,
+            last_status=last_status,
+        )
+
+    result_status, result_payload = await _get_returns_series_result(
+        client=client,
+        base_url=base_url,
+        result_path=result_path,
+        headers=headers,
+        started_at=started_at,
+    )
+    if result_status != 200:
+        return None, next_status
+    if result_payload is None:
+        raise missing_upstream_data(
+            service="lotus-performance",
+            operation=RETURNS_SERIES_OPERATION,
+            message="lotus-performance async returns-series result returned no payload",
+        )
+    return result_payload, next_status
+
+
+def _raise_returns_series_poll_timeout(last_status: str) -> NoReturn:
     raise missing_upstream_data(
         service="lotus-performance",
         operation=RETURNS_SERIES_OPERATION,
