@@ -31,3 +31,10 @@ Inbound correlation IDs are preserved only when they use a bounded safe characte
 IDs and `traceparent` values are preserved only when they satisfy the supported W3C format and use a
 non-zero trace ID; malformed, mismatched, or unbounded values are replaced. This intentionally
 hardens response-header reflection and structured request logging without changing valid callers.
+
+## REF-DEC-006: Client-Facing Upstream Errors Are Bounded
+
+Upstream error envelopes preserve dependency, operation, status, category, retryability, and
+correlation context, but never include raw downstream response bodies or transport exception text.
+This intentionally changes unsafe error-message detail while preserving the governed error codes
+and status behavior used by clients.

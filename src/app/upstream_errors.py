@@ -125,7 +125,6 @@ def classify_upstream_http_error(
     service: str,
     operation: str,
     response: httpx.Response,
-    detail: str,
 ) -> UpstreamServiceError:
     upstream_status = response.status_code
     profile = _upstream_http_error_profile(upstream_status)
@@ -135,7 +134,7 @@ def classify_upstream_http_error(
         upstream_status=upstream_status,
         response_status=profile.response_status,
         code=profile.code,
-        message=f"{service} {operation} {profile.verb} ({upstream_status}): {detail}",
+        message=f"{service} {operation} {profile.verb} ({upstream_status})",
         category=profile.category,
         retryable=profile.retryable,
     )
@@ -179,7 +178,7 @@ def classify_upstream_transport_error(
             operation=operation,
             status_code=HTTPStatus.GATEWAY_TIMEOUT,
             code="UPSTREAM_TIMEOUT",
-            message=f"{service} {operation} timed out: {exc}",
+            message=f"{service} {operation} timed out",
             details=_dependency_details(
                 service=service,
                 operation=operation,
@@ -192,7 +191,7 @@ def classify_upstream_transport_error(
         operation=operation,
         status_code=HTTPStatus.SERVICE_UNAVAILABLE,
         code="UPSTREAM_UNAVAILABLE",
-        message=f"{service} {operation} unavailable: {exc}",
+        message=f"{service} {operation} unavailable",
         details=_dependency_details(
             service=service,
             operation=operation,
@@ -200,24 +199,3 @@ def classify_upstream_transport_error(
         ),
         retryable=True,
     )
-
-
-def extract_upstream_error_detail(response: httpx.Response) -> str:
-    try:
-        payload = response.json()
-    except ValueError:
-        return response.text or "unknown error"
-    if isinstance(payload, dict):
-        detail = payload.get("detail")
-        if isinstance(detail, str):
-            return detail
-        if isinstance(detail, dict):
-            message = detail.get("message")
-            if isinstance(message, str):
-                return message
-        error = payload.get("error")
-        if isinstance(error, dict):
-            message = error.get("message")
-            if isinstance(message, str):
-                return message
-    return str(payload)

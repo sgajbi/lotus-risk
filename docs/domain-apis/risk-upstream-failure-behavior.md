@@ -31,6 +31,10 @@ Every upstream failure returned by `lotus-risk` should include deterministic det
 4. `retryable`: boolean retry guidance,
 5. `upstream_status_code`: present for HTTP upstream failures.
 
+Client-facing messages identify the dependency, operation, bounded failure class, and upstream HTTP
+status where available. Raw upstream response bodies, downstream exception text, stack traces,
+credentials, and tokens are never included in the client-facing envelope.
+
 ## Correlation IDs
 
 When a caller sends `X-Correlation-Id`, `lotus-risk` forwards it to upstream clients and includes the same correlation ID in the error envelope returned to the caller.

@@ -11,6 +11,7 @@ client, request, response, trace, or correlation data through logs, metrics, err
    `traceparent` must satisfy the supported W3C format. Unsafe values are replaced instead of
    reflected or logged.
 3. Dependency failures are mapped into bounded error envelopes.
+   Raw upstream response bodies and transport exception text are not exposed to API callers.
 4. Dependency audit is enforced through `make security-audit` using an isolated project-scoped
    install, not the developer's global Python environment.
 5. Bandit configuration is added for progressive static security evidence.

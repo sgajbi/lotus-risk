@@ -14,7 +14,6 @@ from app.upstream_errors import (
     UpstreamServiceError,
     classify_upstream_http_error,
     classify_upstream_transport_error,
-    extract_upstream_error_detail,
 )
 
 
@@ -153,7 +152,6 @@ def _http_status_upstream_error(
         service=dependency,
         operation=operation,
         response=exc.response,
-        detail=extract_upstream_error_detail(exc.response),
     )
 
 

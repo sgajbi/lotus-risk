@@ -100,7 +100,7 @@ STANDARD_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
                 "example": {
                     "error": {
                         "code": "FAILED_DEPENDENCY",
-                        "message": "lotus-performance /integration/returns/series rejected request (404): missing benchmark assignment",
+                        "message": "lotus-performance /integration/returns/series rejected request (404)",
                         "correlation_id": "corr-123",
                         "details": {
                             "service": "lotus-performance",
@@ -124,7 +124,7 @@ STANDARD_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
                 "example": {
                     "error": {
                         "code": "UPSTREAM_FAILURE",
-                        "message": "lotus-performance /integration/returns/series failed (503): upstream failed",
+                        "message": "lotus-performance /integration/returns/series failed (503)",
                         "correlation_id": "corr-123",
                         "details": {
                             "service": "lotus-performance",
@@ -145,7 +145,7 @@ STANDARD_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
                 "example": {
                     "error": {
                         "code": "UPSTREAM_UNAVAILABLE",
-                        "message": "lotus-core /integration/reference/risk-free-series unavailable: network down",
+                        "message": "lotus-core /integration/reference/risk-free-series unavailable",
                         "correlation_id": "corr-123",
                         "details": {
                             "service": "lotus-core",
@@ -165,7 +165,7 @@ STANDARD_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
                 "example": {
                     "error": {
                         "code": "UPSTREAM_TIMEOUT",
-                        "message": "lotus-core /integration/reference/risk-free-series timed out: request timed out",
+                        "message": "lotus-core /integration/reference/risk-free-series timed out",
                         "correlation_id": "corr-123",
                         "details": {
                             "service": "lotus-core",

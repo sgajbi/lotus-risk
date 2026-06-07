@@ -47,6 +47,8 @@ Bank deployment mode is stricter than local development mode:
 6. caller-provided correlation and trace headers are untrusted: unsafe or unbounded correlation IDs
    and malformed, zero, or mismatched W3C trace context are replaced rather than reflected or
    logged.
+7. client-facing upstream failure envelopes preserve bounded dependency and retry context but never
+   expose raw downstream response bodies or transport exception text.
 
 ## Upstream Boundary Discipline
 
