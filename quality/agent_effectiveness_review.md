@@ -27,3 +27,13 @@ decisions.
 | Documentation | Improved | Added the previously missing `docs/configuration.md`, expanded the environment example, and linked safe runtime configuration from README, security docs, wiki, threat model, and runbooks. |
 | Repository context | Improved | Recorded application-owned downstream pools and fail-fast downstream URL policy in `REPOSITORY-ENGINEERING-CONTEXT.md` because both are durable runtime architecture truth. |
 | Automation | No new gate | Focused configuration, security-document, source-size, architecture, complexity, and existing CI gates cover the new policy. A new standalone configuration gate would duplicate tested behavior. |
+
+## 2026-06-08 Review 3
+
+| Area | Decision | Evidence / action |
+| --- | --- | --- |
+| Skill routing | No change | `lotus-backend-delivery-governance` plus `lotus-codebase-review-ledger` remain the smallest sufficient workflow for the API governance, modularity, baseline, and CI-evidence slices. |
+| Agent guidance | No change | The existing five-slice cadence correctly triggered this review after the fail-closed runtime, fail-closed evidence, problem-details, benchmark-period, and rolling-dependency-selection slices. |
+| Documentation | Improved | API governance, risk analytics contract, upstream failure behavior, wiki governance, review ledger, and refactor decisions now capture additive RFC 7807/problem-details compatibility and service-hotspot extraction evidence. |
+| Repository context | Improved | `REPOSITORY-ENGINEERING-CONTEXT.md` now records that Lotus error-envelope compatibility and problem-details metadata must remain additive unless a versioned migration is introduced. |
+| Automation | No new gate | Existing `make check`, OpenAPI artifact/quality gates, source-size gate, baseline generation, and GitHub Feature Lane already cover the new error-contract and modularity evidence. |

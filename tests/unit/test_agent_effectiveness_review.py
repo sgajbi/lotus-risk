@@ -34,3 +34,12 @@ def test_second_effectiveness_review_records_configuration_and_context_improveme
     assert "docs/configuration.md" in text
     assert "fail-fast downstream URL policy" in text
     assert "A new standalone configuration gate would duplicate tested behavior" in text
+
+
+def test_third_effectiveness_review_records_problem_details_and_modularity_evidence() -> None:
+    text = REVIEW.read_text(encoding="utf-8")
+
+    assert "## 2026-06-08 Review 3" in text
+    assert "additive RFC 7807/problem-details compatibility" in text
+    assert "service-hotspot extraction evidence" in text
+    assert "problem-details metadata must remain additive" in text
