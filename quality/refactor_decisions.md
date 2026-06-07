@@ -88,3 +88,10 @@ overlapping path prefixes resolve deterministically to the most specific rule.
 `error.details` client contract. RFC 7807/problem-details metadata is added inside the same `error`
 object as `type`, `title`, `status`, `detail`, and `instance` so gateways and clients can normalize
 errors without a breaking top-level response shape change.
+
+## REF-DEC-014: Split Benchmark Period Metrics From Period Orchestration
+
+Risk period orchestration remains exposed through `calculate_period_metrics`, but benchmark-specific
+period alignment, dependency error mapping, and benchmark context construction now live in
+`risk/benchmark_period_metrics.py`. This reduces the largest service hotspot without changing the
+caller contract or metric semantics.

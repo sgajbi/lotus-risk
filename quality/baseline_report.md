@@ -13,11 +13,11 @@ completion claim.
 ## Generation Identity
 
 - Git branch: `feat/enterprise-risk-refactor-continuation`
-- Git commit: `04526f9aa5c6350feac5a81f913eb19100d05b2d`
+- Git commit: `48392dd0d1f7278d2aedd9412694c326c6fb01ec`
 
 ## Current Code Size
 
-- Python source files under `src/`: 209
+- Python source files under `src/`: 210
 - Python test files under `tests/`: 103
 - Python packages under `src/`: 9
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
@@ -26,7 +26,6 @@ completion claim.
 
 | Path | Lines | Bytes |
 | --- | --- | --- |
-| src/app/services/risk/period_metrics.py | 401 | 12857 |
 | src/app/services/rolling_stateful_inputs.py | 376 | 13506 |
 | src/app/services/rolling_metric_series.py | 361 | 11066 |
 | src/app/enterprise_readiness.py | 336 | 11095 |
@@ -46,6 +45,7 @@ completion claim.
 | src/app/services/drawdown_periods.py | 254 | 7963 |
 | src/app/services/scenario_engine.py | 253 | 8239 |
 | src/app/services/concentration/stateless_resolver.py | 246 | 8471 |
+| src/app/services/concentration/response_builder.py | 244 | 9409 |
 
 ### Largest Functions And Classes
 
@@ -96,12 +96,12 @@ All checks passed!
 - Ruff format check: passed
 
 ```text
-327 files already formatted
+328 files already formatted
 ```
 - Type checking: passed
 
 ```text
-Success: no issues found in 312 source files
+Success: no issues found in 313 source files
 ```
 - Unit coverage snapshot: passed
 
@@ -115,10 +115,10 @@ Success: no issues found in 312 source files
 ...
 src\app\services\rolling_stateful_inputs.py                  113      1     32      1    99%   176
 ------------------------------------------------------------------------------------------------------
-TOTAL                                                       5994     89   1026     73    98%
+TOTAL                                                       6006     89   1026     73    98%
 
-169 files skipped due to complete coverage.
-549 passed in 8.89s
+170 files skipped due to complete coverage.
+549 passed in 9.07s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -136,7 +136,7 @@ src\app\error_response.py - A (60.11)
 ...
 src\app\services\risk\metric_calculators.py - A (39.28)
 src\app\services\risk\metric_timing.py - A (100.00)
-src\app\services\risk\period_metrics.py - A (38.89)
+src\app\services\risk\period_metrics.py - A (49.15)
 src\app\services\risk\period_resolution.py - A (47.21)
 src\app\services\risk\period_windows.py - A (58.70)
 src\app\services\risk\__init__.py - A (100.00)
@@ -148,7 +148,7 @@ src\app\services\risk\__init__.py - A (100.00)
 - Dependency hygiene: passed
 
 ```text
-Scanning 209 files...
+Scanning 210 files...
 
 Success! No dependency issues found.
 ```
@@ -247,7 +247,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc1-503-UPSTREAM_UNAVAILABLE-transport]
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 
-549 tests collected in 1.65s
+549 tests collected in 1.69s
 ```
 - Import-linter report-only: passed
 
