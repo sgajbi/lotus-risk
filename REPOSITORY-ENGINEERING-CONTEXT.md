@@ -172,6 +172,9 @@ Boundary rules:
 9. downstream base URLs are validated at adapter construction and must be valid HTTP(S) service
    endpoints without embedded credentials, query strings, fragments, whitespace, or control
    characters; runtime-owned settings are documented in `docs/configuration.md`.
+10. `ENTERPRISE_ENFORCE_RUNTIME_CONFIG=true` is fail-closed bank mode: application construction
+    requires authorization plus explicit policy, key, rotation, capability, payload-limit, and
+    upstream URL configuration.
 
 Canonical direct local validation ports:
 

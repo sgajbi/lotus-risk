@@ -65,6 +65,10 @@ ingress/proxy plus ASGI/server request body limits with `ENTERPRISE_MAX_WRITE_PA
 Missing ingress/server body-limit enforcement for requests without trustworthy `Content-Length` is
 a deployment-readiness failure.
 
+With `ENTERPRISE_ENFORCE_RUNTIME_CONFIG=true`, startup fails closed when the in-process bank posture
+is incomplete. Resolve every bounded `enterprise_runtime_config_invalid:<issue-codes>` entry before
+promoting the deployment.
+
 ## Live Validation Baseline
 
 Current governed default:

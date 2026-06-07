@@ -29,6 +29,8 @@ def test_security_threat_model_records_current_abuse_controls() -> None:
         "ASGI/server request body limits",
         "credential-bearing downstream URL",
         "docs/configuration.md",
+        "fails application construction",
+        "missing_capability_rule",
     )
 
     for term in required_terms:

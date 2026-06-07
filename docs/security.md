@@ -25,6 +25,8 @@ client, request, response, trace, or correlation data through logs, metrics, err
 9. Downstream base URLs fail fast unless they use HTTP(S), include a valid host, and exclude
    embedded credentials, query strings, fragments, whitespace, and control characters. Validation
    errors never echo the rejected value.
+10. Authorization-enforced write requests fail closed when no well-formed capability rule matches
+    the request path.
 
 ## Refactor Requirements
 

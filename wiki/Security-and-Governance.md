@@ -53,6 +53,10 @@ Bank deployment mode is stricter than local development mode:
    authorization and payload-limit failures.
 9. downstream base URLs fail fast unless they are valid HTTP(S) service endpoints without embedded
    credentials, query strings, fragments, whitespace, or control characters.
+10. `ENTERPRISE_ENFORCE_RUNTIME_CONFIG=true` fails service construction unless the documented
+    in-process bank posture is complete; failures expose bounded issue codes, not values.
+11. authorization-enforced write paths without a well-formed matching capability rule fail closed
+    with `missing_capability_rule`.
 
 ## Upstream Boundary Discipline
 

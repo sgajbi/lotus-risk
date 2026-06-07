@@ -9,10 +9,28 @@ from app.enterprise_readiness import (
     authorize_write_request,
     build_enterprise_audit_middleware,
     emit_audit_event,
+    load_capability_rules,
     load_feature_flags,
     redact_sensitive,
     validate_enterprise_runtime_config,
 )
+
+
+def _set_valid_enterprise_runtime_config(monkeypatch: pytest.MonkeyPatch) -> None:
+    for name, value in {
+        "ENTERPRISE_ENFORCE_RUNTIME_CONFIG": "true",
+        "ENTERPRISE_ENFORCE_AUTHZ": "true",
+        "ENTERPRISE_POLICY_VERSION": "2.0.0",
+        "ENTERPRISE_PRIMARY_KEY_ID": "key-2026-01",
+        "ENTERPRISE_SECRET_ROTATION_DAYS": "30",
+        "ENTERPRISE_CAPABILITY_RULES_JSON": (
+            '{"POST /analytics/risk/calculate":"risk.analytics.write"}'
+        ),
+        "ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES": "1048576",
+        "LOTUS_CORE_BASE_URL": "https://core.internal.example",
+        "LOTUS_PERFORMANCE_BASE_URL": "https://performance.internal.example",
+    }.items():
+        monkeypatch.setenv(name, value)
 
 
 def test_validate_runtime_config_collects_and_enforces_issues(
@@ -35,6 +53,44 @@ def test_validate_runtime_config_collects_and_enforces_issues(
 
     monkeypatch.setenv("ENTERPRISE_ENFORCE_RUNTIME_CONFIG", "true")
     with pytest.raises(RuntimeError, match="enterprise_runtime_config_invalid"):
+        validate_enterprise_runtime_config()
+
+
+def test_validate_enterprise_runtime_config_accepts_complete_bank_posture(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _set_valid_enterprise_runtime_config(monkeypatch)
+
+    assert validate_enterprise_runtime_config() == []
+
+
+@pytest.mark.parametrize(
+    ("setting", "value", "issue"),
+    [
+        ("ENTERPRISE_ENFORCE_AUTHZ", "false", "authorization_not_enforced"),
+        ("ENTERPRISE_POLICY_VERSION", "", "missing_policy_version"),
+        ("ENTERPRISE_PRIMARY_KEY_ID", "", "missing_primary_key_id"),
+        ("ENTERPRISE_SECRET_ROTATION_DAYS", "", "missing_secret_rotation_days"),
+        ("ENTERPRISE_CAPABILITY_RULES_JSON", "{}", "missing_capability_rules"),
+        (
+            "ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES",
+            "0",
+            "missing_or_invalid_max_write_payload_bytes",
+        ),
+        ("LOTUS_CORE_BASE_URL", "", "missing_lotus_core_base_url"),
+        ("LOTUS_PERFORMANCE_BASE_URL", "", "missing_lotus_performance_base_url"),
+    ],
+)
+def test_validate_enterprise_runtime_config_fails_closed_for_missing_bank_posture(
+    monkeypatch: pytest.MonkeyPatch,
+    setting: str,
+    value: str,
+    issue: str,
+) -> None:
+    _set_valid_enterprise_runtime_config(monkeypatch)
+    monkeypatch.setenv(setting, value)
+
+    with pytest.raises(RuntimeError, match=issue):
         validate_enterprise_runtime_config()
 
 
@@ -71,8 +127,12 @@ def test_authorize_write_request_enforces_headers_identity_and_capabilities(
     assert reason is None
 
     allowed, reason = authorize_write_request("POST", "/unmapped/path", headers)
-    assert allowed
-    assert reason is None
+    assert not allowed
+    assert reason == "missing_capability_rule"
+
+    allowed, reason = authorize_write_request("POST", "/analytics/risk/calculate-extra", headers)
+    assert not allowed
+    assert reason == "missing_capability_rule"
 
 
 def test_feature_flag_json_fallbacks(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -80,6 +140,48 @@ def test_feature_flag_json_fallbacks(monkeypatch: pytest.MonkeyPatch) -> None:
     assert load_feature_flags() == {}
     monkeypatch.setenv("ENTERPRISE_FEATURE_FLAGS_JSON", "[]")
     assert load_feature_flags() == {}
+
+
+def test_capability_rules_accept_only_nonempty_string_mappings(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv(
+        "ENTERPRISE_CAPABILITY_RULES_JSON",
+        (
+            '{"POST /valid":"risk.write","GET /read":"risk.read","invalid":"risk.write",'
+            '"POST /empty":"","POST /object":{"value":"unsafe"}}'
+        ),
+    )
+
+    assert load_capability_rules() == {"POST /valid": "risk.write"}
+
+
+def test_authorization_uses_most_specific_matching_capability_rule(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("ENTERPRISE_ENFORCE_AUTHZ", "true")
+    monkeypatch.setenv(
+        "ENTERPRISE_CAPABILITY_RULES_JSON",
+        (
+            '{"POST /analytics":"risk.analytics.write",'
+            '"POST /analytics/risk/calculate":"risk.calculate.write"}'
+        ),
+    )
+    headers = {
+        "X-Actor-Id": "actor-1",
+        "X-Tenant-Id": "tenant-1",
+        "X-Role": "advisor",
+        "X-Correlation-Id": "corr-1",
+        "X-Service-Identity": "lotus-gateway",
+        "X-Capabilities": "risk.analytics.write",
+    }
+
+    allowed, reason = authorize_write_request("POST", "/analytics/risk/calculate", headers)
+    assert not allowed
+    assert reason == "missing_capability:risk.calculate.write"
+
+    headers["X-Capabilities"] = "risk.calculate.write"
+    assert authorize_write_request("POST", "/analytics/risk/calculate", headers) == (True, None)
 
 
 def test_redact_sensitive_masks_nested_structures() -> None:

@@ -32,7 +32,13 @@ Enterprise bank deployments must provide all of the following:
 
 The service must fail closed when these requirements are missing in enterprise mode. Runtime
 configuration validation in `src/app/enterprise_readiness.py` enforces the in-process portion of
-this policy.
+this policy. When `ENTERPRISE_ENFORCE_RUNTIME_CONFIG=true`, service construction fails unless
+authorization is enabled and policy version, key ID, rotation days, nonempty string capability
+rules, positive payload limit, and both upstream base URLs are explicit.
+Capability rules are required as nonempty string mappings.
+Every authorization-enforced write path must match a well-formed write-method capability rule;
+unmapped writes fail closed with `missing_capability_rule`, and overlapping prefixes resolve to the
+most specific path rule.
 
 ## Identity Boundary
 

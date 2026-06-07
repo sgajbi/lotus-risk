@@ -21,6 +21,10 @@ def test_configuration_document_pins_runtime_owned_settings_and_safe_url_policy(
         "exclude embedded credentials",
         "never includes a rejected URL value",
         "SOURCE_FILE_MAX_LINES",
+        "application construction fails closed",
+        "bounded issue codes only",
+        "missing_capability_rule",
+        "most specific path rule wins",
     )
     for term in required_terms:
         assert term in text

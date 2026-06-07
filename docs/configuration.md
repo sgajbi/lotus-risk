@@ -48,6 +48,14 @@ keepalive limits apply to reusable application-owned pools.
 Do not place secrets, bearer tokens, or credentials in capability rules, feature flags, base URLs,
 logs, examples, or committed environment files.
 
+When `ENTERPRISE_ENFORCE_RUNTIME_CONFIG=true`, application construction fails closed unless the
+enterprise bank posture above is explicit. The failure contains bounded issue codes only and never
+includes configuration values.
+
+Capability-rule keys must use `<WRITE_METHOD> /absolute/path-prefix` form with a nonempty string
+capability value. When authorization is enabled, write requests without a matching rule fail closed
+with `missing_capability_rule`. When multiple prefixes match, the most specific path rule wins.
+
 ## Quality-Gate Controls
 
 These settings affect repository validation rather than application runtime:

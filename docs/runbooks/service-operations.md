@@ -30,11 +30,15 @@ Enterprise bank deployments must run with the security posture in
 2. Verify `ENTERPRISE_ENFORCE_RUNTIME_CONFIG=true`.
 3. Verify `ENTERPRISE_PRIMARY_KEY_ID` and `ENTERPRISE_SECRET_ROTATION_DAYS` are set.
 4. Verify `ENTERPRISE_CAPABILITY_RULES_JSON` contains the endpoint capability map for write-like
-   analytics POST endpoints.
+   analytics POST endpoints and that no supported write path is unmapped.
 5. Verify ingress/proxy and ASGI/server request body limits are at or below
    `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES`.
 6. Treat missing body-limit enforcement for requests without trustworthy `Content-Length` as a
    deployment-readiness failure, not an application-code exception.
+7. Verify `LOTUS_CORE_BASE_URL` and `LOTUS_PERFORMANCE_BASE_URL` are explicit approved service
+   endpoints.
+8. Treat any `enterprise_runtime_config_invalid:<issue-codes>` startup failure as a blocked
+   deployment until every bounded issue code is resolved.
 
 ## Endpoint Failure Rate Alert
 

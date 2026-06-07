@@ -72,3 +72,12 @@ Both upstream adapters use one shared base-URL resolver. It accepts valid HTTP(S
 including approved path prefixes, but rejects malformed hosts or ports, embedded credentials,
 query strings, fragments, whitespace, and control characters. Validation errors identify only the
 setting name and policy violation so a credential-bearing value cannot be reflected.
+
+## REF-DEC-012: Enterprise Runtime Enforcement Is Fail Closed
+
+Local development keeps its permissive defaults. When `ENTERPRISE_ENFORCE_RUNTIME_CONFIG=true`,
+application construction requires the documented in-process bank posture and fails with bounded
+issue codes when it is incomplete. This closes the gap between deployment policy and executable
+startup behavior without claiming enforcement of external ingress or identity-provider controls.
+Authorization-enforced writes also fail closed when no well-formed capability rule matches, and
+overlapping path prefixes resolve deterministically to the most specific rule.

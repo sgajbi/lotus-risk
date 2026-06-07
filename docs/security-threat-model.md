@@ -38,9 +38,9 @@ diagnostics, or downstream failure messages.
 | Abuse case | Current control | Verification evidence | Remaining risk |
 | --- | --- | --- | --- |
 | Oversized POST payload attempts resource exhaustion | `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES` returns `413 PAYLOAD_TOO_LARGE` before handler execution | `test_enterprise_middleware_payload_limit` and `docs/security-deployment-policy.md` | Enterprise deployments must enforce matching ingress and ASGI/server request body limits for requests without trustworthy `Content-Length` |
-| Caller invokes calculation POST without actor, tenant, role, or correlation context | `ENTERPRISE_ENFORCE_AUTHZ=true` requires `X-Actor-Id`, `X-Tenant-Id`, `X-Role`, and `X-Correlation-Id`; enterprise bank deployment mode requires this flag | `test_authorize_write_request_enforces_headers_identity_and_capabilities`, `test_enterprise_middleware_denies_unauthorized_writes`, and `test_enterprise_deployment_policy_docs.py` | Local development mode may keep enforcement disabled, but that mode cannot support a bank-buyable production-readiness claim |
+| Caller invokes calculation POST without actor, tenant, role, or correlation context | `ENTERPRISE_ENFORCE_AUTHZ=true` requires `X-Actor-Id`, `X-Tenant-Id`, `X-Role`, and `X-Correlation-Id`; enterprise runtime enforcement fails startup when authorization is disabled | `test_authorize_write_request_enforces_headers_identity_and_capabilities`, `test_enterprise_middleware_denies_unauthorized_writes`, and `test_validate_enterprise_runtime_config_fails_closed_for_missing_bank_posture` | Local development mode may keep enforcement disabled, but that mode cannot support a bank-buyable production-readiness claim |
 | Caller presents actor context without service identity | Authorization fails with `missing_service_identity` unless `X-Service-Identity` or `Authorization` is present | `test_authorize_write_request_enforces_headers_identity_and_capabilities` | Gateway-backed token-validation evidence remains a platform integration proof item |
-| Caller lacks endpoint capability | Capability rules from `ENTERPRISE_CAPABILITY_RULES_JSON` deny missing `X-Capabilities` entries | `test_authorize_write_request_enforces_headers_identity_and_capabilities` | Capability vocabulary must stay governed by deployment configuration |
+| Caller lacks endpoint capability or targets an unmapped write path | Well-formed capability rules from `ENTERPRISE_CAPABILITY_RULES_JSON` deny missing `X-Capabilities` entries and unmapped writes fail with `missing_capability_rule` | `test_authorize_write_request_enforces_headers_identity_and_capabilities` | Capability vocabulary and complete write-path mapping must stay governed by deployment configuration |
 | Sensitive metadata appears in audit events | `redact_sensitive` masks password, secret, token, authorization, ssn, account_number, and client_email keys recursively | `test_emit_audit_event_redacts_metadata` and `test_redact_sensitive_masks_nested_structures` | Redaction is key-based; newly introduced sensitive field names must update `_REDACT_FIELDS` with tests |
 | Downstream service returns unsafe details or malformed payloads | `app.upstream_errors` bounds upstream failure categories and messages | `tests/unit/test_upstream_errors.py` | Upstream contracts must continue publishing bounded problem details |
 | Deployment injects a malformed or credential-bearing downstream URL | Shared downstream URL validation permits only valid HTTP(S) service URLs and never echoes rejected values | `tests/unit/test_downstream_base_url.py` and `docs/configuration.md` | Approved endpoint ownership and network egress policy remain deployment responsibilities |
@@ -64,6 +64,8 @@ The governed deployment posture is now recorded in
    `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES` for enterprise deployments.
 9. Downstream base URLs must be approved HTTP(S) service endpoints without embedded credentials,
    query strings, fragments, whitespace, or control characters.
+10. Enterprise runtime enforcement fails application construction when required in-process bank
+    configuration is absent or invalid.
 
 ## Evidence Commands
 

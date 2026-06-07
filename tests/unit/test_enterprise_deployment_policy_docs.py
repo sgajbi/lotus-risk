@@ -26,6 +26,9 @@ def test_enterprise_deployment_policy_records_bank_mode_requirements() -> None:
         "LOTUS_CORE_BASE_URL",
         "LOTUS_PERFORMANCE_BASE_URL",
         "without embedded credentials",
+        "service construction fails",
+        "Capability rules are required as nonempty string mappings",
+        "missing_capability_rule",
     )
 
     for term in required_terms:
