@@ -44,6 +44,9 @@ Bank deployment mode is stricter than local development mode:
    `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES`,
 5. gateway or platform ingress validates token integrity while `lotus-risk` enforces required
    actor, tenant, role, correlation, service identity, and capability evidence.
+6. caller-provided correlation and trace headers are untrusted: unsafe or unbounded correlation IDs
+   and malformed, zero, or mismatched W3C trace context are replaced rather than reflected or
+   logged.
 
 ## Upstream Boundary Discipline
 

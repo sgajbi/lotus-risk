@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import time
 import uuid
 from typing import Awaitable, Callable
@@ -8,6 +9,12 @@ from typing import Awaitable, Callable
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
+
+_SAFE_CORRELATION_ID = re.compile(r"^[A-Za-z0-9._:/-]{1,128}$")
+_SAFE_TRACE_ID = re.compile(r"^[0-9a-f]{32}$")
+_SAFE_TRACEPARENT = re.compile(
+    r"^00-(?P<trace_id>[0-9a-f]{32})-(?P<span_id>[0-9a-f]{16})-(?P<flags>[0-9a-f]{2})$"
+)
 
 
 class CorrelationIdMiddleware(BaseHTTPMiddleware):
@@ -18,26 +25,38 @@ class CorrelationIdMiddleware(BaseHTTPMiddleware):
 
     @staticmethod
     def _resolve_trace_id(inbound_trace_id: str | None, traceparent: str | None) -> str:
-        if inbound_trace_id:
+        if inbound_trace_id and CorrelationIdMiddleware._is_valid_trace_id(inbound_trace_id):
             return inbound_trace_id
-        if traceparent:
-            parts = traceparent.split("-")
-            if len(parts) >= 4 and len(parts[1]) == 32:
-                return parts[1]
+        traceparent_match = _SAFE_TRACEPARENT.fullmatch(traceparent or "")
+        if traceparent_match and CorrelationIdMiddleware._is_valid_trace_id(
+            traceparent_match.group("trace_id")
+        ):
+            return traceparent_match.group("trace_id")
         return uuid.uuid4().hex
 
     @staticmethod
     def _resolve_traceparent(traceparent: str | None, trace_id: str) -> str:
-        if traceparent:
-            return traceparent
+        traceparent_match = _SAFE_TRACEPARENT.fullmatch(traceparent or "")
+        if traceparent_match and traceparent_match.group("trace_id") == trace_id:
+            return traceparent_match.group(0)
         return f"00-{trace_id}-{uuid.uuid4().hex[:16]}-01"
+
+    @staticmethod
+    def _is_valid_trace_id(trace_id: str) -> bool:
+        return bool(_SAFE_TRACE_ID.fullmatch(trace_id)) and trace_id != "0" * 32
+
+    @staticmethod
+    def _resolve_correlation_id(inbound_correlation_id: str | None) -> str:
+        if inbound_correlation_id and _SAFE_CORRELATION_ID.fullmatch(inbound_correlation_id):
+            return inbound_correlation_id
+        return str(uuid.uuid4())
 
     async def dispatch(
         self,
         request: Request,
         call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
-        correlation_id = request.headers.get("X-Correlation-Id") or str(uuid.uuid4())
+        correlation_id = self._resolve_correlation_id(request.headers.get("X-Correlation-Id"))
         trace_id = self._resolve_trace_id(
             request.headers.get("X-Trace-Id"), request.headers.get("traceparent")
         )

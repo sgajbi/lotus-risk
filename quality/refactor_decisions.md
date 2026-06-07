@@ -24,3 +24,10 @@ Risk calculation services accept a narrow metric-duration observer callable. Pro
 construction and registration remain in `app.observability`. Import-linter prohibits direct
 `prometheus_client` imports from `app.services`, keeping calculations testable without the concrete
 metrics backend while preserving runtime metric behavior.
+
+## REF-DEC-005: Treat Correlation And Trace Headers As Untrusted Input
+
+Inbound correlation IDs are preserved only when they use a bounded safe character set. Inbound trace
+IDs and `traceparent` values are preserved only when they satisfy the supported W3C format and use a
+non-zero trace ID; malformed, mismatched, or unbounded values are replaced. This intentionally
+hardens response-header reflection and structured request logging without changing valid callers.

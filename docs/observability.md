@@ -6,7 +6,8 @@ supportability metrics, analytics freshness buckets, readiness state, and Promet
 ## Required Signals
 
 1. Correlation identifiers must be accepted, generated when absent, returned to callers, and
-   propagated to downstream services.
+   propagated to downstream services. Caller-provided values are preserved only when they satisfy
+   the bounded correlation-ID policy; malformed trace context is replaced with valid W3C context.
 2. Metrics labels must stay bounded and must never expose portfolio identifiers, client
    identifiers, trace identifiers, correlation identifiers, request bodies, or response bodies.
 3. Readiness must distinguish ready, degraded, and draining dependency posture.

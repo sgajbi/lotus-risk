@@ -6,7 +6,10 @@ client, request, response, trace, or correlation data through logs, metrics, err
 ## Current Controls
 
 1. Enterprise audit middleware enforces write-policy headers and redacts sensitive metadata.
-2. Correlation middleware controls request correlation and trace propagation.
+2. Correlation middleware treats caller correlation and trace headers as untrusted input:
+   correlation IDs are bounded to a safe character set and length, while trace IDs and
+   `traceparent` must satisfy the supported W3C format. Unsafe values are replaced instead of
+   reflected or logged.
 3. Dependency failures are mapped into bounded error envelopes.
 4. Dependency audit is enforced through `make security-audit` using an isolated project-scoped
    install, not the developer's global Python environment.
