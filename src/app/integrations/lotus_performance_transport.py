@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from typing import Any
 
 import httpx
@@ -9,6 +8,7 @@ from app.integrations._downstream_client_profile import (
     DownstreamClientProfile,
     execute_downstream_request_json,
 )
+from app.integrations.downstream_base_url import resolve_downstream_base_url
 from app.integrations.performance_returns_series_async import (
     RETURNS_SERIES_OPERATION,
     ensure_dict_payload,
@@ -21,10 +21,11 @@ BENCHMARK_EXPOSURE_CONTEXT_OPERATION = "/integration/benchmarks/exposure-context
 
 
 def resolve_lotus_performance_base_url(base_url: str | None) -> str:
-    configured_base_url = base_url or os.getenv("LOTUS_PERFORMANCE_BASE_URL")
-    if not configured_base_url:
-        configured_base_url = DEFAULT_LOTUS_PERFORMANCE_BASE_URL
-    return configured_base_url.rstrip("/")
+    return resolve_downstream_base_url(
+        explicit_base_url=base_url,
+        env_name="LOTUS_PERFORMANCE_BASE_URL",
+        default_base_url=DEFAULT_LOTUS_PERFORMANCE_BASE_URL,
+    )
 
 
 def correlation_headers(correlation_id: str | None) -> dict[str, str]:

@@ -43,6 +43,7 @@ diagnostics, or downstream failure messages.
 | Caller lacks endpoint capability | Capability rules from `ENTERPRISE_CAPABILITY_RULES_JSON` deny missing `X-Capabilities` entries | `test_authorize_write_request_enforces_headers_identity_and_capabilities` | Capability vocabulary must stay governed by deployment configuration |
 | Sensitive metadata appears in audit events | `redact_sensitive` masks password, secret, token, authorization, ssn, account_number, and client_email keys recursively | `test_emit_audit_event_redacts_metadata` and `test_redact_sensitive_masks_nested_structures` | Redaction is key-based; newly introduced sensitive field names must update `_REDACT_FIELDS` with tests |
 | Downstream service returns unsafe details or malformed payloads | `app.upstream_errors` bounds upstream failure categories and messages | `tests/unit/test_upstream_errors.py` | Upstream contracts must continue publishing bounded problem details |
+| Deployment injects a malformed or credential-bearing downstream URL | Shared downstream URL validation permits only valid HTTP(S) service URLs and never echoes rejected values | `tests/unit/test_downstream_base_url.py` and `docs/configuration.md` | Approved endpoint ownership and network egress policy remain deployment responsibilities |
 | Metrics cardinality attack through payload fields | Metrics labels are constrained to bounded service/endpoint/status/supportability dimensions | `test_risk_supportability_openapi_documents_metric_labels` | New metrics must use the same bounded-label rule before merge |
 | OpenAPI drift hides missing request examples or operation identifiers | `make openapi-gate` evaluates generated schema metadata and request examples; `make openapi-artifact-gate` exports the generated artifact and validates Spectral policy expectations | `tests/unit/test_openapi_quality_gate.py` and `tests/unit/test_openapi_artifact_gate.py` | Keep generated artifact evidence attached to CI/PR review |
 
@@ -61,6 +62,8 @@ The governed deployment posture is now recorded in
    threshold.
 8. Ingress/proxy and ASGI/server request body limits must be configured at or below
    `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES` for enterprise deployments.
+9. Downstream base URLs must be approved HTTP(S) service endpoints without embedded credentials,
+   query strings, fragments, whitespace, or control characters.
 
 ## Evidence Commands
 

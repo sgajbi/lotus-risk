@@ -51,6 +51,8 @@ Bank deployment mode is stricter than local development mode:
    expose raw downstream response bodies or transport exception text.
 8. every API response is marked `no-store`, `no-referrer`, and `nosniff`, including early
    authorization and payload-limit failures.
+9. downstream base URLs fail fast unless they are valid HTTP(S) service endpoints without embedded
+   credentials, query strings, fragments, whitespace, or control characters.
 
 ## Upstream Boundary Discipline
 

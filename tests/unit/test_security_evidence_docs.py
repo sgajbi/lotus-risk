@@ -27,6 +27,8 @@ def test_security_threat_model_records_current_abuse_controls() -> None:
         "security-deployment-policy.md",
         "Enterprise bank deployment mode requires",
         "ASGI/server request body limits",
+        "credential-bearing downstream URL",
+        "docs/configuration.md",
     )
 
     for term in required_terms:

@@ -65,3 +65,10 @@ FastAPI lifespan startup creates one reusable HTTP client for `lotus-core` and o
 `lotus-performance`, making the existing connection and keepalive limits effective across
 requests. Shutdown marks the service draining and closes only the pools it owns. Directly
 constructed or explicitly injected adapters retain their existing compatibility behavior.
+
+## REF-DEC-011: Fail Fast On Unsafe Downstream Base URLs
+
+Both upstream adapters use one shared base-URL resolver. It accepts valid HTTP(S) service URLs,
+including approved path prefixes, but rejects malformed hosts or ports, embedded credentials,
+query strings, fragments, whitespace, and control characters. Validation errors identify only the
+setting name and policy violation so a credential-bearing value cannot be reflected.

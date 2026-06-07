@@ -22,6 +22,9 @@ client, request, response, trace, or correlation data through logs, metrics, err
 8. Every API response, including early authorization and payload-limit failures, carries
    `Cache-Control: no-store`, `Referrer-Policy: no-referrer`, `X-Content-Type-Options: nosniff`,
    and the active enterprise policy version.
+9. Downstream base URLs fail fast unless they use HTTP(S), include a valid host, and exclude
+   embedded credentials, query strings, fragments, whitespace, and control characters. Validation
+   errors never echo the rejected value.
 
 ## Refactor Requirements
 

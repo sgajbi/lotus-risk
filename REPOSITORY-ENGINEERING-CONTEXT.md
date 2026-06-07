@@ -169,6 +169,9 @@ Boundary rules:
    attribution now degrades response-level calculation supportability whenever any source-owned
    attribution set emits quality flags, so downstream consumers do not treat missing grouping data,
    empty active-risk alignment, or unsupported attribution combinations as fully ready analytics.
+9. downstream base URLs are validated at adapter construction and must be valid HTTP(S) service
+   endpoints without embedded credentials, query strings, fragments, whitespace, or control
+   characters; runtime-owned settings are documented in `docs/configuration.md`.
 
 Canonical direct local validation ports:
 

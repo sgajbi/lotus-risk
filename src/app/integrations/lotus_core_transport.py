@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from typing import Any
 
 import httpx
@@ -9,6 +8,7 @@ from app.integrations._downstream_client_profile import (
     DownstreamClientProfile,
     execute_downstream_request_json,
 )
+from app.integrations.downstream_base_url import resolve_downstream_base_url
 from app.observability import observation_start
 from app.upstream_errors import invalid_upstream_payload
 
@@ -16,12 +16,11 @@ DEFAULT_LOTUS_CORE_BASE_URL = "http://core-control.dev.lotus"
 
 
 def resolve_lotus_core_base_url(base_url: str | None) -> str:
-    configured_base_url = base_url
-    if configured_base_url is None:
-        configured_base_url = os.getenv("LOTUS_CORE_BASE_URL")
-    if not configured_base_url:
-        configured_base_url = DEFAULT_LOTUS_CORE_BASE_URL
-    return configured_base_url.rstrip("/")
+    return resolve_downstream_base_url(
+        explicit_base_url=base_url,
+        env_name="LOTUS_CORE_BASE_URL",
+        default_base_url=DEFAULT_LOTUS_CORE_BASE_URL,
+    )
 
 
 async def execute_lotus_core_json_request(

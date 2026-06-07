@@ -27,6 +27,8 @@ Enterprise bank deployments must provide all of the following:
    write-like analytics POST endpoints.
 6. `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES` set explicitly and aligned to ingress and ASGI/server body
    limits.
+7. `LOTUS_CORE_BASE_URL` and `LOTUS_PERFORMANCE_BASE_URL` set to approved HTTP(S) service
+   endpoints without embedded credentials, query strings, or fragments.
 
 The service must fail closed when these requirements are missing in enterprise mode. Runtime
 configuration validation in `src/app/enterprise_readiness.py` enforces the in-process portion of

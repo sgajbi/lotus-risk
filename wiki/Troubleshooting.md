@@ -31,6 +31,10 @@ Most common cause:
 
 Use the canonical local URL runbook before changing more code.
 
+Malformed URLs, unsupported schemes, credential-bearing URLs, and URLs with query strings or
+fragments fail during service construction. The validation error names the setting but deliberately
+does not echo its value.
+
 ## Historical Attribution Looks Incomplete
 
 Symptoms:

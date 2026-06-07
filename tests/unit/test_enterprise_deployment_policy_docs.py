@@ -23,6 +23,9 @@ def test_enterprise_deployment_policy_records_bank_mode_requirements() -> None:
         "token-validation evidence",
         "ASGI/server request body limits",
         "Content-Length",
+        "LOTUS_CORE_BASE_URL",
+        "LOTUS_PERFORMANCE_BASE_URL",
+        "without embedded credentials",
     )
 
     for term in required_terms:
