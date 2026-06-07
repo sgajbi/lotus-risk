@@ -175,6 +175,9 @@ Boundary rules:
 10. `ENTERPRISE_ENFORCE_RUNTIME_CONFIG=true` is fail-closed bank mode: application construction
     requires authorization plus explicit policy, key, rotation, capability, payload-limit, and
     upstream URL configuration.
+11. API errors preserve the standard Lotus `error` envelope while adding RFC 7807/problem-details
+    compatibility fields inside the same object; do not replace this with a breaking top-level
+    problem-details shape without a versioned migration.
 
 Canonical direct local validation ports:
 

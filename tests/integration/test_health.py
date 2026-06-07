@@ -138,7 +138,13 @@ def test_legacy_workbench_proxy_removed_with_standard_404_error() -> None:
     assert response.status_code == 404
     assert response.headers["X-Correlation-Id"] == "corr-legacy-404"
     body = response.json()["error"]
+    assert body["type"] == "urn:lotus-risk:error:resource-not-found"
+    assert body["title"] == "Resource Not Found"
+    assert body["status"] == 404
+    assert body["detail"] == "Not Found"
+    assert body["instance"] == "/analytics/workbench/risk-proxy"
     assert body["code"] == "RESOURCE_NOT_FOUND"
+    assert body["message"] == "Not Found"
     assert body["correlation_id"] == "corr-legacy-404"
 
 
@@ -385,6 +391,12 @@ def test_health_ready_and_ops_surface_structured_data_gap_metadata() -> None:
 def test_openapi_declares_standard_error_models_for_risk_endpoints() -> None:
     client = TestClient(app)
     spec = client.get("/openapi.json").json()
+    error_body = spec["components"]["schemas"]["ErrorBody"]
+    error_body_properties = error_body["properties"]
+    for field in ("type", "title", "status", "detail", "instance"):
+        assert field in error_body_properties
+    assert "RFC 7807" in error_body_properties["status"]["description"]
+
     calculate_responses = spec["paths"]["/analytics/risk/calculate"]["post"]["responses"]
     concentration_responses = spec["paths"]["/analytics/risk/concentration"]["post"]["responses"]
     attribution_responses = spec["paths"]["/analytics/risk/historical-attribution"]["post"][

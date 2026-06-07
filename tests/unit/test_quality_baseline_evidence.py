@@ -55,3 +55,11 @@ def test_generated_scorecard_preserves_security_hardening_evidence() -> None:
 
     assert "downstream base URLs are hardened with negative tests" in scorecard
     assert "enterprise runtime and unmapped writes fail closed" in scorecard
+
+
+def test_generated_scorecard_preserves_problem_details_evidence() -> None:
+    baseline = BASELINE_REPORT.read_text(encoding="utf-8")
+    scorecard = QUALITY_SCORECARD.read_text(encoding="utf-8")
+
+    assert "additive RFC 7807/problem-details" in baseline
+    assert "standard error examples include additive RFC 7807/problem-details fields" in scorecard

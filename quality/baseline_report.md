@@ -13,7 +13,7 @@ completion claim.
 ## Generation Identity
 
 - Git branch: `feat/enterprise-risk-refactor-continuation`
-- Git commit: `917a9041faf012da0e1500560ffae3cac603808b`
+- Git commit: `04526f9aa5c6350feac5a81f913eb19100d05b2d`
 
 ## Current Code Size
 
@@ -31,6 +31,7 @@ completion claim.
 | src/app/services/rolling_metric_series.py | 361 | 11066 |
 | src/app/enterprise_readiness.py | 336 | 11095 |
 | src/app/services/concentration/parsing.py | 322 | 11235 |
+| src/app/api_errors.py | 311 | 11604 |
 | src/app/services/rolling_engine.py | 310 | 10403 |
 | src/app/services/risk/calculation_orchestrator.py | 301 | 9984 |
 | src/app/services/risk/helpers.py | 297 | 10019 |
@@ -40,7 +41,6 @@ completion claim.
 | src/app/openapi_examples.py | 273 | 8965 |
 | src/app/services/drawdown_series.py | 271 | 8488 |
 | src/app/integrations/_downstream_client_profile.py | 268 | 7495 |
-| src/app/api_errors.py | 262 | 8814 |
 | src/app/services/concentration/simulation_resolver.py | 255 | 8549 |
 | src/app/integrations/performance_returns_series_async.py | 255 | 7747 |
 | src/app/services/drawdown_periods.py | 254 | 7963 |
@@ -103,22 +103,22 @@ All checks passed!
 ```text
 Success: no issues found in 312 source files
 ```
-- Unit coverage snapshot: reported exit 1
+- Unit coverage snapshot: passed
 
 ```text
 ........................................................................ [ 13%]
 ........................................................................ [ 26%]
 ........................................................................ [ 39%]
 ........................................................................ [ 52%]
-..............................................................F......... [ 65%]
+........................................................................ [ 65%]
 ........................................................................ [ 78%]
 ...
-TOTAL                                                       5985     89   1026     73    98%
+src\app\services\rolling_stateful_inputs.py                  113      1     32      1    99%   176
+------------------------------------------------------------------------------------------------------
+TOTAL                                                       5994     89   1026     73    98%
 
 169 files skipped due to complete coverage.
-=========================== short test summary info ===========================
-FAILED tests/unit/test_quality_baseline_evidence.py::test_generated_scorecard_preserves_security_hardening_evidence
-1 failed, 546 passed in 10.16s
+549 passed in 8.89s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -132,7 +132,7 @@ src\app\app_factory.py - A (100.00)
 src\app\app_lifecycle.py - A (59.25)
 src\app\domain_data_products.py - A (49.24)
 src\app\enterprise_readiness.py - A (22.11)
-src\app\error_response.py - A (68.27)
+src\app\error_response.py - A (60.11)
 ...
 src\app\services\risk\metric_calculators.py - A (39.28)
 src\app\services\risk\metric_timing.py - A (100.00)
@@ -183,8 +183,8 @@ Known vulnerabilities: 0
    a workable extraction boundary.
 4. Infrastructure clients already sit under `src/app/integrations`, and API routes now access them
    through the application dependency provider boundary.
-5. Consistent error envelopes exist through `app.error_response`, but the contract remains
-   repository-local rather than full RFC 7807 problem-details.
+5. Consistent error envelopes exist through `app.error_response`; additive RFC 7807/problem-details
+   metadata now lives inside the existing Lotus `error` object without breaking the legacy envelope.
 
 ## OpenAPI And API Governance Gaps
 
@@ -196,8 +196,8 @@ Known vulnerabilities: 0
    but any future list/read-model route must use an explicit shared contract.
 4. Health, liveness, readiness, metadata, metrics, and ops endpoints exist and are documented, but
    public/internal route grouping is not yet enforced by module structure.
-5. Standard error response metadata exists in `src/app/api_errors.py`, but richer problem-details
-   error examples remain a later certification slice.
+5. Standard error response metadata in `src/app/api_errors.py` now includes problem-details
+   compatibility fields while preserving the Lotus error envelope.
 
 ## Security And Resilience Gaps
 
@@ -247,7 +247,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc1-503-UPSTREAM_UNAVAILABLE-transport]
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 
-547 tests collected in 1.85s
+549 tests collected in 1.65s
 ```
 - Import-linter report-only: passed
 

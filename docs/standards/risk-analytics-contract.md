@@ -136,10 +136,18 @@
   - `503`
   - `504`
 - Error envelope:
+  - `error.type`
+  - `error.title`
+  - `error.status`
+  - `error.detail`
+  - `error.instance`
   - `error.code`
   - `error.message`
-  - `error.correlationId`
+  - `error.correlation_id`
   - optional `error.details`
+- `error.type`, `error.title`, `error.status`, `error.detail`, and `error.instance` are additive
+  RFC 7807/problem-details compatibility fields inside the existing Lotus `error` object.
+- `error.code` remains the stable Lotus machine-readable error code.
 - Period/model validation errors return `422` with `error.code=INVALID_REQUEST`.
 - Calculation-level invalid period or method errors return `400` with `error.code=INVALID_INPUT`.
 - Dependency rejection or missing upstream-required data returns `424` with `error.code=FAILED_DEPENDENCY`.

@@ -18,6 +18,11 @@ ERROR_RESPONSE_400: dict[str, Any] = {
         "application/json": {
             "example": {
                 "error": {
+                    "type": "urn:lotus-risk:error:invalid-input",
+                    "title": "Invalid Input",
+                    "status": 400,
+                    "detail": "Unsupported period type: BAD",
+                    "instance": "/analytics/risk/calculate",
                     "code": "INVALID_INPUT",
                     "message": "Unsupported period type: BAD",
                     "correlation_id": "corr-123",
@@ -33,6 +38,11 @@ ERROR_RESPONSE_403: dict[str, Any] = {
         "application/json": {
             "example": {
                 "error": {
+                    "type": "urn:lotus-risk:error:authorization-denied",
+                    "title": "Authorization Denied",
+                    "status": 403,
+                    "detail": "authorization_policy_denied",
+                    "instance": "/analytics/risk/calculate",
                     "code": "AUTHORIZATION_DENIED",
                     "message": "authorization_policy_denied",
                     "correlation_id": "corr-123",
@@ -49,6 +59,11 @@ ERROR_RESPONSE_404: dict[str, Any] = {
         "application/json": {
             "example": {
                 "error": {
+                    "type": "urn:lotus-risk:error:resource-not-found",
+                    "title": "Resource Not Found",
+                    "status": 404,
+                    "detail": "Not Found",
+                    "instance": "/unknown",
                     "code": "RESOURCE_NOT_FOUND",
                     "message": "Not Found",
                     "correlation_id": "corr-123",
@@ -64,6 +79,11 @@ ERROR_RESPONSE_422: dict[str, Any] = {
         "application/json": {
             "example": {
                 "error": {
+                    "type": "urn:lotus-risk:error:invalid-request",
+                    "title": "Invalid Request",
+                    "status": 422,
+                    "detail": "Request validation failed",
+                    "instance": "/analytics/risk/calculate",
                     "code": "INVALID_REQUEST",
                     "message": "Request validation failed",
                     "correlation_id": "corr-123",
@@ -82,6 +102,11 @@ ERROR_RESPONSE_DEFAULT: dict[str, Any] = {
         "application/json": {
             "example": {
                 "error": {
+                    "type": "urn:lotus-risk:error:request-rejected",
+                    "title": "Request Rejected",
+                    "status": 500,
+                    "detail": "Unexpected error",
+                    "instance": "/analytics/risk/calculate",
                     "code": "REQUEST_REJECTED",
                     "message": "Unexpected error",
                     "correlation_id": "corr-123",
@@ -99,6 +124,13 @@ STANDARD_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
             "application/json": {
                 "example": {
                     "error": {
+                        "type": "urn:lotus-risk:error:failed-dependency",
+                        "title": "Failed Dependency",
+                        "status": 424,
+                        "detail": (
+                            "lotus-performance /integration/returns/series rejected request (404)"
+                        ),
+                        "instance": "/analytics/risk/calculate",
                         "code": "FAILED_DEPENDENCY",
                         "message": "lotus-performance /integration/returns/series rejected request (404)",
                         "correlation_id": "corr-123",
@@ -123,6 +155,11 @@ STANDARD_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
             "application/json": {
                 "example": {
                     "error": {
+                        "type": "urn:lotus-risk:error:upstream-failure",
+                        "title": "Upstream Failure",
+                        "status": 502,
+                        "detail": ("lotus-performance /integration/returns/series failed (503)"),
+                        "instance": "/analytics/risk/calculate",
                         "code": "UPSTREAM_FAILURE",
                         "message": "lotus-performance /integration/returns/series failed (503)",
                         "correlation_id": "corr-123",
@@ -144,6 +181,13 @@ STANDARD_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
             "application/json": {
                 "example": {
                     "error": {
+                        "type": "urn:lotus-risk:error:upstream-unavailable",
+                        "title": "Upstream Unavailable",
+                        "status": 503,
+                        "detail": (
+                            "lotus-core /integration/reference/risk-free-series unavailable"
+                        ),
+                        "instance": "/analytics/risk/rolling-metrics",
                         "code": "UPSTREAM_UNAVAILABLE",
                         "message": "lotus-core /integration/reference/risk-free-series unavailable",
                         "correlation_id": "corr-123",
@@ -164,6 +208,11 @@ STANDARD_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
             "application/json": {
                 "example": {
                     "error": {
+                        "type": "urn:lotus-risk:error:upstream-timeout",
+                        "title": "Upstream Timeout",
+                        "status": 504,
+                        "detail": ("lotus-core /integration/reference/risk-free-series timed out"),
+                        "instance": "/analytics/risk/rolling-metrics",
                         "code": "UPSTREAM_TIMEOUT",
                         "message": "lotus-core /integration/reference/risk-free-series timed out",
                         "correlation_id": "corr-123",

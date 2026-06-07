@@ -30,7 +30,9 @@ The highest-value rules for this repo are:
 2. OpenAPI quality is enforced,
 3. API vocabulary validation is enforced,
 4. test-pyramid discipline is enforced,
-5. security audit and Docker build are part of the real CI contract.
+5. standard error responses preserve the Lotus `error.code` envelope and also publish additive
+   RFC 7807/problem-details fields inside the same `error` object,
+6. security audit and Docker build are part of the real CI contract.
 
 ## Enterprise Deployment Security
 
