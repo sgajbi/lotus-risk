@@ -60,6 +60,11 @@ The following explicit downstream transport posture is defined in
 - `lotus-performance` also controls async polling through
   `LOTUS_PERFORMANCE_ASYNC_POLL_INTERVAL_SECONDS` and
   `LOTUS_PERFORMANCE_ASYNC_MAX_POLLS`.
+- FastAPI lifespan startup creates one reusable HTTP connection pool per upstream dependency.
+  Lifespan shutdown marks the service draining, closes both owned pools, and preserves any
+  explicitly injected client used by tests or controlled runtimes.
+- Directly constructed adapters remain usable outside the FastAPI lifespan and create a bounded
+  temporary client for each operation.
 - Timeout and retry-class handling remains deterministic:
   transport errors map to `UPSTREAM_TIMEOUT` or `UPSTREAM_UNAVAILABLE`,
   while HTTP `429` and `5xx` map to retryable throttling and upstream-failure classes.
@@ -70,4 +75,5 @@ The failure classification matrix is covered by `tests/unit/test_upstream_errors
 
 1. `tests/unit/test_lotus_core_client.py`,
 2. `tests/unit/test_lotus_performance_client.py`,
-3. `tests/unit/test_main_error_handlers.py`.
+3. `tests/unit/test_app_lifecycle.py`,
+4. `tests/unit/test_main_error_handlers.py`.

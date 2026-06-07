@@ -58,3 +58,10 @@ sensitive-data exposure.
 All current Python source modules are below 402 lines. A 450-line active regression gate leaves
 reasonable room for cohesive maintenance while preventing new monolithic modules. The threshold may
 be reduced only after further behavior-preserving extraction proves a lower limit is practical.
+
+## REF-DEC-010: Own Downstream HTTP Pools For The Application Lifespan
+
+FastAPI lifespan startup creates one reusable HTTP client for `lotus-core` and one for
+`lotus-performance`, making the existing connection and keepalive limits effective across
+requests. Shutdown marks the service draining and closes only the pools it owns. Directly
+constructed or explicitly injected adapters retain their existing compatibility behavior.

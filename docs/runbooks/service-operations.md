@@ -57,6 +57,10 @@ Alert id: `lotus-risk-upstream-dependency-failures`
    `docs/domain-apis/risk-upstream-failure-behavior.md`.
 4. Confirm retry behavior and timeout posture before escalating to the upstream owning team.
 
+The service owns reusable `lotus-core` and `lotus-performance` HTTP pools for the FastAPI lifespan.
+During shutdown it reports draining posture and closes those pools. Repeated connection setup under
+normal runtime traffic indicates the service was started without ASGI lifespan support.
+
 ## Calculation Supportability Alert
 
 Alert id: `lotus-risk-calculation-supportability-degraded`

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+import httpx
+
 from app.integrations._downstream_client_profile import (
     _env_float_with_default,
     _env_int_with_default,
@@ -23,12 +25,14 @@ class LotusPerformanceClient:
         *,
         base_url: str | None = None,
         timeout_seconds: float | None = None,
+        http_client: httpx.AsyncClient | None = None,
     ) -> None:
         self._base_url = resolve_lotus_performance_base_url(base_url)
         self._profile = resolve_downstream_client_profile(
             env_prefix="LOTUS_PERFORMANCE",
             default_timeout_seconds=timeout_seconds or 10.0,
         )
+        self._http_client = http_client
         self._async_poll_interval_seconds = _env_float_with_default(
             "LOTUS_PERFORMANCE_ASYNC_POLL_INTERVAL_SECONDS", 1.0
         )
@@ -46,6 +50,7 @@ class LotusPerformanceClient:
     ) -> dict[str, Any]:
         return await execute_returns_series_request(
             profile=self._profile,
+            client=self._http_client,
             base_url=self._base_url,
             request_payload=request_payload,
             correlation_id=correlation_id,
@@ -61,6 +66,7 @@ class LotusPerformanceClient:
     ) -> dict[str, Any]:
         return await execute_benchmark_exposure_context_request(
             profile=self._profile,
+            client=self._http_client,
             base_url=self._base_url,
             request_payload=request_payload,
             correlation_id=correlation_id,

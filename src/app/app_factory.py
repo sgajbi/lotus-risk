@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 
+from app.app_lifecycle import application_lifespan
 from app.api_errors import register_exception_handlers
 from app.enterprise_readiness import (
     build_enterprise_audit_middleware,
@@ -18,7 +19,7 @@ from app.service_metadata import SERVICE_NAME, SERVICE_VERSION
 
 
 def create_app() -> FastAPI:
-    risk_app = FastAPI(title=SERVICE_NAME, version=SERVICE_VERSION)
+    risk_app = FastAPI(title=SERVICE_NAME, version=SERVICE_VERSION, lifespan=application_lifespan)
     risk_app.add_middleware(CorrelationIdMiddleware, service_name=SERVICE_NAME)
     validate_enterprise_runtime_config()
     risk_app.middleware("http")(build_enterprise_audit_middleware())

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 import httpx
 import pytest
@@ -94,6 +94,28 @@ async def test_client_builds_headers_and_payload_for_session_creation(
     assert 'lotus_risk_upstream_requests_total{category="ok"' in metrics
     assert 'dependency="lotus-core"' in metrics
     assert 'operation="/simulation-sessions"' in metrics
+
+
+@pytest.mark.asyncio
+async def test_client_reuses_injected_http_client_without_creating_temporary_pool(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    injected_client = _FakeAsyncClient(timeout=httpx.Timeout(5.0))
+    _FakeAsyncClient.response_factory = lambda **_: _ok_response({"ok": True})
+    monkeypatch.setattr(
+        "app.integrations._downstream_client_profile.DownstreamClientProfile.make_client",
+        lambda _: (_ for _ in ()).throw(AssertionError("temporary pool created")),
+    )
+
+    client = LotusCoreClient(
+        base_url="http://core.local",
+        http_client=cast(httpx.AsyncClient, injected_client),
+    )
+    assert await client.get_core_snapshot(
+        portfolio_id="DEMO_DPM_EUR_001",
+        request_payload={"snapshot_mode": "BASELINE"},
+        correlation_id=None,
+    ) == {"ok": True}
 
 
 @pytest.mark.asyncio

@@ -3,6 +3,8 @@ from __future__ import annotations
 import os
 from typing import Any
 
+import httpx
+
 from app.integrations._downstream_client_profile import (
     DownstreamClientProfile,
     execute_downstream_request_json,
@@ -32,6 +34,7 @@ def correlation_headers(correlation_id: str | None) -> dict[str, str]:
 async def execute_returns_series_request(
     *,
     profile: DownstreamClientProfile,
+    client: httpx.AsyncClient | None,
     base_url: str,
     request_payload: dict[str, Any],
     correlation_id: str | None,
@@ -41,24 +44,58 @@ async def execute_returns_series_request(
     headers = correlation_headers(correlation_id)
     url = f"{base_url}{RETURNS_SERIES_OPERATION}"
     started_at = observation_start()
-    async with profile.make_client() as client:
-        status_code, payload = await _execute_initial_returns_series_request(
-            client=client,
-            url=url,
-            request_payload=request_payload,
-            headers=headers,
-            started_at=started_at,
-        )
-        return await _finalize_returns_series_payload(
+    if client is not None:
+        return await _execute_returns_series_request_with_client(
             client=client,
             base_url=base_url,
-            status_code=status_code,
-            payload=payload,
+            url=url,
+            request_payload=request_payload,
             headers=headers,
             started_at=started_at,
             async_max_polls=async_max_polls,
             async_poll_interval_seconds=async_poll_interval_seconds,
         )
+    async with profile.make_client() as client:
+        return await _execute_returns_series_request_with_client(
+            client=client,
+            base_url=base_url,
+            url=url,
+            request_payload=request_payload,
+            headers=headers,
+            started_at=started_at,
+            async_max_polls=async_max_polls,
+            async_poll_interval_seconds=async_poll_interval_seconds,
+        )
+
+
+async def _execute_returns_series_request_with_client(
+    *,
+    client: httpx.AsyncClient,
+    base_url: str,
+    url: str,
+    request_payload: dict[str, Any],
+    headers: dict[str, str],
+    started_at: float,
+    async_max_polls: int,
+    async_poll_interval_seconds: float,
+) -> dict[str, Any]:
+    status_code, payload = await _execute_initial_returns_series_request(
+        client=client,
+        url=url,
+        request_payload=request_payload,
+        headers=headers,
+        started_at=started_at,
+    )
+    return await _finalize_returns_series_payload(
+        client=client,
+        base_url=base_url,
+        status_code=status_code,
+        payload=payload,
+        headers=headers,
+        started_at=started_at,
+        async_max_polls=async_max_polls,
+        async_poll_interval_seconds=async_poll_interval_seconds,
+    )
 
 
 async def _execute_initial_returns_series_request(
@@ -92,6 +129,7 @@ async def _execute_initial_returns_series_request(
 async def execute_benchmark_exposure_context_request(
     *,
     profile: DownstreamClientProfile,
+    client: httpx.AsyncClient | None,
     base_url: str,
     request_payload: dict[str, Any],
     correlation_id: str | None,
@@ -99,19 +137,42 @@ async def execute_benchmark_exposure_context_request(
     headers = correlation_headers(correlation_id)
     url = f"{base_url}{BENCHMARK_EXPOSURE_CONTEXT_OPERATION}"
     started_at = observation_start()
-    async with profile.make_client() as client:
-        return await execute_downstream_request_json(
-            dependency="lotus-performance",
-            operation=BENCHMARK_EXPOSURE_CONTEXT_OPERATION,
+    if client is not None:
+        return await _execute_benchmark_exposure_context_request_with_client(
+            client=client,
+            url=url,
+            request_payload=request_payload,
+            headers=headers,
             started_at=started_at,
-            request_factory=lambda: client.post(url, json=request_payload, headers=headers),
-            parse_response=lambda response: ensure_dict_payload(
-                response,
-                invalid_message=(
-                    "lotus-performance returned invalid benchmark exposure context payload"
-                ),
-            ),
         )
+    async with profile.make_client() as client:
+        return await _execute_benchmark_exposure_context_request_with_client(
+            client=client,
+            url=url,
+            request_payload=request_payload,
+            headers=headers,
+            started_at=started_at,
+        )
+
+
+async def _execute_benchmark_exposure_context_request_with_client(
+    *,
+    client: httpx.AsyncClient,
+    url: str,
+    request_payload: dict[str, Any],
+    headers: dict[str, str],
+    started_at: float,
+) -> dict[str, Any]:
+    return await execute_downstream_request_json(
+        dependency="lotus-performance",
+        operation=BENCHMARK_EXPOSURE_CONTEXT_OPERATION,
+        started_at=started_at,
+        request_factory=lambda: client.post(url, json=request_payload, headers=headers),
+        parse_response=lambda response: ensure_dict_payload(
+            response,
+            invalid_message="lotus-performance returned invalid benchmark exposure context payload",
+        ),
+    )
 
 
 async def _finalize_returns_series_payload(

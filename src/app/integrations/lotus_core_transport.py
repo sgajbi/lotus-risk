@@ -27,6 +27,7 @@ def resolve_lotus_core_base_url(base_url: str | None) -> str:
 async def execute_lotus_core_json_request(
     *,
     profile: DownstreamClientProfile,
+    client: httpx.AsyncClient | None,
     base_url: str,
     method: str,
     path: str,
@@ -39,22 +40,53 @@ async def execute_lotus_core_json_request(
 
     url = f"{base_url}{path}"
     started_at = observation_start()
-    async with profile.make_client() as client:
-        return await execute_downstream_request_json(
-            dependency="lotus-core",
-            operation=path,
+    if client is not None:
+        return await _execute_lotus_core_json_request(
+            client=client,
+            method=method,
+            url=url,
+            path=path,
+            json_payload=json_payload,
+            headers=headers,
             started_at=started_at,
-            request_factory=lambda: client.request(
-                method=method,
-                url=url,
-                json=json_payload,
-                headers=headers,
-            ),
-            parse_response=lambda response: _parse_json_dict_payload(
-                response=response,
-                invalid_message=f"lotus-core returned invalid JSON payload for {path}",
-            ),
         )
+    async with profile.make_client() as client:
+        return await _execute_lotus_core_json_request(
+            client=client,
+            method=method,
+            url=url,
+            path=path,
+            json_payload=json_payload,
+            headers=headers,
+            started_at=started_at,
+        )
+
+
+async def _execute_lotus_core_json_request(
+    *,
+    client: httpx.AsyncClient,
+    method: str,
+    url: str,
+    path: str,
+    json_payload: dict[str, Any],
+    headers: dict[str, str],
+    started_at: float,
+) -> dict[str, Any]:
+    return await execute_downstream_request_json(
+        dependency="lotus-core",
+        operation=path,
+        started_at=started_at,
+        request_factory=lambda: client.request(
+            method=method,
+            url=url,
+            json=json_payload,
+            headers=headers,
+        ),
+        parse_response=lambda response: _parse_json_dict_payload(
+            response=response,
+            invalid_message=f"lotus-core returned invalid JSON payload for {path}",
+        ),
+    )
 
 
 def _parse_json_dict_payload(

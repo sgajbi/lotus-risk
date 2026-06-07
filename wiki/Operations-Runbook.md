@@ -42,6 +42,11 @@ In Docker Compose, the service uses canonical hostnames mapped back to the host 
 1. `performance.dev.lotus`
 2. `core-control.dev.lotus`
 
+The FastAPI lifespan owns one reusable HTTP connection pool for each upstream dependency. On
+shutdown, the service enters draining posture and closes those owned pools. A production ASGI
+runtime must keep lifespan support enabled so configured keepalive and connection limits are
+effective.
+
 ## Common Misconfiguration
 
 The most common local configuration mistake is wrong upstream routing.

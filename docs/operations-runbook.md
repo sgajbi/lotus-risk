@@ -29,3 +29,12 @@ Bank deployment mode requires the posture in `docs/security-deployment-policy.md
 enforcement, runtime configuration enforcement, explicit key and secret-rotation configuration,
 endpoint capability rules, and ingress/server request body limits aligned to
 `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES`.
+
+## Downstream Connection Pools
+
+FastAPI lifespan startup owns one reusable HTTP connection pool for `lotus-core` and one for
+`lotus-performance`. Pool limits, keepalive limits, keepalive expiry, and request timeout are
+configured through the dependency-specific environment variables documented in
+`docs/domain-apis/risk-upstream-failure-behavior.md`.
+
+On shutdown, the service enters draining posture before closing its owned downstream pools.
