@@ -6,13 +6,17 @@ from datetime import date
 from typing import Any
 
 from app.contracts.risk import ReturnPoint
-from app.contracts.rolling import ROLLING_BENCHMARK_METRICS, RollingStatefulInput
+from app.contracts.rolling import RollingStatefulInput
 from app.services.core_risk_free_series import build_risk_free_series_request
 from app.services.rolling_risk_free_dependency import (
     get_risk_free_coverage_details,
     resolve_risk_free_dependency,
 )
-from app.services.rolling_metric_series import ROLLING_SHARPE_METRIC
+from app.services.rolling_stateful_dependency_selection import (
+    RollingStatefulDependencySelection,
+    requires_benchmark,
+    resolve_stateful_dependency_selection,
+)
 from app.services.rolling_stateful_models import (
     LotusCoreClientProtocol,
     LotusPerformanceClientProtocol,
@@ -34,13 +38,6 @@ class _ParsedRollingSourceSeries:
 
 
 @dataclass(frozen=True)
-class _RollingStatefulDependencySelection:
-    stateful: RollingStatefulInput
-    include_risk_free: bool
-    reporting_currency: str | None
-
-
-@dataclass(frozen=True)
 class _RollingSourceResolution:
     source_responses: StatefulSourceResponses
     parsed_series: _ParsedRollingSourceSeries
@@ -58,9 +55,6 @@ __all__ = [
 
 
 def build_stateful_source_request(stateful: RollingStatefulInput) -> dict[str, Any]:
-    include_benchmark = any(
-        metric in ROLLING_BENCHMARK_METRICS for metric in stateful.rolling_options.metrics
-    )
     return build_stateful_returns_series_request(
         portfolio_id=stateful.portfolio_id,
         as_of_date=stateful.as_of_date,
@@ -68,7 +62,7 @@ def build_stateful_source_request(stateful: RollingStatefulInput) -> dict[str, A
         frequency="DAILY",
         metric_basis=stateful.net_or_gross,
         reporting_currency=stateful.reporting_currency,
-        include_benchmark=include_benchmark,
+        include_benchmark=requires_benchmark(stateful),
         include_risk_free=False,
         missing_data_policy="ALLOW_PARTIAL",
     )
@@ -86,74 +80,6 @@ def explicit_window_bounds(source_payload: dict[str, Any]) -> tuple[date, date] 
     if not isinstance(raw_start, str) or not isinstance(raw_end, str):
         return None
     return date.fromisoformat(raw_start), date.fromisoformat(raw_end)
-
-
-async def _resolve_reporting_currency(
-    *,
-    stateful: RollingStatefulInput,
-    include_risk_free: bool,
-    core_client: LotusCoreClientProtocol | None,
-    correlation_id: str | None,
-) -> str | None:
-    if stateful.reporting_currency:
-        return stateful.reporting_currency
-    if not include_risk_free:
-        return None
-    if core_client is None:
-        raise ValueError(
-            "reporting_currency is required for rolling Sharpe in stateful mode when lotus-core is unavailable"
-        )
-
-    snapshot = await core_client.get_core_snapshot(
-        portfolio_id=stateful.portfolio_id,
-        request_payload={
-            "snapshot_mode": "BASELINE",
-            "as_of_date": stateful.as_of_date.isoformat(),
-            "sections": ["portfolio_totals"],
-        },
-        correlation_id=correlation_id,
-    )
-    valuation_context = snapshot.get("valuation_context")
-    if not isinstance(valuation_context, dict):
-        raise ValueError("lotus-core core-snapshot payload missing valuation_context")
-    resolved_reporting_currency = valuation_context.get("reporting_currency")
-    if not isinstance(resolved_reporting_currency, str) or not resolved_reporting_currency:
-        resolved_reporting_currency = valuation_context.get("portfolio_currency")
-    if not isinstance(resolved_reporting_currency, str) or not resolved_reporting_currency:
-        raise ValueError(
-            "lotus-core core-snapshot payload missing portfolio/reporting currency required for rolling Sharpe"
-        )
-    return resolved_reporting_currency
-
-
-def _requires_risk_free(stateful: RollingStatefulInput) -> bool:
-    return ROLLING_SHARPE_METRIC in stateful.rolling_options.metrics
-
-
-def _requires_benchmark(stateful: RollingStatefulInput) -> bool:
-    return any(metric in ROLLING_BENCHMARK_METRICS for metric in stateful.rolling_options.metrics)
-
-
-async def _resolve_stateful_dependency_selection(
-    stateful: RollingStatefulInput,
-    *,
-    core_client: LotusCoreClientProtocol | None,
-    correlation_id: str | None,
-) -> _RollingStatefulDependencySelection:
-    include_risk_free = _requires_risk_free(stateful)
-    resolved_reporting_currency = await _resolve_reporting_currency(
-        stateful=stateful,
-        include_risk_free=include_risk_free,
-        core_client=core_client,
-        correlation_id=correlation_id,
-    )
-    if resolved_reporting_currency != stateful.reporting_currency:
-        stateful = stateful.model_copy(update={"reporting_currency": resolved_reporting_currency})
-    return _RollingStatefulDependencySelection(
-        stateful=stateful,
-        include_risk_free=include_risk_free,
-        reporting_currency=resolved_reporting_currency,
-    )
 
 
 def _explicit_risk_free_request(
@@ -299,7 +225,7 @@ def _resolved_stateful_inputs(
 
 async def _resolve_rolling_source_series(
     *,
-    dependency_selection: _RollingStatefulDependencySelection,
+    dependency_selection: RollingStatefulDependencySelection,
     performance_client: LotusPerformanceClientProtocol,
     core_client: LotusCoreClientProtocol | None,
     correlation_id: str | None,
@@ -314,7 +240,7 @@ async def _resolve_rolling_source_series(
     )
     parsed_series = _parse_stateful_source_series(
         source_responses.source_response,
-        include_benchmark=_requires_benchmark(dependency_selection.stateful),
+        include_benchmark=requires_benchmark(dependency_selection.stateful),
     )
     return _RollingSourceResolution(
         source_responses=source_responses,
@@ -324,7 +250,7 @@ async def _resolve_rolling_source_series(
 
 async def _resolve_rolling_risk_free_dependency(
     *,
-    dependency_selection: _RollingStatefulDependencySelection,
+    dependency_selection: RollingStatefulDependencySelection,
     source_responses: StatefulSourceResponses,
     core_client: LotusCoreClientProtocol | None,
     portfolio_points: list[ReturnPoint],
@@ -349,7 +275,7 @@ async def resolve_stateful_rolling_inputs(
     core_client: LotusCoreClientProtocol | None = None,
     correlation_id: str | None,
 ) -> ResolvedStatefulRollingInputs:
-    dependency_selection = await _resolve_stateful_dependency_selection(
+    dependency_selection = await resolve_stateful_dependency_selection(
         stateful,
         core_client=core_client,
         correlation_id=correlation_id,

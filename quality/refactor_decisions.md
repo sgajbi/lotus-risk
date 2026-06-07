@@ -95,3 +95,10 @@ Risk period orchestration remains exposed through `calculate_period_metrics`, bu
 period alignment, dependency error mapping, and benchmark context construction now live in
 `risk/benchmark_period_metrics.py`. This reduces the largest service hotspot without changing the
 caller contract or metric semantics.
+
+## REF-DEC-015: Split Rolling Dependency Selection From Source Resolution
+
+Rolling stateful input resolution now delegates risk-free/benchmark requirement checks and
+reporting-currency resolution to `rolling_stateful_dependency_selection.py`. The source-resolution
+module remains responsible for request construction, dependency calls, parsing, and final
+`ResolvedStatefulRollingInputs` assembly.
