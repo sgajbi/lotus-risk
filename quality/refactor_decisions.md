@@ -18,3 +18,9 @@ Current routers, services, contracts, dependencies, and integrations already pro
 boundaries. A separate application/domain/ports package will be introduced only where it removes
 concrete coupling and can be enforced with architecture tests.
 
+## REF-DEC-004: Calculation Services Use An Observability Port
+
+Risk calculation services accept a narrow metric-duration observer callable. Prometheus metric
+construction and registration remain in `app.observability`. Import-linter prohibits direct
+`prometheus_client` imports from `app.services`, keeping calculations testable without the concrete
+metrics backend while preserving runtime metric behavior.

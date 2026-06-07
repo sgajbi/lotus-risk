@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
+from contextlib import AbstractContextManager
 from time import perf_counter
 
 from prometheus_client import Counter, Histogram
@@ -44,10 +46,29 @@ HTTP_REQUESTS_TOTAL = Counter(
     "HTTP requests by route handler, method, and status class.",
     ["handler", "method", "status"],
 )
+RISK_METRIC_REQUESTED_TOTAL = Counter(
+    "risk_metric_requested_total",
+    "Number of risk metric requests by metric name.",
+    ["metric_name"],
+)
+RISK_METRIC_DURATION_SECONDS = Histogram(
+    "risk_metric_duration_seconds",
+    "Risk metric calculation duration by metric name.",
+    ["metric_name"],
+)
 
 
 def observation_start() -> float:
     return perf_counter()
+
+
+def record_risk_metric_requests(metrics: Sequence[str]) -> None:
+    for metric in metrics:
+        RISK_METRIC_REQUESTED_TOTAL.labels(metric_name=metric).inc()
+
+
+def observe_risk_metric_duration(metric_name: str) -> AbstractContextManager[None]:
+    return RISK_METRIC_DURATION_SECONDS.labels(metric_name=metric_name).time()
 
 
 def record_endpoint_execution(

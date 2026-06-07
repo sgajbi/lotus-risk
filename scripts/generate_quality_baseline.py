@@ -430,6 +430,8 @@ def write_rules() -> None:
 8. Every request must support and propagate correlation identity.
 9. Logs and metrics must use bounded labels and must not expose portfolio, client, trace,
    correlation, request-body, or response-body values as labels.
+10. Calculation services depend on narrow observability ports and must not import
+    `prometheus_client` directly.
 """,
         encoding="utf-8",
     )

@@ -5,10 +5,10 @@ from dataclasses import dataclass
 from typing import Callable
 
 import pandas as pd
-from prometheus_client import Histogram
 
 from app.contracts.risk import RiskStatelessCalculationInput, RiskValue
 from app.services.risk import helpers as risk_helpers
+from app.services.risk.metric_timing import MetricDurationObserver
 from app.services.risk.metric_calculators import (
     align_and_resample_benchmark,
     calculate_drawdown,
@@ -58,7 +58,7 @@ class PeriodMetricCalculationRequest:
     period_returns: pd.Series
     benchmark_df: pd.DataFrame
     benchmark_metrics: Sequence[str]
-    duration_seconds: Histogram
+    observe_metric_duration: MetricDurationObserver
 
 
 def _build_non_benchmark_calculators(
@@ -103,13 +103,13 @@ def _calculate_requested_non_benchmark_metrics(
     *,
     request: RiskStatelessCalculationInput,
     non_benchmark_calculators: dict[str, Callable[[], RiskValue]],
-    duration_seconds: Histogram,
+    observe_metric_duration: MetricDurationObserver,
 ) -> dict[str, RiskValue]:
     metric_map: dict[str, RiskValue] = {}
     for metric_name, calculator in non_benchmark_calculators.items():
         if metric_name not in request.metrics:
             continue
-        with duration_seconds.labels(metric_name=metric_name).time():
+        with observe_metric_duration(metric_name):
             try:
                 metric_map[metric_name] = calculator()
             except ValueError as exc:
@@ -131,7 +131,7 @@ def _calculate_aligned_benchmark_metrics(
     benchmark_period: pd.Series,
     benchmark_metrics: Sequence[str],
     annual_factor: int,
-    duration_seconds: Histogram,
+    observe_metric_duration: MetricDurationObserver,
 ) -> tuple[dict[str, RiskValue], int]:
     aligned = resolve_aligned_benchmark_series(
         metric_series=metric_series,
@@ -151,7 +151,7 @@ def _calculate_aligned_benchmark_metrics(
     benchmark_aligned_series = pd.Series(aligned["benchmark"])
     metric_map: dict[str, RiskValue] = {}
     for metric_name in benchmark_metrics:
-        with duration_seconds.labels(metric_name=metric_name).time():
+        with observe_metric_duration(metric_name):
             try:
                 metric_map[metric_name] = resolve_benchmark_metric_value(
                     metric_name=metric_name,
@@ -173,7 +173,7 @@ def _benchmark_period_metrics(
     benchmark_df: pd.DataFrame,
     benchmark_metrics: Sequence[str],
     annual_factor: int,
-    duration_seconds: Histogram,
+    observe_metric_duration: MetricDurationObserver,
 ) -> _BenchmarkPeriodMetrics:
     benchmark_period = _benchmark_period_series(
         request=request,
@@ -193,7 +193,7 @@ def _benchmark_period_metrics(
         benchmark_period=benchmark_period,
         benchmark_metrics=benchmark_metrics,
         annual_factor=annual_factor,
-        duration_seconds=duration_seconds,
+        observe_metric_duration=observe_metric_duration,
     )
     return _BenchmarkPeriodMetrics(
         metric_map=metric_map,
@@ -253,7 +253,7 @@ def _calculate_benchmark_metrics(
     benchmark_df: pd.DataFrame,
     benchmark_metrics: Sequence[str],
     annual_factor: int,
-    duration_seconds: Histogram,
+    observe_metric_duration: MetricDurationObserver,
 ) -> tuple[dict[str, RiskValue], BenchmarkContextPayload, int, int]:
     if benchmark_df.empty:
         benchmark_result = _empty_benchmark_period_metrics(benchmark_metrics)
@@ -266,7 +266,7 @@ def _calculate_benchmark_metrics(
             benchmark_df=benchmark_df,
             benchmark_metrics=benchmark_metrics,
             annual_factor=annual_factor,
-            duration_seconds=duration_seconds,
+            observe_metric_duration=observe_metric_duration,
         )
 
     benchmark_context = prepare_benchmark_context(
@@ -289,7 +289,7 @@ def _period_non_benchmark_metrics(
     periodic_rf: float,
     periodic_mar: float,
     period_returns: pd.Series,
-    duration_seconds: Histogram,
+    observe_metric_duration: MetricDurationObserver,
 ) -> _PeriodNonBenchmarkMetrics:
     metric_series = risk_helpers._resample_returns(period_returns, request.options.frequency)
     return _PeriodNonBenchmarkMetrics(
@@ -304,7 +304,7 @@ def _period_non_benchmark_metrics(
                 periodic_rf=periodic_rf,
                 periodic_mar=periodic_mar,
             ),
-            duration_seconds=duration_seconds,
+            observe_metric_duration=observe_metric_duration,
         ),
     )
 
@@ -318,7 +318,7 @@ def _period_benchmark_metrics(
     benchmark_df: pd.DataFrame,
     benchmark_metrics: Sequence[str],
     annual_factor: int,
-    duration_seconds: Histogram,
+    observe_metric_duration: MetricDurationObserver,
 ) -> _PeriodBenchmarkMetrics | None:
     if not benchmark_metrics:
         return None
@@ -332,7 +332,7 @@ def _period_benchmark_metrics(
             benchmark_df=benchmark_df,
             benchmark_metrics=benchmark_metrics,
             annual_factor=annual_factor,
-            duration_seconds=duration_seconds,
+            observe_metric_duration=observe_metric_duration,
         )
     )
     return _PeriodBenchmarkMetrics(
@@ -380,7 +380,7 @@ def calculate_period_metrics(
         periodic_rf=calculation_request.periodic_rf,
         periodic_mar=calculation_request.periodic_mar,
         period_returns=calculation_request.period_returns,
-        duration_seconds=calculation_request.duration_seconds,
+        observe_metric_duration=calculation_request.observe_metric_duration,
     )
     benchmark_result = _period_benchmark_metrics(
         request=calculation_request.request,
@@ -390,7 +390,7 @@ def calculate_period_metrics(
         benchmark_df=calculation_request.benchmark_df,
         benchmark_metrics=calculation_request.benchmark_metrics,
         annual_factor=calculation_request.annual_factor,
-        duration_seconds=calculation_request.duration_seconds,
+        observe_metric_duration=calculation_request.observe_metric_duration,
     )
     return _period_metric_result_tuple(
         non_benchmark_result=non_benchmark_result,

@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from typing import Literal
 
 import pandas as pd
-from prometheus_client import Histogram
 
 from app.contracts.risk import (
     BenchmarkRequestContext,
@@ -25,6 +24,7 @@ from app.services.risk.period_metrics import (
     PeriodMetricCalculationRequest,
     calculate_period_metrics,
 )
+from app.services.risk.metric_timing import MetricDurationObserver
 from app.services.risk.period_windows import RiskPeriodWindow, risk_period_window
 
 BENCHMARK_METRICS = risk_helpers.BENCHMARK_METRICS
@@ -199,7 +199,7 @@ def _period_metric_calculation(
     periodic_mar: float,
     benchmark_df: pd.DataFrame,
     benchmark_metrics: Sequence[str],
-    duration_seconds: Histogram,
+    observe_metric_duration: MetricDurationObserver,
 ) -> _PeriodMetricCalculation:
     return _period_metric_calculation_result(
         calculate_period_metrics(
@@ -213,7 +213,7 @@ def _period_metric_calculation(
                 period_returns=period_window.returns,
                 benchmark_df=benchmark_df,
                 benchmark_metrics=benchmark_metrics,
-                duration_seconds=duration_seconds,
+                observe_metric_duration=observe_metric_duration,
             )
         )
     )
@@ -241,7 +241,7 @@ def _build_single_period_result(
     returns_df: pd.DataFrame,
     benchmark_df: pd.DataFrame,
     benchmark_metrics: Sequence[str],
-    duration_seconds: Histogram,
+    observe_metric_duration: MetricDurationObserver,
 ) -> tuple[str, RiskPeriodResult]:
     period_window = risk_period_window(
         request=request,
@@ -256,7 +256,7 @@ def _build_single_period_result(
         periodic_mar=periodic_mar,
         benchmark_df=benchmark_df,
         benchmark_metrics=benchmark_metrics,
-        duration_seconds=duration_seconds,
+        observe_metric_duration=observe_metric_duration,
     )
 
     return period_window.name, _period_result(
@@ -277,7 +277,7 @@ def build_period_results(
     periodic_mar: float,
     returns_df: pd.DataFrame,
     benchmark_df: pd.DataFrame,
-    duration_seconds: Histogram,
+    observe_metric_duration: MetricDurationObserver,
 ) -> dict[str, RiskPeriodResult]:
     benchmark_metrics_for_request = [
         metric for metric in request.metrics if metric in BENCHMARK_METRICS
@@ -294,7 +294,7 @@ def build_period_results(
             returns_df=returns_df,
             benchmark_df=benchmark_df,
             benchmark_metrics=benchmark_metrics_for_request,
-            duration_seconds=duration_seconds,
+            observe_metric_duration=observe_metric_duration,
         )
         results[period_name] = period_result
 

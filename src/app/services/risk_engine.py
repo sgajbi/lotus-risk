@@ -1,9 +1,5 @@
 from __future__ import annotations
 
-from typing import Sequence
-
-from prometheus_client import Counter, Histogram
-
 from app.contracts.risk import (
     RiskCalculationSupportability,
     RiskPeriodResult,
@@ -11,27 +7,12 @@ from app.contracts.risk import (
     RiskResponse,
     RiskStatelessCalculationInput,
 )
+from app.observability import observe_risk_metric_duration, record_risk_metric_requests
 from app.services.calculation_supportability import record_operation_supportability
 from app.services.risk import calculation_orchestrator as risk_orchestrator
 from app.services.risk import helpers as risk_helpers
 
-RISK_METRIC_REQUESTED_TOTAL = Counter(
-    "risk_metric_requested_total",
-    "Number of risk metric requests by metric name.",
-    ["metric_name"],
-)
-RISK_METRIC_DURATION_SECONDS = Histogram(
-    "risk_metric_duration_seconds",
-    "Risk metric calculation duration by metric name.",
-    ["metric_name"],
-)
-
 BENCHMARK_METRICS = risk_helpers.BENCHMARK_METRICS
-
-
-def _record_metric_request(metrics: Sequence[str]) -> None:
-    for metric in metrics:
-        RISK_METRIC_REQUESTED_TOTAL.labels(metric_name=metric).inc()
 
 
 def _build_metadata(
@@ -81,7 +62,7 @@ def _risk_response(
 
 
 def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
-    _record_metric_request(request.metrics)
+    record_risk_metric_requests(request.metrics)
     annual_factor = risk_orchestrator.derive_annualization_factor(request)
 
     returns_df, benchmark_df = risk_orchestrator.resolve_return_frames(request)
@@ -105,7 +86,7 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
         periodic_mar=periodic_mar,
         returns_df=returns_df,
         benchmark_df=benchmark_df,
-        duration_seconds=RISK_METRIC_DURATION_SECONDS,
+        observe_metric_duration=observe_risk_metric_duration,
     )
 
     return _risk_response(
