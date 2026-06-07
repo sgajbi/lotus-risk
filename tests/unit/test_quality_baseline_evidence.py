@@ -54,3 +54,4 @@ def test_generated_scorecard_preserves_security_hardening_evidence() -> None:
     scorecard = QUALITY_SCORECARD.read_text(encoding="utf-8")
 
     assert "downstream base URLs are hardened with negative tests" in scorecard
+    assert "enterprise runtime and unmapped writes fail closed" in scorecard
