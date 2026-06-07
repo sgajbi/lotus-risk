@@ -49,6 +49,8 @@ Bank deployment mode is stricter than local development mode:
    logged.
 7. client-facing upstream failure envelopes preserve bounded dependency and retry context but never
    expose raw downstream response bodies or transport exception text.
+8. every API response is marked `no-store`, `no-referrer`, and `nosniff`, including early
+   authorization and payload-limit failures.
 
 ## Upstream Boundary Discipline
 

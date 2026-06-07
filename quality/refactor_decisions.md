@@ -38,3 +38,10 @@ Upstream error envelopes preserve dependency, operation, status, category, retry
 correlation context, but never include raw downstream response bodies or transport exception text.
 This intentionally changes unsafe error-message detail while preserving the governed error codes
 and status behavior used by clients.
+
+## REF-DEC-007: Sensitive Risk API Responses Are Non-Cacheable
+
+All responses passing through enterprise middleware, including early authorization and payload-limit
+failures, carry the active policy version and conservative `no-store`, `no-referrer`, and `nosniff`
+headers. This prevents sensitive analytics or error context from being cached and keeps security
+posture consistent across success and rejection paths.

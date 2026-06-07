@@ -23,6 +23,11 @@ _REDACT_FIELDS = {
     "account_number",
     "client_email",
 }
+_SECURITY_RESPONSE_HEADERS = {
+    "Cache-Control": "no-store",
+    "Referrer-Policy": "no-referrer",
+    "X-Content-Type-Options": "nosniff",
+}
 
 
 def _env_enabled(name: str, default: str = "true") -> bool:
@@ -242,21 +247,29 @@ def _emit_write_audit_event(request: Request, response: Response) -> None:
     )
 
 
+def _apply_enterprise_response_headers(response: Response) -> Response:
+    response.headers["X-Enterprise-Policy-Version"] = enterprise_policy_version()
+    for name, value in _SECURITY_RESPONSE_HEADERS.items():
+        response.headers[name] = value
+    return response
+
+
 def build_enterprise_audit_middleware() -> MiddlewareCallable:
     async def middleware(request: Request, call_next: MiddlewareNext) -> Response:
         payload_limit_response = _payload_limit_response(request)
         if payload_limit_response is not None:
-            return payload_limit_response
+            return _apply_enterprise_response_headers(payload_limit_response)
 
         authorized, reason = authorize_write_request(
             request.method, request.url.path, dict(request.headers)
         )
         if not authorized:
-            return _authorization_denied_response(request, reason=reason)
+            return _apply_enterprise_response_headers(
+                _authorization_denied_response(request, reason=reason)
+            )
 
         response = await call_next(request)
-        response.headers["X-Enterprise-Policy-Version"] = enterprise_policy_version()
         _emit_write_audit_event(request, response)
-        return response
+        return _apply_enterprise_response_headers(response)
 
     return middleware

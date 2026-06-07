@@ -139,6 +139,9 @@ def test_enterprise_middleware_payload_limit(monkeypatch: pytest.MonkeyPatch) ->
     assert body["code"] == "PAYLOAD_TOO_LARGE"
     assert body["message"] == "payload_too_large"
     assert body["correlation_id"] == "corr-413"
+    assert response.headers["Cache-Control"] == "no-store"
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
+    assert response.headers["X-Enterprise-Policy-Version"] == "1.0.0"
 
 
 def test_enterprise_middleware_denies_unauthorized_writes(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -155,6 +158,10 @@ def test_enterprise_middleware_denies_unauthorized_writes(monkeypatch: pytest.Mo
     assert body["message"] == "authorization_policy_denied"
     assert body["details"]["reason"].startswith("missing_headers:")
     assert body["correlation_id"] == "corr-403"
+    assert response.headers["Cache-Control"] == "no-store"
+    assert response.headers["Referrer-Policy"] == "no-referrer"
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
+    assert response.headers["X-Enterprise-Policy-Version"] == "1.0.0"
 
 
 def test_enterprise_middleware_sets_policy_header(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -164,6 +171,9 @@ def test_enterprise_middleware_sets_policy_header(monkeypatch: pytest.MonkeyPatc
     response = client.get("/health")
     assert response.status_code == 200
     assert response.headers["X-Enterprise-Policy-Version"] == "2.0.0"
+    assert response.headers["Cache-Control"] == "no-store"
+    assert response.headers["Referrer-Policy"] == "no-referrer"
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
 
 
 def test_enterprise_middleware_handles_invalid_numeric_env_and_content_length(

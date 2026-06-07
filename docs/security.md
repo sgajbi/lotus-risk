@@ -19,6 +19,9 @@ client, request, response, trace, or correlation data through logs, metrics, err
    [`security-threat-model.md`](security-threat-model.md).
 7. Enterprise deployment security posture is recorded in
    [`security-deployment-policy.md`](security-deployment-policy.md).
+8. Every API response, including early authorization and payload-limit failures, carries
+   `Cache-Control: no-store`, `Referrer-Policy: no-referrer`, `X-Content-Type-Options: nosniff`,
+   and the active enterprise policy version.
 
 ## Refactor Requirements
 
