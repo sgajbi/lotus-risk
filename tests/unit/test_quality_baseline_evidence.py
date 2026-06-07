@@ -1,0 +1,42 @@
+from pathlib import Path
+from typing import Any
+
+from scripts import generate_quality_baseline
+
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+BASELINE_REPORT = REPO_ROOT / "quality" / "baseline_report.md"
+REVIEW_LEDGER = REPO_ROOT / "docs" / "architecture" / "CODEBASE-REVIEW-LEDGER.md"
+REVIEW_PLAYBOOK = REPO_ROOT / "docs" / "architecture" / "CODEBASE-REVIEW-PLAYBOOK.md"
+SECURITY_FINDINGS = REPO_ROOT / "quality" / "security_findings.md"
+REFACTOR_DECISIONS = REPO_ROOT / "quality" / "refactor_decisions.md"
+
+
+def test_git_value_returns_unknown_when_git_command_fails(monkeypatch: Any) -> None:
+    monkeypatch.setattr(generate_quality_baseline, "_run", lambda _command: (1, ""))
+
+    assert generate_quality_baseline.git_value("rev-parse", "HEAD") == "unknown"
+
+
+def test_generated_baseline_separates_immutable_before_evidence_from_current_state() -> None:
+    text = BASELINE_REPORT.read_text(encoding="utf-8")
+    source_hotspots = text.split("### Largest Source Files", maxsplit=1)[1].split(
+        "### Largest Functions And Classes", maxsplit=1
+    )[0]
+
+    assert "# Lotus Risk Enterprise Refactor Current-State Baseline" in text
+    assert "immutable initial baseline is commit `3254774`" in text
+    assert "## Generation Identity" in text
+    assert "tests/" not in source_hotspots
+
+
+def test_refactor_control_documents_record_required_operational_evidence() -> None:
+    required_documents = (REVIEW_LEDGER, REVIEW_PLAYBOOK, SECURITY_FINDINGS, REFACTOR_DECISIONS)
+
+    for document in required_documents:
+        assert document.exists()
+        assert document.read_text(encoding="utf-8").strip()
+
+    ledger = REVIEW_LEDGER.read_text(encoding="utf-8")
+    assert "RISK-REF-001" in ledger
+    assert "Quality measurement and CI truthfulness" in ledger
