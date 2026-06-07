@@ -57,6 +57,8 @@ jobs:
         run: make api-vocabulary-gate
       - name: Complexity Gate
         run: make complexity-gate
+      - name: Source Size Gate
+        run: make source-size-gate
       - name: Dependency Hygiene Gate
         run: make dependency-hygiene-gate
       - name: Dead Code Gate

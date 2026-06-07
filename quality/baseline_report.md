@@ -13,12 +13,12 @@ completion claim.
 ## Generation Identity
 
 - Git branch: `feat/enterprise-risk-refactor-continuation`
-- Git commit: `7ab88704ac810029d2a70a02999f1db39f5dc381`
+- Git commit: `8b0340704b9e66ac7307b6752b0c301a4c603833`
 
 ## Current Code Size
 
-- Python source files under `src/`: 206
-- Python test files under `tests/`: 97
+- Python source files under `src/`: 207
+- Python test files under `tests/`: 100
 - Python packages under `src/`: 9
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
 
@@ -26,21 +26,21 @@ completion claim.
 
 | Path | Lines | Bytes |
 | --- | --- | --- |
-| src/app/services/risk/period_metrics.py | 401 | 12644 |
+| src/app/services/risk/period_metrics.py | 401 | 12857 |
 | src/app/services/rolling_stateful_inputs.py | 376 | 13506 |
 | src/app/services/rolling_metric_series.py | 361 | 11066 |
 | src/app/services/concentration/parsing.py | 322 | 11235 |
 | src/app/services/rolling_engine.py | 310 | 10403 |
-| src/app/services/risk/calculation_orchestrator.py | 301 | 9855 |
+| src/app/services/risk/calculation_orchestrator.py | 301 | 9984 |
 | src/app/services/risk/helpers.py | 297 | 10019 |
 | src/app/services/attribution_exposure_history.py | 280 | 9754 |
 | src/app/services/attribution_decomposition.py | 279 | 9057 |
 | src/app/services/attribution_stateful_inputs.py | 276 | 9699 |
+| src/app/enterprise_readiness.py | 275 | 8737 |
 | src/app/openapi_examples.py | 273 | 8965 |
 | src/app/services/drawdown_series.py | 271 | 8488 |
-| src/app/integrations/_downstream_client_profile.py | 270 | 7590 |
-| src/app/api_errors.py | 262 | 8894 |
-| src/app/enterprise_readiness.py | 262 | 8266 |
+| src/app/integrations/_downstream_client_profile.py | 268 | 7495 |
+| src/app/api_errors.py | 262 | 8814 |
 | src/app/services/concentration/simulation_resolver.py | 255 | 8549 |
 | src/app/integrations/performance_returns_series_async.py | 255 | 7747 |
 | src/app/services/drawdown_periods.py | 254 | 7963 |
@@ -62,6 +62,7 @@ completion claim.
 | src/app/contracts/concentration_request_inputs.py | ConcentrationRequest | ClassDef | 75 |
 | src/app/contracts/risk_response_outputs.py | RiskResponseMetadata | ClassDef | 75 |
 | src/app/contracts/attribution_metadata_outputs.py | HistoricalAttributionMetadata | ClassDef | 71 |
+| src/app/middleware/correlation.py | CorrelationIdMiddleware | ClassDef | 70 |
 | src/app/contracts/drawdown_metadata_outputs.py | DrawdownMetadata | ClassDef | 69 |
 | src/app/contracts/risk_common_inputs.py | RiskRequestPeriod | ClassDef | 68 |
 | src/app/contracts/risk_event_cohort_response.py | RiskEventAffectedCohortResponse | ClassDef | 66 |
@@ -70,7 +71,6 @@ completion claim.
 | src/app/contracts/scenario_inputs.py | RegimeScenarioPackRequest | ClassDef | 63 |
 | src/app/contracts/concentration_metadata_outputs.py | ConcentrationMetadata | ClassDef | 62 |
 | src/app/contracts/drawdown_metric_outputs.py | DrawdownSummary | ClassDef | 61 |
-| src/app/contracts/risk_request_inputs.py | RiskAnalyticsRequest | ClassDef | 60 |
 
 ## Tool Baseline
 
@@ -96,12 +96,12 @@ All checks passed!
 - Ruff format check: passed
 
 ```text
-317 files already formatted
+322 files already formatted
 ```
 - Type checking: passed
 
 ```text
-Success: no issues found in 303 source files
+Success: no issues found in 307 source files
 ```
 - Unit coverage snapshot: passed
 
@@ -109,16 +109,16 @@ Success: no issues found in 303 source files
 ........................................................................ [ 14%]
 ........................................................................ [ 28%]
 ........................................................................ [ 42%]
-........................................................................ [ 57%]
-........................................................................ [ 71%]
-........................................................................ [ 85%]
+........................................................................ [ 56%]
+........................................................................ [ 70%]
+........................................................................ [ 84%]
 ...
-src\app\upstream_errors.py                                    67      0     20      3    97%   210->223, 216->218, 221->223
+src\app\services\rolling_stateful_inputs.py                  113      1     32      1    99%   176
 ------------------------------------------------------------------------------------------------------
-TOTAL                                                       5851     85    994     74    98%
+TOTAL                                                       5856     85    984     71    98%
 
-167 files skipped due to complete coverage.
-503 passed in 8.88s
+169 files skipped due to complete coverage.
+510 passed in 8.79s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -130,12 +130,12 @@ TOTAL                                                       5851     85    994  
 src\app\api_errors.py - A (48.80)
 src\app\app_factory.py - A (100.00)
 src\app\domain_data_products.py - A (49.24)
-src\app\enterprise_readiness.py - A (30.24)
+src\app\enterprise_readiness.py - A (29.70)
 src\app\error_response.py - A (68.27)
 src\app\main.py - A (100.00)
 ...
-src\app\services\risk\helpers.py - A (34.16)
 src\app\services\risk\metric_calculators.py - A (39.28)
+src\app\services\risk\metric_timing.py - A (100.00)
 src\app\services\risk\period_metrics.py - A (38.89)
 src\app\services\risk\period_resolution.py - A (47.21)
 src\app\services\risk\period_windows.py - A (58.70)
@@ -148,7 +148,7 @@ src\app\services\risk\__init__.py - A (100.00)
 - Dependency hygiene: passed
 
 ```text
-Scanning 206 files...
+Scanning 207 files...
 
 Success! No dependency issues found.
 ```
@@ -235,19 +235,19 @@ needs current CI status, generated OpenAPI artifact evidence, and reviewer-ready
 - Unit test collection: passed
 
 ```text
+tests/unit/test_agent_effectiveness_review.py::test_agent_effectiveness_review_records_all_required_areas
+tests/unit/test_agent_effectiveness_review.py::test_codebase_review_playbook_requires_recurring_effectiveness_review
 tests/unit/test_app_factory.py::test_create_app_builds_independent_service_instance
 tests/unit/test_app_factory.py::test_create_app_registers_risk_analytics_routes
 tests/unit/test_app_runtime.py::test_override_app_runtime_restores_clients_and_classes_after_exit
 tests/unit/test_app_runtime.py::test_override_app_runtime_restores_state_after_exception
-tests/unit/test_attribution_contract.py::test_attribution_contract_accepts_stateless_payload
-tests/unit/test_attribution_contract.py::test_attribution_contract_module_preserves_public_import_surface
 ...
+tests/unit/test_upstream_errors.py::test_classify_upstream_http_error_matrix[504-502-UPSTREAM_FAILURE-upstream_failure-True]
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc0-504-UPSTREAM_TIMEOUT-timeout]
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc1-503-UPSTREAM_UNAVAILABLE-transport]
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
-tests/unit/test_upstream_errors.py::test_extract_upstream_error_detail_variants
 
-503 tests collected in 1.66s
+510 tests collected in 1.59s
 ```
 - Import-linter report-only: passed
 
@@ -259,10 +259,10 @@ Import Linter
 
 ---------
 ...
-Domain and service layers stay framework independent KEPT
+Calculation services stay independent from Prometheus KEPT
 DTO contracts do not import infrastructure clients KEPT
 Routers do not import downstream infrastructure clients directly KEPT
 Infrastructure adapters do not depend on API entry point KEPT
 
-Contracts: 4 kept, 0 broken.
+Contracts: 5 kept, 0 broken.
 ```

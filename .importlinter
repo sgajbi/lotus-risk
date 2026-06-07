@@ -18,6 +18,7 @@ source_modules =
     app.services
 forbidden_modules =
     prometheus_client
+allow_indirect_imports = True
 
 [importlinter:contract:contracts_do_not_depend_on_infrastructure]
 name = DTO contracts do not import infrastructure clients

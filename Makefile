@@ -1,6 +1,7 @@
-.PHONY: architecture-gate complexity-gate dead-code-gate dependency-hygiene-gate install install-ci check check-all test test-unit test-integration test-e2e test-all test-coverage test-fast test-all-fast test-all-no-cov test-all-parallel ci ci-local ci-local-docker ci-local-docker-down typecheck typecheck-tests-critical lint monetary-float-guard domain-product-validate domain-data-product-gate trust-telemetry-validate observability-contract-validate mesh-contract-validate no-alias-gate openapi-gate openapi-artifact-gate api-vocabulary-gate live-api-validate live-api-validate-core format clean run check-deps security-audit migration-smoke migration-apply pre-commit docker-build docker-up docker-down test-pyramid-gate quality-baseline
+.PHONY: architecture-gate complexity-gate source-size-gate dead-code-gate dependency-hygiene-gate install install-ci check check-all test test-unit test-integration test-e2e test-all test-coverage test-fast test-all-fast test-all-no-cov test-all-parallel ci ci-local ci-local-docker ci-local-docker-down typecheck typecheck-tests-critical lint monetary-float-guard domain-product-validate domain-data-product-gate trust-telemetry-validate observability-contract-validate mesh-contract-validate no-alias-gate openapi-gate openapi-artifact-gate api-vocabulary-gate live-api-validate live-api-validate-core format clean run check-deps security-audit migration-smoke migration-apply pre-commit docker-build docker-up docker-down test-pyramid-gate quality-baseline
 
 COVERAGE_FAIL_UNDER ?= 98
+SOURCE_FILE_MAX_LINES ?= 450
 
 install:
 	python -m pip install --upgrade pip
@@ -14,9 +15,9 @@ install-ci:
 pre-commit:
 	pre-commit run --all-files
 
-check: lint no-alias-gate typecheck openapi-gate openapi-artifact-gate api-vocabulary-gate mesh-contract-validate test
+check: lint no-alias-gate typecheck openapi-gate openapi-artifact-gate api-vocabulary-gate mesh-contract-validate source-size-gate test
 
-ci: lint no-alias-gate typecheck openapi-gate openapi-artifact-gate api-vocabulary-gate migration-smoke test-all security-audit
+ci: lint no-alias-gate typecheck openapi-gate openapi-artifact-gate api-vocabulary-gate migration-smoke source-size-gate test-all security-audit
 
 quality-baseline:
 	python scripts/generate_quality_baseline.py
@@ -124,6 +125,9 @@ architecture-gate:
 complexity-gate:
 	python -m radon cc src -s -n C
 	python -m radon mi src -s
+
+source-size-gate:
+	python scripts/source_size_gate.py --max-lines=$(SOURCE_FILE_MAX_LINES)
 
 dependency-hygiene-gate:
 	python -m deptry .

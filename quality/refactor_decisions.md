@@ -52,3 +52,9 @@ Request middleware emits a structured `request_observation` log event rather tha
 text line. The event includes bounded operational fields and deliberately excludes query strings,
 headers, and request/response bodies so production support can parse events without increasing
 sensitive-data exposure.
+
+## REF-DEC-009: Prevent New Source Monoliths At 450 Lines
+
+All current Python source modules are below 402 lines. A 450-line active regression gate leaves
+reasonable room for cohesive maintenance while preventing new monolithic modules. The threshold may
+be reduced only after further behavior-preserving extraction proves a lower limit is practical.

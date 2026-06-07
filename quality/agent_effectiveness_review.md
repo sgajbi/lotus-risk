@@ -16,5 +16,4 @@ decisions.
 | Agent guidance | Improve | Added a mandatory effectiveness-review cadence to `docs/architecture/CODEBASE-REVIEW-PLAYBOOK.md`. |
 | Documentation | Improve continuously | Security, observability, architecture, wiki, quality evidence, and decisions are updated in the same slices as implementation changes. |
 | Repository context | No change yet | Current repository role, commands, and integration truth remain accurate. Update `REPOSITORY-ENGINEERING-CONTEXT.md` when durable architecture, command, or supportability truth changes. |
-| Automation | Review next | Current feature-lane and quality-baseline workflows are green. Review reproducible scorecard and file-size regression automation in the next CI-measurement slice. |
-
+| Automation | Improved | Added a tested source-file-size regression gate to local commands and every GitHub delivery lane after current modularization proved a 450-line ceiling is practical. |
