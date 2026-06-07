@@ -40,3 +40,16 @@ A review unit may be signed off only when the ledger records:
 
 Full-suite or end-to-end success is supporting proof, not a substitute for focused lower-level tests.
 
+## Agent Effectiveness Review
+
+After every five meaningful slices, and before major architecture, PR, or closure decisions, review
+whether the work exposed a durable improvement opportunity in:
+
+1. available Lotus skill routing,
+2. repository or platform agent guidance,
+3. implementation-backed documentation,
+4. repository engineering context,
+5. repeatable automation or validation.
+
+Record the outcome in `quality/agent_effectiveness_review.md`. A deliberate no-change decision must
+state why the existing artifact is sufficient.
