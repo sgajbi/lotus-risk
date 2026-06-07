@@ -25,3 +25,12 @@ def test_codebase_review_playbook_requires_recurring_effectiveness_review() -> N
     assert "After every five meaningful slices" in text
     assert "quality/agent_effectiveness_review.md" in text
     assert "deliberate no-change decision" in text
+
+
+def test_second_effectiveness_review_records_configuration_and_context_improvements() -> None:
+    text = REVIEW.read_text(encoding="utf-8")
+
+    assert "## 2026-06-07 Review 2" in text
+    assert "docs/configuration.md" in text
+    assert "fail-fast downstream URL policy" in text
+    assert "A new standalone configuration gate would duplicate tested behavior" in text

@@ -13,12 +13,12 @@ completion claim.
 ## Generation Identity
 
 - Git branch: `feat/enterprise-risk-refactor-continuation`
-- Git commit: `eb5f0025e400a46f4787daae5ccf0eea5c3bebd8`
+- Git commit: `f6cec537b17e6920be4be290e251485e9e89c220`
 
 ## Current Code Size
 
-- Python source files under `src/`: 208
-- Python test files under `tests/`: 101
+- Python source files under `src/`: 209
+- Python test files under `tests/`: 103
 - Python packages under `src/`: 9
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
 
@@ -96,29 +96,29 @@ All checks passed!
 - Ruff format check: passed
 
 ```text
-324 files already formatted
+327 files already formatted
 ```
 - Type checking: passed
 
 ```text
-Success: no issues found in 309 source files
+Success: no issues found in 312 source files
 ```
-- Unit coverage snapshot: passed
+- Unit coverage snapshot: reported exit 1
 
 ```text
 ........................................................................ [ 13%]
-........................................................................ [ 27%]
-........................................................................ [ 41%]
-........................................................................ [ 55%]
-........................................................................ [ 69%]
-........................................................................ [ 83%]
+........................................................................ [ 26%]
+........................................................................ [ 40%]
+........................................................................ [ 53%]
+..................................................F..................... [ 67%]
+........................................................................ [ 80%]
 ...
-src\app\services\rolling_stateful_inputs.py                  113      1     32      1    99%   176
-------------------------------------------------------------------------------------------------------
-TOTAL                                                       5908     86    996     72    98%
+TOTAL                                                       5940     86   1004     72    98%
 
-169 files skipped due to complete coverage.
-516 passed in 11.22s
+170 files skipped due to complete coverage.
+=========================== short test summary info ===========================
+FAILED tests/unit/test_quality_baseline_evidence.py::test_generated_scorecard_preserves_security_hardening_evidence
+1 failed, 534 passed in 12.62s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -148,7 +148,7 @@ src\app\services\risk\__init__.py - A (100.00)
 - Dependency hygiene: passed
 
 ```text
-Scanning 208 files...
+Scanning 209 files...
 
 Success! No dependency issues found.
 ```
@@ -237,17 +237,17 @@ needs current CI status, generated OpenAPI artifact evidence, and reviewer-ready
 ```text
 tests/unit/test_agent_effectiveness_review.py::test_agent_effectiveness_review_records_all_required_areas
 tests/unit/test_agent_effectiveness_review.py::test_codebase_review_playbook_requires_recurring_effectiveness_review
+tests/unit/test_agent_effectiveness_review.py::test_second_effectiveness_review_records_configuration_and_context_improvements
 tests/unit/test_app_factory.py::test_create_app_builds_independent_service_instance
 tests/unit/test_app_factory.py::test_create_app_registers_risk_analytics_routes
 tests/unit/test_app_lifecycle.py::test_application_lifespan_owns_reusable_downstream_http_clients
-tests/unit/test_app_lifecycle.py::test_application_lifespan_preserves_injected_downstream_clients
 ...
 tests/unit/test_upstream_errors.py::test_classify_upstream_http_error_matrix[504-502-UPSTREAM_FAILURE-upstream_failure-True]
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc0-504-UPSTREAM_TIMEOUT-timeout]
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc1-503-UPSTREAM_UNAVAILABLE-transport]
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 
-516 tests collected in 1.69s
+535 tests collected in 1.98s
 ```
 - Import-linter report-only: passed
 

@@ -48,3 +48,9 @@ def test_generated_scorecard_preserves_resilience_and_performance_evidence() -> 
 
     assert "| Resilience and performance |" in scorecard
     assert "FastAPI lifespan owns reusable dependency-specific HTTP pools" in scorecard
+
+
+def test_generated_scorecard_preserves_security_hardening_evidence() -> None:
+    scorecard = QUALITY_SCORECARD.read_text(encoding="utf-8")
+
+    assert "downstream base URLs are hardened with negative tests" in scorecard
