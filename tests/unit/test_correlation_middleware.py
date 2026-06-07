@@ -1,5 +1,8 @@
+import logging
+from typing import Any, cast
 from unittest.mock import patch
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -98,3 +101,26 @@ def test_correlation_middleware_does_not_reflect_unsafe_context_headers() -> Non
     assert response.headers["X-Correlation-Id"] != "unsafe correlation value"
     assert response.headers["X-Trace-Id"] != "not-a-w3c-trace-id"
     assert response.headers["traceparent"] != "malformed"
+
+
+def test_correlation_middleware_emits_bounded_structured_request_event(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    caplog.set_level(logging.INFO, logger="lotus_risk.request")
+    client = TestClient(_correlation_app())
+
+    response = client.get(
+        "/ping?client_secret=do-not-log",
+        headers={"X-Correlation-Id": "corr-structured"},
+    )
+
+    assert response.status_code == 200
+    event = cast(dict[str, Any], getattr(caplog.records[-1], "request_observation"))
+    assert event["service"] == "lotus-risk"
+    assert event["method"] == "GET"
+    assert event["path"] == "/ping"
+    assert event["status_code"] == 200
+    assert event["correlation_id"] == "corr-structured"
+    assert event["risk"] is True
+    assert "client_secret" not in str(event)
+    assert "do-not-log" not in str(event)

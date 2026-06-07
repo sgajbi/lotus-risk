@@ -79,6 +79,10 @@ Use:
 4. `docs/operations/canonical-local-upstream-urls.md`
 5. `docs/operations/live-risk-validation-matrix.md`
 
+Request logs expose a structured `request_observation` event with bounded service, method, path,
+status, correlation, trace, latency, and risk fields. Query strings and request/response bodies are
+deliberately excluded.
+
 For risk analytics responses, `metadata.calculation_supportability` is emitted by `risk/calculate`,
 drawdown, rolling metrics, historical attribution, and concentration. Use it before inferring UI
 state from individual metric values, period errors, issuer coverage, or stale returns. It reports

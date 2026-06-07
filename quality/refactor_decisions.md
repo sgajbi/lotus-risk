@@ -45,3 +45,10 @@ All responses passing through enterprise middleware, including early authorizati
 failures, carry the active policy version and conservative `no-store`, `no-referrer`, and `nosniff`
 headers. This prevents sensitive analytics or error context from being cached and keeps security
 posture consistent across success and rejection paths.
+
+## REF-DEC-008: Request Observations Are Structured And Bounded
+
+Request middleware emits a structured `request_observation` log event rather than an interpolated
+text line. The event includes bounded operational fields and deliberately excludes query strings,
+headers, and request/response bodies so production support can parse events without increasing
+sensitive-data exposure.

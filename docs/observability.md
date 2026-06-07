@@ -13,6 +13,9 @@ supportability metrics, analytics freshness buckets, readiness state, and Promet
 3. Readiness must distinguish ready, degraded, and draining dependency posture.
 4. Downstream failures must preserve source service, operation, retryability, and mapped platform
    error category.
+5. Request observations are emitted as structured `request_observation` events with bounded method,
+   path, status, correlation, trace, latency, service, and risk fields. Query strings and request or
+   response bodies are not logged.
 
 ## Refactor Guardrail
 

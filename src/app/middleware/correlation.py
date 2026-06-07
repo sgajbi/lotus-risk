@@ -72,18 +72,18 @@ class CorrelationIdMiddleware(BaseHTTPMiddleware):
         response.headers["X-Service-Name"] = self._service_name
         response.headers["X-Request-Duration-Ms"] = f"{duration_ms:.3f}"
         self._event_logger.info(
-            (
-                "request_observed service=%s method=%s path=%s status=%s "
-                "correlation=%s trace_id=%s latency_ms=%.3f risk=true"
-            )
-            % (
-                self._service_name,
-                request.method,
-                request.url.path,
-                response.status_code,
-                correlation_id,
-                trace_id,
-                duration_ms,
-            )
+            "request_observed",
+            extra={
+                "request_observation": {
+                    "service": self._service_name,
+                    "method": request.method,
+                    "path": request.url.path,
+                    "status_code": response.status_code,
+                    "correlation_id": correlation_id,
+                    "trace_id": trace_id,
+                    "latency_ms": round(duration_ms, 3),
+                    "risk": True,
+                }
+            },
         )
         return response
