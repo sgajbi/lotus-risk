@@ -10,6 +10,7 @@ REVIEW_LEDGER = REPO_ROOT / "docs" / "architecture" / "CODEBASE-REVIEW-LEDGER.md
 REVIEW_PLAYBOOK = REPO_ROOT / "docs" / "architecture" / "CODEBASE-REVIEW-PLAYBOOK.md"
 SECURITY_FINDINGS = REPO_ROOT / "quality" / "security_findings.md"
 REFACTOR_DECISIONS = REPO_ROOT / "quality" / "refactor_decisions.md"
+QUALITY_SCORECARD = REPO_ROOT / "quality" / "quality_scorecard.md"
 
 
 def test_git_value_returns_unknown_when_git_command_fails(monkeypatch: Any) -> None:
@@ -40,3 +41,10 @@ def test_refactor_control_documents_record_required_operational_evidence() -> No
     ledger = REVIEW_LEDGER.read_text(encoding="utf-8")
     assert "RISK-REF-001" in ledger
     assert "Quality measurement and CI truthfulness" in ledger
+
+
+def test_generated_scorecard_preserves_resilience_and_performance_evidence() -> None:
+    scorecard = QUALITY_SCORECARD.read_text(encoding="utf-8")
+
+    assert "| Resilience and performance |" in scorecard
+    assert "FastAPI lifespan owns reusable dependency-specific HTTP pools" in scorecard

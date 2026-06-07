@@ -13,12 +13,12 @@ completion claim.
 ## Generation Identity
 
 - Git branch: `feat/enterprise-risk-refactor-continuation`
-- Git commit: `8b0340704b9e66ac7307b6752b0c301a4c603833`
+- Git commit: `eb5f0025e400a46f4787daae5ccf0eea5c3bebd8`
 
 ## Current Code Size
 
-- Python source files under `src/`: 207
-- Python test files under `tests/`: 100
+- Python source files under `src/`: 208
+- Python test files under `tests/`: 101
 - Python packages under `src/`: 9
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
 
@@ -51,7 +51,7 @@ completion claim.
 
 | Path | Symbol | Kind | Lines |
 | --- | --- | --- | --- |
-| src/app/integrations/lotus_core_client.py | LotusCoreClient | ClassDef | 119 |
+| src/app/integrations/lotus_core_client.py | LotusCoreClient | ClassDef | 128 |
 | src/app/contracts/concentration_issuer_metric_outputs.py | IssuerConcentration | ClassDef | 85 |
 | src/app/trust_telemetry_product_models.py | ProductTrustTelemetrySeed | ClassDef | 79 |
 | src/app/contracts/attribution_stateless_inputs.py | HistoricalAttributionStatelessInput | ClassDef | 77 |
@@ -96,29 +96,29 @@ All checks passed!
 - Ruff format check: passed
 
 ```text
-322 files already formatted
+324 files already formatted
 ```
 - Type checking: passed
 
 ```text
-Success: no issues found in 307 source files
+Success: no issues found in 309 source files
 ```
 - Unit coverage snapshot: passed
 
 ```text
-........................................................................ [ 14%]
-........................................................................ [ 28%]
-........................................................................ [ 42%]
-........................................................................ [ 56%]
-........................................................................ [ 70%]
-........................................................................ [ 84%]
+........................................................................ [ 13%]
+........................................................................ [ 27%]
+........................................................................ [ 41%]
+........................................................................ [ 55%]
+........................................................................ [ 69%]
+........................................................................ [ 83%]
 ...
 src\app\services\rolling_stateful_inputs.py                  113      1     32      1    99%   176
 ------------------------------------------------------------------------------------------------------
-TOTAL                                                       5856     85    984     71    98%
+TOTAL                                                       5908     86    996     72    98%
 
 169 files skipped due to complete coverage.
-510 passed in 8.79s
+516 passed in 11.22s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -129,10 +129,10 @@ TOTAL                                                       5856     85    984  
 ```text
 src\app\api_errors.py - A (48.80)
 src\app\app_factory.py - A (100.00)
+src\app\app_lifecycle.py - A (59.25)
 src\app\domain_data_products.py - A (49.24)
 src\app\enterprise_readiness.py - A (29.70)
 src\app\error_response.py - A (68.27)
-src\app\main.py - A (100.00)
 ...
 src\app\services\risk\metric_calculators.py - A (39.28)
 src\app\services\risk\metric_timing.py - A (100.00)
@@ -148,7 +148,7 @@ src\app\services\risk\__init__.py - A (100.00)
 - Dependency hygiene: passed
 
 ```text
-Scanning 207 files...
+Scanning 208 files...
 
 Success! No dependency issues found.
 ```
@@ -239,15 +239,15 @@ tests/unit/test_agent_effectiveness_review.py::test_agent_effectiveness_review_r
 tests/unit/test_agent_effectiveness_review.py::test_codebase_review_playbook_requires_recurring_effectiveness_review
 tests/unit/test_app_factory.py::test_create_app_builds_independent_service_instance
 tests/unit/test_app_factory.py::test_create_app_registers_risk_analytics_routes
-tests/unit/test_app_runtime.py::test_override_app_runtime_restores_clients_and_classes_after_exit
-tests/unit/test_app_runtime.py::test_override_app_runtime_restores_state_after_exception
+tests/unit/test_app_lifecycle.py::test_application_lifespan_owns_reusable_downstream_http_clients
+tests/unit/test_app_lifecycle.py::test_application_lifespan_preserves_injected_downstream_clients
 ...
 tests/unit/test_upstream_errors.py::test_classify_upstream_http_error_matrix[504-502-UPSTREAM_FAILURE-upstream_failure-True]
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc0-504-UPSTREAM_TIMEOUT-timeout]
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc1-503-UPSTREAM_UNAVAILABLE-transport]
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 
-510 tests collected in 1.59s
+516 tests collected in 1.69s
 ```
 - Import-linter report-only: passed
 

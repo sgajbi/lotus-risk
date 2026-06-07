@@ -3,10 +3,10 @@
 ## Current Slice
 
 The branch has moved beyond report-only scaffolding into measured modularity,
-contract-size, client-boundary, complexity reduction, and generated OpenAPI
-schema certification. The current baseline shows no C-or-worse complexity
-candidates, while GitHub feature-lane checks are being used asynchronously
-after each pushed slice.
+contract-size, client-boundary, runtime lifecycle hardening, complexity reduction,
+and generated OpenAPI schema certification. The current baseline shows no
+C-or-worse complexity candidates, while GitHub feature-lane checks are being
+used asynchronously after each pushed slice.
 
 ## Highest Priority Refactor Targets
 
@@ -24,9 +24,10 @@ after each pushed slice.
 2. Fail only new regressions: partially active through lint, typecheck,
    architecture gate, monetary-float guard, OpenAPI gate, focused tests, and
    GitHub feature lane checks.
-3. Enforce agreed thresholds: not complete; complexity is clean, OpenAPI
-   generation is actively gated, security deployment policy is documented and
-   tested, and observability operations evidence is governed, but file-size
-   and production telemetry thresholds still need final policy.
+3. Enforce agreed thresholds: partially complete; complexity and the 450-line
+   source-size ceiling are actively gated, OpenAPI generation is actively gated,
+   security deployment policy is documented and tested, and observability
+   operations evidence is governed, but production telemetry thresholds still
+   need final policy.
 4. Enterprise-readiness gates: not complete; final PR still needs healthy PR
    merge-gate CI plus current generated OpenAPI artifact and command evidence.
