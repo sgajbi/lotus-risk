@@ -13,11 +13,11 @@ completion claim.
 ## Generation Identity
 
 - Git branch: `feat/enterprise-risk-refactor-continuation`
-- Git commit: `2a8703fa528b488099b86564993c45e774649bf9`
+- Git commit: `09a199e642c11cb285efacc79d1f006d9edd9851`
 
 ## Current Code Size
 
-- Python source files under `src/`: 212
+- Python source files under `src/`: 213
 - Python test files under `tests/`: 103
 - Python packages under `src/`: 9
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
@@ -26,7 +26,6 @@ completion claim.
 
 | Path | Lines | Bytes |
 | --- | --- | --- |
-| src/app/enterprise_readiness.py | 336 | 11095 |
 | src/app/services/concentration/parsing.py | 322 | 11235 |
 | src/app/api_errors.py | 311 | 11604 |
 | src/app/services/rolling_engine.py | 310 | 10403 |
@@ -39,6 +38,7 @@ completion claim.
 | src/app/openapi_examples.py | 273 | 8965 |
 | src/app/services/drawdown_series.py | 271 | 8488 |
 | src/app/integrations/_downstream_client_profile.py | 268 | 7495 |
+| src/app/enterprise_readiness.py | 259 | 8103 |
 | src/app/services/concentration/simulation_resolver.py | 255 | 8549 |
 | src/app/integrations/performance_returns_series_async.py | 255 | 7747 |
 | src/app/services/drawdown_periods.py | 254 | 7963 |
@@ -96,12 +96,12 @@ All checks passed!
 - Ruff format check: passed
 
 ```text
-330 files already formatted
+331 files already formatted
 ```
 - Type checking: passed
 
 ```text
-Success: no issues found in 315 source files
+Success: no issues found in 316 source files
 ```
 - Unit coverage snapshot: passed
 
@@ -115,10 +115,10 @@ Success: no issues found in 315 source files
 ...
 src\app\services\rolling_stateful_inputs.py                   80      1     18      1    98%   102
 ------------------------------------------------------------------------------------------------------
-TOTAL                                                       6023     89   1026     73    98%
+TOTAL                                                       6039     91   1026     73    98%
 
 171 files skipped due to complete coverage.
-550 passed in 8.61s
+550 passed in 8.49s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -131,8 +131,8 @@ src\app\api_errors.py - A (48.80)
 src\app\app_factory.py - A (100.00)
 src\app\app_lifecycle.py - A (59.25)
 src\app\domain_data_products.py - A (49.24)
-src\app\enterprise_readiness.py - A (22.11)
-src\app\error_response.py - A (60.11)
+src\app\enterprise_authorization.py - A (36.76)
+src\app\enterprise_readiness.py - A (32.32)
 ...
 src\app\services\risk\metric_calculators.py - A (39.28)
 src\app\services\risk\metric_timing.py - A (100.00)
@@ -148,7 +148,7 @@ src\app\services\risk\__init__.py - A (100.00)
 - Dependency hygiene: passed
 
 ```text
-Scanning 212 files...
+Scanning 213 files...
 
 Success! No dependency issues found.
 ```
@@ -247,7 +247,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc1-503-UPSTREAM_UNAVAILABLE-transport]
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 
-550 tests collected in 1.61s
+550 tests collected in 1.62s
 ```
 - Import-linter report-only: passed
 

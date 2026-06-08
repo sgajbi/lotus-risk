@@ -108,3 +108,10 @@ module remains responsible for request construction, dependency calls, parsing, 
 Rolling benchmark alignment and benchmark-dependent series calculations for beta, tracking error,
 and information ratio now live in `rolling_benchmark_metric_series.py`. The original rolling metric
 module keeps the public dispatcher plus volatility, Sharpe, and maximum-drawdown calculations.
+
+## REF-DEC-017: Split Enterprise Authorization From Readiness Middleware
+
+Capability-rule parsing and write authorization now live in `enterprise_authorization.py`.
+`enterprise_readiness.py` keeps runtime validation, audit emission, redaction, payload-limit
+handling, and middleware assembly, and explicitly re-exports the previous authorization functions
+for compatibility.
