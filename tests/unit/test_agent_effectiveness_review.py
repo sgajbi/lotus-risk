@@ -43,3 +43,13 @@ def test_third_effectiveness_review_records_problem_details_and_modularity_evide
     assert "additive RFC 7807/problem-details compatibility" in text
     assert "service-hotspot extraction evidence" in text
     assert "problem-details metadata must remain additive" in text
+
+
+def test_fourth_effectiveness_review_records_recent_modularity_evidence() -> None:
+    text = REVIEW.read_text(encoding="utf-8")
+
+    assert "## 2026-06-08 Review 4" in text
+    assert "rolling period/source extraction" in text
+    assert "risk period-result extraction" in text
+    assert "risk benchmark-metric extraction" in text
+    assert "did not change repository responsibilities" in text

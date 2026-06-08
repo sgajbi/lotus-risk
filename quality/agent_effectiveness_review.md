@@ -37,3 +37,13 @@ decisions.
 | Documentation | Improved | API governance, risk analytics contract, upstream failure behavior, wiki governance, review ledger, and refactor decisions now capture additive RFC 7807/problem-details compatibility and service-hotspot extraction evidence. |
 | Repository context | Improved | `REPOSITORY-ENGINEERING-CONTEXT.md` now records that Lotus error-envelope compatibility and problem-details metadata must remain additive unless a versioned migration is introduced. |
 | Automation | No new gate | Existing `make check`, OpenAPI artifact/quality gates, source-size gate, baseline generation, and GitHub Feature Lane already cover the new error-contract and modularity evidence. |
+
+## 2026-06-08 Review 4
+
+| Area | Decision | Evidence / action |
+| --- | --- | --- |
+| Skill routing | No change | Backend delivery governance plus the codebase review ledger still cover the rolling, risk, API-error, security, and evidence-update slices without needing a narrower custom skill. |
+| Agent guidance | No change | The current instruction pack and review cadence continue to produce small pushed commits with local `make check` proof and asynchronous GitHub check review. |
+| Documentation | Improved | Review ledger, refactor decisions, generated baseline, and scorecard now capture rolling period/source extraction, risk period-result extraction, and risk benchmark-metric extraction. |
+| Repository context | No change | The recent slices refined internal service modularity but did not change repository responsibilities, canonical commands, runtime operations, or cross-app contracts. |
+| Automation | No new gate | Source-size, mypy, monetary-float, no-alias, OpenAPI, vocabulary, contract, baseline, and GitHub feature-lane gates already detect the relevant regressions from these extractions. |
