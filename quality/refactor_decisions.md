@@ -152,3 +152,10 @@ construction, request metadata, and supportability helpers. Per-period metric in
 benchmark observation accounting, and `RiskPeriodResult` assembly now live in `risk/period_results.py`.
 The orchestrator still exposes `build_period_results` for existing callers, but delegates the
 period-result semantics to the focused module.
+
+## REF-DEC-023: Split Risk Benchmark Metrics From Generic Helpers
+
+Benchmark-relative risk calculations for beta, tracking error, and information ratio now live in
+`risk/benchmark_metrics.py`, with numeric coercion isolated in `risk/numeric.py`. `risk/helpers.py`
+keeps compatibility aliases for existing internal characterization tests and callers, while
+`risk/metric_calculators.py` depends directly on the focused benchmark module.

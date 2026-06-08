@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from app.contracts.risk import RiskValue
+from app.services.risk import benchmark_metrics
 from app.services.risk import helpers as risk_helpers
 
 RiskMetricDetails = risk_helpers.RiskMetricDetails
@@ -39,7 +40,7 @@ def calculate_drawdown(*, drawdown_series: pd.Series) -> RiskValue:
     return RiskValue(
         value=(
             risk_helpers._as_number(drawdown_value)
-            if isinstance(drawdown_value, (int, float))
+            if isinstance(drawdown_value, (int, float))  # monetary-float-allow
             else None
         ),
         details=drawdown_data,
@@ -181,7 +182,7 @@ def resolve_benchmark_metric_value(
     aligned_benchmark_series: pd.Series,
     annual_factor: int,
 ) -> RiskValue:
-    value, details = risk_helpers._calculate_benchmark_metric(
+    value, details = benchmark_metrics.calculate_benchmark_metric(
         metric_name,
         aligned_portfolio_series,
         aligned_benchmark_series,

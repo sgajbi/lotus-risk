@@ -2,21 +2,26 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
-from math import sqrt
 from statistics import NormalDist
-from typing import SupportsFloat, cast
+from typing import cast
 
 import numpy as np
 import pandas as pd
 
+from app.services.risk.benchmark_metrics import (
+    BENCHMARK_METRICS,
+    RISK_METRICS_REQUIRING_BENCHMARK,
+    RiskMetricDetails,
+    beta as _beta,
+    calculate_benchmark_metric as _calculate_benchmark_metric,
+    information_ratio as _information_ratio,
+)
+from app.services.risk.numeric import as_number as _as_number
 from app.services.risk.period_resolution import (
     resolve_period,
     resolve_period_bounds,
 )
 
-RiskMetricDetails = dict[str, str | float | int | bool | None]
-
-RISK_METRICS_REQUIRING_BENCHMARK = {"BETA", "TRACKING_ERROR", "INFORMATION_RATIO"}
 RISK_METRICS_REQUIRING_RISK_FREE = {"SHARPE"}
 
 
@@ -26,10 +31,6 @@ class _DrawdownRecovery:
     is_recovered: bool
     days_to_recovery: int | None
     time_under_water_days: int
-
-
-def _as_number(number: SupportsFloat) -> float:
-    return float(number)
 
 
 def _resolve_period(
@@ -212,86 +213,27 @@ def _expected_shortfall(
     return _as_number(tail.mean())
 
 
-def _beta(portfolio: pd.Series, benchmark: pd.Series) -> tuple[float, RiskMetricDetails]:
-    covariance = np.cov(portfolio, benchmark, ddof=1)
-    denominator = covariance[1, 1]
-    if np.isclose(denominator, 0.0):
-        raise ValueError("Benchmark variance is zero")
-    covariance_pb = _as_number(covariance[0, 1])
-    benchmark_variance = _as_number(denominator)
-    return (
-        _as_number(covariance_pb / benchmark_variance),
-        {
-            "aligned_observation_count": int(portfolio.count()),
-            "portfolio_mean_return": _as_number(portfolio.mean() / 100),
-            "benchmark_mean_return": _as_number(benchmark.mean() / 100),
-            "covariance": covariance_pb,
-            "benchmark_variance": benchmark_variance,
-        },
-    )
-
-
-def _tracking_error(
-    portfolio: pd.Series, benchmark: pd.Series, annual_factor: int
-) -> tuple[float, RiskMetricDetails]:
-    active = portfolio - benchmark
-    active_std = _as_number(active.std(ddof=1))
-    annualized_tracking_error = _as_number(active_std * sqrt(annual_factor))
-    return (
-        annualized_tracking_error,
-        {
-            "aligned_observation_count": int(active.count()),
-            "annualization_factor": annual_factor,
-            "portfolio_mean_return": _as_number(portfolio.mean() / 100),
-            "benchmark_mean_return": _as_number(benchmark.mean() / 100),
-            "active_mean_return": _as_number(active.mean() / 100),
-            "active_volatility": active_std / 100,
-            "annualized_tracking_error": annualized_tracking_error / 100,
-        },
-    )
-
-
-def _information_ratio(
-    portfolio: pd.Series, benchmark: pd.Series, annual_factor: int
-) -> tuple[float, RiskMetricDetails]:
-    active = portfolio - benchmark
-    tracking_err = active.std(ddof=1)
-    if np.isclose(tracking_err, 0.0):
-        raise ValueError("Tracking error is zero")
-    active_mean = _as_number(active.mean() / 100)
-    tracking_error = _as_number(tracking_err / 100)
-    annualized_active_return = _as_number(active_mean * annual_factor)
-    annualized_tracking_error = _as_number(tracking_error * sqrt(annual_factor))
-    return (
-        _as_number((active.mean() / tracking_err) * sqrt(annual_factor)),
-        {
-            "aligned_observation_count": int(active.count()),
-            "annualization_factor": annual_factor,
-            "portfolio_mean_return": _as_number(portfolio.mean() / 100),
-            "benchmark_mean_return": _as_number(benchmark.mean() / 100),
-            "active_mean_return": active_mean,
-            "tracking_error": tracking_error,
-            "annualized_active_return": annualized_active_return,
-            "annualized_tracking_error": annualized_tracking_error,
-        },
-    )
-
-
-def _calculate_benchmark_metric(
-    metric_name: str, portfolio: pd.Series, benchmark: pd.Series, annual_factor: int
-) -> tuple[float, RiskMetricDetails]:
-    if metric_name == "BETA":
-        return _beta(portfolio, benchmark)
-    if metric_name == "TRACKING_ERROR":
-        return _tracking_error(portfolio, benchmark, annual_factor)
-    if metric_name == "INFORMATION_RATIO":
-        return _information_ratio(portfolio, benchmark, annual_factor)
-    raise ValueError(f"Unsupported benchmark metric: {metric_name}")
-
-
 def _require_data(series: pd.Series, minimum: int = 2) -> None:
     if len(series.dropna()) < minimum:
         raise ValueError("Insufficient data")
 
 
-BENCHMARK_METRICS = RISK_METRICS_REQUIRING_BENCHMARK
+__all__ = [
+    "BENCHMARK_METRICS",
+    "RISK_METRICS_REQUIRING_BENCHMARK",
+    "RISK_METRICS_REQUIRING_RISK_FREE",
+    "RiskMetricDetails",
+    "_annual_to_periodic",
+    "_as_number",
+    "_beta",
+    "_calculate_benchmark_metric",
+    "_calculate_var_by_method",
+    "_drawdown",
+    "_expected_shortfall",
+    "_information_ratio",
+    "_require_data",
+    "_resolve_period",
+    "_resolve_period_bounds",
+    "_resample_returns",
+    "_to_log_returns",
+]
