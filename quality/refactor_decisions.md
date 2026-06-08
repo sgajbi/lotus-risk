@@ -167,3 +167,11 @@ fetching, issuer enrichment, upstream error mapping, and non-empty history valid
 group-key resolution, decimal market-value coercion, exposure aggregation, and `ExposurePoint`
 construction now live in `attribution_exposure_points.py`, with compatibility exports preserved from
 `attribution_exposure_history.py` for the stateful mode adapter tests and internal callers.
+
+## REF-DEC-025: Split Attribution Set Results From Decomposition Orchestration
+
+`attribution_decomposition.py` keeps `AttributionSetBuildRequest`, unsupported metric filtering,
+calculation input precalculation, and the public `build_attribution_set` entry point. Empty
+attribution-set construction, contributor DTO mapping, reconciled result assembly, and calculated
+result assembly now live in `attribution_set_results.py`, keeping attribution math behavior
+unchanged while making result-shape construction independently reviewable.
