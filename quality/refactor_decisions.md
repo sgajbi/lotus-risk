@@ -102,3 +102,9 @@ Rolling stateful input resolution now delegates risk-free/benchmark requirement 
 reporting-currency resolution to `rolling_stateful_dependency_selection.py`. The source-resolution
 module remains responsible for request construction, dependency calls, parsing, and final
 `ResolvedStatefulRollingInputs` assembly.
+
+## REF-DEC-016: Split Rolling Benchmark Metric Series From Generic Rolling Metrics
+
+Rolling benchmark alignment and benchmark-dependent series calculations for beta, tracking error,
+and information ratio now live in `rolling_benchmark_metric_series.py`. The original rolling metric
+module keeps the public dispatcher plus volatility, Sharpe, and maximum-drawdown calculations.

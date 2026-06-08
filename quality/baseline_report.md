@@ -13,11 +13,11 @@ completion claim.
 ## Generation Identity
 
 - Git branch: `feat/enterprise-risk-refactor-continuation`
-- Git commit: `a41cce803ac2445bb2f62a7e26e5a409080321f0`
+- Git commit: `2a8703fa528b488099b86564993c45e774649bf9`
 
 ## Current Code Size
 
-- Python source files under `src/`: 211
+- Python source files under `src/`: 212
 - Python test files under `tests/`: 103
 - Python packages under `src/`: 9
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
@@ -26,7 +26,6 @@ completion claim.
 
 | Path | Lines | Bytes |
 | --- | --- | --- |
-| src/app/services/rolling_metric_series.py | 361 | 11066 |
 | src/app/enterprise_readiness.py | 336 | 11095 |
 | src/app/services/concentration/parsing.py | 322 | 11235 |
 | src/app/api_errors.py | 311 | 11604 |
@@ -46,6 +45,7 @@ completion claim.
 | src/app/services/scenario_engine.py | 253 | 8239 |
 | src/app/services/concentration/stateless_resolver.py | 246 | 8471 |
 | src/app/services/concentration/response_builder.py | 244 | 9409 |
+| src/app/services/attribution_engine.py | 244 | 7513 |
 
 ### Largest Functions And Classes
 
@@ -96,12 +96,12 @@ All checks passed!
 - Ruff format check: passed
 
 ```text
-329 files already formatted
+330 files already formatted
 ```
 - Type checking: passed
 
 ```text
-Success: no issues found in 314 source files
+Success: no issues found in 315 source files
 ```
 - Unit coverage snapshot: passed
 
@@ -115,10 +115,10 @@ Success: no issues found in 314 source files
 ...
 src\app\services\rolling_stateful_inputs.py                   80      1     18      1    98%   102
 ------------------------------------------------------------------------------------------------------
-TOTAL                                                       6011     89   1026     73    98%
+TOTAL                                                       6023     89   1026     73    98%
 
 171 files skipped due to complete coverage.
-549 passed in 9.23s
+550 passed in 8.61s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -148,7 +148,7 @@ src\app\services\risk\__init__.py - A (100.00)
 - Dependency hygiene: passed
 
 ```text
-Scanning 211 files...
+Scanning 212 files...
 
 Success! No dependency issues found.
 ```
@@ -238,16 +238,16 @@ needs current CI status, generated OpenAPI artifact evidence, and reviewer-ready
 tests/unit/test_agent_effectiveness_review.py::test_agent_effectiveness_review_records_all_required_areas
 tests/unit/test_agent_effectiveness_review.py::test_codebase_review_playbook_requires_recurring_effectiveness_review
 tests/unit/test_agent_effectiveness_review.py::test_second_effectiveness_review_records_configuration_and_context_improvements
+tests/unit/test_agent_effectiveness_review.py::test_third_effectiveness_review_records_problem_details_and_modularity_evidence
 tests/unit/test_app_factory.py::test_create_app_builds_independent_service_instance
 tests/unit/test_app_factory.py::test_create_app_registers_risk_analytics_routes
-tests/unit/test_app_factory.py::test_create_app_fails_closed_for_incomplete_enterprise_bank_posture
 ...
 tests/unit/test_upstream_errors.py::test_classify_upstream_http_error_matrix[504-502-UPSTREAM_FAILURE-upstream_failure-True]
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc0-504-UPSTREAM_TIMEOUT-timeout]
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc1-503-UPSTREAM_UNAVAILABLE-transport]
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 
-549 tests collected in 1.58s
+550 tests collected in 1.61s
 ```
 - Import-linter report-only: passed
 

@@ -9,6 +9,9 @@ import pandas as pd
 from app.contracts.rolling import (
     ROLLING_BENCHMARK_METRICS,
 )
+from app.services.rolling_benchmark_metric_series import (
+    calculate_rolling_benchmark_metric_values,
+)
 from app.services.rolling_metric_outputs import (
     rolling_metric_series_context as rolling_metric_series_context,
     rolling_metric_series_points as rolling_metric_series_points,
@@ -26,13 +29,6 @@ class RollingMetricCalculation:
     quality_flags: list[str]
     aligned_benchmark_series_count: int
     aligned_risk_free_series_count: int
-
-
-@dataclass(frozen=True)
-class _AlignedBenchmarkSeries:
-    portfolio: pd.Series
-    benchmark: pd.Series
-    observation_count: int
 
 
 @dataclass(frozen=True)
@@ -110,15 +106,19 @@ def _rolling_benchmark_calculation(
     metric_name: str,
     context: _RollingMetricCalculationContext,
 ) -> RollingMetricCalculation:
-    metric_values, flags, aligned_count = _rolling_benchmark_metrics(
+    result = calculate_rolling_benchmark_metric_values(
         metric_name,
-        context.portfolio_decimal,
-        context.benchmark_decimal,
+        portfolio_decimal=context.portfolio_decimal,
+        benchmark_decimal=context.benchmark_decimal,
         window_length=context.window_length,
         annualization_basis=context.annualization_basis,
         min_obs=context.min_obs,
     )
-    return _with_benchmark_count(metric_values, flags, aligned_count)
+    return _with_benchmark_count(
+        result.values,
+        result.quality_flags,
+        result.aligned_benchmark_series_count,
+    )
 
 
 def _rolling_max_drawdown_calculation(
@@ -203,146 +203,6 @@ def _rolling_sharpe(
     if roll_std.dropna().eq(0).any():
         flags.append("metric:ROLLING_SHARPE:zero_volatility_window")
     return sharpe, flags, int(aligned.shape[0])
-
-
-def _aligned_portfolio_benchmark(
-    portfolio_decimal: pd.Series,
-    benchmark_decimal: pd.Series,
-) -> pd.DataFrame:
-    return pd.merge(
-        portfolio_decimal.to_frame("portfolio"),
-        benchmark_decimal.to_frame("benchmark"),
-        left_index=True,
-        right_index=True,
-        how="inner",
-    )
-
-
-def _aligned_benchmark_series(aligned: pd.DataFrame) -> _AlignedBenchmarkSeries:
-    return _AlignedBenchmarkSeries(
-        portfolio=aligned["portfolio"],
-        benchmark=aligned["benchmark"],
-        observation_count=int(aligned.shape[0]),
-    )
-
-
-def _active_rolling_returns(
-    portfolio: pd.Series,
-    benchmark: pd.Series,
-) -> pd.Series:
-    return portfolio - benchmark
-
-
-def _rolling_tracking_error(
-    portfolio: pd.Series,
-    benchmark: pd.Series,
-    *,
-    window_length: int,
-    annualization_basis: int,
-    min_obs: int,
-) -> tuple[pd.Series, list[str]]:
-    active = _active_rolling_returns(portfolio, benchmark)
-    result = active.rolling(window=window_length, min_periods=min_obs).std(ddof=1) * sqrt(
-        annualization_basis
-    )
-    return result, []
-
-
-def _rolling_information_ratio(
-    portfolio: pd.Series,
-    benchmark: pd.Series,
-    *,
-    window_length: int,
-    annualization_basis: int,
-    min_obs: int,
-) -> tuple[pd.Series, list[str]]:
-    active = _active_rolling_returns(portfolio, benchmark)
-    roll_mean = active.rolling(window=window_length, min_periods=min_obs).mean()
-    roll_std = active.rolling(window=window_length, min_periods=min_obs).std(ddof=1)
-    result = (roll_mean / roll_std) * sqrt(annualization_basis)
-    result = result.replace([np.inf, -np.inf], np.nan)
-    flags: list[str] = []
-    if roll_std.dropna().eq(0).any():
-        flags.append("metric:ROLLING_INFORMATION_RATIO:zero_tracking_error_window")
-    return result, flags
-
-
-def _rolling_beta_metric(
-    portfolio: pd.Series,
-    benchmark: pd.Series,
-    *,
-    window_length: int,
-    min_obs: int,
-) -> tuple[pd.Series, list[str]]:
-    roll_cov = portfolio.rolling(window=window_length, min_periods=min_obs).cov(benchmark)
-    roll_var = benchmark.rolling(window=window_length, min_periods=min_obs).var(ddof=1)
-    result = roll_cov / roll_var
-    result = result.replace([np.inf, -np.inf], np.nan)
-    flags: list[str] = []
-    if roll_var.dropna().eq(0).any():
-        flags.append("metric:ROLLING_BETA:benchmark_variance_zero")
-    return result, flags
-
-
-def _calculate_aligned_rolling_benchmark_metric(
-    metric_name: str,
-    aligned_series: _AlignedBenchmarkSeries,
-    *,
-    window_length: int,
-    annualization_basis: int,
-    min_obs: int,
-) -> tuple[pd.Series, list[str]]:
-    if metric_name == "ROLLING_TRACKING_ERROR":
-        return _rolling_tracking_error(
-            aligned_series.portfolio,
-            aligned_series.benchmark,
-            window_length=window_length,
-            annualization_basis=annualization_basis,
-            min_obs=min_obs,
-        )
-
-    if metric_name == "ROLLING_INFORMATION_RATIO":
-        return _rolling_information_ratio(
-            aligned_series.portfolio,
-            aligned_series.benchmark,
-            window_length=window_length,
-            annualization_basis=annualization_basis,
-            min_obs=min_obs,
-        )
-
-    if metric_name == "ROLLING_BETA":
-        return _rolling_beta_metric(
-            aligned_series.portfolio,
-            aligned_series.benchmark,
-            window_length=window_length,
-            min_obs=min_obs,
-        )
-
-    raise ValueError(f"Unsupported rolling benchmark metric: {metric_name}")
-
-
-def _rolling_benchmark_metrics(
-    metric_name: str,
-    portfolio_decimal: pd.Series,
-    benchmark_decimal: pd.Series,
-    *,
-    window_length: int,
-    annualization_basis: int,
-    min_obs: int,
-) -> tuple[pd.Series, list[str], int]:
-    aligned = _aligned_portfolio_benchmark(portfolio_decimal, benchmark_decimal)
-    if aligned.empty:
-        return pd.Series(dtype="float64"), [f"metric:{metric_name}:alignment_empty"], 0
-
-    aligned_series = _aligned_benchmark_series(aligned)
-    result, flags = _calculate_aligned_rolling_benchmark_metric(
-        metric_name,
-        aligned_series,
-        window_length=window_length,
-        annualization_basis=annualization_basis,
-        min_obs=min_obs,
-    )
-    return result, flags, aligned_series.observation_count
 
 
 def _rolling_max_drawdown_metric(
