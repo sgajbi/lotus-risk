@@ -115,3 +115,10 @@ Capability-rule parsing and write authorization now live in `enterprise_authoriz
 `enterprise_readiness.py` keeps runtime validation, audit emission, redaction, payload-limit
 handling, and middleware assembly, and explicitly re-exports the previous authorization functions
 for compatibility.
+
+## REF-DEC-018: Split Concentration Issuer Mapping From Position Parsing
+
+Concentration issuer mapping, issuer-enrichment extraction, and issuer-weight aggregation now live
+in `concentration/issuer_mapping.py`. `concentration/parsing.py` keeps position parsing,
+display-name application, primitive coercion, and valuation-context extraction, with explicit
+compatibility exports for existing internal callers.
