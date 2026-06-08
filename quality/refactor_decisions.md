@@ -159,3 +159,11 @@ Benchmark-relative risk calculations for beta, tracking error, and information r
 `risk/benchmark_metrics.py`, with numeric coercion isolated in `risk/numeric.py`. `risk/helpers.py`
 keeps compatibility aliases for existing internal characterization tests and callers, while
 `risk/metric_calculators.py` depends directly on the focused benchmark module.
+
+## REF-DEC-024: Split Attribution Exposure Points From Stateful Fetch Orchestration
+
+Stateful attribution exposure-history orchestration still owns lotus-core position-timeseries
+fetching, issuer enrichment, upstream error mapping, and non-empty history validation. Deterministic
+group-key resolution, decimal market-value coercion, exposure aggregation, and `ExposurePoint`
+construction now live in `attribution_exposure_points.py`, with compatibility exports preserved from
+`attribution_exposure_history.py` for the stateful mode adapter tests and internal callers.
