@@ -13,7 +13,7 @@ completion claim.
 ## Generation Identity
 
 - Git branch: `feat/enterprise-risk-refactor-continuation`
-- Git commit: `7bbae5acf586747ea501d86f9c4db4c1ff668f1a`
+- Git commit: `62e70779203ac2bd1cb8b5dccba6abe923bae028`
 
 ## Current Code Size
 
@@ -26,7 +26,6 @@ completion claim.
 
 | Path | Lines | Bytes |
 | --- | --- | --- |
-| src/app/api_errors.py | 311 | 11604 |
 | src/app/services/rolling_engine.py | 310 | 10403 |
 | src/app/services/rolling_stateful_inputs.py | 302 | 10592 |
 | src/app/services/risk/calculation_orchestrator.py | 301 | 9984 |
@@ -43,6 +42,7 @@ completion claim.
 | src/app/services/drawdown_periods.py | 254 | 7963 |
 | src/app/services/scenario_engine.py | 253 | 8239 |
 | src/app/services/concentration/stateless_resolver.py | 246 | 8471 |
+| src/app/api_errors.py | 246 | 7863 |
 | src/app/services/concentration/response_builder.py | 244 | 9409 |
 | src/app/services/attribution_engine.py | 244 | 7513 |
 | src/app/services/rolling_risk_free_dependency.py | 242 | 7826 |
@@ -115,10 +115,10 @@ Success: no issues found in 317 source files
 ...
 src\app\services\rolling_stateful_inputs.py                   80      1     18      1    98%   102
 ------------------------------------------------------------------------------------------------------
-TOTAL                                                       6050     91   1026     73    98%
+TOTAL                                                       6061     91   1028     73    98%
 
 171 files skipped due to complete coverage.
-550 passed in 8.73s
+550 passed in 8.53s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -127,7 +127,7 @@ TOTAL                                                       6050     91   1026  
 - Maintainability index summary: passed
 
 ```text
-src\app\api_errors.py - A (48.80)
+src\app\api_errors.py - A (46.15)
 src\app\app_factory.py - A (100.00)
 src\app\app_lifecycle.py - A (59.25)
 src\app\domain_data_products.py - A (49.24)
@@ -247,7 +247,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc1-503-UPSTREAM_UNAVAILABLE-transport]
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 
-550 tests collected in 1.59s
+550 tests collected in 1.61s
 ```
 - Import-linter report-only: passed
 

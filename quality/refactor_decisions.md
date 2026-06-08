@@ -122,3 +122,9 @@ Concentration issuer mapping, issuer-enrichment extraction, and issuer-weight ag
 in `concentration/issuer_mapping.py`. `concentration/parsing.py` keeps position parsing,
 display-name application, primitive coercion, and valuation-context extraction, with explicit
 compatibility exports for existing internal callers.
+
+## REF-DEC-019: Generate Standard Error OpenAPI Examples From Builders
+
+Standard OpenAPI error response metadata still lives in `api_errors.py`, but repeated nested error
+example dictionaries now flow through small helper builders. This keeps the additive
+problem-details fields and Lotus envelope synchronized across all standard examples.
