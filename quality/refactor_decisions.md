@@ -128,3 +128,11 @@ compatibility exports for existing internal callers.
 Standard OpenAPI error response metadata still lives in `api_errors.py`, but repeated nested error
 example dictionaries now flow through small helper builders. This keeps the additive
 problem-details fields and Lotus envelope synchronized across all standard examples.
+
+## REF-DEC-020: Split Rolling Period Results From Response Orchestration
+
+`calculate_rolling_metrics` keeps the public rolling analytics orchestration, empty-response
+handling, supportability recording, and response metadata assembly. Per-period result construction,
+including insufficient-data responses, dependency count/context calculation, and window aggregate
+mapping, now lives in `rolling_period_results.py` so rolling period semantics can be reviewed and
+tested independently from the response envelope.
