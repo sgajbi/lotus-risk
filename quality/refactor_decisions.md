@@ -136,3 +136,11 @@ handling, supportability recording, and response metadata assembly. Per-period r
 including insufficient-data responses, dependency count/context calculation, and window aggregate
 mapping, now lives in `rolling_period_results.py` so rolling period semantics can be reviewed and
 tested independently from the response envelope.
+
+## REF-DEC-021: Split Rolling Stateful Source Responses From Input Assembly
+
+Rolling stateful input assembly keeps dependency selection, upstream payload parsing, risk-free
+dependency reconciliation, and final `ResolvedStatefulRollingInputs` construction. Returns-series
+request construction, explicit window extraction, explicit risk-free request construction, and
+concurrent source/risk-free fetch behavior now live in `rolling_stateful_source_responses.py` while
+the previous compatibility exports remain available through `rolling_stateful_inputs.py`.
