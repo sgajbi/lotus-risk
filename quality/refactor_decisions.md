@@ -144,3 +144,11 @@ dependency reconciliation, and final `ResolvedStatefulRollingInputs` constructio
 request construction, explicit window extraction, explicit risk-free request construction, and
 concurrent source/risk-free fetch behavior now live in `rolling_stateful_source_responses.py` while
 the previous compatibility exports remain available through `rolling_stateful_inputs.py`.
+
+## REF-DEC-022: Split Risk Period Results From Calculation Orchestration
+
+`risk/calculation_orchestrator.py` keeps annualization, periodic-rate resolution, return-frame
+construction, request metadata, and supportability helpers. Per-period metric invocation,
+benchmark observation accounting, and `RiskPeriodResult` assembly now live in `risk/period_results.py`.
+The orchestrator still exposes `build_period_results` for existing callers, but delegates the
+period-result semantics to the focused module.
