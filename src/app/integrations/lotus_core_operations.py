@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+import httpx
+
 from app.integrations._downstream_client_profile import DownstreamClientProfile
 from app.integrations.lotus_core_transport import execute_lotus_core_json_request
 
@@ -23,6 +25,7 @@ def build_simulation_session_payload(
 async def execute_create_simulation_session_request(
     *,
     profile: DownstreamClientProfile,
+    client: httpx.AsyncClient | None,
     base_url: str,
     portfolio_id: str,
     ttl_hours: int | None,
@@ -31,6 +34,7 @@ async def execute_create_simulation_session_request(
 ) -> dict[str, Any]:
     return await execute_lotus_core_json_request(
         profile=profile,
+        client=client,
         base_url=base_url,
         method="POST",
         path="/simulation-sessions",
@@ -46,6 +50,7 @@ async def execute_create_simulation_session_request(
 async def execute_add_simulation_changes_request(
     *,
     profile: DownstreamClientProfile,
+    client: httpx.AsyncClient | None,
     base_url: str,
     session_id: str,
     changes: list[dict[str, Any]],
@@ -53,6 +58,7 @@ async def execute_add_simulation_changes_request(
 ) -> dict[str, Any]:
     return await execute_lotus_core_json_request(
         profile=profile,
+        client=client,
         base_url=base_url,
         method="POST",
         path=f"/simulation-sessions/{session_id}/changes",
@@ -64,6 +70,7 @@ async def execute_add_simulation_changes_request(
 async def execute_core_snapshot_request(
     *,
     profile: DownstreamClientProfile,
+    client: httpx.AsyncClient | None,
     base_url: str,
     portfolio_id: str,
     request_payload: dict[str, Any],
@@ -71,6 +78,7 @@ async def execute_core_snapshot_request(
 ) -> dict[str, Any]:
     return await execute_lotus_core_json_request(
         profile=profile,
+        client=client,
         base_url=base_url,
         method="POST",
         path=f"/integration/portfolios/{portfolio_id}/core-snapshot",
@@ -82,12 +90,14 @@ async def execute_core_snapshot_request(
 async def execute_instrument_enrichment_request(
     *,
     profile: DownstreamClientProfile,
+    client: httpx.AsyncClient | None,
     base_url: str,
     security_ids: list[str],
     correlation_id: str | None,
 ) -> dict[str, Any]:
     return await execute_lotus_core_json_request(
         profile=profile,
+        client=client,
         base_url=base_url,
         method="POST",
         path="/integration/instruments/enrichment-bulk",
@@ -99,6 +109,7 @@ async def execute_instrument_enrichment_request(
 async def execute_position_analytics_timeseries_request(
     *,
     profile: DownstreamClientProfile,
+    client: httpx.AsyncClient | None,
     base_url: str,
     portfolio_id: str,
     request_payload: dict[str, Any],
@@ -106,6 +117,7 @@ async def execute_position_analytics_timeseries_request(
 ) -> dict[str, Any]:
     return await execute_lotus_core_json_request(
         profile=profile,
+        client=client,
         base_url=base_url,
         method="POST",
         path=f"/integration/portfolios/{portfolio_id}/analytics/position-timeseries",
@@ -117,12 +129,14 @@ async def execute_position_analytics_timeseries_request(
 async def execute_risk_free_series_request(
     *,
     profile: DownstreamClientProfile,
+    client: httpx.AsyncClient | None,
     base_url: str,
     request_payload: dict[str, Any],
     correlation_id: str | None,
 ) -> dict[str, Any]:
     return await execute_lotus_core_json_request(
         profile=profile,
+        client=client,
         base_url=base_url,
         method="POST",
         path="/integration/reference/risk-free-series",
@@ -134,6 +148,7 @@ async def execute_risk_free_series_request(
 async def execute_risk_free_coverage_request(
     *,
     profile: DownstreamClientProfile,
+    client: httpx.AsyncClient | None,
     base_url: str,
     currency: str,
     request_payload: dict[str, Any],
@@ -141,6 +156,7 @@ async def execute_risk_free_coverage_request(
 ) -> dict[str, Any]:
     return await execute_lotus_core_json_request(
         profile=profile,
+        client=client,
         base_url=base_url,
         method="POST",
         path=f"/integration/reference/risk-free-series/coverage?currency={currency}",

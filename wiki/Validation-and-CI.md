@@ -78,6 +78,10 @@ They protect:
 - `REPOSITORY-ENGINEERING-CONTEXT.md`
 - `quality/baseline_report.md`
 - `quality/quality_scorecard.md`
+
+The active `make source-size-gate` prevents new Python source monoliths above the governed
+450-line ceiling. It runs in local `make check`/`make ci` and the Feature, PR Merge, and Main
+Releasability lanes.
 - `docs/operations/development-workflow-and-ci-strategy.md`
 - `docs/domain-apis/endpoint-matrix.md`
 - `docs/domain-apis/risk-product-surface-alignment.md`

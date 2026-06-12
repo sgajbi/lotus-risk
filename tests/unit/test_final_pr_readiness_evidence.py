@@ -4,6 +4,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 READINESS_DOC = REPO_ROOT / "quality" / "final_pr_readiness.md"
 OPENAPI_ARTIFACT_EVIDENCE_DOC = REPO_ROOT / "quality" / "openapi_artifact_evidence.md"
+FINAL_PR_BODY_DOC = REPO_ROOT / "quality" / "final_pr_body.md"
 
 
 def test_final_pr_readiness_pack_contains_required_pr_sections() -> None:
@@ -32,8 +33,16 @@ def test_final_pr_readiness_pack_pins_evidence_commands_and_risks() -> None:
     text = READINESS_DOC.read_text(encoding="utf-8")
 
     required_terms = (
+        "feat/enterprise-risk-refactor-continuation",
         "quality/quality_scorecard.md",
         "quality/openapi_artifact_evidence.md",
+        "553",
+        "103",
+        "244",
+        "347",
+        "50",
+        "quality/baseline_report.md",
+        "regenerated immediately before final PR assembly",
         "make openapi-artifact-gate",
         "output/openapi/lotus-risk.openapi.json",
         "make quality-baseline",
@@ -41,6 +50,10 @@ def test_final_pr_readiness_pack_pins_evidence_commands_and_risks() -> None:
         "Quality Baseline",
         "Remote Feature Lane",
         "Pull Request Merge Gate",
+        "Sync-RepoWikis.ps1 -CheckOnly -Repository lotus-risk",
+        "Sync-RepoWikis.ps1 -Publish",
+        "Operations-Runbook.md",
+        "Security-and-Governance.md",
         "gateway-backed token-validation evidence",
         "production telemetry",
         "not a completion claim",
@@ -61,6 +74,38 @@ def test_openapi_artifact_evidence_manifest_records_attachment_metadata() -> Non
         "Artifact size bytes",
         "Path count",
         "Operation count",
+        "feat/enterprise-risk-refactor-continuation",
+    )
+
+    for term in required_terms:
+        assert term in text
+
+
+def test_final_pr_body_covers_enterprise_refactor_pr_requirements() -> None:
+    text = FINAL_PR_BODY_DOC.read_text(encoding="utf-8")
+
+    required_terms = (
+        "# Summary",
+        "# Why",
+        "# Refactoring Approach",
+        "# Before/After Scorecard",
+        "# Architecture Improvements",
+        "# API And OpenAPI Improvements",
+        "# Testing Improvements",
+        "# Security Improvements",
+        "# Observability Improvements",
+        "# Documentation Improvements",
+        "# Dependency Changes And Justification",
+        "# Behavior, Migration, And Configuration Notes",
+        "# Validation Evidence",
+        "# Known Limitations",
+        "# Follow-Up Backlog",
+        "# Review Focus Areas",
+        "quality/quality_scorecard.md",
+        "quality/openapi_artifact_evidence.md",
+        "Known vulnerabilities: 0",
+        "Pull Request Merge Gate",
+        "Sync-RepoWikis.ps1 -Publish -Repository lotus-risk",
     )
 
     for term in required_terms:

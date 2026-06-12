@@ -42,6 +42,11 @@ In Docker Compose, the service uses canonical hostnames mapped back to the host 
 1. `performance.dev.lotus`
 2. `core-control.dev.lotus`
 
+The FastAPI lifespan owns one reusable HTTP connection pool for each upstream dependency. On
+shutdown, the service enters draining posture and closes those owned pools. A production ASGI
+runtime must keep lifespan support enabled so configured keepalive and connection limits are
+effective.
+
 ## Common Misconfiguration
 
 The most common local configuration mistake is wrong upstream routing.
@@ -59,6 +64,10 @@ configure primary key and secret-rotation evidence, configure endpoint capabilit
 ingress/proxy plus ASGI/server request body limits with `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES`.
 Missing ingress/server body-limit enforcement for requests without trustworthy `Content-Length` is
 a deployment-readiness failure.
+
+With `ENTERPRISE_ENFORCE_RUNTIME_CONFIG=true`, startup fails closed when the in-process bank posture
+is incomplete. Resolve every bounded `enterprise_runtime_config_invalid:<issue-codes>` entry before
+promoting the deployment.
 
 ## Live Validation Baseline
 
@@ -78,6 +87,10 @@ Use:
 3. container logs,
 4. `docs/operations/canonical-local-upstream-urls.md`
 5. `docs/operations/live-risk-validation-matrix.md`
+
+Request logs expose a structured `request_observation` event with bounded service, method, path,
+status, correlation, trace, latency, and risk fields. Query strings and request/response bodies are
+deliberately excluded.
 
 For risk analytics responses, `metadata.calculation_supportability` is emitted by `risk/calculate`,
 drawdown, rolling metrics, historical attribution, and concentration. Use it before inferring UI

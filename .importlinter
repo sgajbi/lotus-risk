@@ -11,6 +11,15 @@ forbidden_modules =
     fastapi
     starlette
 
+[importlinter:contract:services_do_not_depend_on_prometheus]
+name = Calculation services stay independent from Prometheus
+type = forbidden
+source_modules =
+    app.services
+forbidden_modules =
+    prometheus_client
+allow_indirect_imports = True
+
 [importlinter:contract:contracts_do_not_depend_on_infrastructure]
 name = DTO contracts do not import infrastructure clients
 type = forbidden

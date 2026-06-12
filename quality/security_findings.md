@@ -1,0 +1,15 @@
+# Lotus Risk Security Findings
+
+This register records security findings for the enterprise refactor continuation. Findings require
+code and test evidence before closure.
+
+| Finding ID | Class | Status | Evidence | Required action |
+| --- | --- | --- | --- | --- |
+| SEC-REF-001 | Runtime identity validation evidence | Open, platform-dependent | `quality/refactor_health_report.md`; `docs/security-deployment-policy.md` | Add gateway-backed token-validation and final runtime configuration proof before release promotion. |
+| SEC-REF-002 | Untrusted request-correlation and trace headers | Hardened | Correlation middleware previously reflected and logged unbounded caller-supplied correlation IDs and preserved malformed or mismatched `traceparent` values. | Bounded correlation IDs to a safe character set and length; validate W3C trace IDs/traceparent; replace malformed, zero, or mismatched values; retain focused negative tests. |
+| SEC-REF-003 | Sensitive-data logging and metric labels | Reviewing | Existing redaction and bounded-label tests; `make security-audit` baseline passes | Review negative coverage across downstream failures and operational diagnostics; add focused tests for any uncovered path. |
+| SEC-REF-004 | Dependency and source vulnerability posture | Hardened | `make security-audit`; generated current-state baseline reports zero known dependency vulnerabilities and no high-severity Bandit findings | Keep active in all delivery lanes and document any future exception with owner and expiry. |
+| SEC-REF-005 | Raw downstream error exposure | Hardened | HTTP classifiers embedded raw upstream body detail and transport exception text in client-facing messages. | Client-facing messages now contain bounded dependency, operation, status, and category context only; raw detail extraction was removed as dead and unsafe behavior. |
+| SEC-REF-006 | Sensitive API response caching and early-response header drift | Hardened | Normal responses carried policy version only; early authorization/payload-limit responses skipped it, and responses did not explicitly disable caching or MIME sniffing. | Apply policy-version, no-store, no-referrer, and nosniff headers to every enterprise middleware response path. |
+| SEC-REF-007 | Unsafe downstream base-URL configuration | Hardened | Upstream URL resolution accepted malformed schemes, embedded credentials, query strings, fragments, and invalid ports until request time. | Centralize downstream URL validation, fail fast without echoing rejected values, document runtime settings, and retain focused negative tests. |
+| SEC-REF-008 | Enterprise runtime and authorization mode did not fully fail closed | Hardened | `ENTERPRISE_ENFORCE_RUNTIME_CONFIG=true` could pass while authorization and required explicit bank settings were absent; authorization-enforced write paths without a capability rule were allowed. | Fail application construction unless the in-process bank posture is complete; accept only well-formed write capability rules; deny unmapped writes with `missing_capability_rule`. |

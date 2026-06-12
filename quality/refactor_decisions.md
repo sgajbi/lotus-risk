@@ -1,0 +1,320 @@
+# Lotus Risk Refactor Decisions
+
+## REF-DEC-001: Preserve The Initial Baseline By Commit Identity
+
+The immutable enterprise-refactor baseline is commit `3254774`. Generated
+`quality/baseline_report.md` represents current state and must identify its branch, commit, and
+working-tree posture. This prevents routine regeneration from silently rewriting the "before"
+evidence.
+
+## REF-DEC-002: Continue Incrementally From Current Main
+
+The earlier refactor series is already merged into `main`. This continuation will not recreate or
+rewrite that history. New work will target remaining measurable gaps with small, reviewable commits.
+
+## REF-DEC-003: Do Not Invent A Layer Before A Real Boundary Exists
+
+Current routers, services, contracts, dependencies, and integrations already provide useful
+boundaries. A separate application/domain/ports package will be introduced only where it removes
+concrete coupling and can be enforced with architecture tests.
+
+## REF-DEC-004: Calculation Services Use An Observability Port
+
+Risk calculation services accept a narrow metric-duration observer callable. Prometheus metric
+construction and registration remain in `app.observability`. Import-linter prohibits direct
+`prometheus_client` imports from `app.services`, keeping calculations testable without the concrete
+metrics backend while preserving runtime metric behavior.
+
+## REF-DEC-005: Treat Correlation And Trace Headers As Untrusted Input
+
+Inbound correlation IDs are preserved only when they use a bounded safe character set. Inbound trace
+IDs and `traceparent` values are preserved only when they satisfy the supported W3C format and use a
+non-zero trace ID; malformed, mismatched, or unbounded values are replaced. This intentionally
+hardens response-header reflection and structured request logging without changing valid callers.
+
+## REF-DEC-006: Client-Facing Upstream Errors Are Bounded
+
+Upstream error envelopes preserve dependency, operation, status, category, retryability, and
+correlation context, but never include raw downstream response bodies or transport exception text.
+This intentionally changes unsafe error-message detail while preserving the governed error codes
+and status behavior used by clients.
+
+## REF-DEC-007: Sensitive Risk API Responses Are Non-Cacheable
+
+All responses passing through enterprise middleware, including early authorization and payload-limit
+failures, carry the active policy version and conservative `no-store`, `no-referrer`, and `nosniff`
+headers. This prevents sensitive analytics or error context from being cached and keeps security
+posture consistent across success and rejection paths.
+
+## REF-DEC-008: Request Observations Are Structured And Bounded
+
+Request middleware emits a structured `request_observation` log event rather than an interpolated
+text line. The event includes bounded operational fields and deliberately excludes query strings,
+headers, and request/response bodies so production support can parse events without increasing
+sensitive-data exposure.
+
+## REF-DEC-009: Prevent New Source Monoliths At 450 Lines
+
+All current Python source modules are below 402 lines. A 450-line active regression gate leaves
+reasonable room for cohesive maintenance while preventing new monolithic modules. The threshold may
+be reduced only after further behavior-preserving extraction proves a lower limit is practical.
+
+## REF-DEC-010: Own Downstream HTTP Pools For The Application Lifespan
+
+FastAPI lifespan startup creates one reusable HTTP client for `lotus-core` and one for
+`lotus-performance`, making the existing connection and keepalive limits effective across
+requests. Shutdown marks the service draining and closes only the pools it owns. Directly
+constructed or explicitly injected adapters retain their existing compatibility behavior.
+
+## REF-DEC-011: Fail Fast On Unsafe Downstream Base URLs
+
+Both upstream adapters use one shared base-URL resolver. It accepts valid HTTP(S) service URLs,
+including approved path prefixes, but rejects malformed hosts or ports, embedded credentials,
+query strings, fragments, whitespace, and control characters. Validation errors identify only the
+setting name and policy violation so a credential-bearing value cannot be reflected.
+
+## REF-DEC-012: Enterprise Runtime Enforcement Is Fail Closed
+
+Local development keeps its permissive defaults. When `ENTERPRISE_ENFORCE_RUNTIME_CONFIG=true`,
+application construction requires the documented in-process bank posture and fails with bounded
+issue codes when it is incomplete. This closes the gap between deployment policy and executable
+startup behavior without claiming enforcement of external ingress or identity-provider controls.
+Authorization-enforced writes also fail closed when no well-formed capability rule matches, and
+overlapping path prefixes resolve deterministically to the most specific rule.
+
+## REF-DEC-013: Problem Details Are Additive To The Lotus Error Envelope
+
+`lotus-risk` keeps the existing `error.code`, `error.message`, `error.correlation_id`, and
+`error.details` client contract. RFC 7807/problem-details metadata is added inside the same `error`
+object as `type`, `title`, `status`, `detail`, and `instance` so gateways and clients can normalize
+errors without a breaking top-level response shape change.
+
+## REF-DEC-014: Split Benchmark Period Metrics From Period Orchestration
+
+Risk period orchestration remains exposed through `calculate_period_metrics`, but benchmark-specific
+period alignment, dependency error mapping, and benchmark context construction now live in
+`risk/benchmark_period_metrics.py`. This reduces the largest service hotspot without changing the
+caller contract or metric semantics.
+
+## REF-DEC-015: Split Rolling Dependency Selection From Source Resolution
+
+Rolling stateful input resolution now delegates risk-free/benchmark requirement checks and
+reporting-currency resolution to `rolling_stateful_dependency_selection.py`. The source-resolution
+module remains responsible for request construction, dependency calls, parsing, and final
+`ResolvedStatefulRollingInputs` assembly.
+
+## REF-DEC-016: Split Rolling Benchmark Metric Series From Generic Rolling Metrics
+
+Rolling benchmark alignment and benchmark-dependent series calculations for beta, tracking error,
+and information ratio now live in `rolling_benchmark_metric_series.py`. The original rolling metric
+module keeps the public dispatcher plus volatility, Sharpe, and maximum-drawdown calculations.
+
+## REF-DEC-017: Split Enterprise Authorization From Readiness Middleware
+
+Capability-rule parsing and write authorization now live in `enterprise_authorization.py`.
+`enterprise_readiness.py` keeps runtime validation, payload-limit handling, and middleware
+assembly, and explicitly re-exports the previous authorization functions for compatibility.
+
+## REF-DEC-018: Split Concentration Issuer Mapping From Position Parsing
+
+Concentration issuer mapping, issuer-enrichment extraction, and issuer-weight aggregation now live
+in `concentration/issuer_mapping.py`. `concentration/parsing.py` keeps position parsing,
+display-name application, primitive coercion, and valuation-context extraction, with explicit
+compatibility exports for existing internal callers.
+
+## REF-DEC-019: Generate Standard Error OpenAPI Examples From Builders
+
+Standard OpenAPI error response metadata still lives in `api_errors.py`, but repeated nested error
+example dictionaries now flow through small helper builders. This keeps the additive
+problem-details fields and Lotus envelope synchronized across all standard examples.
+
+## REF-DEC-020: Split Rolling Period Results From Response Orchestration
+
+`calculate_rolling_metrics` keeps the public rolling analytics orchestration, empty-response
+handling, supportability recording, and response metadata assembly. Per-period result construction,
+including insufficient-data responses, dependency count/context calculation, and window aggregate
+mapping, now lives in `rolling_period_results.py` so rolling period semantics can be reviewed and
+tested independently from the response envelope.
+
+## REF-DEC-021: Split Rolling Stateful Source Responses From Input Assembly
+
+Rolling stateful input assembly keeps dependency selection, upstream payload parsing, risk-free
+dependency reconciliation, and final `ResolvedStatefulRollingInputs` construction. Returns-series
+request construction, explicit window extraction, explicit risk-free request construction, and
+concurrent source/risk-free fetch behavior now live in `rolling_stateful_source_responses.py` while
+the previous compatibility exports remain available through `rolling_stateful_inputs.py`.
+
+## REF-DEC-022: Split Risk Period Results From Calculation Orchestration
+
+`risk/calculation_orchestrator.py` keeps annualization, periodic-rate resolution, return-frame
+construction, request metadata, and supportability helpers. Per-period metric invocation,
+benchmark observation accounting, and `RiskPeriodResult` assembly now live in `risk/period_results.py`.
+The orchestrator still exposes `build_period_results` for existing callers, but delegates the
+period-result semantics to the focused module.
+
+## REF-DEC-023: Split Risk Benchmark Metrics From Generic Helpers
+
+Benchmark-relative risk calculations for beta, tracking error, and information ratio now live in
+`risk/benchmark_metrics.py`, with numeric coercion isolated in `risk/numeric.py`. `risk/helpers.py`
+keeps compatibility aliases for existing internal characterization tests and callers, while
+`risk/metric_calculators.py` depends directly on the focused benchmark module.
+
+## REF-DEC-024: Split Attribution Exposure Points From Stateful Fetch Orchestration
+
+Stateful attribution exposure-history orchestration still owns lotus-core position-timeseries
+fetching, issuer enrichment, upstream error mapping, and non-empty history validation. Deterministic
+group-key resolution, decimal market-value coercion, exposure aggregation, and `ExposurePoint`
+construction now live in `attribution_exposure_points.py`, with compatibility exports preserved from
+`attribution_exposure_history.py` for the stateful mode adapter tests and internal callers.
+
+## REF-DEC-025: Split Attribution Set Results From Decomposition Orchestration
+
+`attribution_decomposition.py` keeps `AttributionSetBuildRequest`, unsupported metric filtering,
+calculation input precalculation, and the public `build_attribution_set` entry point. Empty
+attribution-set construction, contributor DTO mapping, reconciled result assembly, and calculated
+result assembly now live in `attribution_set_results.py`, keeping attribution math behavior
+unchanged while making result-shape construction independently reviewable.
+
+## REF-DEC-026: Split Attribution Stateful Returns From Input Assembly
+
+Stateful attribution input resolution keeps grouping validation, core exposure-history sourcing,
+active benchmark exposure sourcing, and final stateless-input assembly. Returns-series request
+construction, active-attribution requirement detection, portfolio/benchmark return parsing, and
+`StatefulReturnsContext` construction now live in `attribution_stateful_returns.py`, with
+compatibility exports preserved from `attribution_stateful_inputs.py`.
+
+## REF-DEC-027: Split OpenAPI Request Examples From The Facade Helper
+
+`openapi_examples.py` keeps the stable request-example facade used by routers and tests. The static
+endpoint request payloads now live in the `openapi_request_examples` package, split between
+analytics and source-product examples, while `request_body_examples` remains in the facade. This
+reduces the largest source module and keeps OpenAPI example validation behavior unchanged.
+
+## REF-DEC-028: Split Drawdown Episodes From Series Summary Logic
+
+`drawdown_series.py` keeps drawdown series construction, summary aggregation, underwater-series
+mapping, and risk statistics. Drawdown episode records, duration calculation, segment extraction,
+and max-episode extreme-field selection now live in `drawdown_episodes.py`, with compatibility
+exports preserved from `drawdown_series.py` for existing engine and period-result callers.
+
+## REF-DEC-029: Split Downstream Profile Environment Parsing
+
+Downstream timeout, connection-pool, keepalive, and async polling settings now use focused
+environment parsing helpers in `downstream_profile_env.py`. `_downstream_client_profile.py` keeps
+the public profile type, HTTP-client construction, request execution, error mapping, and upstream
+metrics recording, while `LotusPerformanceClient` uses the shared env helpers directly for async
+polling controls.
+
+## REF-DEC-030: Split Enterprise Audit And Policy Metadata
+
+Enterprise audit emission and sensitive metadata redaction now live in `enterprise_audit.py`, while
+policy-version lookup lives in `enterprise_policy.py`. `enterprise_readiness.py` keeps the public
+facade, runtime validation, payload-limit handling, security response headers, and middleware
+assembly so app wiring and existing tests preserve behavior.
+
+## REF-DEC-031: Split Concentration Simulation Snapshot State
+
+`concentration/simulation_resolver.py` keeps simulation session resolution, change application,
+metadata construction, and final computation-input assembly. Snapshot issuer mapping, baseline and
+projected position extraction, fallback behavior, coverage counts, and valuation-context extraction
+now live in `concentration/simulation_snapshot.py`.
+
+## REF-DEC-032: Split Lotus-Performance Async Returns Payload Handling
+
+`performance_returns_series_async.py` keeps async returns-series polling orchestration and the
+legacy import facade for transport callers. Accepted-payload path validation, async result payload
+parsing, required result checks, and bounded failure/timeout error construction now live in
+`performance_returns_payloads.py`.
+
+## REF-DEC-033: Split Drawdown Period Series Preparation
+
+`drawdown_periods.py` keeps per-period drawdown result assembly, relative benchmark invocation,
+episode DTO mapping, and underwater-series inclusion policy. Return DataFrame construction,
+period-window resolution, period naming, and benchmark/portfolio series slicing now live in
+`drawdown_period_series.py`.
+
+## REF-DEC-034: Split Scenario Pack Catalog
+
+`scenario_engine.py` keeps regime scenario-pack request context assembly, scenario evaluation,
+policy-breach supportability, fingerprinting, and response construction. Static CIO scenario-pack
+definitions and supported exposure-bucket vocabulary now live in `scenario_pack_catalog.py`.
+
+## REF-DEC-035: Split Stateless Concentration Issuer Mapping
+
+`concentration/stateless_resolver.py` keeps stateless weighted-state construction and final
+computation payload assembly. Caller issuer extraction, lotus-core enrichment retrieval, core
+issuer-record parsing, and caller/core issuer-map merge policy now live in
+`concentration/stateless_issuer_mapping.py`.
+
+## REF-DEC-036: Split OpenAPI Error Examples
+
+`api_errors.py` keeps runtime exception handlers and registration. Static OpenAPI standard
+error-response metadata, examples, and problem-details example helpers now live in
+`api_error_examples.py`, while `app.api_errors.STANDARD_ERROR_RESPONSES` remains the router-facing
+facade.
+
+## REF-DEC-037: Split Downstream Request Execution
+
+`_downstream_client_profile.py` keeps downstream HTTP profile defaults, profile DTOs, client
+construction, and environment-backed profile resolution. Request execution, HTTP/transport
+upstream-error normalization, invalid-payload failure observation, and success/failure upstream
+request metrics now live in `downstream_request_execution.py`, while the original module preserves
+compatibility exports for existing adapter imports.
+
+## REF-DEC-038: Split Concentration Response Metrics
+
+`concentration/response_builder.py` keeps concentration response DTO assembly and calculation
+supportability recording. Position and issuer concentration metric derivation, coverage-status
+selection, and top-driver selection now live in `concentration/response_metrics.py`.
+
+## REF-DEC-039: Split Attribution Period Results
+
+`attribution_engine.py` keeps historical attribution response orchestration, metadata assembly, and
+supportability recording. Period naming, period-window resolution, portfolio and benchmark return
+slicing, insufficient-data period results, and period-result construction now live in
+`attribution_period_results.py`.
+
+## REF-DEC-040: Split Rolling Risk-Free Coverage
+
+`rolling_risk_free_dependency.py` keeps rolling risk-free dependency resolution, fallback sourcing,
+response parsing, and missing-data failure construction. Missing-risk-free coverage request
+construction, upstream coverage probing, and safe coverage-detail mapping now live in
+`rolling_risk_free_coverage.py`, while the original dependency module preserves the prior import
+facade for callers.
+
+## REF-DEC-041: Split Risk Drawdown Details
+
+`risk/helpers.py` keeps compatibility aliases for risk calculation helpers, period wrappers,
+return transformations, VaR, expected shortfall, and data guards. Drawdown recovery semantics,
+empty drawdown detail construction, and drawdown metadata assembly now live in
+`risk/drawdown_details.py`, preserving the existing `risk_helpers._drawdown` facade used by metric
+calculators and characterization tests.
+
+## REF-DEC-042: Split Concentration Snapshot Display Names
+
+`concentration/parsing.py` keeps concentration numeric coercion, position extraction, valuation
+context parsing, and compatibility exports used by resolver tests. Snapshot instrument-name
+enrichment and display-name application now live in `concentration/snapshot_display_names.py`,
+while `_apply_snapshot_display_names` remains available from the parsing facade for current
+resolver callers.
+
+## REF-DEC-043: Split Concentration Stateful Snapshot Sourcing
+
+`concentration/resolvers.py` keeps the public stateful/simulation resolver orchestration and
+stateful response computation-input assembly. Stateful lotus-core snapshot payload construction,
+snapshot fetch validation, issuer-map merge policy, valuation-context extraction, and baseline
+position/issuer extraction now live in `concentration/stateful_snapshot.py`.
+
+## REF-DEC-044: Split Attribution Active Benchmark Exposure
+
+`attribution_stateful_inputs.py` keeps stateful attribution orchestration, grouping validation,
+portfolio exposure-history sourcing, and final stateless-input assembly. Active benchmark exposure
+context fetching and benchmark-return/exposure-date alignment validation now live in
+`attribution_active_benchmark_exposure.py`.
+
+## REF-DEC-045: Split Rolling Maximum Drawdown Series
+
+`rolling_metric_series.py` keeps rolling metric dispatch, volatility, Sharpe, and dependency-count
+wrapping. Rolling maximum-drawdown window application and numpy drawdown math now live in
+`rolling_max_drawdown_series.py`, keeping that methodology independently reviewable from the
+dispatcher.

@@ -1,80 +1,22 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, NoReturn
+from typing import Any
 
 import httpx
 
 from app.integrations._downstream_client_profile import execute_downstream_request_json
-from app.upstream_errors import invalid_upstream_payload, missing_upstream_data
+from app.integrations.performance_returns_payloads import (
+    RETURNS_SERIES_OPERATION,
+    async_returns_series_paths,
+    ensure_dict_payload,
+    parse_async_result_payload,
+    raise_returns_series_async_failure,
+    raise_returns_series_poll_timeout,
+    required_async_result_payload,
+)
 
-RETURNS_SERIES_OPERATION = "/integration/returns/series"
-
-
-def ensure_dict_payload(
-    response: httpx.Response,
-    *,
-    invalid_message: str,
-) -> dict[str, Any]:
-    payload = response.json()
-    if not isinstance(payload, dict):
-        raise invalid_upstream_payload(
-            service="lotus-performance",
-            operation=response.request.url.path,
-            message=invalid_message,
-        )
-    return payload
-
-
-def _parse_async_result_payload(
-    response: httpx.Response,
-    *,
-    invalid_message: str,
-) -> dict[str, Any] | None:
-    payload = response.json()
-    if payload is None:
-        return None
-    if not isinstance(payload, dict):
-        raise invalid_upstream_payload(
-            service="lotus-performance",
-            operation=response.request.url.path,
-            message=invalid_message,
-        )
-    return payload
-
-
-def _async_returns_series_paths(accepted_payload: dict[str, Any]) -> tuple[str, str | None]:
-    result_path = accepted_payload.get("result_path")
-    if not isinstance(result_path, str) or not result_path.startswith("/"):
-        raise invalid_upstream_payload(
-            service="lotus-performance",
-            operation=RETURNS_SERIES_OPERATION,
-            message="lotus-performance async accepted payload missing result_path",
-        )
-
-    poll_path = accepted_payload.get("poll_path")
-    if poll_path is not None and (not isinstance(poll_path, str) or not poll_path.startswith("/")):
-        raise invalid_upstream_payload(
-            service="lotus-performance",
-            operation=RETURNS_SERIES_OPERATION,
-            message="lotus-performance async accepted payload has invalid poll_path",
-        )
-    return result_path, poll_path
-
-
-def _raise_returns_series_async_failure(execution_payload: dict[str, Any]) -> None:
-    error_message = execution_payload.get("error_message")
-    if isinstance(error_message, str) and error_message:
-        raise missing_upstream_data(
-            service="lotus-performance",
-            operation=RETURNS_SERIES_OPERATION,
-            message=f"lotus-performance async returns-series failed: {error_message}",
-        )
-    raise missing_upstream_data(
-        service="lotus-performance",
-        operation=RETURNS_SERIES_OPERATION,
-        message="lotus-performance async returns-series failed",
-    )
+__all__ = ["RETURNS_SERIES_OPERATION", "ensure_dict_payload", "poll_returns_series_result"]
 
 
 async def poll_returns_series_result(
@@ -87,7 +29,7 @@ async def poll_returns_series_result(
     async_max_polls: int,
     async_poll_interval_seconds: float,
 ) -> dict[str, Any]:
-    result_path, poll_path = _async_returns_series_paths(accepted_payload)
+    result_path, poll_path = async_returns_series_paths(accepted_payload)
     last_status = "pending"
     for _ in range(async_max_polls):
         result_payload, last_status = await _poll_returns_series_once(
@@ -104,7 +46,7 @@ async def poll_returns_series_result(
 
         await asyncio.sleep(async_poll_interval_seconds)
 
-    _raise_returns_series_poll_timeout(last_status)
+    raise_returns_series_poll_timeout(last_status)
 
 
 async def _poll_returns_series_once(
@@ -134,7 +76,7 @@ async def _poll_returns_series_once(
     )
     if result_status != 200:
         return None, next_status
-    return _required_async_result_payload(result_payload), next_status
+    return required_async_result_payload(result_payload), next_status
 
 
 async def _returns_series_poll_status_if_configured(
@@ -155,29 +97,6 @@ async def _returns_series_poll_status_if_configured(
         headers=headers,
         started_at=started_at,
         last_status=last_status,
-    )
-
-
-def _required_async_result_payload(
-    result_payload: dict[str, Any] | None,
-) -> dict[str, Any]:
-    if result_payload is not None:
-        return result_payload
-    raise missing_upstream_data(
-        service="lotus-performance",
-        operation=RETURNS_SERIES_OPERATION,
-        message="lotus-performance async returns-series result returned no payload",
-    )
-
-
-def _raise_returns_series_poll_timeout(last_status: str) -> NoReturn:
-    raise missing_upstream_data(
-        service="lotus-performance",
-        operation=RETURNS_SERIES_OPERATION,
-        message=(
-            "lotus-performance async returns-series did not complete within polling budget "
-            f"(last_status={last_status})"
-        ),
     )
 
 
@@ -202,7 +121,7 @@ async def _poll_returns_series_status(
     status = execution_payload.get("status")
     next_status = status if isinstance(status, str) else last_status
     if status == "failed":
-        _raise_returns_series_async_failure(execution_payload)
+        raise_returns_series_async_failure(execution_payload)
     return next_status
 
 
@@ -223,7 +142,7 @@ async def _get_returns_series_result(
             response.status_code,
             None
             if response.status_code in {202, 404}
-            else _parse_async_result_payload(
+            else parse_async_result_payload(
                 response,
                 invalid_message="lotus-performance returned invalid async result payload",
             ),

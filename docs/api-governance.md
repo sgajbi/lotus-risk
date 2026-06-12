@@ -13,6 +13,26 @@ Risk APIs must remain explicit, version-aware, documented, and domain-correct.
 4. Health, readiness, liveness, metadata, metrics, operational, and public analytics endpoints must
    remain separated in code and documentation.
 
+## Error Contract
+
+`lotus-risk` preserves the standard Lotus error envelope:
+
+- `error.code`
+- `error.message`
+- `error.correlation_id`
+- optional `error.details`
+
+For RFC 7807/problem-details compatibility, the same `error` object also carries:
+
+- `error.type`
+- `error.title`
+- `error.status`
+- `error.detail`
+- `error.instance`
+
+The compatibility fields are additive. They do not replace the Lotus envelope, and clients should
+continue to treat `error.code` as the stable machine-readable Lotus error code.
+
 ## Current Gates
 
 The repo runs OpenAPI quality, API vocabulary, no-alias, type, lint, security, and test gates

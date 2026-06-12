@@ -1,35 +1,28 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import date
-from math import sqrt
 from statistics import NormalDist
-from typing import SupportsFloat, cast
+from typing import cast
 
 import numpy as np
 import pandas as pd
 
+from app.services.risk.benchmark_metrics import (
+    BENCHMARK_METRICS,
+    RISK_METRICS_REQUIRING_BENCHMARK,
+    RiskMetricDetails,
+    beta as _beta,
+    calculate_benchmark_metric as _calculate_benchmark_metric,
+    information_ratio as _information_ratio,
+)
+from app.services.risk.drawdown_details import drawdown_details as _drawdown
+from app.services.risk.numeric import as_number as _as_number
 from app.services.risk.period_resolution import (
     resolve_period,
     resolve_period_bounds,
 )
 
-RiskMetricDetails = dict[str, str | float | int | bool | None]
-
-RISK_METRICS_REQUIRING_BENCHMARK = {"BETA", "TRACKING_ERROR", "INFORMATION_RATIO"}
 RISK_METRICS_REQUIRING_RISK_FREE = {"SHARPE"}
-
-
-@dataclass(frozen=True)
-class _DrawdownRecovery:
-    recovery_date: str | None
-    is_recovered: bool
-    days_to_recovery: int | None
-    time_under_water_days: int
-
-
-def _as_number(number: SupportsFloat) -> float:
-    return float(number)
 
 
 def _resolve_period(
@@ -94,81 +87,6 @@ def _annual_to_periodic(rate: float, annual_factor: int) -> float:
     return float((1.0 + float(rate)) ** (1.0 / float(annual_factor)) - 1.0)
 
 
-def _empty_drawdown_details() -> dict[str, str | float | None]:
-    return {
-        "max_drawdown": 0.0,
-        "peak_date": None,
-        "trough_date": None,
-        "max_drawdown_date": None,
-        "recovery_date": None,
-        "is_recovered": True,
-        "days_to_trough": None,
-        "days_to_recovery": None,
-        "time_under_water_days": 0,
-    }
-
-
-def _drawdown_recovery(
-    *,
-    wealth: pd.Series,
-    peak_idx: pd.Timestamp,
-    trough_idx: pd.Timestamp,
-    peak_value: float,  # monetary-float-allow: drawdown wealth ratio peak, not money.
-) -> _DrawdownRecovery:
-    post_trough_wealth = wealth.loc[trough_idx:]
-    recovery_candidates = post_trough_wealth[post_trough_wealth >= peak_value]
-    recovery_idx = (
-        cast(pd.Timestamp, recovery_candidates.index[0]) if not recovery_candidates.empty else None
-    )
-    if recovery_idx is None:
-        return _DrawdownRecovery(
-            recovery_date=None,
-            is_recovered=False,
-            days_to_recovery=None,
-            time_under_water_days=int((wealth.index[-1] - peak_idx).days),
-        )
-    return _DrawdownRecovery(
-        recovery_date=str(recovery_idx.date()),
-        is_recovered=True,
-        days_to_recovery=int((recovery_idx - trough_idx).days),
-        time_under_water_days=int((recovery_idx - peak_idx).days),
-    )
-
-
-def _drawdown(returns: pd.Series) -> dict[str, str | float | None]:
-    wealth = (1 + returns / 100).cumprod()
-    peak = wealth.cummax()
-    drawdown = wealth / peak - 1
-    if drawdown.empty:
-        return _empty_drawdown_details()
-
-    trough_idx = cast(pd.Timestamp, drawdown.idxmin())
-    peak_idx = cast(pd.Timestamp, wealth.loc[:trough_idx].idxmax())
-    max_drawdown = _as_number(cast(float, drawdown.loc[trough_idx] * 100))
-    peak_value = _as_number(
-        cast(float, peak.loc[trough_idx])
-    )  # monetary-float-allow: drawdown wealth ratio peak, not money.
-    recovery = _drawdown_recovery(
-        wealth=wealth,
-        peak_idx=peak_idx,
-        trough_idx=trough_idx,
-        peak_value=peak_value,
-    )
-    days_to_trough = int((trough_idx - peak_idx).days)
-    trough_date = str(trough_idx.date())
-    return {
-        "max_drawdown": max_drawdown,
-        "peak_date": str(peak_idx.date()),
-        "trough_date": trough_date,
-        "max_drawdown_date": trough_date,
-        "recovery_date": recovery.recovery_date,
-        "is_recovered": recovery.is_recovered,
-        "days_to_trough": days_to_trough,
-        "days_to_recovery": recovery.days_to_recovery,
-        "time_under_water_days": recovery.time_under_water_days,
-    }
-
-
 def _var_historical(returns: pd.Series, confidence: float) -> float:
     alpha = 1.0 - confidence
     return cast(float, np.percentile(returns, alpha * 100))
@@ -212,86 +130,27 @@ def _expected_shortfall(
     return _as_number(tail.mean())
 
 
-def _beta(portfolio: pd.Series, benchmark: pd.Series) -> tuple[float, RiskMetricDetails]:
-    covariance = np.cov(portfolio, benchmark, ddof=1)
-    denominator = covariance[1, 1]
-    if np.isclose(denominator, 0.0):
-        raise ValueError("Benchmark variance is zero")
-    covariance_pb = _as_number(covariance[0, 1])
-    benchmark_variance = _as_number(denominator)
-    return (
-        _as_number(covariance_pb / benchmark_variance),
-        {
-            "aligned_observation_count": int(portfolio.count()),
-            "portfolio_mean_return": _as_number(portfolio.mean() / 100),
-            "benchmark_mean_return": _as_number(benchmark.mean() / 100),
-            "covariance": covariance_pb,
-            "benchmark_variance": benchmark_variance,
-        },
-    )
-
-
-def _tracking_error(
-    portfolio: pd.Series, benchmark: pd.Series, annual_factor: int
-) -> tuple[float, RiskMetricDetails]:
-    active = portfolio - benchmark
-    active_std = _as_number(active.std(ddof=1))
-    annualized_tracking_error = _as_number(active_std * sqrt(annual_factor))
-    return (
-        annualized_tracking_error,
-        {
-            "aligned_observation_count": int(active.count()),
-            "annualization_factor": annual_factor,
-            "portfolio_mean_return": _as_number(portfolio.mean() / 100),
-            "benchmark_mean_return": _as_number(benchmark.mean() / 100),
-            "active_mean_return": _as_number(active.mean() / 100),
-            "active_volatility": active_std / 100,
-            "annualized_tracking_error": annualized_tracking_error / 100,
-        },
-    )
-
-
-def _information_ratio(
-    portfolio: pd.Series, benchmark: pd.Series, annual_factor: int
-) -> tuple[float, RiskMetricDetails]:
-    active = portfolio - benchmark
-    tracking_err = active.std(ddof=1)
-    if np.isclose(tracking_err, 0.0):
-        raise ValueError("Tracking error is zero")
-    active_mean = _as_number(active.mean() / 100)
-    tracking_error = _as_number(tracking_err / 100)
-    annualized_active_return = _as_number(active_mean * annual_factor)
-    annualized_tracking_error = _as_number(tracking_error * sqrt(annual_factor))
-    return (
-        _as_number((active.mean() / tracking_err) * sqrt(annual_factor)),
-        {
-            "aligned_observation_count": int(active.count()),
-            "annualization_factor": annual_factor,
-            "portfolio_mean_return": _as_number(portfolio.mean() / 100),
-            "benchmark_mean_return": _as_number(benchmark.mean() / 100),
-            "active_mean_return": active_mean,
-            "tracking_error": tracking_error,
-            "annualized_active_return": annualized_active_return,
-            "annualized_tracking_error": annualized_tracking_error,
-        },
-    )
-
-
-def _calculate_benchmark_metric(
-    metric_name: str, portfolio: pd.Series, benchmark: pd.Series, annual_factor: int
-) -> tuple[float, RiskMetricDetails]:
-    if metric_name == "BETA":
-        return _beta(portfolio, benchmark)
-    if metric_name == "TRACKING_ERROR":
-        return _tracking_error(portfolio, benchmark, annual_factor)
-    if metric_name == "INFORMATION_RATIO":
-        return _information_ratio(portfolio, benchmark, annual_factor)
-    raise ValueError(f"Unsupported benchmark metric: {metric_name}")
-
-
 def _require_data(series: pd.Series, minimum: int = 2) -> None:
     if len(series.dropna()) < minimum:
         raise ValueError("Insufficient data")
 
 
-BENCHMARK_METRICS = RISK_METRICS_REQUIRING_BENCHMARK
+__all__ = [
+    "BENCHMARK_METRICS",
+    "RISK_METRICS_REQUIRING_BENCHMARK",
+    "RISK_METRICS_REQUIRING_RISK_FREE",
+    "RiskMetricDetails",
+    "_annual_to_periodic",
+    "_as_number",
+    "_beta",
+    "_calculate_benchmark_metric",
+    "_calculate_var_by_method",
+    "_drawdown",
+    "_expected_shortfall",
+    "_information_ratio",
+    "_require_data",
+    "_resolve_period",
+    "_resolve_period_bounds",
+    "_resample_returns",
+    "_to_log_returns",
+]

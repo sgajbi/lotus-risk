@@ -7,7 +7,6 @@ from fastapi import status
 from app.upstream_errors import (
     classify_upstream_http_error,
     classify_upstream_transport_error,
-    extract_upstream_error_detail,
     invalid_upstream_payload,
     missing_upstream_data,
 )
@@ -44,7 +43,6 @@ def test_classify_upstream_http_error_matrix(
         service="lotus-performance",
         operation="/integration/returns/series",
         response=_response(upstream_status, {"detail": {"message": "upstream detail"}}),
-        detail="upstream detail",
     )
 
     assert error.status_code == expected_status
@@ -56,7 +54,8 @@ def test_classify_upstream_http_error_matrix(
         "category": expected_category,
         "upstream_status_code": upstream_status,
     }
-    assert "upstream detail" in error.message
+    assert "upstream detail" not in error.message
+    assert error.message.endswith(f"({upstream_status})")
 
 
 @pytest.mark.parametrize(
@@ -122,25 +121,3 @@ def test_invalid_payload_and_missing_data_carry_structured_categories() -> None:
     assert missing.retryable is False
     assert missing.details["category"] == "data_gap"
     assert missing.details["currency"] == "USD"
-
-
-def test_extract_upstream_error_detail_variants() -> None:
-    assert extract_upstream_error_detail(_response(400, {"detail": "simple detail"})) == (
-        "simple detail"
-    )
-    assert extract_upstream_error_detail(_response(400, {"detail": {"message": "nested"}})) == (
-        "nested"
-    )
-    assert extract_upstream_error_detail(_response(400, {"error": {"message": "error msg"}})) == (
-        "error msg"
-    )
-    assert extract_upstream_error_detail(_response(400, {"unexpected": "payload"})) == str(
-        {"unexpected": "payload"}
-    )
-
-    plain = httpx.Response(
-        status_code=500,
-        text="plain text",
-        request=httpx.Request("POST", "http://x"),
-    )
-    assert extract_upstream_error_detail(plain) == "plain text"

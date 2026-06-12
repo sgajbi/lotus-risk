@@ -31,6 +31,15 @@ Every upstream failure returned by `lotus-risk` should include deterministic det
 4. `retryable`: boolean retry guidance,
 5. `upstream_status_code`: present for HTTP upstream failures.
 
+Client-facing messages identify the dependency, operation, bounded failure class, and upstream HTTP
+status where available. Raw upstream response bodies, downstream exception text, stack traces,
+credentials, and tokens are never included in the client-facing envelope.
+
+Upstream failures use the standard Lotus error envelope and additive RFC 7807/problem-details
+compatibility fields inside the `error` object. `error.code` remains the stable Lotus machine code;
+`error.type`, `error.title`, `error.status`, `error.detail`, and `error.instance` are provided for
+clients and gateways that normalize problem-details payloads.
+
 ## Correlation IDs
 
 When a caller sends `X-Correlation-Id`, `lotus-risk` forwards it to upstream clients and includes the same correlation ID in the error envelope returned to the caller.
@@ -56,6 +65,11 @@ The following explicit downstream transport posture is defined in
 - `lotus-performance` also controls async polling through
   `LOTUS_PERFORMANCE_ASYNC_POLL_INTERVAL_SECONDS` and
   `LOTUS_PERFORMANCE_ASYNC_MAX_POLLS`.
+- FastAPI lifespan startup creates one reusable HTTP connection pool per upstream dependency.
+  Lifespan shutdown marks the service draining, closes both owned pools, and preserves any
+  explicitly injected client used by tests or controlled runtimes.
+- Directly constructed adapters remain usable outside the FastAPI lifespan and create a bounded
+  temporary client for each operation.
 - Timeout and retry-class handling remains deterministic:
   transport errors map to `UPSTREAM_TIMEOUT` or `UPSTREAM_UNAVAILABLE`,
   while HTTP `429` and `5xx` map to retryable throttling and upstream-failure classes.
@@ -66,4 +80,5 @@ The failure classification matrix is covered by `tests/unit/test_upstream_errors
 
 1. `tests/unit/test_lotus_core_client.py`,
 2. `tests/unit/test_lotus_performance_client.py`,
-3. `tests/unit/test_main_error_handlers.py`.
+3. `tests/unit/test_app_lifecycle.py`,
+4. `tests/unit/test_main_error_handlers.py`.

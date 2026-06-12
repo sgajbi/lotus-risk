@@ -30,7 +30,9 @@ The highest-value rules for this repo are:
 2. OpenAPI quality is enforced,
 3. API vocabulary validation is enforced,
 4. test-pyramid discipline is enforced,
-5. security audit and Docker build are part of the real CI contract.
+5. standard error responses preserve the Lotus `error.code` envelope and also publish additive
+   RFC 7807/problem-details fields inside the same `error` object,
+6. security audit and Docker build are part of the real CI contract.
 
 ## Enterprise Deployment Security
 
@@ -44,6 +46,19 @@ Bank deployment mode is stricter than local development mode:
    `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES`,
 5. gateway or platform ingress validates token integrity while `lotus-risk` enforces required
    actor, tenant, role, correlation, service identity, and capability evidence.
+6. caller-provided correlation and trace headers are untrusted: unsafe or unbounded correlation IDs
+   and malformed, zero, or mismatched W3C trace context are replaced rather than reflected or
+   logged.
+7. client-facing upstream failure envelopes preserve bounded dependency and retry context but never
+   expose raw downstream response bodies or transport exception text.
+8. every API response is marked `no-store`, `no-referrer`, and `nosniff`, including early
+   authorization and payload-limit failures.
+9. downstream base URLs fail fast unless they are valid HTTP(S) service endpoints without embedded
+   credentials, query strings, fragments, whitespace, or control characters.
+10. `ENTERPRISE_ENFORCE_RUNTIME_CONFIG=true` fails service construction unless the documented
+    in-process bank posture is complete; failures expose bounded issue codes, not values.
+11. authorization-enforced write paths without a well-formed matching capability rule fail closed
+    with `missing_capability_rule`.
 
 ## Upstream Boundary Discipline
 

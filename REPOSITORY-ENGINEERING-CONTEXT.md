@@ -145,6 +145,8 @@ Runtime model:
 1. FastAPI-backed risk analytics service,
 2. primarily consumed through `lotus-gateway`,
 3. integrates with `lotus-core` and `lotus-performance` for stateful or cross-analytic flows where required.
+4. FastAPI lifespan owns reusable, dependency-specific downstream HTTP connection pools and closes
+   them after entering draining posture during shutdown.
 
 Boundary rules:
 
@@ -154,7 +156,10 @@ Boundary rules:
 4. supportability and evidence posture should remain truthful and data-backed,
 5. downstream consumers must preserve signed VaR semantics, attribution reconciliation fields, issuer active-risk support metadata, concentration-only simulation support, and audit lineage metadata as documented in `docs/domain-apis/risk-product-surface-alignment.md`,
 6. `lotus-core` must be consumed as a governed source-data, analytics-input, snapshot/simulation, and support-metadata authority, while `lotus-performance` remains the authority for performance return and benchmark exposure context inputs.
-7. RFC-0108 calculation supportability is source-owned in this repository across `risk/calculate`,
+7. production ASGI runtimes must keep lifespan support enabled so downstream connection pooling and
+   shutdown cleanup remain effective; explicitly injected clients are preserved for controlled
+   runtimes and tests.
+8. RFC-0108 calculation supportability is source-owned in this repository across `risk/calculate`,
    drawdown, rolling metrics, historical attribution, and concentration through
    `metadata.calculation_supportability` plus bounded
    `lotus_risk_calculation_supportability_total` labels. The supportability contract publishes
@@ -164,6 +169,15 @@ Boundary rules:
    attribution now degrades response-level calculation supportability whenever any source-owned
    attribution set emits quality flags, so downstream consumers do not treat missing grouping data,
    empty active-risk alignment, or unsupported attribution combinations as fully ready analytics.
+9. downstream base URLs are validated at adapter construction and must be valid HTTP(S) service
+   endpoints without embedded credentials, query strings, fragments, whitespace, or control
+   characters; runtime-owned settings are documented in `docs/configuration.md`.
+10. `ENTERPRISE_ENFORCE_RUNTIME_CONFIG=true` is fail-closed bank mode: application construction
+    requires authorization plus explicit policy, key, rotation, capability, payload-limit, and
+    upstream URL configuration.
+11. API errors preserve the standard Lotus `error` envelope while adding RFC 7807/problem-details
+    compatibility fields inside the same object; do not replace this with a breaking top-level
+    problem-details shape without a versioned migration.
 
 Canonical direct local validation ports:
 

@@ -6,8 +6,12 @@ client, request, response, trace, or correlation data through logs, metrics, err
 ## Current Controls
 
 1. Enterprise audit middleware enforces write-policy headers and redacts sensitive metadata.
-2. Correlation middleware controls request correlation and trace propagation.
+2. Correlation middleware treats caller correlation and trace headers as untrusted input:
+   correlation IDs are bounded to a safe character set and length, while trace IDs and
+   `traceparent` must satisfy the supported W3C format. Unsafe values are replaced instead of
+   reflected or logged.
 3. Dependency failures are mapped into bounded error envelopes.
+   Raw upstream response bodies and transport exception text are not exposed to API callers.
 4. Dependency audit is enforced through `make security-audit` using an isolated project-scoped
    install, not the developer's global Python environment.
 5. Bandit configuration is added for progressive static security evidence.
@@ -15,6 +19,14 @@ client, request, response, trace, or correlation data through logs, metrics, err
    [`security-threat-model.md`](security-threat-model.md).
 7. Enterprise deployment security posture is recorded in
    [`security-deployment-policy.md`](security-deployment-policy.md).
+8. Every API response, including early authorization and payload-limit failures, carries
+   `Cache-Control: no-store`, `Referrer-Policy: no-referrer`, `X-Content-Type-Options: nosniff`,
+   and the active enterprise policy version.
+9. Downstream base URLs fail fast unless they use HTTP(S), include a valid host, and exclude
+   embedded credentials, query strings, fragments, whitespace, and control characters. Validation
+   errors never echo the rejected value.
+10. Authorization-enforced write requests fail closed when no well-formed capability rule matches
+    the request path.
 
 ## Refactor Requirements
 

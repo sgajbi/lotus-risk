@@ -234,6 +234,7 @@ Best starting points:
 - capability publication: `docs/domain-apis/integration-capabilities.md`
 - product-surface alignment: `docs/domain-apis/risk-product-surface-alignment.md`
 - service operations: `docs/runbooks/service-operations.md`
+- runtime configuration: `docs/configuration.md`
 - development workflow: `docs/operations/development-workflow-and-ci-strategy.md`
 - live validation matrix: `docs/operations/live-risk-validation-matrix.md`
 - local RFC index: `docs/rfcs/README.md`

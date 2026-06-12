@@ -1,8 +1,40 @@
 from fastapi.testclient import TestClient
+import pytest
 
 from app.main import app
 from tests.support.app_runtime import override_app_runtime
 from tests.support.lotus_core_fakes import SimulationLotusCoreClient
+
+
+@pytest.mark.parametrize(
+    ("path", "expected_key", "expected_value"),
+    (
+        ("/health", "status", None),
+        ("/health/live", "status", "live"),
+        ("/health/ready", "status", "ready"),
+        ("/ops", "dependencies", None),
+        ("/ops/trust-telemetry", "declared_dependencies", None),
+        ("/metadata", "rounding_policy_version", None),
+        ("/integration/capabilities", "supported_input_modes", None),
+        ("/openapi.json", "paths", None),
+        ("/metrics", "# HELP", None),
+    ),
+)
+def test_operational_get_endpoint_contract_smoke(
+    path: str, expected_key: str, expected_value: str | None
+) -> None:
+    client = TestClient(app)
+    response = client.get(path)
+
+    assert response.status_code == 200
+    if path == "/metrics":
+        assert response.headers["content-type"].startswith("text/plain")
+        assert expected_key in response.text
+    else:
+        body = response.json()
+        assert expected_key in body
+        if expected_value is not None:
+            assert body[expected_key] == expected_value
 
 
 def test_health_endpoints() -> None:
@@ -138,7 +170,13 @@ def test_legacy_workbench_proxy_removed_with_standard_404_error() -> None:
     assert response.status_code == 404
     assert response.headers["X-Correlation-Id"] == "corr-legacy-404"
     body = response.json()["error"]
+    assert body["type"] == "urn:lotus-risk:error:resource-not-found"
+    assert body["title"] == "Resource Not Found"
+    assert body["status"] == 404
+    assert body["detail"] == "Not Found"
+    assert body["instance"] == "/analytics/workbench/risk-proxy"
     assert body["code"] == "RESOURCE_NOT_FOUND"
+    assert body["message"] == "Not Found"
     assert body["correlation_id"] == "corr-legacy-404"
 
 
@@ -385,6 +423,12 @@ def test_health_ready_and_ops_surface_structured_data_gap_metadata() -> None:
 def test_openapi_declares_standard_error_models_for_risk_endpoints() -> None:
     client = TestClient(app)
     spec = client.get("/openapi.json").json()
+    error_body = spec["components"]["schemas"]["ErrorBody"]
+    error_body_properties = error_body["properties"]
+    for field in ("type", "title", "status", "detail", "instance"):
+        assert field in error_body_properties
+    assert "RFC 7807" in error_body_properties["status"]["description"]
+
     calculate_responses = spec["paths"]["/analytics/risk/calculate"]["post"]["responses"]
     concentration_responses = spec["paths"]["/analytics/risk/concentration"]["post"]["responses"]
     attribution_responses = spec["paths"]["/analytics/risk/historical-attribution"]["post"][

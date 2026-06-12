@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 import httpx
 import pytest
@@ -15,7 +15,7 @@ from app.integrations.lotus_performance_transport import (
     correlation_headers,
     resolve_lotus_performance_base_url,
 )
-from app.upstream_errors import UpstreamServiceError, extract_upstream_error_detail
+from app.upstream_errors import UpstreamServiceError
 
 
 class _FakeAsyncClient:
@@ -98,6 +98,31 @@ async def test_client_builds_headers_and_payload_for_returns_series(
 
 
 @pytest.mark.asyncio
+async def test_client_reuses_injected_http_client_without_creating_temporary_pool(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    injected_client = _FakeAsyncClient(timeout=httpx.Timeout(5.0))
+    _FakeAsyncClient.response_factory = lambda **_: _ok_response(
+        {"series": {"portfolio_returns": []}}
+    )
+    monkeypatch.setattr(
+        "app.integrations._downstream_client_profile.DownstreamClientProfile.make_client",
+        lambda _: (_ for _ in ()).throw(AssertionError("temporary pool created")),
+    )
+
+    client = LotusPerformanceClient(
+        base_url="http://performance.local",
+        http_client=cast(httpx.AsyncClient, injected_client),
+    )
+    response = await client.get_returns_series(
+        request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
+        correlation_id=None,
+    )
+
+    assert response["series"] == {"portfolio_returns": []}
+
+
+@pytest.mark.asyncio
 async def test_client_rejects_non_object_json_response(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(httpx, "AsyncClient", _FakeAsyncClient)
     _FakeAsyncClient.requests = []
@@ -122,7 +147,7 @@ async def test_client_maps_http_status_error_with_detail(monkeypatch: pytest.Mon
     )
     client = LotusPerformanceClient(base_url="http://performance.local")
 
-    with pytest.raises(UpstreamServiceError, match="failed \\(503\\): upstream failed") as exc_info:
+    with pytest.raises(UpstreamServiceError, match="failed \\(503\\)") as exc_info:
         await client.get_returns_series(
             request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
             correlation_id=None,
@@ -375,12 +400,13 @@ async def test_client_raises_for_unexpected_async_result_status(
     _FakeAsyncClient.response_factory = lambda **_: next(responses)
 
     client = LotusPerformanceClient(base_url="http://performance.local")
-    with pytest.raises(UpstreamServiceError, match="failed \\(500\\): not ready") as exc_info:
+    with pytest.raises(UpstreamServiceError, match="failed \\(500\\)") as exc_info:
         await client.get_returns_series(
             request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
             correlation_id=None,
         )
     assert exc_info.value.code == "UPSTREAM_FAILURE"
+    assert "not ready" not in exc_info.value.message
 
 
 @pytest.mark.asyncio
@@ -487,31 +513,13 @@ async def test_client_maps_benchmark_exposure_context_errors(
 
     with pytest.raises(
         UpstreamServiceError,
-        match="exposure-context failed \\(503\\): benchmark context unavailable",
+        match="exposure-context failed \\(503\\)",
     ) as exc_info:
         await client.get_benchmark_exposure_context(
             request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
             correlation_id=None,
         )
     assert exc_info.value.code == "UPSTREAM_FAILURE"
-
-
-def test_client_extract_error_detail_variants() -> None:
-    response_plain = httpx.Response(
-        status_code=500,
-        text="plain text",
-        request=httpx.Request("POST", "http://x"),
-    )
-    assert extract_upstream_error_detail(response_plain) == "plain text"
-
-    response_detail_str = _ok_response({"detail": "simple detail"})
-    assert extract_upstream_error_detail(response_detail_str) == "simple detail"
-
-    response_error_obj = _ok_response({"error": {"message": "error message"}})
-    assert extract_upstream_error_detail(response_error_obj) == "error message"
-
-    response_fallback_obj = _ok_response({"unexpected": "payload"})
-    assert extract_upstream_error_detail(response_fallback_obj) == str({"unexpected": "payload"})
 
 
 def test_client_defaults_base_url_when_env_missing(monkeypatch: pytest.MonkeyPatch) -> None:

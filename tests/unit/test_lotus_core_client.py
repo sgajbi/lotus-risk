@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 import httpx
 import pytest
@@ -13,7 +13,7 @@ from app.integrations.lotus_core_client import (
 )
 from app.integrations.lotus_core_operations import build_simulation_session_payload
 from app.integrations.lotus_core_transport import resolve_lotus_core_base_url
-from app.upstream_errors import UpstreamServiceError, extract_upstream_error_detail
+from app.upstream_errors import UpstreamServiceError
 
 
 class _FakeAsyncClient:
@@ -97,6 +97,28 @@ async def test_client_builds_headers_and_payload_for_session_creation(
 
 
 @pytest.mark.asyncio
+async def test_client_reuses_injected_http_client_without_creating_temporary_pool(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    injected_client = _FakeAsyncClient(timeout=httpx.Timeout(5.0))
+    _FakeAsyncClient.response_factory = lambda **_: _ok_response({"ok": True})
+    monkeypatch.setattr(
+        "app.integrations._downstream_client_profile.DownstreamClientProfile.make_client",
+        lambda _: (_ for _ in ()).throw(AssertionError("temporary pool created")),
+    )
+
+    client = LotusCoreClient(
+        base_url="http://core.local",
+        http_client=cast(httpx.AsyncClient, injected_client),
+    )
+    assert await client.get_core_snapshot(
+        portfolio_id="DEMO_DPM_EUR_001",
+        request_payload={"snapshot_mode": "BASELINE"},
+        correlation_id=None,
+    ) == {"ok": True}
+
+
+@pytest.mark.asyncio
 async def test_client_supports_add_changes_and_snapshot_routes(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -171,7 +193,9 @@ async def test_client_rejects_non_object_json_response(monkeypatch: pytest.Monke
 
 
 @pytest.mark.asyncio
-async def test_client_maps_http_status_error_with_detail(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_client_maps_http_status_error_without_exposing_detail(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(httpx, "AsyncClient", _FakeAsyncClient)
     _FakeAsyncClient.response_factory = lambda **_: _ok_response(
         {"detail": "bad request"},
@@ -179,9 +203,7 @@ async def test_client_maps_http_status_error_with_detail(monkeypatch: pytest.Mon
     )
     client = LotusCoreClient(base_url="http://core.local")
 
-    with pytest.raises(
-        UpstreamServiceError, match="rejected request \\(400\\): bad request"
-    ) as exc_info:
+    with pytest.raises(UpstreamServiceError, match="rejected request \\(400\\)") as exc_info:
         await client.get_core_snapshot(
             portfolio_id="DEMO_DPM_EUR_001",
             request_payload={"snapshot_mode": "BASELINE"},
@@ -189,6 +211,7 @@ async def test_client_maps_http_status_error_with_detail(monkeypatch: pytest.Mon
         )
     assert exc_info.value.code == "FAILED_DEPENDENCY"
     assert exc_info.value.status_code == 424
+    assert "bad request" not in exc_info.value.message
 
 
 @pytest.mark.asyncio
@@ -215,18 +238,6 @@ async def test_client_maps_http_transport_error(monkeypatch: pytest.MonkeyPatch)
         )
     assert exc_info.value.code == "UPSTREAM_UNAVAILABLE"
     assert exc_info.value.status_code == 503
-
-
-def test_extract_error_detail_variants() -> None:
-    response_plain = httpx.Response(
-        status_code=500,
-        text="plain text",
-        request=httpx.Request("POST", "http://x"),
-    )
-    assert extract_upstream_error_detail(response_plain) == "plain text"
-
-    response_dict = _ok_response({"detail": {"message": "nested message"}})
-    assert extract_upstream_error_detail(response_dict) == "nested message"
 
 
 def test_client_defaults_to_canonical_core_service_identity(
