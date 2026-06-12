@@ -311,3 +311,10 @@ position/issuer extraction now live in `concentration/stateful_snapshot.py`.
 portfolio exposure-history sourcing, and final stateless-input assembly. Active benchmark exposure
 context fetching and benchmark-return/exposure-date alignment validation now live in
 `attribution_active_benchmark_exposure.py`.
+
+## REF-DEC-045: Split Rolling Maximum Drawdown Series
+
+`rolling_metric_series.py` keeps rolling metric dispatch, volatility, Sharpe, and dependency-count
+wrapping. Rolling maximum-drawdown window application and numpy drawdown math now live in
+`rolling_max_drawdown_series.py`, keeping that methodology independently reviewable from the
+dispatcher.

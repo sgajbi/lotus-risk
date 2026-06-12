@@ -12,6 +12,7 @@ from app.contracts.rolling import (
 from app.services.rolling_benchmark_metric_series import (
     calculate_rolling_benchmark_metric_values,
 )
+from app.services.rolling_max_drawdown_series import rolling_max_drawdown_metric
 from app.services.rolling_metric_outputs import (
     rolling_metric_series_context as rolling_metric_series_context,
     rolling_metric_series_points as rolling_metric_series_points,
@@ -125,7 +126,7 @@ def _rolling_max_drawdown_calculation(
     context: _RollingMetricCalculationContext,
 ) -> RollingMetricCalculation:
     return _without_dependency_counts(
-        _rolling_max_drawdown_metric(
+        rolling_max_drawdown_metric(
             context.portfolio_decimal,
             window_length=context.window_length,
             min_obs=context.min_obs,
@@ -203,19 +204,3 @@ def _rolling_sharpe(
     if roll_std.dropna().eq(0).any():
         flags.append("metric:ROLLING_SHARPE:zero_volatility_window")
     return sharpe, flags, int(aligned.shape[0])
-
-
-def _rolling_max_drawdown_metric(
-    series_decimal: pd.Series, *, window_length: int, min_obs: int
-) -> pd.Series:
-    return series_decimal.rolling(window=window_length, min_periods=min_obs).apply(
-        _rolling_max_drawdown,
-        raw=True,
-    )
-
-
-def _rolling_max_drawdown(window_decimal_returns: np.ndarray) -> float:
-    wealth = np.cumprod(1.0 + window_decimal_returns)
-    running_peak = np.maximum.accumulate(wealth)
-    drawdown = wealth / running_peak - 1.0
-    return float(np.min(drawdown))
