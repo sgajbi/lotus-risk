@@ -304,3 +304,10 @@ resolver callers.
 stateful response computation-input assembly. Stateful lotus-core snapshot payload construction,
 snapshot fetch validation, issuer-map merge policy, valuation-context extraction, and baseline
 position/issuer extraction now live in `concentration/stateful_snapshot.py`.
+
+## REF-DEC-044: Split Attribution Active Benchmark Exposure
+
+`attribution_stateful_inputs.py` keeps stateful attribution orchestration, grouping validation,
+portfolio exposure-history sourcing, and final stateless-input assembly. Active benchmark exposure
+context fetching and benchmark-return/exposure-date alignment validation now live in
+`attribution_active_benchmark_exposure.py`.
