@@ -252,3 +252,11 @@ issuer-record parsing, and caller/core issuer-map merge policy now live in
 error-response metadata, examples, and problem-details example helpers now live in
 `api_error_examples.py`, while `app.api_errors.STANDARD_ERROR_RESPONSES` remains the router-facing
 facade.
+
+## REF-DEC-037: Split Downstream Request Execution
+
+`_downstream_client_profile.py` keeps downstream HTTP profile defaults, profile DTOs, client
+construction, and environment-backed profile resolution. Request execution, HTTP/transport
+upstream-error normalization, invalid-payload failure observation, and success/failure upstream
+request metrics now live in `downstream_request_execution.py`, while the original module preserves
+compatibility exports for existing adapter imports.

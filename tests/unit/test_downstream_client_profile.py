@@ -163,7 +163,7 @@ async def test_execute_downstream_request_json_records_success_and_parses(
 ) -> None:
     success_records: list[dict[str, object]] = []
     monkeypatch.setattr(
-        "app.integrations._downstream_client_profile.record_upstream_request",
+        "app.integrations.downstream_request_execution.record_upstream_request",
         lambda **kwargs: success_records.append(kwargs),
     )
 
@@ -191,11 +191,11 @@ async def test_execute_downstream_request_json_records_failures_for_invalid_payl
     successes: list[dict[str, object]] = []
 
     monkeypatch.setattr(
-        "app.integrations._downstream_client_profile._record_upstream_failure",
+        "app.integrations.downstream_request_execution._record_upstream_failure",
         lambda **kwargs: failures.append(kwargs),
     )
     monkeypatch.setattr(
-        "app.integrations._downstream_client_profile.record_upstream_request",
+        "app.integrations.downstream_request_execution.record_upstream_request",
         lambda **kwargs: successes.append(kwargs),
     )
 
