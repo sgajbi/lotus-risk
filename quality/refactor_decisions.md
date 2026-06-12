@@ -232,3 +232,9 @@ parsing, required result checks, and bounded failure/timeout error construction 
 episode DTO mapping, and underwater-series inclusion policy. Return DataFrame construction,
 period-window resolution, period naming, and benchmark/portfolio series slicing now live in
 `drawdown_period_series.py`.
+
+## REF-DEC-034: Split Scenario Pack Catalog
+
+`scenario_engine.py` keeps regime scenario-pack request context assembly, scenario evaluation,
+policy-breach supportability, fingerprinting, and response construction. Static CIO scenario-pack
+definitions and supported exposure-bucket vocabulary now live in `scenario_pack_catalog.py`.
