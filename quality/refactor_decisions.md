@@ -281,3 +281,11 @@ response parsing, and missing-data failure construction. Missing-risk-free cover
 construction, upstream coverage probing, and safe coverage-detail mapping now live in
 `rolling_risk_free_coverage.py`, while the original dependency module preserves the prior import
 facade for callers.
+
+## REF-DEC-041: Split Risk Drawdown Details
+
+`risk/helpers.py` keeps compatibility aliases for risk calculation helpers, period wrappers,
+return transformations, VaR, expected shortfall, and data guards. Drawdown recovery semantics,
+empty drawdown detail construction, and drawdown metadata assembly now live in
+`risk/drawdown_details.py`, preserving the existing `risk_helpers._drawdown` facade used by metric
+calculators and characterization tests.
