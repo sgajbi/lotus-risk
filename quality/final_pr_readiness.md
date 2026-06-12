@@ -153,6 +153,16 @@ GitHub evidence to cite:
 3. `Pull Request Merge Gate` after the PR is opened
 4. `Main Releasability Gate` only after merge/release promotion flow requires it
 
+Wiki evidence:
+
+1. `..\lotus-platform\automation\Sync-RepoWikis.ps1 -CheckOnly -Repository lotus-risk` currently
+   reports publication drift for branch-authored wiki source files:
+   `Operations-Runbook.md`, `Security-and-Governance.md`, `Troubleshooting.md`, and
+   `Validation-and-CI.md`.
+2. Do not publish the GitHub wiki from this feature branch. After merge to `main`, publish the
+   repo-authored wiki source with `..\lotus-platform\automation\Sync-RepoWikis.ps1 -Publish
+   -Repository lotus-risk`.
+
 ## Known Limitations
 
 1. This branch should not claim unrestricted enterprise portfolio-archetype coverage beyond the
@@ -160,6 +170,8 @@ GitHub evidence to cite:
 2. Runtime token-validation proof remains a platform/gateway integration evidence item.
 3. Production telemetry threshold tuning remains post-deployment work.
 4. Large service and contract modules remain future maintainability targets.
+5. GitHub wiki publication remains a post-merge closure step for the four branch-authored wiki
+   files listed in the validation evidence section.
 
 ## Follow-Up Backlog
 
@@ -168,6 +180,7 @@ GitHub evidence to cite:
 3. Capture final enterprise runtime configuration proof before release promotion.
 4. Continue reducing large service and contract modules in behavior-preserving slices.
 5. Recalibrate observability alert thresholds with production telemetry.
+6. Publish repo-authored wiki source after merge to synchronize the GitHub wiki target.
 
 ## PR Assembly Checklist
 
