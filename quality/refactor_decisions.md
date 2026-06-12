@@ -211,3 +211,10 @@ Enterprise audit emission and sensitive metadata redaction now live in `enterpri
 policy-version lookup lives in `enterprise_policy.py`. `enterprise_readiness.py` keeps the public
 facade, runtime validation, payload-limit handling, security response headers, and middleware
 assembly so app wiring and existing tests preserve behavior.
+
+## REF-DEC-031: Split Concentration Simulation Snapshot State
+
+`concentration/simulation_resolver.py` keeps simulation session resolution, change application,
+metadata construction, and final computation-input assembly. Snapshot issuer mapping, baseline and
+projected position extraction, fallback behavior, coverage counts, and valuation-context extraction
+now live in `concentration/simulation_snapshot.py`.
