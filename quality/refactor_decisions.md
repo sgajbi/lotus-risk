@@ -289,3 +289,11 @@ return transformations, VaR, expected shortfall, and data guards. Drawdown recov
 empty drawdown detail construction, and drawdown metadata assembly now live in
 `risk/drawdown_details.py`, preserving the existing `risk_helpers._drawdown` facade used by metric
 calculators and characterization tests.
+
+## REF-DEC-042: Split Concentration Snapshot Display Names
+
+`concentration/parsing.py` keeps concentration numeric coercion, position extraction, valuation
+context parsing, and compatibility exports used by resolver tests. Snapshot instrument-name
+enrichment and display-name application now live in `concentration/snapshot_display_names.py`,
+while `_apply_snapshot_display_names` remains available from the parsing facade for current
+resolver callers.

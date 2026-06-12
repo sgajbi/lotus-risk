@@ -17,6 +17,9 @@ from app.services.concentration.issuer_mapping import (
     _merge_issuer_maps,
     _to_weighted_values,
 )
+from app.services.concentration.snapshot_display_names import (
+    apply_snapshot_display_names as _apply_snapshot_display_names,
+)
 
 
 def _as_str(value: Any) -> str | None:
@@ -106,52 +109,6 @@ def _extract_values_from_stateless_payload(
             )
 
     return current_rows, proposed_rows
-
-
-def _apply_snapshot_display_names(
-    sections: dict[str, Any],
-    issuer_by_security: dict[str, IssuerIdentity],
-) -> None:
-    enrichment = sections.get("instrument_enrichment")
-    if not isinstance(enrichment, list):
-        return
-    security_names = _security_names_from_enrichment(enrichment)
-    _apply_display_names_to_snapshot_positions(sections, security_names)
-
-
-def _security_names_from_enrichment(enrichment: list[Any]) -> dict[str, str]:
-    security_names: dict[str, str] = {}
-    for row in enrichment:
-        if not isinstance(row, dict):
-            continue
-        security_id = _as_str(row.get("security_id"))
-        instrument_name = _as_str(row.get("instrument_name"))
-        if security_id and instrument_name:
-            security_names[security_id] = instrument_name
-    return security_names
-
-
-def _apply_display_names_to_snapshot_positions(
-    sections: dict[str, Any],
-    security_names: dict[str, str],
-) -> None:
-    for section_name in ("positions_baseline", "positions_projected", "positions_delta"):
-        positions = sections.get(section_name)
-        if not isinstance(positions, list):
-            continue
-        _apply_display_names_to_rows(positions, security_names)
-
-
-def _apply_display_names_to_rows(
-    positions: list[Any],
-    security_names: dict[str, str],
-) -> None:
-    for row in positions:
-        if not isinstance(row, dict):
-            continue
-        security_id = _as_str(row.get("security_id"))
-        if security_id and security_id in security_names and "instrument_name" not in row:
-            row["instrument_name"] = security_names[security_id]
 
 
 def _snapshot_position_entry(position: dict[str, Any]) -> PositionEntry | None:
