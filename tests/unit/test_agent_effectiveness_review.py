@@ -53,3 +53,13 @@ def test_fourth_effectiveness_review_records_recent_modularity_evidence() -> Non
     assert "risk period-result extraction" in text
     assert "risk benchmark-metric extraction" in text
     assert "did not change repository responsibilities" in text
+
+
+def test_fifth_effectiveness_review_records_current_refactor_loop_evidence() -> None:
+    text = REVIEW.read_text(encoding="utf-8")
+
+    assert "## 2026-06-12 Review 5" in text
+    assert "49 pushed commits" in text
+    assert "transient facade-export/type issue and stale-import issue" in text
+    assert "Repository role, canonical commands, runtime integration posture" in text
+    assert "No new gate" in text

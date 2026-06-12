@@ -47,3 +47,13 @@ decisions.
 | Documentation | Improved | Review ledger, refactor decisions, generated baseline, and scorecard now capture rolling period/source extraction, risk period-result extraction, and risk benchmark-metric extraction. |
 | Repository context | No change | The recent slices refined internal service modularity but did not change repository responsibilities, canonical commands, runtime operations, or cross-app contracts. |
 | Automation | No new gate | Source-size, mypy, monetary-float, no-alias, OpenAPI, vocabulary, contract, baseline, and GitHub feature-lane gates already detect the relevant regressions from these extractions. |
+
+## 2026-06-12 Review 5
+
+| Area | Decision | Evidence / action |
+| --- | --- | --- |
+| Skill routing | No change | `lotus-backend-delivery-governance` plus `lotus-codebase-review-ledger` remain the smallest correct skills for the current backend refactor, CI evidence, and review-ledger workflow. |
+| Agent guidance | No change | The existing instruction pack and five-slice cadence continue to prevent broad rewrites: recent slices stayed behavior-preserving, each carried focused tests, regenerated baseline evidence, and `make check` proof before push. |
+| Documentation | Improved | `CODEBASE-REVIEW-LEDGER.md`, `quality/refactor_decisions.md`, `quality/quality_scorecard.md`, and `quality/baseline_report.md` now capture attribution, concentration, rolling, risk, downstream, and OpenAPI modularity movement through 49 pushed commits. |
+| Repository context | No change | The recent slices changed internal module ownership only. Repository role, canonical commands, runtime integration posture, API contract shape, and cross-app supportability truth remain accurate. |
+| Automation | No new gate | The current gates caught a transient facade-export/type issue and stale-import issue during the slice loop, then passed after correction. That evidence supports keeping the existing gate set rather than adding a duplicate custom validator. |
