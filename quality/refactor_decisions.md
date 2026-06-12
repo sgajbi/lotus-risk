@@ -260,3 +260,9 @@ construction, and environment-backed profile resolution. Request execution, HTTP
 upstream-error normalization, invalid-payload failure observation, and success/failure upstream
 request metrics now live in `downstream_request_execution.py`, while the original module preserves
 compatibility exports for existing adapter imports.
+
+## REF-DEC-038: Split Concentration Response Metrics
+
+`concentration/response_builder.py` keeps concentration response DTO assembly and calculation
+supportability recording. Position and issuer concentration metric derivation, coverage-status
+selection, and top-driver selection now live in `concentration/response_metrics.py`.
