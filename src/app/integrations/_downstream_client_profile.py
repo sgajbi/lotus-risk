@@ -7,8 +7,8 @@ from dataclasses import dataclass
 from typing import Final, NoReturn, TypeVar
 
 import httpx
-import os
 
+from app.integrations.downstream_profile_env import env_float_with_default, env_int_with_default
 from app.observability import record_upstream_request
 from app.upstream_errors import (
     UpstreamServiceError,
@@ -222,28 +222,6 @@ def _record_upstream_failure(
     )
 
 
-def _env_float_with_default(name: str, default: float) -> float:
-    raw_value = os.getenv(name)
-    if raw_value is None:
-        return default
-    try:
-        value = float(raw_value)  # monetary-float-allow: timeout/keepalive seconds, not money.
-    except ValueError:
-        return default
-    return value if value > 0 else default
-
-
-def _env_int_with_default(name: str, default: int) -> int:
-    raw_value = os.getenv(name)
-    if raw_value is None:
-        return default
-    try:
-        value = int(raw_value)
-    except ValueError:
-        return default
-    return value if value > 0 else default
-
-
 def resolve_downstream_client_profile(
     *,
     env_prefix: str,
@@ -253,16 +231,16 @@ def resolve_downstream_client_profile(
     default_keepalive_expiry_seconds: float = DEFAULT_KEEPALIVE_EXPIRY_SECONDS,
 ) -> DownstreamClientProfile:
     return DownstreamClientProfile(
-        timeout_seconds=_env_float_with_default(
+        timeout_seconds=env_float_with_default(
             f"{env_prefix}_TIMEOUT_SECONDS", default_timeout_seconds
         ),
-        max_connections=_env_int_with_default(
+        max_connections=env_int_with_default(
             f"{env_prefix}_MAX_CONNECTIONS", default_max_connections
         ),
-        max_keepalive_connections=_env_int_with_default(
+        max_keepalive_connections=env_int_with_default(
             f"{env_prefix}_MAX_KEEPALIVE_CONNECTIONS", default_max_keepalive_connections
         ),
-        keepalive_expiry_seconds=_env_float_with_default(
+        keepalive_expiry_seconds=env_float_with_default(
             f"{env_prefix}_KEEPALIVE_EXPIRY_SECONDS", default_keepalive_expiry_seconds
         ),
     )

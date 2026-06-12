@@ -4,11 +4,8 @@ from typing import Any
 
 import httpx
 
-from app.integrations._downstream_client_profile import (
-    _env_float_with_default,
-    _env_int_with_default,
-    resolve_downstream_client_profile,
-)
+from app.integrations._downstream_client_profile import resolve_downstream_client_profile
+from app.integrations.downstream_profile_env import env_float_with_default, env_int_with_default
 from app.integrations.lotus_performance_transport import (
     DEFAULT_LOTUS_PERFORMANCE_BASE_URL as _DEFAULT_LOTUS_PERFORMANCE_BASE_URL,
     execute_benchmark_exposure_context_request,
@@ -33,10 +30,10 @@ class LotusPerformanceClient:
             default_timeout_seconds=timeout_seconds or 10.0,
         )
         self._http_client = http_client
-        self._async_poll_interval_seconds = _env_float_with_default(
+        self._async_poll_interval_seconds = env_float_with_default(
             "LOTUS_PERFORMANCE_ASYNC_POLL_INTERVAL_SECONDS", 1.0
         )
-        self._async_max_polls = _env_int_with_default("LOTUS_PERFORMANCE_ASYNC_MAX_POLLS", 60)
+        self._async_max_polls = env_int_with_default("LOTUS_PERFORMANCE_ASYNC_MAX_POLLS", 60)
 
     @property
     def base_url(self) -> str:

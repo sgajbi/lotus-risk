@@ -13,11 +13,11 @@ completion claim.
 ## Generation Identity
 
 - Git branch: `feat/enterprise-risk-refactor-continuation`
-- Git commit: `55caf881c1c712ac85e6eb59db447328fb0d522e`
+- Git commit: `b20f5cfdee8c35d18e4182c0317b65d2f8935b1b`
 
 ## Current Code Size
 
-- Python source files under `src/`: 226
+- Python source files under `src/`: 227
 - Python test files under `tests/`: 103
 - Python packages under `src/`: 10
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
@@ -26,7 +26,6 @@ completion claim.
 
 | Path | Lines | Bytes |
 | --- | --- | --- |
-| src/app/integrations/_downstream_client_profile.py | 268 | 7495 |
 | src/app/enterprise_readiness.py | 259 | 8103 |
 | src/app/services/concentration/simulation_resolver.py | 255 | 8549 |
 | src/app/integrations/performance_returns_series_async.py | 255 | 7747 |
@@ -34,6 +33,7 @@ completion claim.
 | src/app/services/scenario_engine.py | 253 | 8239 |
 | src/app/services/concentration/stateless_resolver.py | 246 | 8471 |
 | src/app/api_errors.py | 246 | 7863 |
+| src/app/integrations/_downstream_client_profile.py | 246 | 6965 |
 | src/app/services/concentration/response_builder.py | 244 | 9409 |
 | src/app/services/attribution_engine.py | 244 | 7513 |
 | src/app/services/rolling_risk_free_dependency.py | 242 | 7826 |
@@ -96,12 +96,12 @@ All checks passed!
 - Ruff format check: passed
 
 ```text
-344 files already formatted
+345 files already formatted
 ```
 - Type checking: passed
 
 ```text
-Success: no issues found in 329 source files
+Success: no issues found in 330 source files
 ```
 - Unit coverage snapshot: passed
 
@@ -115,10 +115,10 @@ Success: no issues found in 329 source files
 ...
 src\app\services\rolling_stateful_source_responses.py         45      1     16      1    97%   96
 ------------------------------------------------------------------------------------------------------
-TOTAL                                                       6136     91   1028     73    98%
+TOTAL                                                       6140     91   1028     73    98%
 
-183 files skipped due to complete coverage.
-551 passed in 13.63s
+184 files skipped due to complete coverage.
+551 passed in 12.81s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -148,7 +148,7 @@ src\app\services\risk\__init__.py - A (100.00)
 - Dependency hygiene: passed
 
 ```text
-Scanning 226 files...
+Scanning 227 files...
 
 Success! No dependency issues found.
 ```
@@ -156,11 +156,22 @@ Success! No dependency issues found.
 ## Security Snapshot
 
 - Bandit source scan: passed
-- Dependency vulnerability audit: passed
+- Dependency vulnerability audit: reported exit 1
 
 ```text
-=== Vulnerability Summary ===
-Known vulnerabilities: 0
+=== dependency install stdout ===
+Obtaining file:///C:/Users/Sandeep/projects/lotus-risk
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Checking if build backend supports build_editable: started
+  Checking if build backend supports build_editable: finished with status 'done'
+...
+  
+  [0 lines of output]
+  [end of output]
+  
+  note: This error originates from a subprocess, and is likely not a problem with pip.
+ERROR: Failed to build 'file:///C:/Users/Sandeep/projects/lotus-risk' when getting requirements to build editable
 ```
 
 ## Current Architectural Findings
@@ -247,7 +258,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc1-503-UPSTREAM_UNAVAILABLE-transport]
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 
-551 tests collected in 2.00s
+551 tests collected in 2.04s
 ```
 - Import-linter report-only: passed
 

@@ -197,3 +197,11 @@ reduces the largest source module and keeps OpenAPI example validation behavior 
 mapping, and risk statistics. Drawdown episode records, duration calculation, segment extraction,
 and max-episode extreme-field selection now live in `drawdown_episodes.py`, with compatibility
 exports preserved from `drawdown_series.py` for existing engine and period-result callers.
+
+## REF-DEC-029: Split Downstream Profile Environment Parsing
+
+Downstream timeout, connection-pool, keepalive, and async polling settings now use focused
+environment parsing helpers in `downstream_profile_env.py`. `_downstream_client_profile.py` keeps
+the public profile type, HTTP-client construction, request execution, error mapping, and upstream
+metrics recording, while `LotusPerformanceClient` uses the shared env helpers directly for async
+polling controls.
