@@ -297,3 +297,10 @@ context parsing, and compatibility exports used by resolver tests. Snapshot inst
 enrichment and display-name application now live in `concentration/snapshot_display_names.py`,
 while `_apply_snapshot_display_names` remains available from the parsing facade for current
 resolver callers.
+
+## REF-DEC-043: Split Concentration Stateful Snapshot Sourcing
+
+`concentration/resolvers.py` keeps the public stateful/simulation resolver orchestration and
+stateful response computation-input assembly. Stateful lotus-core snapshot payload construction,
+snapshot fetch validation, issuer-map merge policy, valuation-context extraction, and baseline
+position/issuer extraction now live in `concentration/stateful_snapshot.py`.
