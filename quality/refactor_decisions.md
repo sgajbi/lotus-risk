@@ -218,3 +218,10 @@ assembly so app wiring and existing tests preserve behavior.
 metadata construction, and final computation-input assembly. Snapshot issuer mapping, baseline and
 projected position extraction, fallback behavior, coverage counts, and valuation-context extraction
 now live in `concentration/simulation_snapshot.py`.
+
+## REF-DEC-032: Split Lotus-Performance Async Returns Payload Handling
+
+`performance_returns_series_async.py` keeps async returns-series polling orchestration and the
+legacy import facade for transport callers. Accepted-payload path validation, async result payload
+parsing, required result checks, and bounded failure/timeout error construction now live in
+`performance_returns_payloads.py`.

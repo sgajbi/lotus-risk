@@ -13,11 +13,11 @@ completion claim.
 ## Generation Identity
 
 - Git branch: `feat/enterprise-risk-refactor-continuation`
-- Git commit: `19da72ae2bfd115d94ee54e212b0dc652100c77a`
+- Git commit: `9f78b92f91369b150522635fcd10b824e48612f4`
 
 ## Current Code Size
 
-- Python source files under `src/`: 230
+- Python source files under `src/`: 231
 - Python test files under `tests/`: 103
 - Python packages under `src/`: 10
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
@@ -26,7 +26,6 @@ completion claim.
 
 | Path | Lines | Bytes |
 | --- | --- | --- |
-| src/app/integrations/performance_returns_series_async.py | 255 | 7747 |
 | src/app/services/drawdown_periods.py | 254 | 7963 |
 | src/app/services/scenario_engine.py | 253 | 8239 |
 | src/app/services/concentration/stateless_resolver.py | 246 | 8471 |
@@ -46,6 +45,7 @@ completion claim.
 | src/app/integrations/lotus_performance_transport.py | 216 | 6839 |
 | src/app/services/risk_event_cohort_engine.py | 212 | 7302 |
 | src/app/services/risk/metric_calculators.py | 211 | 7168 |
+| src/app/services/risk/period_metrics.py | 211 | 6797 |
 
 ### Largest Functions And Classes
 
@@ -96,12 +96,12 @@ All checks passed!
 - Ruff format check: passed
 
 ```text
-348 files already formatted
+349 files already formatted
 ```
 - Type checking: passed
 
 ```text
-Success: no issues found in 333 source files
+Success: no issues found in 334 source files
 ```
 - Unit coverage snapshot: passed
 
@@ -113,12 +113,12 @@ Success: no issues found in 333 source files
 ........................................................................ [ 65%]
 ........................................................................ [ 78%]
 ...
-src\app\services\rolling_stateful_source_responses.py         45      1     16      1    97%   96
-------------------------------------------------------------------------------------------------------
-TOTAL                                                       6153     91   1028     73    98%
+src\app\services\rolling_stateful_source_responses.py      45      1     16      1    97%   96
+---------------------------------------------------------------------------------------------------
+TOTAL                                                    6159     91   1028     73    98%
 
-187 files skipped due to complete coverage.
-551 passed in 13.64s
+188 files skipped due to complete coverage.
+551 passed in 11.86s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -148,7 +148,7 @@ src\app\services\risk\__init__.py - A (100.00)
 - Dependency hygiene: passed
 
 ```text
-Scanning 230 files...
+Scanning 231 files...
 
 Success! No dependency issues found.
 ```
@@ -247,7 +247,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc1-503-UPSTREAM_UNAVAILABLE-transport]
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 
-551 tests collected in 2.13s
+551 tests collected in 1.94s
 ```
 - Import-linter report-only: passed
 
