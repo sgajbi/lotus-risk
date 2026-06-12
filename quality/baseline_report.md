@@ -13,11 +13,11 @@ completion claim.
 ## Generation Identity
 
 - Git branch: `feat/enterprise-risk-refactor-continuation`
-- Git commit: `3c02c72b05e345bcda4de511ff575d2a000644df`
+- Git commit: `a203d961955fe7aae550cb6df11dd58f56e64d88`
 
 ## Current Code Size
 
-- Python source files under `src/`: 234
+- Python source files under `src/`: 235
 - Python test files under `tests/`: 103
 - Python packages under `src/`: 10
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
@@ -26,7 +26,6 @@ completion claim.
 
 | Path | Lines | Bytes |
 | --- | --- | --- |
-| src/app/api_errors.py | 246 | 7863 |
 | src/app/integrations/_downstream_client_profile.py | 246 | 6965 |
 | src/app/services/concentration/response_builder.py | 244 | 9409 |
 | src/app/services/attribution_engine.py | 244 | 7513 |
@@ -46,6 +45,7 @@ completion claim.
 | src/app/services/risk/period_metrics.py | 211 | 6797 |
 | src/app/services/risk/benchmark_period_metrics.py | 211 | 6678 |
 | src/app/openapi_request_examples/analytics.py | 210 | 6967 |
+| src/app/services/scenario_governance.py | 208 | 7313 |
 
 ### Largest Functions And Classes
 
@@ -96,12 +96,12 @@ All checks passed!
 - Ruff format check: passed
 
 ```text
-352 files already formatted
+353 files already formatted
 ```
 - Type checking: passed
 
 ```text
-Success: no issues found in 337 source files
+Success: no issues found in 338 source files
 ```
 - Unit coverage snapshot: passed
 
@@ -115,10 +115,10 @@ Success: no issues found in 337 source files
 ...
 src\app\services\rolling_stateful_source_responses.py           45      1     16      1    97%   96
 --------------------------------------------------------------------------------------------------------
-TOTAL                                                         6174     91   1028     73    98%
+TOTAL                                                         6179     91   1028     73    98%
 
-190 files skipped due to complete coverage.
-551 passed in 12.77s
+191 files skipped due to complete coverage.
+551 passed in 10.54s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -127,12 +127,12 @@ TOTAL                                                         6174     91   1028
 - Maintainability index summary: passed
 
 ```text
-src\app\api_errors.py - A (46.15)
+src\app\api_errors.py - A (51.81)
+src\app\api_error_examples.py - A (60.17)
 src\app\app_factory.py - A (100.00)
 src\app\app_lifecycle.py - A (59.25)
 src\app\domain_data_products.py - A (49.24)
 src\app\enterprise_audit.py - A (60.61)
-src\app\enterprise_authorization.py - A (36.76)
 ...
 src\app\services\risk\numeric.py - A (100.00)
 src\app\services\risk\period_metrics.py - A (49.15)
@@ -148,7 +148,7 @@ src\app\services\risk\__init__.py - A (100.00)
 - Dependency hygiene: passed
 
 ```text
-Scanning 234 files...
+Scanning 235 files...
 
 Success! No dependency issues found.
 ```
@@ -167,7 +167,7 @@ Known vulnerabilities: 0
 
 1. `src/app/main.py` now preserves the stable ASGI export while `src/app/app_factory.py` owns
    FastAPI app construction, middleware registration, exception-handler registration, and router
-   registration. Standard OpenAPI error metadata now lives in `src/app/api_errors.py`; health, readiness,
+   registration. Standard OpenAPI error metadata now lives in `src/app/api_error_examples.py`; health, readiness,
    metrics, operational diagnostics, trust telemetry, and capability publication now live in
    `src/app/routers/operational.py`; stateless source-product endpoints now live in
    `src/app/routers/source_products.py`; the primary risk calculation endpoint now lives in
@@ -196,7 +196,7 @@ Known vulnerabilities: 0
    but any future list/read-model route must use an explicit shared contract.
 4. Health, liveness, readiness, metadata, metrics, and ops endpoints exist and are documented, but
    public/internal route grouping is not yet enforced by module structure.
-5. Standard error response metadata in `src/app/api_errors.py` now includes problem-details
+5. Standard error response metadata in `src/app/api_error_examples.py` now includes problem-details
    compatibility fields while preserving the Lotus error envelope.
 
 ## Security And Resilience Gaps
@@ -247,7 +247,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc1-503-UPSTREAM_UNAVAILABLE-transport]
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 
-551 tests collected in 1.99s
+551 tests collected in 2.30s
 ```
 - Import-linter report-only: passed
 

@@ -245,3 +245,10 @@ definitions and supported exposure-bucket vocabulary now live in `scenario_pack_
 computation payload assembly. Caller issuer extraction, lotus-core enrichment retrieval, core
 issuer-record parsing, and caller/core issuer-map merge policy now live in
 `concentration/stateless_issuer_mapping.py`.
+
+## REF-DEC-036: Split OpenAPI Error Examples
+
+`api_errors.py` keeps runtime exception handlers and registration. Static OpenAPI standard
+error-response metadata, examples, and problem-details example helpers now live in
+`api_error_examples.py`, while `app.api_errors.STANDARD_ERROR_RESPONSES` remains the router-facing
+facade.
