@@ -14,26 +14,32 @@ from app.contracts.risk import ReturnPoint, RiskRequestScope
 from app.services.attribution_exposure_history import (
     fetch_stateful_exposure_history,
 )
+from app.services.attribution_stateful_returns import (
+    LotusPerformanceReturnsClientProtocol,
+    StatefulReturnsContext,
+    build_stateful_returns_request,
+    fetch_stateful_returns_context,
+    requires_active_attribution,
+)
 from app.services.benchmark_exposure_history import (
     BenchmarkExposureHistoryRequest,
     fetch_benchmark_exposure_history,
 )
-from app.services.stateful_returns_request import build_stateful_returns_series_request
-from app.services.stateful_returns_series_parser import (
-    extract_required_portfolio_returns,
-    to_return_points,
-)
 from app.upstream_errors import missing_upstream_data
 
 
-class LotusPerformanceClientProtocol(Protocol):
-    async def get_returns_series(
-        self,
-        *,
-        request_payload: dict[str, Any],
-        correlation_id: str | None,
-    ) -> dict[str, Any]: ...
+__all__ = [
+    "LotusCoreClientProtocol",
+    "LotusPerformanceClientProtocol",
+    "ResolvedStatefulAttributionInputs",
+    "StatefulReturnsContext",
+    "build_stateful_returns_request",
+    "build_stateful_stateless_input",
+    "resolve_stateful_attribution_inputs",
+]
 
+
+class LotusPerformanceClientProtocol(LotusPerformanceReturnsClientProtocol, Protocol):
     async def get_benchmark_exposure_context(
         self,
         *,
@@ -60,14 +66,6 @@ class LotusCoreClientProtocol(Protocol):
 
 
 @dataclass(frozen=True)
-class StatefulReturnsContext:
-    returns_request: dict[str, Any]
-    portfolio_returns: list[ReturnPoint]
-    benchmark_returns: list[ReturnPoint]
-    start_date: date
-
-
-@dataclass(frozen=True)
 class ResolvedStatefulAttributionInputs:
     stateless_input: HistoricalAttributionStatelessInput
     returns_request: dict[str, Any]
@@ -77,11 +75,6 @@ class ResolvedStatefulAttributionInputs:
 class _StatefulExposureHistories:
     exposure_history: list[ExposurePoint]
     benchmark_exposure_history: list[ExposurePoint]
-
-
-def requires_active_attribution(stateful: HistoricalAttributionStatefulInput) -> bool:
-    options = stateful.attribution_options
-    return "ACTIVE_RISK" in options.attribution_types or "TRACKING_ERROR" in options.metrics
 
 
 def _validate_benchmark_exposure_alignment(
@@ -104,55 +97,11 @@ def _validate_benchmark_exposure_alignment(
         )
 
 
-def build_stateful_returns_request(stateful: HistoricalAttributionStatefulInput) -> dict[str, Any]:
-    return build_stateful_returns_series_request(
-        portfolio_id=stateful.portfolio_id,
-        as_of_date=stateful.as_of_date,
-        periods=stateful.periods,
-        frequency="DAILY",
-        metric_basis=stateful.net_or_gross,
-        reporting_currency=stateful.reporting_currency,
-        include_benchmark=requires_active_attribution(stateful),
-        include_risk_free=False,
-        missing_data_policy="ALLOW_PARTIAL",
-    )
-
-
 def validate_stateful_groupings(grouping_dimensions: list[GroupingDimension]) -> None:
     if "CUSTOM" in grouping_dimensions:
         raise ValueError(
             "stateful historical-attribution does not support grouping_dimension=CUSTOM"
         )
-
-
-async def _fetch_stateful_returns_context(
-    *,
-    stateful: HistoricalAttributionStatefulInput,
-    performance_client: LotusPerformanceClientProtocol,
-    correlation_id: str | None,
-) -> StatefulReturnsContext:
-    returns_request = build_stateful_returns_request(stateful)
-    returns_response = await performance_client.get_returns_series(
-        request_payload=returns_request,
-        correlation_id=correlation_id,
-    )
-    series, portfolio_returns = extract_required_portfolio_returns(returns_response)
-    benchmark_returns = to_return_points(series.get("benchmark_returns"))
-    if requires_active_attribution(stateful) and not benchmark_returns:
-        raise missing_upstream_data(
-            service="lotus-performance",
-            operation="/integration/returns/series",
-            message=(
-                "lotus-performance returns-series returned no benchmark returns for "
-                "requested stateful active-risk attribution"
-            ),
-        )
-    return StatefulReturnsContext(
-        returns_request=returns_request,
-        portfolio_returns=portfolio_returns,
-        benchmark_returns=benchmark_returns,
-        start_date=min(point.date for point in portfolio_returns),
-    )
 
 
 async def _fetch_active_benchmark_exposure_history(
@@ -251,7 +200,7 @@ async def resolve_stateful_attribution_inputs(
     validate_stateful_groupings(requested_groupings)
 
     requires_active = requires_active_attribution(stateful)
-    returns_context = await _fetch_stateful_returns_context(
+    returns_context = await fetch_stateful_returns_context(
         stateful=stateful,
         performance_client=performance_client,
         correlation_id=correlation_id,

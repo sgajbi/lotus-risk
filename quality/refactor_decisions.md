@@ -175,3 +175,11 @@ calculation input precalculation, and the public `build_attribution_set` entry p
 attribution-set construction, contributor DTO mapping, reconciled result assembly, and calculated
 result assembly now live in `attribution_set_results.py`, keeping attribution math behavior
 unchanged while making result-shape construction independently reviewable.
+
+## REF-DEC-026: Split Attribution Stateful Returns From Input Assembly
+
+Stateful attribution input resolution keeps grouping validation, core exposure-history sourcing,
+active benchmark exposure sourcing, and final stateless-input assembly. Returns-series request
+construction, active-attribution requirement detection, portfolio/benchmark return parsing, and
+`StatefulReturnsContext` construction now live in `attribution_stateful_returns.py`, with
+compatibility exports preserved from `attribution_stateful_inputs.py`.
