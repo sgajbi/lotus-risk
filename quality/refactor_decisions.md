@@ -225,3 +225,10 @@ now live in `concentration/simulation_snapshot.py`.
 legacy import facade for transport callers. Accepted-payload path validation, async result payload
 parsing, required result checks, and bounded failure/timeout error construction now live in
 `performance_returns_payloads.py`.
+
+## REF-DEC-033: Split Drawdown Period Series Preparation
+
+`drawdown_periods.py` keeps per-period drawdown result assembly, relative benchmark invocation,
+episode DTO mapping, and underwater-series inclusion policy. Return DataFrame construction,
+period-window resolution, period naming, and benchmark/portfolio series slicing now live in
+`drawdown_period_series.py`.
