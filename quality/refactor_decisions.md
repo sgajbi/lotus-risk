@@ -183,3 +183,10 @@ active benchmark exposure sourcing, and final stateless-input assembly. Returns-
 construction, active-attribution requirement detection, portfolio/benchmark return parsing, and
 `StatefulReturnsContext` construction now live in `attribution_stateful_returns.py`, with
 compatibility exports preserved from `attribution_stateful_inputs.py`.
+
+## REF-DEC-027: Split OpenAPI Request Examples From The Facade Helper
+
+`openapi_examples.py` keeps the stable request-example facade used by routers and tests. The static
+endpoint request payloads now live in the `openapi_request_examples` package, split between
+analytics and source-product examples, while `request_body_examples` remains in the facade. This
+reduces the largest source module and keeps OpenAPI example validation behavior unchanged.
