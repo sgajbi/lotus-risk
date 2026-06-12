@@ -238,3 +238,10 @@ period-window resolution, period naming, and benchmark/portfolio series slicing 
 `scenario_engine.py` keeps regime scenario-pack request context assembly, scenario evaluation,
 policy-breach supportability, fingerprinting, and response construction. Static CIO scenario-pack
 definitions and supported exposure-bucket vocabulary now live in `scenario_pack_catalog.py`.
+
+## REF-DEC-035: Split Stateless Concentration Issuer Mapping
+
+`concentration/stateless_resolver.py` keeps stateless weighted-state construction and final
+computation payload assembly. Caller issuer extraction, lotus-core enrichment retrieval, core
+issuer-record parsing, and caller/core issuer-map merge policy now live in
+`concentration/stateless_issuer_mapping.py`.
