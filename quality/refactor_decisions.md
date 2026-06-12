@@ -266,3 +266,10 @@ compatibility exports for existing adapter imports.
 `concentration/response_builder.py` keeps concentration response DTO assembly and calculation
 supportability recording. Position and issuer concentration metric derivation, coverage-status
 selection, and top-driver selection now live in `concentration/response_metrics.py`.
+
+## REF-DEC-039: Split Attribution Period Results
+
+`attribution_engine.py` keeps historical attribution response orchestration, metadata assembly, and
+supportability recording. Period naming, period-window resolution, portfolio and benchmark return
+slicing, insufficient-data period results, and period-result construction now live in
+`attribution_period_results.py`.
