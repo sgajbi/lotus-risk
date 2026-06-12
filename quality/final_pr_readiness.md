@@ -35,7 +35,7 @@ Current measured highlights:
    redaction, dependency audit, threat-model evidence, and enterprise deployment security posture.
 6. Observability evidence now covers metrics, dashboard panels, alert definitions, and runbook
    anchors.
-7. The continuation branch currently carries `50` small, non-squash-oriented commits over
+7. The continuation branch carries at least `50` small, non-squash-oriented commits over
    `origin/main`, with generated baseline identity pinned to commit `ee16bc3`.
 
 ## Architecture Improvements
