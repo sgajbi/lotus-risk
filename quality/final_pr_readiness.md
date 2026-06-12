@@ -1,7 +1,7 @@
 # Lotus Risk Enterprise Refactor PR Readiness Pack
 
 This pack is the draft evidence source for the final non-squash PR on
-`feat/enterprise-risk-refactor-production-hardening`. It is not a completion claim. The PR should
+`feat/enterprise-risk-refactor-continuation`. It is not a completion claim. The PR should
 only be opened after the branch is still clean, GitHub checks are healthy, and the generated
 OpenAPI artifact is attached or referenced in PR evidence.
 
@@ -27,13 +27,16 @@ Current measured highlights:
 1. `src/app/main.py` moved from `980` lines and `22` route/middleware/handler decorators to `10`
    lines and `0` decorators.
 2. The latest quality baseline reports no C-or-worse cyclomatic-complexity candidates.
-3. The latest quality baseline collects `457` tests across `91` Python test files.
+3. The latest quality baseline collects `552` tests across `103` Python test files, with `244`
+   Python source files and `347` mypy-checked source files.
 4. OpenAPI governance now enforces operation IDs, mutation request examples, duplicate operation ID
    checks, and generated artifact policy.
 5. Security evidence now covers authorization headers, service identity, capability checks,
    redaction, dependency audit, threat-model evidence, and enterprise deployment security posture.
 6. Observability evidence now covers metrics, dashboard panels, alert definitions, and runbook
    anchors.
+7. The continuation branch currently carries `50` small, non-squash-oriented commits over
+   `origin/main`, with generated baseline identity pinned to commit `ee16bc3`.
 
 ## Architecture Improvements
 
@@ -47,8 +50,10 @@ Evidence:
 
 Remaining risk:
 
-1. Several service and contract modules remain large enough to deserve later cohesive extraction:
-   targeted drawdown metric, risk response, and residual issuer/response contract fragments.
+1. Several service and contract modules remain large enough to deserve later cohesive extraction,
+   including benchmark exposure history, calculation supportability, risk mode adaptation,
+   lotus-performance transport, scenario analytics, risk event cohort handling, residual contract
+   fragments, and OpenAPI request examples.
 
 ## API And OpenAPI Improvements
 
@@ -66,6 +71,8 @@ PR requirement:
 
 1. Attach or reference the generated `output/openapi/lotus-risk.openapi.json` artifact in the final
    PR evidence, using `quality/openapi_artifact_evidence.md` as the checksum manifest.
+2. Reconfirm the artifact manifest was generated from `feat/enterprise-risk-refactor-continuation`
+   immediately before PR creation.
 
 ## Testing Improvements
 
@@ -74,7 +81,7 @@ Evidence:
 1. Focused tests protect app factory wiring, router extraction, downstream client boundaries,
    OpenAPI governance, security evidence, observability contracts, upstream error mapping,
    enterprise readiness, and risk analytics behavior.
-2. The latest generated baseline records `457` collected tests and `97%` total coverage.
+2. The latest generated baseline records `552` collected tests and `98%` total coverage.
 3. The final PR should list exact local commands and GitHub check names that passed.
 
 ## Security Improvements

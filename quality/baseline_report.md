@@ -13,7 +13,7 @@ completion claim.
 ## Generation Identity
 
 - Git branch: `feat/enterprise-risk-refactor-continuation`
-- Git commit: `44f8255b22441ad7dfc87ecd6c29ca2424e83188`
+- Git commit: `ee16bc3bd397ccd3a7f5624fcf488c00751fd684`
 
 ## Current Code Size
 
@@ -118,7 +118,7 @@ src\app\services\rolling_stateful_source_responses.py           45      1     16
 TOTAL                                                         6236     89   1028     73    98%
 
 198 files skipped due to complete coverage.
-551 passed in 14.00s
+552 passed in 12.67s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -240,14 +240,14 @@ tests/unit/test_agent_effectiveness_review.py::test_codebase_review_playbook_req
 tests/unit/test_agent_effectiveness_review.py::test_second_effectiveness_review_records_configuration_and_context_improvements
 tests/unit/test_agent_effectiveness_review.py::test_third_effectiveness_review_records_problem_details_and_modularity_evidence
 tests/unit/test_agent_effectiveness_review.py::test_fourth_effectiveness_review_records_recent_modularity_evidence
-tests/unit/test_app_factory.py::test_create_app_builds_independent_service_instance
+tests/unit/test_agent_effectiveness_review.py::test_fifth_effectiveness_review_records_current_refactor_loop_evidence
 ...
 tests/unit/test_upstream_errors.py::test_classify_upstream_http_error_matrix[504-502-UPSTREAM_FAILURE-upstream_failure-True]
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc0-504-UPSTREAM_TIMEOUT-timeout]
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc1-503-UPSTREAM_UNAVAILABLE-transport]
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 
-551 tests collected in 2.11s
+552 tests collected in 2.02s
 ```
 - Import-linter report-only: passed
 

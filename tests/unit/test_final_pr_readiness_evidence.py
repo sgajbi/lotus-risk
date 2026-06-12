@@ -32,8 +32,15 @@ def test_final_pr_readiness_pack_pins_evidence_commands_and_risks() -> None:
     text = READINESS_DOC.read_text(encoding="utf-8")
 
     required_terms = (
+        "feat/enterprise-risk-refactor-continuation",
         "quality/quality_scorecard.md",
         "quality/openapi_artifact_evidence.md",
+        "552",
+        "103",
+        "244",
+        "347",
+        "50",
+        "ee16bc3",
         "make openapi-artifact-gate",
         "output/openapi/lotus-risk.openapi.json",
         "make quality-baseline",
@@ -61,6 +68,7 @@ def test_openapi_artifact_evidence_manifest_records_attachment_metadata() -> Non
         "Artifact size bytes",
         "Path count",
         "Operation count",
+        "feat/enterprise-risk-refactor-continuation",
     )
 
     for term in required_terms:

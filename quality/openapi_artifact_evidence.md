@@ -11,7 +11,7 @@ than committed.
 | Artifact path | `output/openapi/lotus-risk.openapi.json` |
 | Generation command | `make openapi-artifact-gate` |
 | Validation command | `make openapi-gate` |
-| Generated from branch | `feat/enterprise-risk-refactor-production-hardening` |
+| Generated from branch | `feat/enterprise-risk-refactor-continuation` |
 | OpenAPI version | `3.1.0` |
 | API title | `lotus-risk` |
 | API version | `0.1.0` |
