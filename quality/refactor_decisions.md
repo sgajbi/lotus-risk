@@ -190,3 +190,10 @@ compatibility exports preserved from `attribution_stateful_inputs.py`.
 endpoint request payloads now live in the `openapi_request_examples` package, split between
 analytics and source-product examples, while `request_body_examples` remains in the facade. This
 reduces the largest source module and keeps OpenAPI example validation behavior unchanged.
+
+## REF-DEC-028: Split Drawdown Episodes From Series Summary Logic
+
+`drawdown_series.py` keeps drawdown series construction, summary aggregation, underwater-series
+mapping, and risk statistics. Drawdown episode records, duration calculation, segment extraction,
+and max-episode extreme-field selection now live in `drawdown_episodes.py`, with compatibility
+exports preserved from `drawdown_series.py` for existing engine and period-result callers.
