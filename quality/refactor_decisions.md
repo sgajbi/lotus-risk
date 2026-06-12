@@ -273,3 +273,11 @@ selection, and top-driver selection now live in `concentration/response_metrics.
 supportability recording. Period naming, period-window resolution, portfolio and benchmark return
 slicing, insufficient-data period results, and period-result construction now live in
 `attribution_period_results.py`.
+
+## REF-DEC-040: Split Rolling Risk-Free Coverage
+
+`rolling_risk_free_dependency.py` keeps rolling risk-free dependency resolution, fallback sourcing,
+response parsing, and missing-data failure construction. Missing-risk-free coverage request
+construction, upstream coverage probing, and safe coverage-detail mapping now live in
+`rolling_risk_free_coverage.py`, while the original dependency module preserves the prior import
+facade for callers.
