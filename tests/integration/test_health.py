@@ -1,8 +1,40 @@
 from fastapi.testclient import TestClient
+import pytest
 
 from app.main import app
 from tests.support.app_runtime import override_app_runtime
 from tests.support.lotus_core_fakes import SimulationLotusCoreClient
+
+
+@pytest.mark.parametrize(
+    ("path", "expected_key", "expected_value"),
+    (
+        ("/health", "status", None),
+        ("/health/live", "status", "live"),
+        ("/health/ready", "status", "ready"),
+        ("/ops", "dependencies", None),
+        ("/ops/trust-telemetry", "declared_dependencies", None),
+        ("/metadata", "rounding_policy_version", None),
+        ("/integration/capabilities", "supported_input_modes", None),
+        ("/openapi.json", "paths", None),
+        ("/metrics", "# HELP", None),
+    ),
+)
+def test_operational_get_endpoint_contract_smoke(
+    path: str, expected_key: str, expected_value: str | None
+) -> None:
+    client = TestClient(app)
+    response = client.get(path)
+
+    assert response.status_code == 200
+    if path == "/metrics":
+        assert response.headers["content-type"].startswith("text/plain")
+        assert expected_key in response.text
+    else:
+        body = response.json()
+        assert expected_key in body
+        if expected_value is not None:
+            assert body[expected_key] == expected_value
 
 
 def test_health_endpoints() -> None:
