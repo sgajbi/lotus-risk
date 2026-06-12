@@ -1,31 +1,20 @@
 import json
-import logging
 import os
-from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable
 
 from fastapi import Request, Response
+from app.enterprise_audit import emit_audit_event, redact_sensitive
 from app.enterprise_authorization import (
     WRITE_METHODS,
     authorize_write_request,
     load_capability_rules,
 )
+from app.enterprise_policy import enterprise_policy_version
 from app.error_response import error_response
 
-logger = logging.getLogger("enterprise_readiness")
 MiddlewareNext = Callable[[Request], Awaitable[Response]]
 MiddlewareCallable = Callable[[Request, MiddlewareNext], Awaitable[Response]]
 
-_SERVICE_NAME = "lotus-risk"
-_REDACT_FIELDS = {
-    "password",
-    "secret",
-    "token",
-    "authorization",
-    "ssn",
-    "account_number",
-    "client_email",
-}
 _SECURITY_RESPONSE_HEADERS = {
     "Cache-Control": "no-store",
     "Referrer-Policy": "no-referrer",
@@ -51,10 +40,6 @@ def _env_int(name: str, default: int) -> int:
         return int(os.getenv(name, str(default)))
     except ValueError:
         return default
-
-
-def enterprise_policy_version() -> str:
-    return os.getenv("ENTERPRISE_POLICY_VERSION", "1.0.0")
 
 
 def validate_enterprise_runtime_config() -> list[str]:
@@ -120,47 +105,6 @@ def _env_has_positive_int(name: str) -> bool:
 
 def load_feature_flags() -> dict[str, dict[str, dict[str, bool]]]:
     return _load_json_map("ENTERPRISE_FEATURE_FLAGS_JSON")
-
-
-def redact_sensitive(value: Any) -> Any:
-    if isinstance(value, dict):
-        out: dict[str, Any] = {}
-        for key, item in value.items():
-            if key.lower() in _REDACT_FIELDS:
-                out[key] = "***REDACTED***"
-            else:
-                out[key] = redact_sensitive(item)
-        return out
-    if isinstance(value, list):
-        return [redact_sensitive(item) for item in value]
-    return value
-
-
-def emit_audit_event(
-    *,
-    action: str,
-    actor_id: str,
-    tenant_id: str,
-    role: str,
-    correlation_id: str | None,
-    metadata: dict[str, Any],
-) -> None:
-    logger.info(
-        "enterprise_audit_event",
-        extra={
-            "audit": {
-                "service": _SERVICE_NAME,
-                "action": action,
-                "actor_id": actor_id,
-                "tenant_id": tenant_id,
-                "role": role,
-                "correlation_id": correlation_id or "",
-                "timestamp_utc": datetime.now(timezone.utc).isoformat(),
-                "policy_version": enterprise_policy_version(),
-                "metadata": redact_sensitive(metadata),
-            }
-        },
-    )
 
 
 def _content_length(request: Request) -> int:

@@ -112,9 +112,8 @@ module keeps the public dispatcher plus volatility, Sharpe, and maximum-drawdown
 ## REF-DEC-017: Split Enterprise Authorization From Readiness Middleware
 
 Capability-rule parsing and write authorization now live in `enterprise_authorization.py`.
-`enterprise_readiness.py` keeps runtime validation, audit emission, redaction, payload-limit
-handling, and middleware assembly, and explicitly re-exports the previous authorization functions
-for compatibility.
+`enterprise_readiness.py` keeps runtime validation, payload-limit handling, and middleware
+assembly, and explicitly re-exports the previous authorization functions for compatibility.
 
 ## REF-DEC-018: Split Concentration Issuer Mapping From Position Parsing
 
@@ -205,3 +204,10 @@ environment parsing helpers in `downstream_profile_env.py`. `_downstream_client_
 the public profile type, HTTP-client construction, request execution, error mapping, and upstream
 metrics recording, while `LotusPerformanceClient` uses the shared env helpers directly for async
 polling controls.
+
+## REF-DEC-030: Split Enterprise Audit And Policy Metadata
+
+Enterprise audit emission and sensitive metadata redaction now live in `enterprise_audit.py`, while
+policy-version lookup lives in `enterprise_policy.py`. `enterprise_readiness.py` keeps the public
+facade, runtime validation, payload-limit handling, security response headers, and middleware
+assembly so app wiring and existing tests preserve behavior.

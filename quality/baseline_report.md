@@ -13,11 +13,11 @@ completion claim.
 ## Generation Identity
 
 - Git branch: `feat/enterprise-risk-refactor-continuation`
-- Git commit: `b20f5cfdee8c35d18e4182c0317b65d2f8935b1b`
+- Git commit: `7ad95efa12edc9e9107315fd44d99fb41d130668`
 
 ## Current Code Size
 
-- Python source files under `src/`: 227
+- Python source files under `src/`: 229
 - Python test files under `tests/`: 103
 - Python packages under `src/`: 10
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
@@ -26,7 +26,6 @@ completion claim.
 
 | Path | Lines | Bytes |
 | --- | --- | --- |
-| src/app/enterprise_readiness.py | 259 | 8103 |
 | src/app/services/concentration/simulation_resolver.py | 255 | 8549 |
 | src/app/integrations/performance_returns_series_async.py | 255 | 7747 |
 | src/app/services/drawdown_periods.py | 254 | 7963 |
@@ -46,6 +45,7 @@ completion claim.
 | src/app/services/calculation_supportability.py | 219 | 7214 |
 | src/app/services/risk_mode_adapter.py | 217 | 6937 |
 | src/app/integrations/lotus_performance_transport.py | 216 | 6839 |
+| src/app/services/risk_event_cohort_engine.py | 212 | 7302 |
 
 ### Largest Functions And Classes
 
@@ -96,12 +96,12 @@ All checks passed!
 - Ruff format check: passed
 
 ```text
-345 files already formatted
+347 files already formatted
 ```
 - Type checking: passed
 
 ```text
-Success: no issues found in 330 source files
+Success: no issues found in 332 source files
 ```
 - Unit coverage snapshot: passed
 
@@ -115,10 +115,10 @@ Success: no issues found in 330 source files
 ...
 src\app\services\rolling_stateful_source_responses.py         45      1     16      1    97%   96
 ------------------------------------------------------------------------------------------------------
-TOTAL                                                       6140     91   1028     73    98%
+TOTAL                                                       6147     91   1028     73    98%
 
-184 files skipped due to complete coverage.
-551 passed in 12.81s
+186 files skipped due to complete coverage.
+551 passed in 12.87s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -131,8 +131,8 @@ src\app\api_errors.py - A (46.15)
 src\app\app_factory.py - A (100.00)
 src\app\app_lifecycle.py - A (59.25)
 src\app\domain_data_products.py - A (49.24)
+src\app\enterprise_audit.py - A (60.61)
 src\app\enterprise_authorization.py - A (36.76)
-src\app\enterprise_readiness.py - A (32.32)
 ...
 src\app\services\risk\numeric.py - A (100.00)
 src\app\services\risk\period_metrics.py - A (49.15)
@@ -148,7 +148,7 @@ src\app\services\risk\__init__.py - A (100.00)
 - Dependency hygiene: passed
 
 ```text
-Scanning 227 files...
+Scanning 229 files...
 
 Success! No dependency issues found.
 ```
@@ -156,22 +156,11 @@ Success! No dependency issues found.
 ## Security Snapshot
 
 - Bandit source scan: passed
-- Dependency vulnerability audit: reported exit 1
+- Dependency vulnerability audit: passed
 
 ```text
-=== dependency install stdout ===
-Obtaining file:///C:/Users/Sandeep/projects/lotus-risk
-  Installing build dependencies: started
-  Installing build dependencies: finished with status 'done'
-  Checking if build backend supports build_editable: started
-  Checking if build backend supports build_editable: finished with status 'done'
-...
-  
-  [0 lines of output]
-  [end of output]
-  
-  note: This error originates from a subprocess, and is likely not a problem with pip.
-ERROR: Failed to build 'file:///C:/Users/Sandeep/projects/lotus-risk' when getting requirements to build editable
+=== Vulnerability Summary ===
+Known vulnerabilities: 0
 ```
 
 ## Current Architectural Findings
