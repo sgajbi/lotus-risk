@@ -131,7 +131,8 @@ Workbench panels must:
 
 - label VaR as a signed return-threshold metric,
 - show attribution residuals with contributor totals or preserve them in a detail surface,
-- disable or omit stateful issuer active-risk affordances,
+- expose stateful issuer active-risk only when consuming the current lotus-risk capability and
+  historical-attribution metadata that marks `ACTIVE_RISK + ISSUER` as supported,
 - expose simulation controls only for concentration,
 - show coverage warnings when concentration issuer enrichment is partial or missing,
 - keep correlation/request identifiers available for support escalation.

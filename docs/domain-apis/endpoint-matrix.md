@@ -26,6 +26,7 @@ Status meanings:
 | `POST /analytics/risk/concentration` | Domain analytics | concentration analytics and HHI metrics | `stateless`, `stateful`, `simulation` | full | lotus-core snapshot and simulation session contracts | none |
 | `POST /analytics/risk/mandate-health-context` | Domain analytics | source-owned mandate risk health context derived from tracking-error methodology | `stateless` | partial | caller-supplied portfolio and benchmark return observations | bounded first-wave context only; does not create mandate actions, rebalance waves, client communication, or execution |
 | `POST /analytics/risk/regime-scenario-pack/evaluate` | Domain analytics | governed CIO regime scenario-pack evaluation with optional per-security contribution evidence | `stateless` | full | caller-supplied exposure weights, optional reconciled exposure components, and risk-owned scenario-pack definitions | does not forecast market states, perform full repricing, or accept browser-owned scenario methodology |
+| `POST /analytics/risk/risk-event-cohorts/evaluate` | Domain analytics | source-owned affected-cohort membership for governed risk events | `stateless` | partial | caller-supplied candidate portfolios, exposure weights, and risk-owned event definitions | does not create rebalance waves, approvals, campaign workflow, or client communications |
 
 ## Mode Support Detail
 
@@ -38,6 +39,7 @@ Status meanings:
 | `POST /analytics/risk/concentration` | full | full | full |
 | `POST /analytics/risk/mandate-health-context` | partial | unsupported by contract | unsupported by contract |
 | `POST /analytics/risk/regime-scenario-pack/evaluate` | full | unsupported by contract | unsupported by contract |
+| `POST /analytics/risk/risk-event-cohorts/evaluate` | partial | unsupported by contract | unsupported by contract |
 
 ## Highest-Value Remaining Gap
 
@@ -93,11 +95,12 @@ See `docs/domain-apis/risk-product-surface-alignment.md`.
 
 ## Related Detail Docs
 
-- [integration-capabilities.md](C:\Users\Sandeep\projects\lotus-risk\docs\domain-apis\integration-capabilities.md)
-- [risk-calculate.md](C:\Users\Sandeep\projects\lotus-risk\docs\domain-apis\risk-calculate.md)
-- [risk-drawdown.md](C:\Users\Sandeep\projects\lotus-risk\docs\domain-apis\risk-drawdown.md)
-- [risk-rolling-metrics.md](C:\Users\Sandeep\projects\lotus-risk\docs\domain-apis\risk-rolling-metrics.md)
-- [risk-historical-attribution.md](C:\Users\Sandeep\projects\lotus-risk\docs\domain-apis\risk-historical-attribution.md)
-- [risk-concentration.md](C:\Users\Sandeep\projects\lotus-risk\docs\domain-apis\risk-concentration.md)
-- [risk-mandate-health-context.md](C:\Users\Sandeep\projects\lotus-risk\docs\domain-apis\risk-mandate-health-context.md)
-- [risk-product-surface-alignment.md](C:\Users\Sandeep\projects\lotus-risk\docs\domain-apis\risk-product-surface-alignment.md)
+- [integration-capabilities.md](./integration-capabilities.md)
+- [risk-calculate.md](./risk-calculate.md)
+- [risk-drawdown.md](./risk-drawdown.md)
+- [risk-rolling-metrics.md](./risk-rolling-metrics.md)
+- [risk-historical-attribution.md](./risk-historical-attribution.md)
+- [risk-concentration.md](./risk-concentration.md)
+- [risk-mandate-health-context.md](./risk-mandate-health-context.md)
+- [regime-scenario-pack-evaluation.md](./regime-scenario-pack-evaluation.md)
+- [risk-product-surface-alignment.md](./risk-product-surface-alignment.md)
