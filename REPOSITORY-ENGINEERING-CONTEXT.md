@@ -242,7 +242,10 @@ Most relevant current governance:
 5. live validation defaults to `PB_SG_GLOBAL_BAL_001`; do not claim broader enterprise portfolio-archetype coverage until `docs/operations/live-risk-validation-matrix.md` has real seeded portfolio IDs and evidence,
 6. stateful historical attribution `ACTIVE_RISK + ISSUER` is supported through lotus-performance benchmark exposure context issuer groups introduced in lotus-performance PR #165,
 7. transport optimization across upstream services should start with contract and retrieval-shape evidence before any gRPC proposal,
-8. `wiki/` inside the repository is the authored documentation source if a GitHub wiki is published later,
+8. `wiki/` inside the repository is the authored documentation source for the published GitHub
+   wiki; use `../lotus-platform/automation/Sync-RepoWikis.ps1 -CheckOnly -Repository lotus-risk`
+   before merge and `../lotus-platform/automation/Sync-RepoWikis.ps1 -Publish -Repository
+   lotus-risk` after merge when repo-local wiki truth changes,
 9. RFC-0087 preparation should reuse repo-owned readiness, observability, and lineage signals before introducing any new trust publication surface.
 
 ## Context Maintenance Rule
