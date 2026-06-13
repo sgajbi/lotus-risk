@@ -12,8 +12,8 @@ completion claim.
 
 ## Generation Identity
 
-- Git branch: `feat/enterprise-risk-refactor-continuation`
-- Git commit: `50a891a93998ed06c354e133a9c311dec27145ef`
+- Git branch: `docs/enterprise-refactor-closure-audit`
+- Git commit: `e98ecaf56dd59979e53d7ce948b8e5827be523b9`
 
 ## Current Code Size
 
@@ -106,19 +106,19 @@ Success: no issues found in 347 source files
 - Unit coverage snapshot: passed
 
 ```text
-........................................................................ [ 13%]
-........................................................................ [ 26%]
-........................................................................ [ 39%]
-........................................................................ [ 52%]
-........................................................................ [ 65%]
-........................................................................ [ 78%]
+........................................................................ [ 12%]
+........................................................................ [ 25%]
+........................................................................ [ 38%]
+........................................................................ [ 51%]
+........................................................................ [ 64%]
+........................................................................ [ 77%]
 ...
 src\app\services\rolling_stateful_source_responses.py           45      1     16      1    97%   96
 --------------------------------------------------------------------------------------------------------
 TOTAL                                                         6236     89   1028     73    98%
 
 198 files skipped due to complete coverage.
-553 passed in 15.12s
+554 passed in 11.55s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -247,7 +247,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc1-503-UPSTREAM_UNAVAILABLE-transport]
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 
-553 tests collected in 2.53s
+554 tests collected in 1.87s
 ```
 - Import-linter report-only: passed
 

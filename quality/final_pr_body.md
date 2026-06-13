@@ -45,7 +45,7 @@ Measured highlights:
   lines, and `LotusPerformanceClient` was `256` lines; largest remaining function is
   `_issuer_concentration` at `37` lines and `LotusPerformanceClient` is `52` lines.
 - Latest generated baseline records `244` Python source files, `103` Python test files, `347`
-  mypy-checked source files, and `553` unit tests.
+  mypy-checked source files, and `554` unit tests.
 - Current baseline reports no C-or-worse cyclomatic-complexity candidates.
 - Source-size gate enforces the current `450` line ceiling.
 
@@ -74,7 +74,7 @@ Measured highlights:
 - Unit coverage now protects app factory wiring, router extraction, downstream boundaries, OpenAPI
   governance, enterprise readiness, error mapping, observability contracts, and core analytics
   behavior.
-- Local `make check` passed with `553` unit tests.
+- Local `make check` passed with `554` unit tests.
 - PR merge gate runs unit, integration, and e2e suites with combined coverage enforcement.
 
 # Security Improvements
@@ -130,15 +130,15 @@ Latest local results:
 
 - `make check`: passed, including lint, format check, no-alias guard, typecheck, OpenAPI gate,
   OpenAPI artifact gate, API vocabulary gate, mesh contract validation, source-size gate, and
-  `553` unit tests.
+  `554` unit tests.
 - `make security-audit`: passed with `Known vulnerabilities: 0`.
 - Latest pushed branch checks before PR creation:
   - `Quality Baseline`: success.
   - `Remote Feature Lane`: success.
 
-PR evidence still required after opening:
+PR evidence after opening:
 
-- `Pull Request Merge Gate` must pass.
+- `Pull Request Merge Gate` passed on PR #149.
 - Attach or reference `output/openapi/lotus-risk.openapi.json` using
   `quality/openapi_artifact_evidence.md` as the checksum manifest.
 
@@ -172,11 +172,15 @@ PR evidence still required after opening:
 
 - [x] Feature branch `Quality Baseline` is green.
 - [x] Feature branch `Remote Feature Lane` is green.
-- [ ] `Pull Request Merge Gate` is green after PR creation.
+- [x] `Pull Request Merge Gate` is green after PR creation.
 
 # Post-Merge Hygiene
 
-- [ ] Delete remote feature branch.
-- [ ] Delete local feature branch.
-- [ ] Sync local `main` with `origin/main`.
-- [ ] Publish repo-authored wiki source to the GitHub wiki target.
+- [x] Delete remote feature branch.
+- [x] Delete local feature branch.
+- [x] Sync local `main` with `origin/main`.
+- [x] Publish repo-authored wiki source to the GitHub wiki target.
+
+# Post-Merge Closure
+
+Post-merge closure evidence is recorded in `quality/final_refactor_closure_audit.md`.

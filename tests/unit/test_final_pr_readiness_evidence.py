@@ -5,6 +5,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 READINESS_DOC = REPO_ROOT / "quality" / "final_pr_readiness.md"
 OPENAPI_ARTIFACT_EVIDENCE_DOC = REPO_ROOT / "quality" / "openapi_artifact_evidence.md"
 FINAL_PR_BODY_DOC = REPO_ROOT / "quality" / "final_pr_body.md"
+FINAL_REFACTOR_CLOSURE_AUDIT_DOC = REPO_ROOT / "quality" / "final_refactor_closure_audit.md"
 
 
 def test_final_pr_readiness_pack_contains_required_pr_sections() -> None:
@@ -36,7 +37,7 @@ def test_final_pr_readiness_pack_pins_evidence_commands_and_risks() -> None:
         "feat/enterprise-risk-refactor-continuation",
         "quality/quality_scorecard.md",
         "quality/openapi_artifact_evidence.md",
-        "553",
+        "554",
         "103",
         "244",
         "347",
@@ -106,6 +107,31 @@ def test_final_pr_body_covers_enterprise_refactor_pr_requirements() -> None:
         "Known vulnerabilities: 0",
         "Pull Request Merge Gate",
         "Sync-RepoWikis.ps1 -Publish -Repository lotus-risk",
+        "quality/final_refactor_closure_audit.md",
+    )
+
+    for term in required_terms:
+        assert term in text
+
+
+def test_final_refactor_closure_audit_records_post_merge_definition_of_done() -> None:
+    text = FINAL_REFACTOR_CLOSURE_AUDIT_DOC.read_text(encoding="utf-8")
+
+    required_terms = (
+        "https://github.com/sgajbi/lotus-risk/pull/149",
+        "e98ecaf56dd59979e53d7ce948b8e5827be523b9",
+        "Definition Of Done Audit",
+        "Pipeline Enforcement Audit",
+        "Main Releasability Gate",
+        "Quality Baseline",
+        "Pull Request Merge Gate",
+        "Sync-RepoWikis.ps1 -CheckOnly -Repository lotus-risk",
+        "DiffCount 0",
+        "make openapi-gate",
+        "make security-audit",
+        "make test-pyramid-gate",
+        "make docker-build",
+        "gateway-backed token-validation evidence",
     )
 
     for term in required_terms:
