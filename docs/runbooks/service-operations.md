@@ -2,10 +2,12 @@
 
 ## Standard Commands
 
-- make lint
-- make typecheck
-- make ci
-- docker compose up --build
+- `make check` for the fast local gate.
+- `make ci` for the PR-grade local gate.
+- `make mesh-contract-validate` for domain product, trust telemetry, and observability contract
+  validation.
+- `docker compose up --build` for prod-shaped local runtime.
+- `docker compose down` to stop the local runtime.
 
 ## Health and Readiness
 
@@ -20,6 +22,9 @@
 1. Check container logs for request failures and stack traces.
 2. Verify /health/ready, /ops, and metrics endpoint.
 3. Run local parity check (make ci) before hotfix PR.
+4. Check `/integration/capabilities` before treating an unsupported mode as an outage.
+5. For stateful-only failures, validate `LOTUS_CORE_BASE_URL` and `LOTUS_PERFORMANCE_BASE_URL`
+   before changing analytics code.
 
 ## Enterprise Deployment Security Checks
 
@@ -75,6 +80,24 @@ Alert id: `lotus-risk-calculation-supportability-degraded`
    exposing portfolio or client identifiers in metrics.
 3. For `stale_source_observations`, validate source freshness from upstream dependency diagnostics.
 4. For `permission_blocked`, verify caller capability and deployment authorization policy.
+
+## Escalation Paths
+
+Escalate by ownership boundary:
+
+1. `lotus-risk` owner: calculation defects, supportability metadata, risk methodology, OpenAPI,
+   capability publication, and bounded risk error mapping.
+2. `lotus-performance` owner: returns, benchmark returns, benchmark exposure context, and
+   performance-aligned attribution inputs.
+3. `lotus-core` owner: portfolio snapshots, simulation sessions, instrument enrichment, issuer
+   authority, and risk-free reference series.
+4. `lotus-gateway` owner: client-facing composition, entitlement propagation, and downstream
+   contract preservation.
+5. `lotus-platform` owner: ingress, CI governance, mesh certification, wiki sync automation, and
+   shared observability contracts.
+
+Do not reclassify an unsupported workflow as degraded. Unsupported modes should remain deterministic
+request-validation or capability-publication outcomes.
 
 ## HTTP 5xx Alert
 
