@@ -261,5 +261,5 @@ Platform governance:
 
 The canonical authored source for the repository wiki lives under `wiki/` in this repository.
 
-If a GitHub wiki is published later, treat `wiki/` as the authored source and any separate
-`*.wiki.git` clone only as publication plumbing.
+The published GitHub wiki is synchronized from this repo-local source. Treat any separate
+`*.wiki.git` clone only as publication plumbing, not as an authored source.
