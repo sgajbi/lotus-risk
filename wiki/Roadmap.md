@@ -20,8 +20,11 @@ The current runtime and contract already provide:
 3. full rolling-metrics support for stateless and stateful modes,
 4. full concentration support for stateless, stateful, and simulation modes,
 5. partial historical attribution support with explicit gating,
-6. typed capability publication through `/integration/capabilities`,
-7. readiness and ops diagnostics tied to real dependency posture.
+6. stateless regime scenario-pack evaluation,
+7. stateless risk-event affected-cohort evaluation,
+8. stateless mandate risk health context,
+9. typed capability publication through `/integration/capabilities`,
+10. readiness and ops diagnostics tied to real dependency posture.
 
 ## What Remains Intentionally Bounded
 
@@ -30,7 +33,9 @@ Important current limits:
 1. broaden live portfolio-archetype validation for stateful `ACTIVE_RISK + ISSUER`,
 2. simulation remains concentration-only,
 3. enterprise live-validation breadth remains limited to the canonical portfolio baseline unless more seeded archetypes are registered with evidence,
-4. downstream consumers still need more cross-repo proof that they preserve the risk contract correctly.
+4. mandate health and risk-event cohorts are bounded first-wave source-owned products, not workflow
+   orchestration engines,
+5. downstream consumers still need more cross-repo proof that they preserve the risk contract correctly.
 
 ## Near-Term Focus
 

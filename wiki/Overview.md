@@ -10,7 +10,10 @@ It owns the analytics and contract meaning for:
 2. realized drawdown,
 3. rolling historical risk diagnostics,
 4. concentration analytics,
-5. historical risk attribution.
+5. historical risk attribution,
+6. mandate risk health context,
+7. governed regime scenario-pack evaluation,
+8. risk-event affected-cohort evaluation.
 
 ## What Makes This Repo Important
 
@@ -70,15 +73,18 @@ It depends on:
 
 Those boundaries are governed and should stay explicit.
 
-## Current Functional Gap
+## Current Functional Limits
 
-The only material gap inside the current approved API surface is:
+The current approved API surface is implementation-backed but intentionally bounded:
 
-1. broader live portfolio-archetype proof for stateful `ACTIVE_RISK + ISSUER` beyond the canonical baseline.
+1. simulation is concentration-only,
+2. historical attribution is partial even though stateful `ACTIVE_RISK + ISSUER` is supported,
+3. mandate risk health context and risk-event affected cohorts are stateless first-wave products,
+4. live portfolio-archetype proof remains broader-roadmap work beyond the canonical baseline.
 
-That gap is intentionally exposed rather than hidden:
+Those limits are intentionally exposed rather than hidden:
 
-1. request validation rejects it,
+1. request validation rejects unsupported modes and unsupported grouping shapes,
 2. `/integration/capabilities` marks historical attribution as `partial`,
 3. docs describe the gate,
 4. live evidence covers the supported stateful groupings.
@@ -93,4 +99,5 @@ That is the pattern this repo should keep following:
 
 1. use [Architecture](./Architecture.md) for code and endpoint shape,
 2. use [Integrations](./Integrations.md) for downstream contract rules,
-3. use [Roadmap](./Roadmap.md) for remaining rollout and evidence gaps.
+3. use [Supported Features](./Supported-Features.md) for current support and limitations,
+4. use [Roadmap](./Roadmap.md) for remaining rollout and evidence gaps.

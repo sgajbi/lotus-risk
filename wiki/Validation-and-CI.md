@@ -15,7 +15,11 @@ The repo-native commands are designed to map to those lanes directly.
 - `make check` - fast local gate
 - `make ci` - PR-grade local gate
 - `make quality-baseline` - report-only enterprise refactor baseline and quality scorecard
+- `make mesh-contract-validate` - domain product, trust telemetry, and observability contract validation
 - `make domain-data-product-gate` - repo-native domain product declaration validation
+- `make openapi-gate` - generated schema quality
+- `make openapi-artifact-gate` - generated artifact policy
+- `make api-vocabulary-gate` - API vocabulary inventory validation
 - `make test-unit` - unit suite
 - `make test-integration` - integration suite
 - `make test-e2e` - e2e suite
@@ -31,8 +35,9 @@ The repo-native commands are designed to map to those lanes directly.
 3. typecheck,
 4. OpenAPI quality,
 5. API vocabulary validation,
-6. repo-native domain product declaration validation,
-7. unit-focused default test execution.
+6. mesh contract validation,
+7. source-size regression protection,
+8. unit-focused default test execution.
 
 ## What `make ci` Adds
 
@@ -78,13 +83,13 @@ They protect:
 - `REPOSITORY-ENGINEERING-CONTEXT.md`
 - `quality/baseline_report.md`
 - `quality/quality_scorecard.md`
+- `docs/operations/development-workflow-and-ci-strategy.md`
+- `docs/domain-apis/endpoint-matrix.md`
+- `docs/domain-apis/risk-product-surface-alignment.md`
 
 The active `make source-size-gate` prevents new Python source monoliths above the governed
 450-line ceiling. It runs in local `make check`/`make ci` and the Feature, PR Merge, and Main
 Releasability lanes.
-- `docs/operations/development-workflow-and-ci-strategy.md`
-- `docs/domain-apis/endpoint-matrix.md`
-- `docs/domain-apis/risk-product-surface-alignment.md`
 
 ## Read Next
 

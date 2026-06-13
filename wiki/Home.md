@@ -22,8 +22,11 @@ small but important:
 3. rolling risk metrics,
 4. historical risk attribution,
 5. concentration analytics,
-6. capability publication,
-7. operational diagnostics.
+6. mandate risk health context,
+7. governed regime scenario-pack evaluation,
+8. risk-event affected-cohort evaluation,
+9. capability publication,
+10. operational diagnostics.
 
 The most important current limits are:
 
@@ -64,8 +67,9 @@ Use:
 4. [Operations Runbook](./Operations-Runbook.md) for health, readiness, and local upstreams,
 5. [Integrations](./Integrations.md) for gateway/downstream contract rules,
 6. [Security and Governance](./Security-and-Governance.md) for contract and supportability discipline,
-7. [RFC Index](./RFC-Index.md) for local decision history,
-8. [Roadmap](./Roadmap.md) for remaining gaps and rollout posture.
+7. [Supported Features](./Supported-Features.md) for implementation-backed support and limits,
+8. [RFC Index](./RFC-Index.md) for local decision history,
+9. [Roadmap](./Roadmap.md) for remaining gaps and rollout posture.
 
 ## Core Commands
 
@@ -81,6 +85,8 @@ docker compose up --build
 
 - `README.md`
 - `REPOSITORY-ENGINEERING-CONTEXT.md`
+- `docs/index.md`
+- `docs/supported-features.md`
 - `docs/domain-apis/endpoint-matrix.md`
 - `docs/domain-apis/risk-product-surface-alignment.md`
 - `docs/operations/live-risk-validation-matrix.md`

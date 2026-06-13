@@ -18,6 +18,8 @@ Use a small, truthful backend loop:
 - `make test-unit`
 - `make test-integration`
 - `make test-e2e`
+- `make mesh-contract-validate`
+- `make openapi-gate`
 - `make migration-apply`
 - `make docker-build`
 
@@ -42,16 +44,18 @@ Use `make ci` when the change affects:
 
 For product and integration work, start from:
 
-1. `src/app/main.py`
-2. `src/app/contracts/`
-3. `src/app/services/`
-4. `src/app/integrations/`
+1. `src/app/app_factory.py`
+2. `src/app/routers/`
+3. `src/app/contracts/`
+4. `src/app/services/`
+5. `src/app/integrations/`
 
 Then confirm with:
 
 1. `docs/domain-apis/endpoint-matrix.md`
 2. `docs/domain-apis/risk-product-surface-alignment.md`
-3. `docs/operations/development-workflow-and-ci-strategy.md`
+3. `docs/index.md`
+4. `docs/operations/development-workflow-and-ci-strategy.md`
 
 ## Docs-With-Code Rule
 

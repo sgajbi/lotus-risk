@@ -8,7 +8,8 @@
 2. integration capability publication,
 3. domain risk analytics endpoints.
 
-That split is visible directly in `src/app/main.py`.
+That split is visible in `src/app/app_factory.py`, which assembles the FastAPI application and
+registers the router modules under `src/app/routers/`.
 
 ## Core Endpoint Groups
 
@@ -44,6 +45,9 @@ It is also the place downstream teams should discover that:
 3. `/analytics/risk/rolling-metrics`
 4. `/analytics/risk/historical-attribution`
 5. `/analytics/risk/concentration`
+6. `/analytics/risk/mandate-health-context`
+7. `/analytics/risk/regime-scenario-pack/evaluate`
+8. `/analytics/risk/risk-event-cohorts/evaluate`
 
 ## Code Map
 
@@ -59,6 +63,10 @@ Primary implementation areas:
    readiness and ops-status evaluation.
 5. `src/app/enterprise_readiness.py`
    enterprise-runtime validation and audit middleware setup.
+6. `contracts/domain-data-products/`
+   repo-native domain product and consumer declarations.
+7. `contracts/observability/`
+   dashboard, alert, and metric-label governance for risk supportability.
 
 ## Execution Modes
 
@@ -72,7 +80,9 @@ The important rule is that support is workflow-specific, not service-wide:
 
 1. concentration supports all three,
 2. risk/calculate, drawdown, and rolling support stateless and stateful only,
-3. historical attribution supports stateless and stateful active-risk, including issuer grouping.
+3. historical attribution supports stateless and stateful active-risk, including issuer grouping,
+4. mandate health, regime scenario-pack evaluation, and risk-event cohorts are stateless
+   source-owned products.
 
 ## Upstream Dependency Model
 

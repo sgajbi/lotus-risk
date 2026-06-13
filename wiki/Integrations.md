@@ -20,6 +20,9 @@ The main executable risk workflows are:
 3. `POST /analytics/risk/rolling-metrics`
 4. `POST /analytics/risk/historical-attribution`
 5. `POST /analytics/risk/concentration`
+6. `POST /analytics/risk/mandate-health-context`
+7. `POST /analytics/risk/regime-scenario-pack/evaluate`
+8. `POST /analytics/risk/risk-event-cohorts/evaluate`
 
 The main discovery contract is:
 
@@ -39,7 +42,9 @@ This matters because:
 5. regime scenario-pack evaluation is stateless and source-owned by `lotus-risk`,
 6. per-security regime scenario contribution rows are available when callers supply reconciled
    exposure components,
-7. stateful `ACTIVE_RISK + ISSUER` is supported through lotus-performance benchmark exposure context issuer groups.
+7. risk-event affected-cohort evaluation and mandate risk health context are stateless first-wave
+   products,
+8. stateful `ACTIVE_RISK + ISSUER` is supported through lotus-performance benchmark exposure context issuer groups.
 
 ## Downstream Preservation Rules
 
@@ -51,7 +56,9 @@ Gateway, Workbench, reporting, and AI consumers must preserve:
 4. concentration-only simulation support,
 5. regime scenario-pack evaluation reason codes and threshold-breach posture,
 6. regime scenario-pack per-security contribution rows when present,
-7. lineage and upstream request-fingerprint metadata.
+7. risk-event affected-cohort source refs and impact scores,
+8. mandate risk health threshold posture and non-claim reason codes,
+9. lineage and upstream request-fingerprint metadata.
 
 If those are dropped or flattened, a numerically correct response can still become product-wrong.
 
