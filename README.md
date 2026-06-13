@@ -41,8 +41,9 @@ Current primary workflows:
 5. `POST /analytics/risk/concentration`
 6. `POST /analytics/risk/regime-scenario-pack/evaluate`
 7. `POST /analytics/risk/risk-event-cohorts/evaluate`
-8. `GET /integration/capabilities`
-9. `GET /ops`
+8. `POST /analytics/risk/mandate-health-context`
+9. `GET /integration/capabilities`
+10. `GET /ops`
 
 Important posture limits:
 
@@ -54,9 +55,12 @@ Important posture limits:
 3. risk-event affected-cohort evaluation is stateless and consumes caller-supplied candidate
    portfolios and source-supplied exposure weights against risk-owned event definitions; it does
    not create rebalance waves or own campaign approval workflow,
-4. stateful historical attribution supports `ACTIVE_RISK + ISSUER` through lotus-performance benchmark exposure context issuer groups,
-5. live validation defaults to canonical portfolio `PB_SG_GLOBAL_BAL_001`,
-6. broader enterprise-bank claims require more seeded archetypes and attached evidence.
+4. mandate risk health context is stateless and returns source-owned tracking-error posture for
+   downstream manage consumption; it does not create actions, rebalance waves, orders, execution,
+   or client communications,
+5. stateful historical attribution supports `ACTIVE_RISK + ISSUER` through lotus-performance benchmark exposure context issuer groups,
+6. live validation defaults to canonical portfolio `PB_SG_GLOBAL_BAL_001`,
+7. broader enterprise-bank claims require more seeded archetypes and attached evidence.
 
 ## Architectural Shape
 
@@ -71,14 +75,16 @@ Core areas:
    analytics engines, mode adapters, lineage helpers, and domain calculations.
 3. `src/app/integrations/`
    upstream clients for `lotus-core` and `lotus-performance`.
-4. `src/app/main.py`
-   public API surface and endpoint grouping.
+4. `src/app/app_factory.py` and `src/app/routers/`
+   application assembly and public API endpoint grouping.
 5. `docs/domain-apis/`
    endpoint-by-endpoint contract and product-surface alignment guidance.
 6. `docs/methodologies/`
    metric methodology definitions.
 7. `docs/operations/` and `docs/runbooks/`
    local runtime, CI, and live validation guidance.
+8. `docs/index.md`
+   navigable docs map for agents, developers, BAs, ops/support, and business/product readers.
 
 Execution model:
 
@@ -94,6 +100,7 @@ Execution model:
 - `docs/domain-apis/` API contracts and downstream alignment rules
 - `docs/methodologies/` metric methodology definitions
 - `docs/operations/` and `docs/runbooks/` runtime and validation guidance
+- `docs/index.md` audience-oriented documentation map
 - `docs/rfcs/` local RFC inventory
 - `docs/standards/` repo-local standards
 - `wiki/` canonical source pages for the repository wiki
@@ -134,6 +141,8 @@ Canonical direct local upstream URLs for live characterization and operator chec
 - `make test-unit` - unit suite
 - `make test-integration` - integration suite
 - `make test-e2e` - e2e suite
+- `make domain-data-product-gate` - repo-native domain data product validation
+- `make mesh-contract-validate` - domain product, trust telemetry, and observability contract validation
 - `make migration-apply` - governed migration contract check
 - `make docker-build` - Docker build validation
 
@@ -230,9 +239,12 @@ Key references:
 
 Best starting points:
 
+- audience-oriented docs index: `docs/index.md`
 - service-wide endpoint posture: `docs/domain-apis/endpoint-matrix.md`
 - capability publication: `docs/domain-apis/integration-capabilities.md`
 - product-surface alignment: `docs/domain-apis/risk-product-surface-alignment.md`
+- supported features and limits: `docs/supported-features.md`
+- documentation gap ledger: `docs/documentation-gap-ledger.md`
 - service operations: `docs/runbooks/service-operations.md`
 - runtime configuration: `docs/configuration.md`
 - development workflow: `docs/operations/development-workflow-and-ci-strategy.md`

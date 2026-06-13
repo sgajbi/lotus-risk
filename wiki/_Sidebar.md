@@ -6,6 +6,7 @@
 * [Validation and CI](Validation-and-CI)
 * [Operations Runbook](Operations-Runbook)
 * [Integrations](Integrations)
+* [Supported Features](Supported-Features)
 * [Security and Governance](Security-and-Governance)
 * [RFC Index](RFC-Index)
 * [Roadmap](Roadmap)
