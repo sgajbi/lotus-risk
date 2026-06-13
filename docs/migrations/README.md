@@ -10,7 +10,7 @@ Authoritative risk documentation has moved to lotus-risk.
 - [04_Operations_Troubleshooting_Guide.md](from-lotus-core/04_Operations_Troubleshooting_Guide.md)
 - [05_Developer_Guide.md](from-lotus-core/05_Developer_Guide.md)
 - [06_ADR_Risk_Analytics_Design.md](from-lotus-core/06_ADR_Risk_Analytics_Design.md)
-- [RFC 007 - Risk Analytics APIs (Volatility, Drawdown, Sharpe, Sortino, Beta, VaR).md](from-lotus-core/RFC 007 - Risk Analytics APIs (Volatility, Drawdown, Sharpe, Sortino, Beta, VaR).md)
+- [RFC 007 - Risk Analytics APIs (Volatility, Drawdown, Sharpe, Sortino, Beta, VaR).md](from-lotus-core/RFC 007 - Risk Analytics APIs %28Volatility, Drawdown, Sharpe, Sortino, Beta, VaR%29.md)
 - [RFC 031 - Risk Service Correctness Hardening.md](from-lotus-core/RFC 031 - Risk Service Correctness Hardening.md)
 
 ## Migrated from lotus-performance
