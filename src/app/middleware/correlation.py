@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import re
 import time
@@ -17,11 +18,21 @@ _SAFE_TRACEPARENT = re.compile(
 )
 
 
+def _ensure_request_event_logger(logger: logging.Logger) -> None:
+    if logger.hasHandlers():
+        return
+    logger.setLevel(logging.INFO)
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter("%(message)s"))
+    logger.addHandler(handler)
+
+
 class CorrelationIdMiddleware(BaseHTTPMiddleware):
     def __init__(self, app: ASGIApp, service_name: str) -> None:
         super().__init__(app)
         self._service_name = service_name
         self._event_logger = logging.getLogger("lotus_risk.request")
+        _ensure_request_event_logger(self._event_logger)
 
     @staticmethod
     def _resolve_trace_id(inbound_trace_id: str | None, traceparent: str | None) -> str:
@@ -71,19 +82,22 @@ class CorrelationIdMiddleware(BaseHTTPMiddleware):
         response.headers["traceparent"] = traceparent
         response.headers["X-Service-Name"] = self._service_name
         response.headers["X-Request-Duration-Ms"] = f"{duration_ms:.3f}"
+        request_observation = {
+            "service": self._service_name,
+            "method": request.method,
+            "path": request.url.path,
+            "status_code": response.status_code,
+            "correlation_id": correlation_id,
+            "trace_id": trace_id,
+            "latency_ms": round(duration_ms, 3),
+            "risk": True,
+        }
         self._event_logger.info(
-            "request_observed",
-            extra={
-                "request_observation": {
-                    "service": self._service_name,
-                    "method": request.method,
-                    "path": request.url.path,
-                    "status_code": response.status_code,
-                    "correlation_id": correlation_id,
-                    "trace_id": trace_id,
-                    "latency_ms": round(duration_ms, 3),
-                    "risk": True,
-                }
-            },
+            json.dumps(
+                {"message": "request_observed", **request_observation},
+                separators=(",", ":"),
+                sort_keys=True,
+            ),
+            extra={"request_observation": request_observation},
         )
         return response
