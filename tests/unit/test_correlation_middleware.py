@@ -107,7 +107,7 @@ def test_correlation_middleware_does_not_reflect_unsafe_context_headers() -> Non
 def test_request_event_logger_adds_runtime_handler_without_root_logging(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    logger = logging.getLogger("lotus_risk.request.test_runtime_handler")
+    logger = logging.getLogger("lotus_risk_unconfigured.request.test_runtime_handler")
     logger.handlers.clear()
     monkeypatch.setattr(logging.getLogger(), "handlers", [])
 
@@ -119,8 +119,8 @@ def test_request_event_logger_adds_runtime_handler_without_root_logging(
         logger.handlers.clear()
 
 
-def test_request_event_logger_preserves_configured_level_when_logging_exists() -> None:
-    logger = logging.getLogger("lotus_risk.request.test_configured_level")
+def test_request_event_logger_preserves_configured_level_when_root_logging_exists() -> None:
+    logger = logging.getLogger("lotus_risk.request.test_configured_root_level")
     root_logger = logging.getLogger()
     root_handler = logging.NullHandler()
     logger.handlers.clear()
@@ -135,6 +135,28 @@ def test_request_event_logger_preserves_configured_level_when_logging_exists() -
         assert logger.handlers == []
     finally:
         root_logger.removeHandler(root_handler)
+        logger.setLevel(original_level)
+
+
+def test_request_event_logger_honors_parent_logger_handlers() -> None:
+    parent_logger = logging.getLogger("lotus_risk.request_parent_configured")
+    logger = logging.getLogger("lotus_risk.request_parent_configured.child")
+    parent_handler = logging.NullHandler()
+    parent_logger.handlers.clear()
+    logger.handlers.clear()
+    original_parent_level = parent_logger.level
+    original_level = logger.level
+    logger.setLevel(logging.DEBUG)
+    parent_logger.addHandler(parent_handler)
+
+    _ensure_request_event_logger(logger)
+
+    try:
+        assert logger.level == logging.DEBUG
+        assert logger.handlers == []
+    finally:
+        parent_logger.removeHandler(parent_handler)
+        parent_logger.setLevel(original_parent_level)
         logger.setLevel(original_level)
 
 
