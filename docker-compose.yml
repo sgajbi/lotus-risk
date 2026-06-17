@@ -4,7 +4,8 @@ services:
     ports:
       - "8130:8130"
     env_file:
-      - .env
+      - path: .env
+        required: false
     environment:
       LOTUS_CORE_BASE_URL: ${LOTUS_CORE_BASE_URL:-http://core-control.dev.lotus:8202}
       LOTUS_PERFORMANCE_BASE_URL: ${LOTUS_PERFORMANCE_BASE_URL:-http://performance.dev.lotus:8002}

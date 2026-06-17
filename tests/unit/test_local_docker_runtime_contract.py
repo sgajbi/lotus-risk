@@ -4,6 +4,8 @@ from pathlib import Path
 def test_local_docker_compose_sets_explicit_upstream_urls() -> None:
     compose_text = Path("docker-compose.yml").read_text(encoding="utf-8")
 
+    assert "path: .env" in compose_text
+    assert "required: false" in compose_text
     assert (
         "LOTUS_CORE_BASE_URL: ${LOTUS_CORE_BASE_URL:-http://core-control.dev.lotus:8202}"
         in compose_text
