@@ -1,3 +1,4 @@
+import json
 import logging
 from typing import Any, cast
 from unittest.mock import patch
@@ -6,7 +7,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.middleware.correlation import CorrelationIdMiddleware
+from app.middleware.correlation import CorrelationIdMiddleware, _ensure_request_event_logger
 
 
 def _correlation_app() -> FastAPI:
@@ -103,6 +104,21 @@ def test_correlation_middleware_does_not_reflect_unsafe_context_headers() -> Non
     assert response.headers["traceparent"] != "malformed"
 
 
+def test_request_event_logger_adds_runtime_handler_without_root_logging(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    logger = logging.getLogger("lotus_risk.request.test_runtime_handler")
+    logger.handlers.clear()
+    monkeypatch.setattr(logging.getLogger(), "handlers", [])
+
+    _ensure_request_event_logger(logger)
+
+    try:
+        assert any(isinstance(handler, logging.StreamHandler) for handler in logger.handlers)
+    finally:
+        logger.handlers.clear()
+
+
 def test_correlation_middleware_emits_bounded_structured_request_event(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -116,11 +132,18 @@ def test_correlation_middleware_emits_bounded_structured_request_event(
 
     assert response.status_code == 200
     event = cast(dict[str, Any], getattr(caplog.records[-1], "request_observation"))
+    log_payload = json.loads(caplog.records[-1].getMessage())
     assert event["service"] == "lotus-risk"
     assert event["method"] == "GET"
     assert event["path"] == "/ping"
     assert event["status_code"] == 200
     assert event["correlation_id"] == "corr-structured"
     assert event["risk"] is True
+    assert log_payload["message"] == "request_observed"
+    assert log_payload["service"] == "lotus-risk"
+    assert log_payload["correlation_id"] == "corr-structured"
+    assert log_payload["risk"] is True
     assert "client_secret" not in str(event)
     assert "do-not-log" not in str(event)
+    assert "client_secret" not in caplog.records[-1].getMessage()
+    assert "do-not-log" not in caplog.records[-1].getMessage()
