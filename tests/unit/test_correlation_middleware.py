@@ -119,6 +119,25 @@ def test_request_event_logger_adds_runtime_handler_without_root_logging(
         logger.handlers.clear()
 
 
+def test_request_event_logger_preserves_configured_level_when_logging_exists() -> None:
+    logger = logging.getLogger("lotus_risk.request.test_configured_level")
+    root_logger = logging.getLogger()
+    root_handler = logging.NullHandler()
+    logger.handlers.clear()
+    original_level = logger.level
+    logger.setLevel(logging.WARNING)
+    root_logger.addHandler(root_handler)
+
+    _ensure_request_event_logger(logger)
+
+    try:
+        assert logger.level == logging.WARNING
+        assert logger.handlers == []
+    finally:
+        root_logger.removeHandler(root_handler)
+        logger.setLevel(original_level)
+
+
 def test_correlation_middleware_emits_bounded_structured_request_event(
     caplog: pytest.LogCaptureFixture,
 ) -> None:

@@ -19,9 +19,9 @@ _SAFE_TRACEPARENT = re.compile(
 
 
 def _ensure_request_event_logger(logger: logging.Logger) -> None:
-    logger.setLevel(logging.INFO)
     if logger.handlers or logging.getLogger().handlers:
         return
+    logger.setLevel(logging.INFO)
     handler = logging.StreamHandler()
     handler.setFormatter(logging.Formatter("%(message)s"))
     logger.addHandler(handler)
