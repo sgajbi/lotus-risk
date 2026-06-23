@@ -46,7 +46,7 @@ def test_regime_scenario_pack_declaration_tracks_position_identifiers() -> None:
         product_version="v1",
     )
 
-    assert product["approved_consumers"] == ["lotus-gateway", "lotus-manage"]
+    assert product["approved_consumers"] == ["lotus-gateway", "lotus-manage", "lotus-idea"]
     assert product["identifier_refs"] == ["portfolio_id", "instrument_id"]
 
 
@@ -57,7 +57,7 @@ def test_mandate_risk_health_context_declaration_is_manage_consumable() -> None:
     )
 
     assert product["current_routes"] == ["/analytics/risk/mandate-health-context"]
-    assert product["approved_consumers"] == ["lotus-gateway", "lotus-manage"]
+    assert product["approved_consumers"] == ["lotus-gateway", "lotus-manage", "lotus-idea"]
     assert product["completeness_policy"] == {
         "default_status": "partial",
         "partial_allowed": True,
