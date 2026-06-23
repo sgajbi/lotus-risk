@@ -283,7 +283,10 @@ def test_metadata_and_ops_contract_shape() -> None:
     )
     assert trust_telemetry_body["products"][0]["authoritative_domain"] == "risk_analytics"
     assert trust_telemetry_body["products"][0]["product_family"] == "analytics_output"
-    assert trust_telemetry_body["products"][0]["approved_consumers"] == ["lotus-gateway"]
+    assert trust_telemetry_body["products"][0]["approved_consumers"] == [
+        "lotus-gateway",
+        "lotus-idea",
+    ]
     assert "request_fingerprint" in trust_telemetry_body["products"][0]["required_trust_metadata"]
     assert trust_telemetry_body["products"][0]["current_routes"] == ["/analytics/risk/calculate"]
 
