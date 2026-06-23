@@ -48,7 +48,8 @@
       "lotus-core:/query/portfolio-state": "sha256:portfolio-state-demo"
     },
     "benchmark_context": "MSCI_ACWI_PRIVATE_BANKING_DEMO",
-    "risk_free_context": "SGD_OVERNIGHT_DEMO"
+    "risk_free_context": "SGD_OVERNIGHT_DEMO",
+    "correlation_id": "rfc-0087-lotus-risk-risk-metrics"
   },
   "evidence": {
     "correlation_id": "rfc-0087-lotus-risk-risk-metrics",
