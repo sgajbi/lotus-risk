@@ -30,7 +30,8 @@
         "source_services",
         "upstream_request_fingerprints",
         "benchmark_context",
-        "risk_free_context"
+        "risk_free_context",
+        "correlation_id"
       ],
       "current_routes": [
         "/analytics/risk/calculate"
@@ -50,7 +51,8 @@
       },
       "security_profile_ref": "business_consumer_access:client_confidential:retain_for_client_record:audit_read_and_export",
       "approved_consumers": [
-        "lotus-gateway"
+        "lotus-gateway",
+        "lotus-idea"
       ],
       "deprecation_policy": {
         "state": "not_deprecated",
@@ -313,7 +315,8 @@
         "request_fingerprint",
         "source_services",
         "upstream_request_fingerprints",
-        "benchmark_context"
+        "benchmark_context",
+        "correlation_id"
       ],
       "current_routes": [
         "/analytics/risk/mandate-health-context"
@@ -334,7 +337,8 @@
       "security_profile_ref": "business_consumer_access:client_confidential:retain_for_client_record:audit_read_and_export",
       "approved_consumers": [
         "lotus-gateway",
-        "lotus-manage"
+        "lotus-manage",
+        "lotus-idea"
       ],
       "deprecation_policy": {
         "state": "not_deprecated",
@@ -367,7 +371,8 @@
         "as_of_date",
         "lineage_version",
         "request_fingerprint",
-        "source_services"
+        "source_services",
+        "correlation_id"
       ],
       "current_routes": [
         "/analytics/risk/regime-scenario-pack/evaluate"
@@ -388,7 +393,8 @@
       "security_profile_ref": "business_consumer_access:client_confidential:retain_for_client_record:audit_read_and_export",
       "approved_consumers": [
         "lotus-gateway",
-        "lotus-manage"
+        "lotus-manage",
+        "lotus-idea"
       ],
       "deprecation_policy": {
         "state": "not_deprecated",
