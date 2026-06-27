@@ -31,12 +31,14 @@ def _simulation_metadata(
     *,
     simulation: SimulationConcentrationInput,
     session: SimulationSession,
+    correlation_id: str | None,
     snapshot_payload: dict[str, Any],
 ) -> ConcentrationMetadata:
     metadata = build_metadata(
         request=request,
         as_of_date=simulation.as_of_date,
         portfolio_id=simulation.portfolio_id,
+        correlation_id=correlation_id,
         simulation_session_id=session.session_id,
         simulation_session_version=session.version,
         session_expires_at=session.expires_at,
@@ -160,6 +162,7 @@ async def resolve_simulation(
         request,
         simulation=simulation,
         session=session,
+        correlation_id=correlation_id,
         snapshot_payload=snapshot_payload,
     )
     return _simulation_computation_input(

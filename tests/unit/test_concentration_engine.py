@@ -102,6 +102,7 @@ async def test_calculate_concentration_stateless_uses_projected_values_when_prov
     } == {
         "as_of_date": None,
         "portfolio_id": None,
+        "correlation_id": None,
         "simulation_session_id": None,
         "simulation_session_version": None,
         "session_expires_at": None,

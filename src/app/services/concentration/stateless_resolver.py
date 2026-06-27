@@ -75,6 +75,7 @@ def _stateless_computation_input(
     request: ConcentrationRequest,
     stateless_input: StatelessConcentrationInput,
     weighted_state: _WeightedConcentrationState,
+    correlation_id: str | None,
 ) -> ConcentrationComputationInput:
     return ConcentrationComputationInput(
         input_mode=ConcentrationInputMode.STATELESS,
@@ -90,6 +91,7 @@ def _stateless_computation_input(
         issuer_note=weighted_state.issuer_note,
         metadata=build_metadata(
             request=request,
+            correlation_id=correlation_id,
             include_cash_positions=None,
             include_zero_quantity_positions=None,
         ),
@@ -124,4 +126,5 @@ async def resolve_stateless(
         request=request,
         stateless_input=stateless_input,
         weighted_state=weighted_state,
+        correlation_id=correlation_id,
     )

@@ -88,6 +88,8 @@ async def test_engine_characterization_merge_policy_prefers_caller_mapping() -> 
 
     assert response.issuer_concentration.hhi_current == 10000.0
     assert response.issuer_concentration.coverage_status.value == "complete"
+    assert response.metadata is not None
+    assert response.metadata.correlation_id == "corr-1"
     assert core_client.calls[0]["security_ids"] == ["A", "B"]
 
 
