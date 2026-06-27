@@ -86,6 +86,9 @@ top-issuer driver selection, top-issuer proposed-state fallback, input-universe 
 boundaries, and issuer-enrichment isolation from `risk_proxy.hhi_*`,
 `single_position_concentration.top_position_*`, and
 `single_position_concentration.top_n_cumulative_weight_*` outputs.
+The governed approved consumers are `lotus-gateway` and `lotus-idea`; `lotus-idea` consumption is
+limited to source-preserving opportunity-intelligence workflows and does not transfer risk
+methodology authority or certify client publication.
 
 `RegimeScenarioPackEvaluation:v1` now carries source-owned scenario-pack evidence beyond aggregate
 loss. When callers provide reconciled `exposure_components`, the product emits per-security
@@ -164,7 +167,9 @@ Audience notes:
   attribution sets are degraded source-owned analytics, not ready values for local promotion.
 - Developers and downstream services must preserve `ConcentrationRiskReport:v1` position HHI,
   issuer HHI, top issuer weight, and related concentration outputs rather than recomputing
-  concentration locally.
+  concentration locally. `lotus-idea` may queue risk-owned concentration evidence for advisor
+  review, but it must keep live risk-source proof, data-mesh certification, and supported-feature
+  promotion separately gated.
 - Developers and downstream services must preserve `RiskEventAffectedCohort:v1` membership,
   exclusions, source refs, and impact scores rather than reconstructing risk-event cohort
   membership locally.

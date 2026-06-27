@@ -119,6 +119,10 @@ Current repository posture:
     proposed-state fallback, input-universe option boundaries, and issuer-enrichment isolation
     from `risk_proxy.hhi_*` and
     `single_position_concentration.top_position_*` / `top_n_cumulative_weight_*` outputs.
+    `lotus-idea` is now an approved consumer for `ConcentrationRiskReport:v1` so it can preserve
+    risk-owned concentration evidence in opportunity-intelligence workflows without taking over
+    concentration methodology, mesh certification, client publication, or supported-feature
+    authority.
 
 ## Architecture And Module Map
 

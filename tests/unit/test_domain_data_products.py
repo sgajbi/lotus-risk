@@ -64,6 +64,18 @@ def test_mandate_risk_health_context_declaration_is_manage_consumable() -> None:
     }
 
 
+def test_concentration_risk_report_declaration_is_idea_consumable() -> None:
+    product = get_declared_product(
+        product_name="ConcentrationRiskReport",
+        product_version="v1",
+    )
+
+    assert product["current_routes"] == ["/analytics/risk/concentration"]
+    assert product["approved_consumers"] == ["lotus-gateway", "lotus-idea"]
+    assert "correlation_id" in product["required_trust_metadata"]
+    assert product["lineage_policy"]["evidence_access_class_ref"] == "customer_consumable"
+
+
 def test_get_declared_product_rejects_unknown_product() -> None:
     try:
         get_declared_product(product_name="UnknownReport", product_version="v1")
