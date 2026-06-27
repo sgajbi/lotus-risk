@@ -177,6 +177,7 @@ def test_stateful_api_characterizes_lotus_core_snapshot_payload_contract() -> No
         "weight_basis": "total_market_value_base",
     }
     body = response.json()
+    assert body["metadata"]["correlation_id"] == "corr-stateful"
     assert body["metadata"]["issuer_grouping_level"] == "legal_issuer"
     assert body["metadata"]["enrichment_policy"] == "core_only"
     assert body["metadata"]["include_cash_positions"] is False
@@ -253,6 +254,7 @@ def test_simulation_api_characterizes_session_creation_and_snapshot_contract() -
         "instrument_enrichment",
     ]
     body = response.json()
+    assert body["metadata"]["correlation_id"] == "corr-sim"
     assert body["metadata"]["issuer_grouping_level"] == "ultimate_parent"
     assert body["metadata"]["enrichment_policy"] == "merge_caller_then_core"
     assert body["metadata"]["include_cash_positions"] is True

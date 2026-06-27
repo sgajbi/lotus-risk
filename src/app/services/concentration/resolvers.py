@@ -50,6 +50,7 @@ async def resolve_stateful(
     metadata = _stateful_metadata(
         request=request,
         stateful=stateful,
+        correlation_id=correlation_id,
         snapshot_payload=snapshot_payload,
     )
     baseline = stateful_baseline_values(snapshot_state)
@@ -89,12 +90,14 @@ def _stateful_metadata(
     *,
     request: ConcentrationRequest,
     stateful: StatefulConcentrationInput,
+    correlation_id: str | None,
     snapshot_payload: dict[str, Any],
 ) -> ConcentrationMetadata:
     metadata = build_metadata(
         request=request,
         as_of_date=stateful.as_of_date,
         portfolio_id=stateful.portfolio_id,
+        correlation_id=correlation_id,
         include_cash_positions=stateful.include_cash_positions,
         include_zero_quantity_positions=stateful.include_zero_quantity_positions,
     )

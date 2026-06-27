@@ -20,6 +20,11 @@ class ConcentrationMetadata(AuditMetadataFields):
         description="Portfolio identifier when stateful or simulation mode is used.",
         json_schema_extra={"example": "DEMO_DPM_EUR_001"},
     )
+    correlation_id: str | None = Field(
+        default=None,
+        description="Request correlation identifier carried through source calls and response metadata.",
+        json_schema_extra={"example": "corr-123"},
+    )
     simulation_session_id: str | None = Field(
         default=None,
         description="Simulation session identifier for simulation mode responses.",

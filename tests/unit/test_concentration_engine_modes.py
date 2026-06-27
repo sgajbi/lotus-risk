@@ -84,10 +84,13 @@ async def test_stateful_mode_includes_reporting_currency_and_metadata() -> None:
         }
     )
 
-    response = await calculate_concentration(request, core_client=client)
+    response = await calculate_concentration(
+        request, core_client=client, correlation_id="corr-stateful-unit"
+    )
 
     assert response.metadata is not None
     assert response.metadata.portfolio_id == "DEMO_DPM_EUR_001"
+    assert response.metadata.correlation_id == "corr-stateful-unit"
     assert response.metadata.issuer_grouping_level.value == "ultimate_parent"
     assert response.metadata.enrichment_policy.value == "merge_caller_then_core"
     assert response.metadata.include_cash_positions is True
@@ -210,10 +213,16 @@ async def test_simulation_mode_falls_back_to_baseline_and_parses_metadata() -> N
         }
     )
 
-    response = await calculate_concentration(request, core_client=client, actor_id="tester")
+    response = await calculate_concentration(
+        request,
+        core_client=client,
+        correlation_id="corr-sim-unit",
+        actor_id="tester",
+    )
 
     assert response.metadata is not None
     assert response.metadata.simulation_session_id == "SIM_0001"
+    assert response.metadata.correlation_id == "corr-sim-unit"
     assert response.metadata.simulation_session_version == 4
     assert isinstance(response.metadata.session_expires_at, datetime)
     assert response.metadata.issuer_grouping_level.value == "ultimate_parent"
