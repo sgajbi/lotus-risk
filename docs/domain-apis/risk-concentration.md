@@ -27,6 +27,14 @@ The API returns three decision-oriented blocks:
    - identity of the top issuer in each state
    - issuer coverage diagnostics
 
+## Governed Consumers
+
+`ConcentrationRiskReport:v1` is approved for `lotus-gateway` composition and `lotus-idea`
+opportunity-intelligence consumption. This approval lets `lotus-idea` use risk-owned
+concentration evidence as an input to advisor review workflows; it does not make `lotus-idea`
+authoritative for concentration methodology, data-mesh certification, client publication, or
+supported-feature promotion.
+
 ## Supported Modes
 
 ### `stateless`
