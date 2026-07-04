@@ -45,9 +45,13 @@ Enterprise bank deployments must run with the security posture in
    deployment-readiness failure, not an application-code exception.
 7. Verify `LOTUS_CORE_BASE_URL` and `LOTUS_PERFORMANCE_BASE_URL` are explicit approved service
    endpoints.
-8. Treat any `enterprise_runtime_config_invalid:<issue-codes>` startup failure as a blocked
+8. Verify explicit `LOTUS_CORE_*`, `LOTUS_PERFORMANCE_*`, and `LOTUS_PERFORMANCE_ASYNC_*` timeout,
+   pool, keepalive, and polling overrides are positive numeric controls. In enterprise mode,
+   `invalid_downstream_runtime_setting:<ENV_NAME>` means a configured runtime control is malformed
+   or nonpositive; fix the configuration rather than relying on local fallback defaults.
+9. Treat any `enterprise_runtime_config_invalid:<issue-codes>` startup failure as a blocked
    deployment until every bounded issue code is resolved.
-9. Confirm `/openapi.json` shows `x-lotus-enterprise-authorization` on every supported analytics
+10. Confirm `/openapi.json` shows `x-lotus-enterprise-authorization` on every supported analytics
    write operation before publishing generated client or QA evidence.
 
 ## Endpoint Failure Rate Alert

@@ -12,6 +12,7 @@ from app.enterprise_authorization import (
 )
 from app.enterprise_policy import enterprise_policy_version
 from app.error_response import error_response
+from app.integrations.downstream_profile_env import invalid_downstream_runtime_setting_issues
 
 MiddlewareNext = Callable[[Request], Awaitable[Response]]
 MiddlewareCallable = Callable[[Request, MiddlewareNext], Awaitable[Response]]
@@ -90,6 +91,7 @@ def _enterprise_bank_config_issues() -> list[str]:
         issues.append(f"missing_capability_rule:{route_key}")
     if not _env_has_positive_int("ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES"):
         issues.append("missing_or_invalid_max_write_payload_bytes")
+    issues.extend(invalid_downstream_runtime_setting_issues())
     return issues
 
 

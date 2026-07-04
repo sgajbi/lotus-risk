@@ -29,13 +29,18 @@ Enterprise bank deployments must provide all of the following:
    limits.
 7. `LOTUS_CORE_BASE_URL` and `LOTUS_PERFORMANCE_BASE_URL` set to approved HTTP(S) service
    endpoints without embedded credentials, query strings, or fragments.
+8. Any explicit downstream timeout, connection-pool, keepalive, or async polling override must be
+   a positive finite numeric value for seconds-based settings and a positive integer for count-based
+   settings.
 
 The service must fail closed when these requirements are missing in enterprise mode. Runtime
 configuration validation in `src/app/enterprise_readiness.py` enforces the in-process portion of
 this policy. When `ENTERPRISE_ENFORCE_RUNTIME_CONFIG=true`, service construction fails unless
 authorization is enabled and policy version, key ID, rotation days, positive payload limit, and both
-upstream base URLs are explicit. Capability rules are required as nonempty string mappings and must
-cover every supported write-like analytics route published by the service:
+upstream base URLs are explicit. It also rejects malformed, zero, negative, or non-finite explicit
+downstream runtime overrides with bounded
+`invalid_downstream_runtime_setting:<ENV_NAME>` issue codes. Capability rules are required as nonempty string mappings.
+They must cover every supported write-like analytics route published by the service:
 
 1. `POST /analytics/risk/calculate`,
 2. `POST /analytics/risk/concentration`,

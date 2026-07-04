@@ -11,6 +11,7 @@ from app.integrations._downstream_client_profile import (
     execute_downstream_request_json,
     resolve_downstream_client_profile,
 )
+from app.integrations.downstream_profile_env import invalid_downstream_runtime_setting_issues
 from app.upstream_errors import UpstreamServiceError, invalid_upstream_payload
 
 
@@ -79,6 +80,22 @@ def test_resolve_downstream_client_profile_uses_fallback_when_values_invalid(
     assert profile.max_connections == 111
     assert profile.max_keepalive_connections == 22
     assert profile.keepalive_expiry_seconds == 3.0
+
+
+def test_invalid_downstream_runtime_setting_issues_reports_bounded_env_names(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("LOTUS_CORE_TIMEOUT_SECONDS", "not-a-number")
+    monkeypatch.setenv("LOTUS_CORE_KEEPALIVE_EXPIRY_SECONDS", "nan")
+    monkeypatch.setenv("LOTUS_PERFORMANCE_MAX_CONNECTIONS", "0")
+    monkeypatch.setenv("LOTUS_PERFORMANCE_ASYNC_MAX_POLLS", "-7")
+
+    assert invalid_downstream_runtime_setting_issues() == [
+        "invalid_downstream_runtime_setting:LOTUS_CORE_TIMEOUT_SECONDS",
+        "invalid_downstream_runtime_setting:LOTUS_CORE_KEEPALIVE_EXPIRY_SECONDS",
+        "invalid_downstream_runtime_setting:LOTUS_PERFORMANCE_MAX_CONNECTIONS",
+        "invalid_downstream_runtime_setting:LOTUS_PERFORMANCE_ASYNC_MAX_POLLS",
+    ]
 
 
 def test_make_client_honors_profile_limits(
