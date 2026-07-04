@@ -31,11 +31,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - name: Checkout Lotus Platform Contracts
-        uses: actions/checkout@v6
-        with:
-          repository: sgajbi/lotus-platform
-          path: .lotus-platform
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -58,6 +53,11 @@ jobs:
         run: make openapi-artifact-gate
       - name: API Vocabulary Gate
         run: make api-vocabulary-gate
+      - name: Checkout Lotus Platform Contracts
+        uses: actions/checkout@v6
+        with:
+          repository: sgajbi/lotus-platform
+          path: .lotus-platform
       - name: Mesh Contract Validation
         run: make mesh-contract-validate
       - name: Architecture Gate
