@@ -53,13 +53,6 @@ jobs:
         run: make openapi-artifact-gate
       - name: API Vocabulary Gate
         run: make api-vocabulary-gate
-      - name: Checkout Lotus Platform Contracts
-        uses: actions/checkout@v6
-        with:
-          repository: sgajbi/lotus-platform
-          path: .lotus-platform
-      - name: Mesh Contract Validation
-        run: make mesh-contract-validate
       - name: Architecture Gate
         run: make architecture-gate
       - name: Complexity Gate
@@ -70,6 +63,13 @@ jobs:
         run: make dependency-hygiene-gate
       - name: Dead Code Gate
         run: make dead-code-gate
+      - name: Checkout Lotus Platform Contracts
+        uses: actions/checkout@v6
+        with:
+          repository: sgajbi/lotus-platform
+          path: .lotus-platform
+      - name: Mesh Contract Validation
+        run: make mesh-contract-validate
       - name: Migration Contract Smoke
         run: make migration-smoke
       - name: Security Audit
