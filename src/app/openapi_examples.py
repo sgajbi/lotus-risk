@@ -15,6 +15,7 @@ from app.enterprise_authorization import (
     ENTERPRISE_CAPABILITIES_HEADER,
     ENTERPRISE_SERVICE_IDENTITY_HEADERS,
 )
+from app.enterprise_trusted_ingress import TRUSTED_INGRESS_HEADER
 
 JsonObject = dict[str, Any]
 
@@ -26,6 +27,7 @@ def _enterprise_authorization_extension() -> JsonObject:
             "enforced_when": "ENTERPRISE_ENFORCE_AUTHZ=true",
             "required_context_headers": list(ENTERPRISE_AUTHORIZATION_REQUIRED_HEADERS),
             "service_identity_headers": list(ENTERPRISE_SERVICE_IDENTITY_HEADERS),
+            "trusted_ingress_header": TRUSTED_INGRESS_HEADER,
             "capabilities_header": ENTERPRISE_CAPABILITIES_HEADER,
             "capability_rules_env": "ENTERPRISE_CAPABILITY_RULES_JSON",
             "denial_status": 403,

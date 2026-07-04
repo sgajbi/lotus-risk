@@ -208,7 +208,12 @@ Boundary rules:
     is the in-process write payload guard; `ENTERPRISE_INGRESS_MAX_BODY_BYTES` and
     `ENTERPRISE_ASGI_MAX_BODY_BYTES` prove external ingress/proxy and ASGI/server limits are present
     and no larger than the app limit. Direct local Uvicorn/Compose is local-only for this posture.
-19. Keep runtime posture modern and current: retained local compatibility or direct-run behavior
+19. Enterprise trusted-ingress proof lives in `enterprise_trusted_ingress.py`. Bank-mode startup
+    requires `ENTERPRISE_TRUSTED_INGRESS_SECRET`; write requests and protected operator endpoints
+    (`/ops`, `/ops/trust-telemetry`, and `/metrics`) must reject missing or invalid
+    `X-Lotus-Trusted-Ingress` before trusting propagated actor, service identity, or capability
+    headers. Health and readiness probes remain platform-compatible.
+20. Keep runtime posture modern and current: retained local compatibility or direct-run behavior
     must be explicitly scoped to local development and must not become a bank-readiness, production,
     or enterprise claim without machine-readable proof and tests. Do not add new legacy aliases,
     local-only shortcuts, or stale compatibility surfaces while fixing issue slices.

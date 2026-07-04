@@ -30,7 +30,10 @@ enforcement, runtime configuration enforcement, explicit key and secret-rotation
 endpoint capability rules, and ingress/server request body limits aligned to
 `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES`. Enterprise startup also requires
 `ENTERPRISE_INGRESS_MAX_BODY_BYTES` and `ENTERPRISE_ASGI_MAX_BODY_BYTES` to prove the effective
-external limits are present and no larger than the in-process write payload limit.
+external limits are present and no larger than the in-process write payload limit. Protected
+operator endpoints and write requests require the trusted-ingress marker injected by the approved
+gateway or ingress from `ENTERPRISE_TRUSTED_INGRESS_SECRET`; health probes remain available without
+that marker.
 
 ## Downstream Connection Pools
 

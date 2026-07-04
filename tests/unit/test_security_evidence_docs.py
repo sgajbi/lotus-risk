@@ -13,6 +13,8 @@ def test_security_threat_model_records_current_abuse_controls() -> None:
         "ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES",
         "ENTERPRISE_INGRESS_MAX_BODY_BYTES",
         "ENTERPRISE_ASGI_MAX_BODY_BYTES",
+        "ENTERPRISE_TRUSTED_INGRESS_SECRET",
+        "X-Lotus-Trusted-Ingress",
         "413 PAYLOAD_TOO_LARGE",
         "ENTERPRISE_ENFORCE_AUTHZ=true",
         "X-Actor-Id",
@@ -34,6 +36,8 @@ def test_security_threat_model_records_current_abuse_controls() -> None:
         "docs/configuration.md",
         "fails application construction",
         "missing_capability_rule",
+        "test_enterprise_middleware_requires_trusted_ingress_before_write_authz",
+        "test_enterprise_middleware_protects_operator_endpoints_with_trusted_ingress",
     )
 
     for term in required_terms:

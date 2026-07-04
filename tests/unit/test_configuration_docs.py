@@ -20,6 +20,8 @@ def test_configuration_document_pins_runtime_owned_settings_and_safe_url_policy(
         "ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES",
         "ENTERPRISE_INGRESS_MAX_BODY_BYTES",
         "ENTERPRISE_ASGI_MAX_BODY_BYTES",
+        "ENTERPRISE_TRUSTED_INGRESS_SECRET",
+        "X-Lotus-Trusted-Ingress",
         "machine-readable",
         "Content-Length",
         "exclude embedded credentials",

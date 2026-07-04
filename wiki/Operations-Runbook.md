@@ -66,6 +66,8 @@ Startup verifies `ENTERPRISE_INGRESS_MAX_BODY_BYTES` and `ENTERPRISE_ASGI_MAX_BO
 machine-readable proof of those external limits.
 Missing ingress/server body-limit enforcement for requests without trustworthy `Content-Length` is
 a deployment-readiness failure.
+`/ops`, `/ops/trust-telemetry`, and `/metrics` also require the trusted-ingress marker in enterprise
+mode; health and readiness probes remain available for platform orchestration.
 
 With `ENTERPRISE_ENFORCE_RUNTIME_CONFIG=true`, startup fails closed when the in-process bank posture
 is incomplete. Resolve every bounded `enterprise_runtime_config_invalid:<issue-codes>` entry before

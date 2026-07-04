@@ -52,6 +52,7 @@ def _has_enterprise_authorization_extension(operation: dict[str, Any]) -> bool:
         for field in (
             "required_context_headers",
             "service_identity_headers",
+            "trusted_ingress_header",
             "capabilities_header",
             "capability_rules_env",
             "denial_code",
