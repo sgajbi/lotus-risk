@@ -235,6 +235,12 @@ Boundary rules:
     supportability, metric-duration, endpoint-execution recording ports and the Prometheus-backed
     implementation in `app.observability`. Preserve this boundary with `.importlinter` and unit
     architecture tests when adding new metrics.
+24. Treat `src/app/contracts` as mixed public API DTOs, shared application values, and compatibility
+    facades until a fuller domain package is introduced. Pure calculation helpers must not construct
+    public response DTOs directly for migrated paths. The concentration representative path maps
+    internal driver values from `src/app/services/concentration/datamodels.py` to public Pydantic
+    response DTOs in `src/app/services/concentration/response_builder.py`; extend that pattern when
+    migrating risk, rolling, drawdown, attribution, or remaining concentration helpers.
 
 Canonical direct local validation ports:
 

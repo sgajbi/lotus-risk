@@ -29,6 +29,20 @@ class IssuerEntry:
     value: float
 
 
+@dataclass(frozen=True)
+class TopPositionDriverValue:
+    security_id: str | None
+    security_name: str | None
+    weight: float
+
+
+@dataclass(frozen=True)
+class TopIssuerDriverValue:
+    issuer_id: str | None
+    issuer_name: str | None
+    weight: float
+
+
 @dataclass
 class ConcentrationComputationInput:
     input_mode: ConcentrationInputMode

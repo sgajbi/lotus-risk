@@ -6,10 +6,12 @@ from typing import Protocol
 
 from app.contracts.concentration import (
     IssuerCoverageStatus,
-    TopIssuerDriver,
-    TopPositionDriver,
 )
-from app.services.concentration.datamodels import ConcentrationComputationInput
+from app.services.concentration.datamodels import (
+    ConcentrationComputationInput,
+    TopIssuerDriverValue,
+    TopPositionDriverValue,
+)
 from app.services.concentration.math import (
     _compute_hhi,
     _single_position_metrics,
@@ -30,8 +32,8 @@ class PositionConcentrationMetrics:
     top_proposed: float
     top_n_current: float
     top_n_proposed: float
-    driver_current: TopPositionDriver
-    driver_proposed: TopPositionDriver
+    driver_current: TopPositionDriverValue
+    driver_proposed: TopPositionDriverValue
 
 
 @dataclass(frozen=True)
@@ -40,8 +42,8 @@ class IssuerConcentrationMetrics:
     hhi_proposed: float
     top_current: float
     top_proposed: float
-    driver_current: TopIssuerDriver
-    driver_proposed: TopIssuerDriver
+    driver_current: TopIssuerDriverValue
+    driver_proposed: TopIssuerDriverValue
     coverage_status: IssuerCoverageStatus
 
 

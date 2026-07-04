@@ -5,13 +5,19 @@ from app.contracts.concentration import (
     ConcentrationRiskProxy,
     IssuerConcentration,
     SinglePositionConcentration,
+    TopIssuerDriver,
+    TopPositionDriver,
 )
 from app.service_metadata import SERVICE_NAME
 from app.services.calculation_supportability import (
     record_operation_supportability,
     supportability_from_concentration_response,
 )
-from app.services.concentration.datamodels import ConcentrationComputationInput
+from app.services.concentration.datamodels import (
+    ConcentrationComputationInput,
+    TopIssuerDriverValue,
+    TopPositionDriverValue,
+)
 from app.services.concentration.math import (
     _coverage_ratio,
     _round,
@@ -49,6 +55,22 @@ def _risk_proxy(position_metrics: PositionConcentrationMetrics) -> Concentration
     )
 
 
+def _top_position_driver(driver: TopPositionDriverValue) -> TopPositionDriver:
+    return TopPositionDriver(
+        security_id=driver.security_id,
+        security_name=driver.security_name,
+        weight=driver.weight,
+    )
+
+
+def _top_issuer_driver(driver: TopIssuerDriverValue) -> TopIssuerDriver:
+    return TopIssuerDriver(
+        issuer_id=driver.issuer_id,
+        issuer_name=driver.issuer_name,
+        weight=driver.weight,
+    )
+
+
 def _single_position_concentration(
     *,
     payload: ConcentrationComputationInput,
@@ -66,8 +88,8 @@ def _single_position_concentration(
             position_metrics.top_n_proposed - position_metrics.top_n_current
         ),
         top_n=payload.top_n,
-        top_position_current=position_metrics.driver_current,
-        top_position_proposed=position_metrics.driver_proposed,
+        top_position_current=_top_position_driver(position_metrics.driver_current),
+        top_position_proposed=_top_position_driver(position_metrics.driver_proposed),
     )
 
 
@@ -105,8 +127,8 @@ def _issuer_concentration(
             payload.total_position_count_proposed,
         ),
         note=payload.issuer_note,
-        top_issuer_current=issuer_metrics.driver_current,
-        top_issuer_proposed=issuer_metrics.driver_proposed,
+        top_issuer_current=_top_issuer_driver(issuer_metrics.driver_current),
+        top_issuer_proposed=_top_issuer_driver(issuer_metrics.driver_proposed),
     )
 
 
