@@ -12,13 +12,13 @@ completion claim.
 
 ## Generation Identity
 
-- Git branch: `docs/enterprise-refactor-closure-audit`
-- Git commit: `e98ecaf56dd59979e53d7ce948b8e5827be523b9`
+- Git branch: `refactor/enterprise-risk-backend`
+- Git commit: `4b3d423bfb2aebc6a2dc2b074f5e70aaf2a5e7df`
 
 ## Current Code Size
 
 - Python source files under `src/`: 244
-- Python test files under `tests/`: 103
+- Python test files under `tests/`: 104
 - Python packages under `src/`: 10
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
 
@@ -61,15 +61,15 @@ completion claim.
 | src/app/contracts/rolling_period_outputs.py | RollingPeriodResult | ClassDef | 76 |
 | src/app/contracts/concentration_request_inputs.py | ConcentrationRequest | ClassDef | 75 |
 | src/app/contracts/risk_response_outputs.py | RiskResponseMetadata | ClassDef | 75 |
+| src/app/middleware/correlation.py | CorrelationIdMiddleware | ClassDef | 74 |
 | src/app/contracts/attribution_metadata_outputs.py | HistoricalAttributionMetadata | ClassDef | 71 |
-| src/app/middleware/correlation.py | CorrelationIdMiddleware | ClassDef | 70 |
 | src/app/contracts/drawdown_metadata_outputs.py | DrawdownMetadata | ClassDef | 69 |
 | src/app/contracts/risk_common_inputs.py | RiskRequestPeriod | ClassDef | 68 |
+| src/app/contracts/concentration_metadata_outputs.py | ConcentrationMetadata | ClassDef | 67 |
 | src/app/contracts/risk_event_cohort_response.py | RiskEventAffectedCohortResponse | ClassDef | 66 |
 | src/app/contracts/risk_stateful_inputs.py | StatefulRiskInput | ClassDef | 64 |
 | src/app/contracts/attribution_request_inputs.py | HistoricalAttributionRequest | ClassDef | 63 |
 | src/app/contracts/scenario_inputs.py | RegimeScenarioPackRequest | ClassDef | 63 |
-| src/app/contracts/concentration_metadata_outputs.py | ConcentrationMetadata | ClassDef | 62 |
 | src/app/contracts/drawdown_metric_outputs.py | DrawdownSummary | ClassDef | 61 |
 
 ## Tool Baseline
@@ -96,12 +96,12 @@ All checks passed!
 - Ruff format check: passed
 
 ```text
-362 files already formatted
+363 files already formatted
 ```
 - Type checking: passed
 
 ```text
-Success: no issues found in 347 source files
+Success: no issues found in 348 source files
 ```
 - Unit coverage snapshot: passed
 
@@ -115,10 +115,10 @@ Success: no issues found in 347 source files
 ...
 src\app\services\rolling_stateful_source_responses.py           45      1     16      1    97%   96
 --------------------------------------------------------------------------------------------------------
-TOTAL                                                         6236     89   1028     73    98%
+TOTAL                                                         6247     89   1030     73    98%
 
 198 files skipped due to complete coverage.
-554 passed in 11.55s
+558 passed in 12.17s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -247,7 +247,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc1-503-UPSTREAM_UNAVAILABLE-transport]
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 
-554 tests collected in 1.87s
+558 tests collected in 2.15s
 ```
 - Import-linter report-only: passed
 
