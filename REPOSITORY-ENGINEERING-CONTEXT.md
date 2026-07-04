@@ -223,6 +223,13 @@ Boundary rules:
     must be explicitly scoped to local development and must not become a bank-readiness, production,
     or enterprise claim without machine-readable proof and tests. Do not add new legacy aliases,
     local-only shortcuts, or stale compatibility surfaces while fixing issue slices.
+22. `/health/ready`, `/ops`, and `/ops/trust-telemetry` publish configured-only dependency posture
+    by default. Dependency rows with `status="configured"` and
+    `detail="configured_only_no_probe"` prove source-safe URL configuration, not live upstream
+    reachability. Keep live dependency diagnosis on endpoint-level upstream errors, bounded
+    supportability metadata, upstream metrics, or explicit runtime dependency-status overrides
+    until an implementation-backed active probe or periodic updater is intentionally introduced
+    with bounded timeouts, tests, and operator docs.
 
 Canonical direct local validation ports:
 

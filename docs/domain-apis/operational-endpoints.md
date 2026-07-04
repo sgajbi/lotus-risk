@@ -42,11 +42,15 @@
 - Availability status:
   - implemented.
 - Output:
-  - normal: HTTP `200`, `status: "ready"`, plus dependency runtime states
-  - degraded dependency: HTTP `200`, `status: "degraded"`
+  - normal: HTTP `200`, `status: "ready"`, plus dependency configuration states
+  - degraded dependency override: HTTP `200`, `status: "degraded"`
   - draining or unavailable dependency: HTTP `503`, `status: "draining"` or `status: "dependency_unavailable"`
 - Alignment:
-  - aligned with platform readiness requirement and now surfaces dependency-aware readiness semantics.
+  - aligned with platform readiness requirement. Dependency entries are configured-only by default:
+    `status: "configured"` and `detail: "configured_only_no_probe"` mean the dependency base URL
+    is configured and safe to display, not that the upstream was actively probed. Degraded or
+    unavailable dependency states are surfaced only from explicit runtime status overrides or
+    endpoint-level downstream failure handling.
 
 ## Endpoint: `GET /metadata`
 
@@ -98,7 +102,8 @@
   - `checks.ready`
   - `checks.draining`
   - `input_modes`
-  - `dependencies[]` with `service`, canonical `base_url`, runtime `status`, optional operator `detail`, and optional structured metadata:
+  - `dependencies[]` with `service`, canonical `base_url`, configured-only or override `status`,
+    optional operator `detail`, and optional structured metadata:
     - `category` such as `transport`, `timeout`, or `data_gap`
     - `issue_code` such as `UPSTREAM_HIGH_LATENCY` or `RISK_FREE_SERIES_EMPTY`
 
@@ -114,4 +119,5 @@
 
 ## Operational Alignment Verdict
 
-- Current state: compliant on health/metadata/metrics/ops with dependency-aware readiness and diagnostics.
+- Current state: compliant on health/metadata/metrics/ops with explicit configured-only
+  dependency readiness semantics, preserving degraded/unavailable runtime override diagnostics.

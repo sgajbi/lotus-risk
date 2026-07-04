@@ -49,14 +49,14 @@ def _configured_dependency_views(
         DependencyRuntimeView(
             service="lotus-core",
             base_url=core_client.base_url,
-            status="ok",
-            detail="configured",
+            status="configured",
+            detail="configured_only_no_probe",
         ),
         DependencyRuntimeView(
             service="lotus-performance",
             base_url=performance_client.base_url,
-            status="ok",
-            detail="configured",
+            status="configured",
+            detail="configured_only_no_probe",
         ),
     ]
 

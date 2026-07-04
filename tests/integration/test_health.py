@@ -6,6 +6,15 @@ from tests.support.app_runtime import override_app_runtime
 from tests.support.lotus_core_fakes import SimulationLotusCoreClient
 
 
+class _ConfiguredOnlyDependencyClient:
+    def __init__(self, base_url: str) -> None:
+        self._base_url = base_url
+
+    @property
+    def base_url(self) -> str:
+        return self._base_url
+
+
 @pytest.mark.parametrize(
     ("path", "expected_key", "expected_value"),
     (
@@ -181,17 +190,23 @@ def test_legacy_workbench_proxy_removed_with_standard_404_error() -> None:
 
 
 def test_concentration_handles_non_positive_positions() -> None:
-    client = TestClient(app)
-    response = client.post(
-        "/analytics/risk/concentration",
-        json={
-            "input_mode": "stateless",
-            "stateless_input": {
-                "current_positions": [{"security_id": "A", "quantity": 0}],
-                "projected_positions": [{"security_id": "B", "proposed_quantity": -5}],
+    with override_app_runtime(
+        lotus_core_client=SimulationLotusCoreClient(
+            session_id="SIM_HEALTH_0002",
+            simulation_version=1,
+        )
+    ):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/concentration",
+            json={
+                "input_mode": "stateless",
+                "stateless_input": {
+                    "current_positions": [{"security_id": "A", "quantity": 0}],
+                    "projected_positions": [{"security_id": "B", "proposed_quantity": -5}],
+                },
             },
-        },
-    )
+        )
     assert response.status_code == 200
     proxy = response.json()["risk_proxy"]
     assert proxy["hhi_current"] == 0
@@ -234,7 +249,11 @@ def test_metadata_and_ops_contract_shape() -> None:
         "lotus-core",
         "lotus-performance",
     ]
-    assert all(dependency["status"] == "ok" for dependency in ops_body["dependencies"])
+    assert all(dependency["status"] == "configured" for dependency in ops_body["dependencies"])
+    assert all(
+        dependency["detail"] == "configured_only_no_probe"
+        for dependency in ops_body["dependencies"]
+    )
     assert all(dependency["category"] is None for dependency in ops_body["dependencies"])
     assert all(dependency["issue_code"] is None for dependency in ops_body["dependencies"])
     assert trust_telemetry_body["service"] == "lotus-risk"
@@ -262,7 +281,7 @@ def test_metadata_and_ops_contract_shape() -> None:
         trust_telemetry_body["declared_dependencies"][0]["producer_repository"]
         == "lotus-performance"
     )
-    assert trust_telemetry_body["declared_dependencies"][0]["runtime_status"] == "ok"
+    assert trust_telemetry_body["declared_dependencies"][0]["runtime_status"] == "configured"
     assert trust_telemetry_body["summary"]["declared_product_count"] == 8
     assert trust_telemetry_body["summary"]["declared_dependency_count"] == 6
     assert trust_telemetry_body["summary"]["degraded_dependency_count"] == 0
@@ -380,7 +399,9 @@ def test_health_ready_returns_draining_when_service_is_draining() -> None:
     assert readiness.status_code == 503
     readiness_body = readiness.json()
     assert readiness_body["status"] == "draining"
-    assert all(dependency["status"] == "ok" for dependency in readiness_body["dependencies"])
+    assert all(
+        dependency["status"] == "configured" for dependency in readiness_body["dependencies"]
+    )
     assert ops.status_code == 200
     ops_body = ops.json()
     assert ops_body["status"] == "degraded"
@@ -421,6 +442,35 @@ def test_health_ready_and_ops_surface_structured_data_gap_metadata() -> None:
     assert ops_dependency["detail"] == "risk_free_series_missing_for_usd_ytd"
     assert ops_dependency["category"] == "data_gap"
     assert ops_dependency["issue_code"] == "RISK_FREE_SERIES_EMPTY"
+
+
+def test_health_ready_uses_configured_only_dependency_semantics_for_unprobed_upstreams() -> None:
+    with override_app_runtime(
+        lotus_core_client=_ConfiguredOnlyDependencyClient("http://127.0.0.1:1"),
+        lotus_performance_client=_ConfiguredOnlyDependencyClient("http://127.0.0.1:2"),
+    ):
+        client = TestClient(app)
+        readiness = client.get("/health/ready")
+        ops = client.get("/ops")
+        trust_telemetry = client.get("/ops/trust-telemetry")
+
+    assert readiness.status_code == 200
+    assert readiness.json()["status"] == "ready"
+    assert {
+        (dependency["service"], dependency["status"], dependency["detail"])
+        for dependency in readiness.json()["dependencies"]
+    } == {
+        ("lotus-core", "configured", "configured_only_no_probe"),
+        ("lotus-performance", "configured", "configured_only_no_probe"),
+    }
+    assert ops.json()["status"] == "ok"
+    assert ops.json()["checks"]["ready"] is True
+    assert {
+        dependency["runtime_status"]
+        for dependency in trust_telemetry.json()["declared_dependencies"]
+    } == {"configured"}
+    assert trust_telemetry.json()["summary"]["degraded_dependency_count"] == 0
+    assert trust_telemetry.json()["summary"]["unavailable_dependency_count"] == 0
 
 
 def test_openapi_declares_standard_error_models_for_risk_endpoints() -> None:
@@ -629,7 +679,8 @@ def test_openapi_exposes_readiness_dependency_schema() -> None:
     assert readiness_schema["properties"]["status"]["description"] == "Readiness state."
     assert readiness_schema["properties"]["status"]["example"] == "ready"
     assert readiness_schema["properties"]["dependencies"]["description"] == (
-        "Dependency runtime states used to determine readiness."
+        "Dependency configuration states and optional runtime override states used to determine "
+        "readiness."
     )
     assert dependency_schema["properties"]["category"]["example"] == "data_gap"
 

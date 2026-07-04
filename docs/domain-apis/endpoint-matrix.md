@@ -14,10 +14,10 @@ Status meanings:
 |---|---|---|---|---|---|---|
 | `GET /health` | Operational | compatibility health | operational | operational | none | none |
 | `GET /health/live` | Operational | liveness | operational | operational | none | none |
-| `GET /health/ready` | Operational | dependency-aware readiness | operational | operational | internal runtime state + dependency runtime view for lotus-core and lotus-performance | none |
+| `GET /health/ready` | Operational | service readiness with configured-only dependency view | operational | operational | internal runtime state + configured-only dependency view for lotus-core and lotus-performance | Does not actively probe upstream reachability; downstream operation failures surface through endpoint errors, supportability metadata, metrics, and optional dependency status overrides |
 | `GET /metadata` | Operational | service/version/rounding metadata | operational | operational | internal constants | none |
 | `GET /metrics` | Operational | Prometheus metrics | operational | operational | internal metrics registry | none |
-| `GET /ops` | Operational | consolidated operational diagnostics | operational | operational | runtime readiness + canonical dependency configuration/runtime status for lotus-core and lotus-performance | none |
+| `GET /ops` | Operational | consolidated operational diagnostics | operational | operational | runtime readiness + canonical dependency configuration and optional override status for lotus-core and lotus-performance | Dependency rows are configured-only by default, not live reachability probes |
 | `GET /integration/capabilities` | Integration | capability/workflow publication | integration metadata | full | internal typed constants and support metadata | query shaping by consumer/tenant is still intentionally absent |
 | `POST /analytics/risk/calculate` | Domain analytics | portfolio risk metrics | `stateless`, `stateful` | full | stateful return sourcing via lotus-performance; source-backed risk-free returns from lotus-core via returns-series when Sharpe is requested | simulation is intentionally unsupported |
 | `POST /analytics/risk/drawdown` | Domain analytics | realized drawdown analytics | `stateless`, `stateful` | full | stateful return sourcing via lotus-performance | simulation is intentionally unsupported |

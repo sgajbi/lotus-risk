@@ -17,6 +17,13 @@
 - Metadata: /metadata
 - Ops diagnostics: /ops
 
+`/health/ready` and `/ops` publish configured-only dependency rows by default. A row with
+`status: "configured"` and `detail: "configured_only_no_probe"` means the dependency base URL is
+configured and source-safe to display; it does not prove `lotus-core` or `lotus-performance`
+reachability. Reachability and data-contract failures are proven by endpoint-level downstream
+errors, `metadata.calculation_supportability`, upstream request metrics, and explicit runtime
+dependency status overrides when an operator or higher-level runtime has injected them.
+
 ## Incident First Checks
 
 1. Check container logs for request failures and stack traces.
@@ -123,7 +130,8 @@ request-validation or capability-publication outcomes.
 Alert id: `lotus-risk-http-5xx`
 
 1. Inspect `http_requests_total` grouped by `handler` and `status`.
-2. Verify `/health/ready` and `/ops` to distinguish dependency degradation from application
-   failures.
+2. Verify `/health/ready` and `/ops` for service readiness, draining posture, and configured-only
+   dependency rows; use upstream request metrics and endpoint errors to distinguish live dependency
+   failures from application failures.
 3. Check recent deploy and configuration changes, including enterprise authorization settings.
 4. Run `make check` locally for fast reproduction and `make ci` before opening a hotfix PR.

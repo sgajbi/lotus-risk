@@ -75,7 +75,7 @@ They protect:
 2. no-alias API discipline,
 3. product-surface semantic correctness,
 4. evidence-backed supportability claims,
-5. dependency-aware runtime posture.
+5. configured-only dependency readiness posture plus endpoint-level upstream failure posture.
 
 ## Validation Sources
 

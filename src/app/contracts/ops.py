@@ -14,12 +14,12 @@ class DependencyStatus(BaseModel):
     )
     status: str = Field(
         description="Dependency runtime state.",
-        json_schema_extra={"example": "ok"},
+        json_schema_extra={"example": "configured"},
     )
     detail: str | None = Field(
         default=None,
         description="Additional runtime detail for operators.",
-        json_schema_extra={"example": "configured"},
+        json_schema_extra={"example": "configured_only_no_probe"},
     )
     category: str | None = Field(
         default=None,
@@ -57,14 +57,17 @@ class ReadinessResponse(BaseModel):
         json_schema_extra={"example": "ready"},
     )
     dependencies: list[DependencyStatus] = Field(
-        description="Dependency runtime states used to determine readiness.",
+        description=(
+            "Dependency configuration states and optional runtime override states used to "
+            "determine readiness."
+        ),
         json_schema_extra={
             "example": [
                 {
                     "service": "lotus-performance",
                     "base_url": "http://performance.dev.lotus",
-                    "status": "ok",
-                    "detail": "configured",
+                    "status": "configured",
+                    "detail": "configured_only_no_probe",
                 }
             ]
         },
@@ -123,14 +126,17 @@ class OpsResponse(BaseModel):
         json_schema_extra={"example": ["stateless", "stateful", "simulation"]},
     )
     dependencies: list[DependencyStatus] = Field(
-        description="Runtime dependency diagnostics used for readiness and operations.",
+        description=(
+            "Dependency configuration diagnostics and optional runtime override states used for "
+            "readiness and operations."
+        ),
         json_schema_extra={
             "example": [
                 {
                     "service": "lotus-core",
                     "base_url": "http://core-control.dev.lotus",
-                    "status": "ok",
-                    "detail": "configured",
+                    "status": "configured",
+                    "detail": "configured_only_no_probe",
                 }
             ]
         },

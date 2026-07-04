@@ -13,7 +13,7 @@
 | Risk-event affected cohort | `/analytics/risk/risk-event-cohorts/evaluate` | partial stateless first-wave product | Source-owned portfolio membership and impact scores for governed risk events. |
 | Mandate risk health | `/analytics/risk/mandate-health-context` | partial stateless first-wave product | Tracking-error health posture for downstream mandate-management consumption. |
 | Capability publication | `/integration/capabilities` | implemented | Downstream discovery of workflow support, mode support, and support notes. |
-| Operations and observability | `/health`, `/health/ready`, `/ops`, `/metrics` | implemented | Runtime readiness, dependency posture, and bounded Prometheus monitoring. |
+| Operations and observability | `/health`, `/health/ready`, `/ops`, `/metrics` | implemented | Runtime readiness, configured-only dependency posture, explicit dependency override states, and bounded Prometheus monitoring. |
 
 ## Explicit Limits
 
