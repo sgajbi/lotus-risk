@@ -32,6 +32,8 @@ Enterprise bank deployments must provide all of the following:
 8. Any explicit downstream timeout, connection-pool, keepalive, or async polling override must be
    a positive finite numeric value for seconds-based settings and a positive integer for count-based
    settings.
+9. `ENTERPRISE_INGRESS_MAX_BODY_BYTES` and `ENTERPRISE_ASGI_MAX_BODY_BYTES` set to the effective
+   ingress/proxy and ASGI/server body limits for the deployment.
 
 The service must fail closed when these requirements are missing in enterprise mode. Runtime
 configuration validation in `src/app/enterprise_readiness.py` enforces the in-process portion of
@@ -90,7 +92,23 @@ The production deployment checklist is:
 1. Configure ingress/proxy maximum request body size at or below `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES`.
 2. Configure ASGI/server request body limits where the selected server supports them.
 3. Keep `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES` explicit in the service environment.
-4. Treat a missing ingress/server body-limit configuration as a production-readiness failure.
+4. Set `ENTERPRISE_INGRESS_MAX_BODY_BYTES` and `ENTERPRISE_ASGI_MAX_BODY_BYTES` to the effective
+   configured limits so startup can verify both external limits are present and no larger than the
+   in-process application limit.
+5. Treat a missing ingress/server body-limit configuration as a production-readiness failure.
+
+Enterprise runtime validation rejects missing, malformed, zero, negative, or oversized external
+body-limit proof with bounded issue codes:
+
+1. `missing_or_invalid_ingress_max_body_bytes`,
+2. `missing_or_invalid_asgi_max_body_bytes`,
+3. `ingress_max_body_bytes_exceeds_app_limit`,
+4. `asgi_max_body_bytes_exceeds_app_limit`.
+
+The repository `Dockerfile` and `docker-compose.yml` run plain Uvicorn directly for local developer
+and contract-test workflows. That direct Compose path is not enterprise body-limit proof unless a
+deployment supplies the explicit proof variables above from an approved ingress/proxy and ASGI/server
+configuration.
 
 ## Evidence Commands
 

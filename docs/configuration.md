@@ -51,6 +51,8 @@ explicit invalid overrides for `LOTUS_CORE_*`, `LOTUS_PERFORMANCE_*`, or
 | `ENTERPRISE_CAPABILITY_RULES_JSON` | `{}` | Required endpoint capability map |
 | `ENTERPRISE_FEATURE_FLAGS_JSON` | `{}` | Governed feature-flag map where used |
 | `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES` | `1048576` | Explicit value aligned to ingress and ASGI limits |
+| `ENTERPRISE_INGRESS_MAX_BODY_BYTES` | unset | Required enterprise proof of ingress/proxy body limit |
+| `ENTERPRISE_ASGI_MAX_BODY_BYTES` | unset | Required enterprise proof of ASGI/server body limit |
 
 Do not place secrets, bearer tokens, or credentials in capability rules, feature flags, base URLs,
 logs, examples, or committed environment files.
@@ -58,6 +60,13 @@ logs, examples, or committed environment files.
 When `ENTERPRISE_ENFORCE_RUNTIME_CONFIG=true`, application construction fails closed unless the
 enterprise bank posture above is explicit. The failure contains bounded issue codes only and never
 includes configuration values.
+
+`ENTERPRISE_INGRESS_MAX_BODY_BYTES` and `ENTERPRISE_ASGI_MAX_BODY_BYTES` are machine-readable
+deployment proof values, not application request limits. In enterprise mode, both must be positive
+integers at or below `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES`; otherwise startup fails with bounded
+`missing_or_invalid_*_max_body_bytes` or `*_max_body_bytes_exceeds_app_limit` issue codes. The
+in-process `Content-Length` check remains defense in depth for write requests, not complete
+protection for chunked or streamed bodies.
 
 Capability-rule keys must use `<WRITE_METHOD> /absolute/path-prefix` form with a nonempty string
 capability value. When authorization is enabled, write requests without a matching rule fail closed

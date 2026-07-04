@@ -11,6 +11,8 @@ def test_security_threat_model_records_current_abuse_controls() -> None:
 
     required_terms = (
         "ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES",
+        "ENTERPRISE_INGRESS_MAX_BODY_BYTES",
+        "ENTERPRISE_ASGI_MAX_BODY_BYTES",
         "413 PAYLOAD_TOO_LARGE",
         "ENTERPRISE_ENFORCE_AUTHZ=true",
         "X-Actor-Id",
@@ -27,6 +29,7 @@ def test_security_threat_model_records_current_abuse_controls() -> None:
         "security-deployment-policy.md",
         "Enterprise bank deployment mode requires",
         "ASGI/server request body limits",
+        "machine-readable proof",
         "credential-bearing downstream URL",
         "docs/configuration.md",
         "fails application construction",

@@ -27,6 +27,9 @@ client, request, response, trace, or correlation data through logs, metrics, err
    errors never echo the rejected value.
 10. Authorization-enforced write requests fail closed when no well-formed capability rule matches
     the request path.
+11. Enterprise body-limit posture is machine-checked: ingress/proxy and ASGI/server proof values
+    must be explicit and no larger than `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES`; direct local
+    Uvicorn/Compose is local-only unless deployment proof is supplied.
 
 ## Refactor Requirements
 
@@ -36,4 +39,7 @@ client, request, response, trace, or correlation data through logs, metrics, err
    gates.
 4. Prove sensitive-data masking with tests whenever new diagnostics, logs, or metrics are added.
 5. Treat `ENTERPRISE_ENFORCE_AUTHZ=true`, `ENTERPRISE_ENFORCE_RUNTIME_CONFIG=true`, explicit
-   capability rules, and ingress/server request body limits as mandatory for bank deployment mode.
+   capability rules, and machine-checked ingress/server request body limits as mandatory for bank
+   deployment mode.
+6. Do not let legacy or local-only runtime shortcuts become bank-readiness claims. Keep retained
+   compatibility behavior clearly scoped to local development unless enterprise evidence proves it.

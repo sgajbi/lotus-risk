@@ -46,9 +46,9 @@ This is the better path when you need:
 
 For host-based local validation, use:
 
-1. `http://localhost:8130` for `lotus-risk`,
-2. `http://localhost:8002` for `lotus-performance`,
-3. `http://localhost:8202` for `lotus-core` query control-plane.
+1. [lotus-risk local API](http://localhost:8130),
+2. [lotus-performance local API](http://localhost:8002),
+3. [lotus-core query control-plane](http://localhost:8202).
 
 Important rule:
 

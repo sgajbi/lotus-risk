@@ -33,9 +33,9 @@ They tell you:
 
 For direct local validation:
 
-1. `lotus-risk` -> `http://localhost:8130`
-2. `lotus-performance` -> `http://localhost:8002`
-3. `lotus-core` query control-plane -> `http://localhost:8202`
+1. [lotus-risk local API](http://localhost:8130)
+2. [lotus-performance local API](http://localhost:8002)
+3. [lotus-core query control-plane](http://localhost:8202)
 
 In Docker Compose, the service uses canonical hostnames mapped back to the host gateway:
 
@@ -62,6 +62,8 @@ Examples:
 Bank deployment mode must enable enterprise authorization and runtime configuration enforcement,
 configure primary key and secret-rotation evidence, configure endpoint capability rules, and align
 ingress/proxy plus ASGI/server request body limits with `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES`.
+Startup verifies `ENTERPRISE_INGRESS_MAX_BODY_BYTES` and `ENTERPRISE_ASGI_MAX_BODY_BYTES` as
+machine-readable proof of those external limits.
 Missing ingress/server body-limit enforcement for requests without trustworthy `Content-Length` is
 a deployment-readiness failure.
 

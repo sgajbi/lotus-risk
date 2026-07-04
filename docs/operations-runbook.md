@@ -28,7 +28,9 @@ themselves; they are evidence for prioritization and regression control.
 Bank deployment mode requires the posture in `docs/security-deployment-policy.md`: authorization
 enforcement, runtime configuration enforcement, explicit key and secret-rotation configuration,
 endpoint capability rules, and ingress/server request body limits aligned to
-`ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES`.
+`ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES`. Enterprise startup also requires
+`ENTERPRISE_INGRESS_MAX_BODY_BYTES` and `ENTERPRISE_ASGI_MAX_BODY_BYTES` to prove the effective
+external limits are present and no larger than the in-process write payload limit.
 
 ## Downstream Connection Pools
 
