@@ -13,12 +13,12 @@ completion claim.
 ## Generation Identity
 
 - Git branch: `refactor/enterprise-risk-backend`
-- Git commit: `a41b60b94446fe8835994db8be77da342f92dae3`
+- Git commit: `b7de1c122428affb056cd0e835a59389b3ee8ddf`
 
 ## Current Code Size
 
-- Python source files under `src/`: 246
-- Python test files under `tests/`: 107
+- Python source files under `src/`: 247
+- Python test files under `tests/`: 108
 - Python packages under `src/`: 11
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
 
@@ -27,8 +27,8 @@ completion claim.
 | Path | Lines | Bytes |
 | --- | --- | --- |
 | src/app/enterprise_readiness.py | 274 | 9366 |
+| src/app/services/calculation_supportability.py | 222 | 7242 |
 | src/app/services/benchmark_exposure_history.py | 220 | 7264 |
-| src/app/services/calculation_supportability.py | 219 | 7214 |
 | src/app/services/risk_mode_adapter.py | 217 | 6937 |
 | src/app/integrations/lotus_performance_transport.py | 216 | 6839 |
 | src/app/services/scenario_engine.py | 214 | 7075 |
@@ -96,29 +96,29 @@ All checks passed!
 - Ruff format check: passed
 
 ```text
-369 files already formatted
+371 files already formatted
 ```
 - Type checking: passed
 
 ```text
-Success: no issues found in 353 source files
+Success: no issues found in 355 source files
 ```
 - Unit coverage snapshot: passed
 
 ```text
-........................................................................ [ 12%]
-........................................................................ [ 24%]
-........................................................................ [ 36%]
-........................................................................ [ 48%]
-........................................................................ [ 60%]
-........................................................................ [ 72%]
+........................................................................ [ 11%]
+........................................................................ [ 23%]
+........................................................................ [ 35%]
+........................................................................ [ 47%]
+........................................................................ [ 59%]
+........................................................................ [ 71%]
 ...
 src\app\services\rolling_stateful_source_responses.py           45      1     16      1    97%   96
 --------------------------------------------------------------------------------------------------------
-TOTAL                                                         6368     85   1058     73    98%
+TOTAL                                                         6384     85   1058     73    98%
 
-200 files skipped due to complete coverage.
-599 passed in 10.89s
+201 files skipped due to complete coverage.
+602 passed in 11.87s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -148,7 +148,7 @@ src\app\services\risk\__init__.py - A (100.00)
 - Dependency hygiene: passed
 
 ```text
-Scanning 246 files...
+Scanning 247 files...
 
 Success! No dependency issues found.
 ```
@@ -248,7 +248,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc1-503-UPSTREAM_UNAVAILABLE-transport]
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 
-599 tests collected in 1.92s
+602 tests collected in 2.03s
 ```
 - Import-linter report-only: reported exit 1
 
@@ -260,10 +260,10 @@ Import Linter
 
 ---------
 ...
-    app.ops_runtime -> app.integrations.lotus_performance_client (l.9)
+    app.ops_runtime -> app.integrations.lotus_core_client (l.8)
 
 -   app.routers.operational -> app.trust_telemetry (l.29)
     app.trust_telemetry -> app.trust_telemetry_builders (l.3)
     app.trust_telemetry_builders -> app.ops_runtime (l.18)
-    app.ops_runtime -> app.integrations.lotus_core_client (l.8)
+    app.ops_runtime -> app.integrations.lotus_performance_client (l.9)
 ```

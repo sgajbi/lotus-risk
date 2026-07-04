@@ -1,7 +1,7 @@
 from collections.abc import Awaitable, Callable
 from typing import TypeVar, cast
 
-from app.observability import observation_start, record_endpoint_execution
+from app.services.observability_ports import observation_start, record_endpoint_execution
 
 ResponseT = TypeVar("ResponseT")
 

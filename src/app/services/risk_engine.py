@@ -7,8 +7,11 @@ from app.contracts.risk import (
     RiskResponse,
     RiskStatelessCalculationInput,
 )
-from app.observability import observe_risk_metric_duration, record_risk_metric_requests
 from app.services.calculation_supportability import record_operation_supportability
+from app.services.observability_ports import (
+    observe_risk_metric_duration,
+    record_risk_metric_requests,
+)
 from app.services.risk import calculation_orchestrator as risk_orchestrator
 from app.services.risk import helpers as risk_helpers
 

@@ -11,7 +11,10 @@ from app.contracts.risk import (
     RiskFreshnessBucket,
     RiskSupportabilityReason,
 )
-from app.observability import record_analytics_freshness_bucket, record_calculation_supportability
+from app.services.observability_ports import (
+    record_analytics_freshness_bucket,
+    record_calculation_supportability,
+)
 from app.services.supportability_periods import (
     assess_period_results,
     period_results_supportability_state,
