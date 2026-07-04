@@ -34,7 +34,15 @@ def to_return_points(series: Any) -> list[ReturnPoint]:
         raw_date = row.get("date")
         if not isinstance(raw_date, str):
             continue
-        parsed_date = date.fromisoformat(raw_date)
+        try:
+            parsed_date = date.fromisoformat(raw_date)
+        except ValueError as exc:
+            raise invalid_upstream_payload(
+                service="lotus-performance",
+                operation="/integration/returns/series",
+                message="Invalid return date from lotus-performance",
+                details={"field": "date"},
+            ) from exc
         if not is_trading_day(parsed_date):
             continue
         result.append(

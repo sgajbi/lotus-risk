@@ -208,7 +208,7 @@ async def test_client_polls_async_returns_series_result_until_complete(
             ),
             _ok_response(
                 {"status": "pending"},
-                status_code=202,
+                status_code=404,
                 url="http://performance.local/integration/returns/series/results/calc-1",
             ),
             _ok_response(
@@ -237,6 +237,9 @@ async def test_client_polls_async_returns_series_result_until_complete(
         "GET",
         "GET",
     ]
+    assert _FakeAsyncClient.requests[2]["url"].endswith(
+        "/integration/returns/series/results/calc-1"
+    )
 
 
 @pytest.mark.asyncio
@@ -407,6 +410,34 @@ async def test_client_raises_for_unexpected_async_result_status(
         )
     assert exc_info.value.code == "UPSTREAM_FAILURE"
     assert "not ready" not in exc_info.value.message
+
+
+@pytest.mark.asyncio
+async def test_client_raises_for_unexpected_async_result_client_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(httpx, "AsyncClient", _FakeAsyncClient)
+    _FakeAsyncClient.requests = []
+
+    responses = iter(
+        [
+            _ok_response(
+                {"result_path": "/integration/returns/series/results/calc-1"},
+                status_code=202,
+            ),
+            _ok_response({"detail": "portfolio identifier leaked"}, status_code=400),
+        ]
+    )
+    _FakeAsyncClient.response_factory = lambda **_: next(responses)
+
+    client = LotusPerformanceClient(base_url="http://performance.local")
+    with pytest.raises(UpstreamServiceError, match="rejected request \\(400\\)") as exc_info:
+        await client.get_returns_series(
+            request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
+            correlation_id=None,
+        )
+    assert exc_info.value.code == "FAILED_DEPENDENCY"
+    assert "portfolio identifier leaked" not in exc_info.value.message
 
 
 @pytest.mark.asyncio

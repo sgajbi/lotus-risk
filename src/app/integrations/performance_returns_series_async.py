@@ -138,6 +138,7 @@ async def _get_returns_series_result(
         operation=result_path,
         started_at=started_at,
         request_factory=lambda: client.get(f"{base_url}{result_path}", headers=headers),
+        accepted_status_codes={202, 404},
         parse_response=lambda response: (
             response.status_code,
             None

@@ -111,6 +111,36 @@ def test_drawdown_endpoint_stateful_uses_lotus_performance() -> None:
     assert body["results"]["YTD"]["relative_to_benchmark"]["time_under_water_days"] >= 0
 
 
+def test_drawdown_endpoint_maps_malformed_upstream_return_dates_to_502() -> None:
+    recorder = RecordingLotusPerformanceClient(
+        response_payload=build_returns_series_response(
+            portfolio_returns=(("not-a-date", "0.0100"),),
+        )
+    )
+    with override_app_runtime(lotus_performance_client=recorder):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/drawdown",
+            headers={"X-Correlation-Id": "corr-dd-bad-date"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-06",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                },
+            },
+        )
+
+    body = response.json()["error"]
+    assert response.status_code == 502
+    assert body["code"] == "UPSTREAM_INVALID_RESPONSE"
+    assert body["message"] == "Upstream dependency returned an invalid response."
+    assert body["details"]["category"] == "invalid_response"
+    assert body["details"]["retryable"] is False
+    assert body["correlation_id"] == "corr-dd-bad-date"
+
+
 def test_drawdown_endpoint_marks_benchmark_unavailable_when_requested_without_series() -> None:
     client = TestClient(app)
     payload = _stateless_payload()

@@ -23,10 +23,14 @@ async def execute_downstream_request(
     operation: str,
     started_at: float,
     request_factory: Callable[[], Awaitable[httpx.Response]],
+    accepted_status_codes: set[int] | None = None,
 ) -> httpx.Response:
     """Execute one outbound request and normalize failures into upstream errors."""
     try:
-        return await _successful_downstream_response(request_factory)
+        return await _successful_downstream_response(
+            request_factory,
+            accepted_status_codes=accepted_status_codes,
+        )
     except UpstreamServiceError as exc:
         _raise_recorded_upstream_error(
             dependency=dependency,
@@ -52,8 +56,12 @@ async def execute_downstream_request(
 
 async def _successful_downstream_response(
     request_factory: Callable[[], Awaitable[httpx.Response]],
+    *,
+    accepted_status_codes: set[int] | None = None,
 ) -> httpx.Response:
     response = await request_factory()
+    if accepted_status_codes and response.status_code in accepted_status_codes:
+        return response
     response.raise_for_status()
     return response
 
@@ -146,6 +154,7 @@ async def execute_downstream_request_json(
     request_factory: Callable[[], Awaitable[httpx.Response]],
     parse_response: Callable[[httpx.Response], _T],
     record_success: bool = True,
+    accepted_status_codes: set[int] | None = None,
 ) -> _T:
     """Execute one outbound request, parse response JSON, and record supportability."""
     response = await execute_downstream_request(
@@ -153,6 +162,7 @@ async def execute_downstream_request_json(
         operation=operation,
         started_at=started_at,
         request_factory=request_factory,
+        accepted_status_codes=accepted_status_codes,
     )
     try:
         parsed_response = parse_response(response)

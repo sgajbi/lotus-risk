@@ -1,13 +1,37 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import sys
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
 LOCAL_TELEMETRY_DIR = ROOT / "contracts" / "trust-telemetry"
-PLATFORM_ROOT = ROOT.parent / "lotus-platform"
+
+
+def _resolve_platform_root() -> Path:
+    configured_root = os.environ.get("LOTUS_PLATFORM_ROOT")
+    candidates = []
+    if configured_root:
+        candidates.append(Path(configured_root))
+    candidates.extend(
+        [
+            ROOT.parent / "lotus-platform",
+            ROOT / ".lotus-platform",
+            ROOT / "lotus-platform",
+        ]
+    )
+
+    for candidate in candidates:
+        resolved = candidate.expanduser().resolve()
+        if (resolved / "platform-contracts").exists():
+            return resolved
+
+    return candidates[0].expanduser().resolve()
+
+
+PLATFORM_ROOT = _resolve_platform_root()
 PLATFORM_AUTOMATION_DIR = PLATFORM_ROOT / "automation"
 PLATFORM_VALIDATOR_PATH = PLATFORM_AUTOMATION_DIR / "validate_trust_telemetry.py"
 PLATFORM_CATALOG_PATH = PLATFORM_ROOT / "generated" / "domain-product-catalog.json"
@@ -22,7 +46,8 @@ def _load_platform_validator():
     if not PLATFORM_VALIDATOR_PATH.exists():
         raise FileNotFoundError(
             f"Platform trust telemetry validator not found at {PLATFORM_VALIDATOR_PATH}. "
-            "Ensure the sibling lotus-platform repository is available."
+            "Ensure lotus-platform is available as a sibling checkout, under this repository, "
+            "or through LOTUS_PLATFORM_ROOT."
         )
 
     automation_path = str(PLATFORM_AUTOMATION_DIR)

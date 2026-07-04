@@ -59,4 +59,6 @@ def test_governed_workflows_run_mesh_contract_validation() -> None:
         "main-releasability.yml",
     ):
         text = (WORKFLOW_DIR / workflow).read_text(encoding="utf-8")
+        assert "repository: sgajbi/lotus-platform" in text, workflow
+        assert "path: .lotus-platform" in text, workflow
         assert "run: make mesh-contract-validate" in text, workflow

@@ -31,9 +31,16 @@ Every upstream failure returned by `lotus-risk` should include deterministic det
 4. `retryable`: boolean retry guidance,
 5. `upstream_status_code`: present for HTTP upstream failures.
 
-Client-facing messages identify the dependency, operation, bounded failure class, and upstream HTTP
-status where available. Raw upstream response bodies, downstream exception text, stack traces,
-credentials, and tokens are never included in the client-facing envelope.
+Client-facing messages expose only a bounded failure class such as `Upstream dependency failed.`
+or `Upstream dependency returned an invalid response.` Dependency identity, operation path,
+category, retryability, and upstream HTTP status are carried in structured `details` fields. Raw
+upstream response bodies, downstream exception text, stack traces, credentials, and tokens are
+never included in the client-facing `message` or problem-details `detail` fields.
+
+`lotus-performance` async returns-series result polling has one operation-specific exception to the
+generic HTTP classification table: `404` from the accepted `result_path` is treated as a pending
+result while the upstream async execution is still materializing. Unexpected result statuses, such
+as `400` or `5xx`, continue to use the standard upstream HTTP classification.
 
 Upstream failures use the standard Lotus error envelope and additive RFC 7807/problem-details
 compatibility fields inside the `error` object. `error.code` remains the stable Lotus machine code;
@@ -73,6 +80,9 @@ The following explicit downstream transport posture is defined in
 - Timeout and retry-class handling remains deterministic:
   transport errors map to `UPSTREAM_TIMEOUT` or `UPSTREAM_UNAVAILABLE`,
   while HTTP `429` and `5xx` map to retryable throttling and upstream-failure classes.
+- Shared stateful return parsing maps malformed upstream return dates to
+  `UPSTREAM_INVALID_RESPONSE` before request-level validation handlers can classify the failure as
+  caller input.
 
 ## Validation Evidence
 

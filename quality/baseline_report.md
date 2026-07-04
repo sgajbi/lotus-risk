@@ -13,7 +13,7 @@ completion claim.
 ## Generation Identity
 
 - Git branch: `refactor/enterprise-risk-backend`
-- Git commit: `df0fe697e907f0e2d35f476880fa42602802cb0b`
+- Git commit: `1b2a5935fbe8c30f3411c7056828ab57b9e3ca18`
 
 ## Current Code Size
 
@@ -37,11 +37,11 @@ completion claim.
 | src/app/services/risk/benchmark_period_metrics.py | 211 | 6678 |
 | src/app/openapi_request_examples/analytics.py | 210 | 6967 |
 | src/app/services/scenario_governance.py | 208 | 7313 |
+| src/app/integrations/downstream_request_execution.py | 208 | 5311 |
 | src/app/services/rolling_metric_series.py | 206 | 6370 |
 | src/app/enterprise_readiness.py | 203 | 6697 |
 | src/app/upstream_errors.py | 201 | 5199 |
 | src/app/trust_telemetry_builders.py | 200 | 7732 |
-| src/app/integrations/downstream_request_execution.py | 198 | 4914 |
 | src/app/contracts/drawdown_metric_outputs.py | 194 | 7451 |
 | src/app/services/rolling_period_results.py | 194 | 6548 |
 | src/app/services/attribution_decomposition.py | 194 | 6333 |
@@ -93,33 +93,32 @@ completion claim.
 ```text
 All checks passed!
 ```
-- Ruff format check: reported exit 1
+- Ruff format check: passed
 
 ```text
-Would reformat: scripts\generate_quality_baseline.py
-1 file would be reformatted, 365 files already formatted
+366 files already formatted
 ```
 - Type checking: passed
 
 ```text
 Success: no issues found in 350 source files
 ```
-- Unit coverage snapshot: reported exit 1
+- Unit coverage snapshot: passed
 
 ```text
-F....................................................................... [ 12%]
+........................................................................ [ 12%]
 ........................................................................ [ 25%]
-........................................................................ [ 38%]
-........................................................................ [ 51%]
+........................................................................ [ 37%]
+........................................................................ [ 50%]
 ........................................................................ [ 63%]
-........................................................................ [ 76%]
+........................................................................ [ 75%]
 ...
-TOTAL                                                         6247     89   1030     73    98%
+src\app\services\rolling_stateful_source_responses.py           45      1     16      1    97%   96
+--------------------------------------------------------------------------------------------------------
+TOTAL                                                         6255     89   1032     73    98%
 
 198 files skipped due to complete coverage.
-=========================== short test summary info ===========================
-FAILED tests/unit/scripts/test_clean_generated_artifacts.py::test_clean_generated_artifacts_removes_only_allowlisted_byproducts
-1 failed, 563 passed in 13.77s
+569 passed in 13.39s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -128,7 +127,7 @@ FAILED tests/unit/scripts/test_clean_generated_artifacts.py::test_clean_generate
 - Maintainability index summary: passed
 
 ```text
-src\app\api_errors.py - A (51.81)
+src\app\api_errors.py - A (50.90)
 src\app\api_error_examples.py - A (60.17)
 src\app\app_factory.py - A (100.00)
 src\app\app_lifecycle.py - A (59.25)
@@ -248,7 +247,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc1-503-UPSTREAM_UNAVAILABLE-transport]
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 
-564 tests collected in 3.72s
+569 tests collected in 2.45s
 ```
 - Import-linter report-only: passed
 

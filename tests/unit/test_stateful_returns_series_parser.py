@@ -11,6 +11,7 @@ from app.services.stateful_returns_series_parser import (
     is_trading_day,
     to_return_points,
 )
+from app.upstream_errors import UpstreamServiceError
 
 
 def test_decimal_return_to_percentage_points_converts_decimal_returns() -> None:
@@ -32,6 +33,15 @@ def test_to_return_points_skips_non_dict_and_invalid_date_rows() -> None:
     )
     assert len(points) == 1
     assert points[0].value == 0.1
+
+
+def test_to_return_points_rejects_malformed_upstream_dates_as_invalid_response() -> None:
+    with pytest.raises(UpstreamServiceError, match="Invalid return date") as exc_info:
+        to_return_points([{"date": "not-a-date", "return_value": "0.0010"}])
+
+    assert exc_info.value.code == "UPSTREAM_INVALID_RESPONSE"
+    assert exc_info.value.details["category"] == "invalid_response"
+    assert exc_info.value.details["field"] == "date"
 
 
 def test_to_return_points_enforces_trading_day_policy_for_stateful_risk() -> None:

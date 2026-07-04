@@ -184,6 +184,24 @@ async def test_execute_downstream_request_json_records_success_and_parses(
 
 
 @pytest.mark.asyncio
+async def test_execute_downstream_request_json_allows_parser_owned_statuses() -> None:
+    async def _accepted_request_factory() -> httpx.Response:
+        return _response({"status": "pending"}, status_code=404)
+
+    result = await execute_downstream_request_json(
+        dependency="lotus-performance",
+        operation="/integration/returns/series/results/calc-1",
+        started_at=123.0,
+        request_factory=_accepted_request_factory,
+        parse_response=lambda response: (response.status_code, response.json()["status"]),
+        accepted_status_codes={404},
+        record_success=False,
+    )
+
+    assert result == (404, "pending")
+
+
+@pytest.mark.asyncio
 async def test_execute_downstream_request_json_records_failures_for_invalid_payload(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

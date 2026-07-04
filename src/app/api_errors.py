@@ -26,6 +26,18 @@ def _default_error_code(status_code: int) -> str:
     return "REQUEST_REJECTED"
 
 
+def _public_upstream_message(exc: UpstreamServiceError) -> str:
+    messages = {
+        "FAILED_DEPENDENCY": "Required upstream dependency data is unavailable.",
+        "UPSTREAM_FAILURE": "Upstream dependency failed.",
+        "UPSTREAM_INVALID_RESPONSE": "Upstream dependency returned an invalid response.",
+        "UPSTREAM_THROTTLED": "Upstream dependency is temporarily throttled.",
+        "UPSTREAM_TIMEOUT": "Upstream dependency timed out.",
+        "UPSTREAM_UNAVAILABLE": "Upstream dependency is unavailable.",
+    }
+    return messages.get(exc.code, "Upstream dependency failed.")
+
+
 async def handle_validation_error(request: Request, exc: RequestValidationError) -> Response:
     return error_response(
         request,
@@ -72,7 +84,7 @@ async def handle_upstream_service_error(request: Request, exc: UpstreamServiceEr
         request,
         status_code=exc.status_code,
         code=exc.code,
-        message=exc.message,
+        message=_public_upstream_message(exc),
         details=details,
     )
 

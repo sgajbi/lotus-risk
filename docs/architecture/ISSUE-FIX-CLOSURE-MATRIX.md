@@ -21,7 +21,7 @@ documentation/wiki/context decision are recorded.
 | #184 | Align PR-grade local CI targets with governed merge and main gates | Fixed locally | Makefile/GitHub workflows | `make ci` now aggregates the deterministic PR-grade local gates used by PR/main lanes; `ci-local` is explicitly documented as a split-suite coverage loop without Docker rather than PR parity. | `tests/unit/test_ci_gate_contract.py`; README and repo context command truth updated. |
 | #183 | Require executable body-limit proof for enterprise bank readiness | Open | HTTP boundary controls/tests | Pending | Pending |
 | #182 | Separate API DTO contracts from core calculation domain models | Open | Architecture boundaries | Pending | Pending |
-| #181 | Bound public upstream error messages in problem-details responses | Open | API error mapping/security | Pending | Pending |
+| #181 | Bound public upstream error messages in problem-details responses | Fixed locally | API error mapping/security | Public upstream messages now come from a bounded code-to-message policy while structured details retain service, operation, category, retryability, and upstream status. Same-pattern scan covered `UpstreamServiceError` handlers and async returns failure messages that previously flowed through `exc.message` into the public envelope. | `tests/unit/test_main_error_handlers.py`; `tests/integration/test_drawdown_endpoint.py`; `docs/domain-apis/risk-upstream-failure-behavior.md` |
 | #180 | Make downstream client resolution a typed runtime composition boundary | Open | Runtime composition/dependencies | Pending | Pending |
 | #179 | Map concentration lotus-core payload shape failures to upstream invalid responses | Open | Concentration upstream mapping | Pending | Pending |
 | #178 | Preserve explicit empty projected positions in concentration simulation | Open | Concentration simulation semantics | Pending | Pending |
@@ -32,7 +32,7 @@ documentation/wiki/context decision are recorded.
 | #173 | Clarify integration capabilities so simulation support is workflow-scoped | Open | Integration capabilities/API docs | Pending | Pending |
 | #172 | Normalize upstream request fingerprint operation keys across portfolios | Open | Auditability/lineage fingerprinting | Pending | Pending |
 | #171 | Bound upstream dependency operation labels in metrics, contracts, and runbooks | Open | Observability labels/contracts/docs | Pending | Pending |
-| #170 | Run mesh contract validation in GitHub feature, PR, and main gates | Fixed locally | CI mesh gates | Feature, PR Merge, and Main Releasability workflows now run `make mesh-contract-validate` through the repo-native aggregate validator instead of duplicating component commands. | `tests/unit/test_ci_gate_contract.py` verifies all three workflow files. |
+| #170 | Run mesh contract validation in GitHub feature, PR, and main gates | Fixed locally | CI mesh gates | Feature, PR Merge, and Main Releasability workflows now run `make mesh-contract-validate` through the repo-native aggregate validator instead of duplicating component commands. Remote Feature Lane failure on run `28706194048` showed that GitHub needed an explicit `lotus-platform` checkout for platform contract validators; workflows now checkout `sgajbi/lotus-platform` into `.lotus-platform`, and validators resolve explicit, sibling, and nested platform roots. | `tests/unit/test_ci_gate_contract.py`; `tests/unit/test_domain_data_product_contract_check.py`; remote failure log `28706194048` |
 | #169 | Align stateful risk Sharpe risk-free sourcing with declared source authority | Open | Stateful risk source authority | Pending | Pending |
 | #168 | Require explicit trust-telemetry coverage for every active risk data product | Open | Trust telemetry contracts/tests | Pending | Pending |
 | #167 | Complete service observability boundary behind narrow ports | Open | Observability ports/architecture | Pending | Pending |
@@ -40,11 +40,11 @@ documentation/wiki/context decision are recorded.
 | #165 | Apply log-return methodology to portfolio risk metric series | Open | Risk methodology/calculation | Pending | Pending |
 | #164 | Document enterprise authorization caller context in OpenAPI | Open | OpenAPI/security documentation | Pending | Pending |
 | #163 | Add protected-access proof for operational diagnostics and metrics | Open | Protected operations endpoints | Pending | Pending |
-| #162 | Map malformed upstream return dates to upstream invalid responses | Open | Upstream return parsing/error mapping | Pending | Pending |
+| #162 | Map malformed upstream return dates to upstream invalid responses | Fixed locally | Upstream return parsing/error mapping | Shared `stateful_returns_series_parser.to_return_points` now maps malformed string dates to `UPSTREAM_INVALID_RESPONSE` with category `invalid_response`, covering risk/calculate, drawdown, rolling, and attribution stateful return consumers. Same-pattern scan preserved existing skip behavior for non-string dates and existing invalid numeric return mapping. | `tests/unit/test_stateful_returns_series_parser.py`; `tests/integration/test_drawdown_endpoint.py` |
 | #161 | Add trusted-ingress proof for enterprise authorization headers | Open | Trusted ingress/security tests | Pending | Pending |
 | #160 | Make readiness dependency status implementation-backed or narrow configured-only claims | Open | Readiness/supportability | Pending | Pending |
 | #158 | Add idempotency controls for concentration simulation change application | Open | Concentration simulation idempotency | Pending | Pending |
-| #157 | Handle 404 async returns-series result status before generic upstream error mapping | Open | Lotus-performance async returns polling | Pending | Pending |
+| #157 | Handle 404 async returns-series result status before generic upstream error mapping | Fixed locally | Lotus-performance async returns polling | Shared downstream request execution now supports operation-owned accepted statuses, and the async result poller passes `{202, 404}` so result `404` remains pending while unexpected `400`/`5xx` statuses still use standard upstream classification. Same-pattern scan kept the bypass scoped to the result endpoint only. | `tests/unit/test_downstream_client_profile.py`; `tests/unit/test_lotus_performance_client.py`; `docs/domain-apis/risk-upstream-failure-behavior.md` |
 
 ## Batch Plan
 
@@ -58,6 +58,8 @@ documentation/wiki/context decision are recorded.
 
 ## Current Docs/Wiki/Context Decision
 
-This matrix is repo-local review evidence. No wiki source change is required for the initial issue
-matrix because no operator-facing behavior has changed yet. Wiki/source documentation will be
-updated in the specific slices that change public, operator, support, or onboarding truth.
+This matrix is repo-local review evidence. No wiki source change is required for the current
+upstream-boundary slice because the changed truth is captured in repo-local domain API docs and
+repository context; the wiki source does not currently publish this level of adapter behavior.
+Wiki/source documentation will be updated in the specific slices that change public, operator,
+support, or onboarding truth.

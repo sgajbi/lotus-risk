@@ -65,6 +65,9 @@ def test_handle_upstream_service_error_returns_dependency_envelope() -> None:
     body = json.loads(bytes(response.body).decode("utf-8"))
     assert response.status_code == 503
     assert body["error"]["code"] == "UPSTREAM_UNAVAILABLE"
+    assert body["error"]["message"] == "Upstream dependency is unavailable."
+    assert body["error"]["detail"] == "Upstream dependency is unavailable."
+    assert "network down" not in json.dumps(body["error"])
     assert body["error"]["details"]["retryable"] is True
     assert body["error"]["correlation_id"] == "corr-123"
 
