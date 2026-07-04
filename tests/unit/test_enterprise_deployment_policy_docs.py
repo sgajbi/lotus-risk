@@ -19,10 +19,15 @@ def test_enterprise_deployment_policy_records_bank_mode_requirements() -> None:
         "ENTERPRISE_SECRET_ROTATION_DAYS",
         "ENTERPRISE_CAPABILITY_RULES_JSON",
         "ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES",
+        "ENTERPRISE_INGRESS_MAX_BODY_BYTES",
+        "ENTERPRISE_ASGI_MAX_BODY_BYTES",
         "gateway",
         "token-validation evidence",
         "ASGI/server request body limits",
         "Content-Length",
+        "missing_or_invalid_ingress_max_body_bytes",
+        "asgi_max_body_bytes_exceeds_app_limit",
+        "direct Compose path is not enterprise body-limit proof",
         "LOTUS_CORE_BASE_URL",
         "LOTUS_PERFORMANCE_BASE_URL",
         "without embedded credentials",
@@ -57,3 +62,4 @@ def test_runbook_and_wiki_link_enterprise_deployment_policy() -> None:
     assert "docs/security-deployment-policy.md" in runbook
     assert "docs/security-deployment-policy.md" in wiki_security
     assert "ENTERPRISE_ENFORCE_RUNTIME_CONFIG=true" in wiki_security
+    assert "ENTERPRISE_INGRESS_MAX_BODY_BYTES" in wiki_security

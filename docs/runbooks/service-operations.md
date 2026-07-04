@@ -41,17 +41,21 @@ Enterprise bank deployments must run with the security posture in
    one common analytics-write capability.
 5. Verify ingress/proxy and ASGI/server request body limits are at or below
    `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES`.
-6. Treat missing body-limit enforcement for requests without trustworthy `Content-Length` as a
+6. Verify `ENTERPRISE_INGRESS_MAX_BODY_BYTES` and `ENTERPRISE_ASGI_MAX_BODY_BYTES` are set to the
+   effective configured limits. Startup issue codes `missing_or_invalid_ingress_max_body_bytes`,
+   `missing_or_invalid_asgi_max_body_bytes`, `ingress_max_body_bytes_exceeds_app_limit`, and
+   `asgi_max_body_bytes_exceeds_app_limit` mean the deployment cannot claim bank readiness.
+7. Treat missing body-limit enforcement for requests without trustworthy `Content-Length` as a
    deployment-readiness failure, not an application-code exception.
-7. Verify `LOTUS_CORE_BASE_URL` and `LOTUS_PERFORMANCE_BASE_URL` are explicit approved service
+8. Verify `LOTUS_CORE_BASE_URL` and `LOTUS_PERFORMANCE_BASE_URL` are explicit approved service
    endpoints.
-8. Verify explicit `LOTUS_CORE_*`, `LOTUS_PERFORMANCE_*`, and `LOTUS_PERFORMANCE_ASYNC_*` timeout,
+9. Verify explicit `LOTUS_CORE_*`, `LOTUS_PERFORMANCE_*`, and `LOTUS_PERFORMANCE_ASYNC_*` timeout,
    pool, keepalive, and polling overrides are positive numeric controls. In enterprise mode,
    `invalid_downstream_runtime_setting:<ENV_NAME>` means a configured runtime control is malformed
    or nonpositive; fix the configuration rather than relying on local fallback defaults.
-9. Treat any `enterprise_runtime_config_invalid:<issue-codes>` startup failure as a blocked
+10. Treat any `enterprise_runtime_config_invalid:<issue-codes>` startup failure as a blocked
    deployment until every bounded issue code is resolved.
-10. Confirm `/openapi.json` shows `x-lotus-enterprise-authorization` on every supported analytics
+11. Confirm `/openapi.json` shows `x-lotus-enterprise-authorization` on every supported analytics
    write operation before publishing generated client or QA evidence.
 
 ## Endpoint Failure Rate Alert

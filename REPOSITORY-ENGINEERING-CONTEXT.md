@@ -204,6 +204,14 @@ Boundary rules:
     development may fall back to defaults for invalid timeout, pool, keepalive, and async polling
     overrides, but enterprise runtime enforcement must reject explicit invalid overrides with
     bounded `invalid_downstream_runtime_setting:<ENV_NAME>` issue codes.
+18. Enterprise body-limit proof must remain executable, not narrative. `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES`
+    is the in-process write payload guard; `ENTERPRISE_INGRESS_MAX_BODY_BYTES` and
+    `ENTERPRISE_ASGI_MAX_BODY_BYTES` prove external ingress/proxy and ASGI/server limits are present
+    and no larger than the app limit. Direct local Uvicorn/Compose is local-only for this posture.
+19. Keep runtime posture modern and current: retained local compatibility or direct-run behavior
+    must be explicitly scoped to local development and must not become a bank-readiness, production,
+    or enterprise claim without machine-readable proof and tests. Do not add new legacy aliases,
+    local-only shortcuts, or stale compatibility surfaces while fixing issue slices.
 
 Canonical direct local validation ports:
 

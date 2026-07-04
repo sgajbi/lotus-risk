@@ -29,6 +29,8 @@ def _set_valid_enterprise_runtime_config(monkeypatch: pytest.MonkeyPatch) -> Non
         "ENTERPRISE_SECRET_ROTATION_DAYS": "30",
         "ENTERPRISE_CAPABILITY_RULES_JSON": ('{"POST /analytics/risk":"risk.analytics.write"}'),
         "ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES": "1048576",
+        "ENTERPRISE_INGRESS_MAX_BODY_BYTES": "1048576",
+        "ENTERPRISE_ASGI_MAX_BODY_BYTES": "1048576",
         "LOTUS_CORE_BASE_URL": "https://core.internal.example",
         "LOTUS_PERFORMANCE_BASE_URL": "https://performance.internal.example",
     }.items():
@@ -117,6 +119,16 @@ def test_capability_rule_coverage_supports_prefix_rules() -> None:
             "0",
             "missing_or_invalid_max_write_payload_bytes",
         ),
+        (
+            "ENTERPRISE_INGRESS_MAX_BODY_BYTES",
+            "0",
+            "missing_or_invalid_ingress_max_body_bytes",
+        ),
+        (
+            "ENTERPRISE_ASGI_MAX_BODY_BYTES",
+            "0",
+            "missing_or_invalid_asgi_max_body_bytes",
+        ),
         ("LOTUS_CORE_BASE_URL", "", "missing_lotus_core_base_url"),
         ("LOTUS_PERFORMANCE_BASE_URL", "", "missing_lotus_performance_base_url"),
     ],
@@ -132,6 +144,40 @@ def test_validate_enterprise_runtime_config_fails_closed_for_missing_bank_postur
 
     with pytest.raises(RuntimeError, match=issue):
         validate_enterprise_runtime_config()
+
+
+@pytest.mark.parametrize(
+    ("setting", "issue"),
+    [
+        ("ENTERPRISE_INGRESS_MAX_BODY_BYTES", "ingress_max_body_bytes_exceeds_app_limit"),
+        ("ENTERPRISE_ASGI_MAX_BODY_BYTES", "asgi_max_body_bytes_exceeds_app_limit"),
+    ],
+)
+def test_validate_enterprise_runtime_config_rejects_body_limit_proof_above_app_limit(
+    monkeypatch: pytest.MonkeyPatch,
+    setting: str,
+    issue: str,
+) -> None:
+    _set_valid_enterprise_runtime_config(monkeypatch)
+    monkeypatch.setenv("ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES", "1024")
+    monkeypatch.setenv(setting, "2048")
+
+    with pytest.raises(RuntimeError, match=issue):
+        validate_enterprise_runtime_config()
+
+
+def test_validate_enterprise_runtime_config_does_not_echo_body_limit_values(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _set_valid_enterprise_runtime_config(monkeypatch)
+    monkeypatch.setenv("ENTERPRISE_INGRESS_MAX_BODY_BYTES", "999999999")
+
+    with pytest.raises(RuntimeError) as exc_info:
+        validate_enterprise_runtime_config()
+
+    error = str(exc_info.value)
+    assert "ingress_max_body_bytes_exceeds_app_limit" in error
+    assert "999999999" not in error
 
 
 @pytest.mark.parametrize(

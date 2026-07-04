@@ -91,6 +91,7 @@ def _enterprise_bank_config_issues() -> list[str]:
         issues.append(f"missing_capability_rule:{route_key}")
     if not _env_has_positive_int("ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES"):
         issues.append("missing_or_invalid_max_write_payload_bytes")
+    issues.extend(_external_body_limit_proof_issues())
     issues.extend(invalid_downstream_runtime_setting_issues())
     return issues
 
@@ -107,6 +108,41 @@ def _env_has_positive_int(name: str) -> bool:
         return int(raw_value) > 0
     except ValueError:
         return False
+
+
+def _env_positive_int(name: str) -> int | None:
+    raw_value = os.getenv(name)
+    if raw_value is None:
+        return None
+    try:
+        value = int(raw_value)
+    except ValueError:
+        return None
+    return value if value > 0 else None
+
+
+def _external_body_limit_proof_issues() -> list[str]:
+    app_limit = _env_positive_int("ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES")
+    checks = (
+        (
+            "ENTERPRISE_INGRESS_MAX_BODY_BYTES",
+            "missing_or_invalid_ingress_max_body_bytes",
+            "ingress_max_body_bytes_exceeds_app_limit",
+        ),
+        (
+            "ENTERPRISE_ASGI_MAX_BODY_BYTES",
+            "missing_or_invalid_asgi_max_body_bytes",
+            "asgi_max_body_bytes_exceeds_app_limit",
+        ),
+    )
+    issues: list[str] = []
+    for env_name, missing_issue, exceeds_issue in checks:
+        external_limit = _env_positive_int(env_name)
+        if external_limit is None:
+            issues.append(missing_issue)
+        elif app_limit is not None and external_limit > app_limit:
+            issues.append(exceeds_issue)
+    return issues
 
 
 def load_feature_flags() -> dict[str, dict[str, dict[str, bool]]]:

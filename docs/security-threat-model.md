@@ -37,7 +37,7 @@ diagnostics, or downstream failure messages.
 
 | Abuse case | Current control | Verification evidence | Remaining risk |
 | --- | --- | --- | --- |
-| Oversized POST payload attempts resource exhaustion | `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES` returns `413 PAYLOAD_TOO_LARGE` before handler execution | `test_enterprise_middleware_payload_limit` and `docs/security-deployment-policy.md` | Enterprise deployments must enforce matching ingress and ASGI/server request body limits for requests without trustworthy `Content-Length` |
+| Oversized POST payload attempts resource exhaustion | `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES` returns `413 PAYLOAD_TOO_LARGE` before handler execution, and enterprise startup requires machine-readable proof that external ingress/proxy plus ASGI/server body-limit values are at or below the app limit | `test_enterprise_middleware_payload_limit`, `test_validate_enterprise_runtime_config_rejects_body_limit_proof_above_app_limit`, and `docs/security-deployment-policy.md` | Direct local Uvicorn/Compose remains local-only unless approved deployment proof variables are supplied |
 | Caller invokes calculation POST without actor, tenant, role, or correlation context | `ENTERPRISE_ENFORCE_AUTHZ=true` requires `X-Actor-Id`, `X-Tenant-Id`, `X-Role`, and `X-Correlation-Id`; enterprise runtime enforcement fails startup when authorization is disabled | `test_authorize_write_request_enforces_headers_identity_and_capabilities`, `test_enterprise_middleware_denies_unauthorized_writes`, and `test_validate_enterprise_runtime_config_fails_closed_for_missing_bank_posture` | Local development mode may keep enforcement disabled, but that mode cannot support a bank-buyable production-readiness claim |
 | Caller presents actor context without service identity | Authorization fails with `missing_service_identity` unless `X-Service-Identity` or `Authorization` is present | `test_authorize_write_request_enforces_headers_identity_and_capabilities` | Gateway-backed token-validation evidence remains a platform integration proof item |
 | Caller lacks endpoint capability or targets an unmapped write path | Well-formed capability rules from `ENTERPRISE_CAPABILITY_RULES_JSON` deny missing `X-Capabilities` entries and unmapped writes fail with `missing_capability_rule` | `test_authorize_write_request_enforces_headers_identity_and_capabilities` | Capability vocabulary and complete write-path mapping must stay governed by deployment configuration |
@@ -60,7 +60,8 @@ The governed deployment posture is now recorded in
 6. `ENTERPRISE_CAPABILITY_RULES_JSON` defines endpoint capability requirements.
 7. `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES` defines the in-process pre-handler POST payload-size
    threshold.
-8. Ingress/proxy and ASGI/server request body limits must be configured at or below
+8. `ENTERPRISE_INGRESS_MAX_BODY_BYTES` and `ENTERPRISE_ASGI_MAX_BODY_BYTES` prove the effective
+   ingress/proxy and ASGI/server request body limits are configured at or below
    `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES` for enterprise deployments.
 9. Downstream base URLs must be approved HTTP(S) service endpoints without embedded credentials,
    query strings, fragments, whitespace, or control characters.

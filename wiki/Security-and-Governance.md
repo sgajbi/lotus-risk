@@ -59,6 +59,11 @@ Bank deployment mode is stricter than local development mode:
     in-process bank posture is complete; failures expose bounded issue codes, not values.
 11. authorization-enforced write paths without a well-formed matching capability rule fail closed
     with `missing_capability_rule`.
+12. enterprise body-limit proof is executable: `ENTERPRISE_INGRESS_MAX_BODY_BYTES` and
+    `ENTERPRISE_ASGI_MAX_BODY_BYTES` must prove external limits are present and no larger than the
+    in-process application limit.
+13. direct local Uvicorn/Compose runtime is local-only for body-limit posture unless an approved
+    deployment supplies the machine-readable proof values.
 
 ## Upstream Boundary Discipline
 
