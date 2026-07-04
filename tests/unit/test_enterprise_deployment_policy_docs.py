@@ -21,6 +21,11 @@ def test_enterprise_deployment_policy_records_bank_mode_requirements() -> None:
         "ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES",
         "ENTERPRISE_INGRESS_MAX_BODY_BYTES",
         "ENTERPRISE_ASGI_MAX_BODY_BYTES",
+        "ENTERPRISE_TRUSTED_INGRESS_SECRET",
+        "X-Lotus-Trusted-Ingress",
+        "missing_trusted_ingress_secret",
+        "Protected Operational Endpoints",
+        "source-safe does not mean public",
         "gateway",
         "token-validation evidence",
         "ASGI/server request body limits",
@@ -63,3 +68,4 @@ def test_runbook_and_wiki_link_enterprise_deployment_policy() -> None:
     assert "docs/security-deployment-policy.md" in wiki_security
     assert "ENTERPRISE_ENFORCE_RUNTIME_CONFIG=true" in wiki_security
     assert "ENTERPRISE_INGRESS_MAX_BODY_BYTES" in wiki_security
+    assert "trusted-ingress proof" in wiki_security

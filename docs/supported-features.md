@@ -27,7 +27,7 @@ runtime-facing support contract.
 | `RiskEventAffectedCohort:v1` | `POST /analytics/risk/risk-event-cohorts/evaluate` | partial stateless first-wave product | does not create rebalance waves, approvals, campaign workflows, or client communications |
 | `MandateRiskHealthContext:v1` | `POST /analytics/risk/mandate-health-context` | partial stateless first-wave product | does not create mandate actions, rebalance waves, orders, execution, or client communications |
 | Capability publication | `GET /integration/capabilities` | implemented | global capability publication only; no tenant- or consumer-shaped query controls |
-| Operations | `/health`, `/health/live`, `/health/ready`, `/metadata`, `/ops`, `/ops/trust-telemetry`, `/metrics` | implemented | `/ops/trust-telemetry` is repo-owned raw telemetry seed material, not platform-certified trust posture |
+| Operations | `/health`, `/health/live`, `/health/ready`, `/metadata`, `/ops`, `/ops/trust-telemetry`, `/metrics` | implemented | `/ops`, `/ops/trust-telemetry`, and `/metrics` require trusted-ingress proof in enterprise mode; `/ops/trust-telemetry` is repo-owned raw telemetry seed material, not platform-certified trust posture |
 
 ## Current Evidence Boundary
 

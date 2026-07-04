@@ -30,6 +30,9 @@ client, request, response, trace, or correlation data through logs, metrics, err
 11. Enterprise body-limit posture is machine-checked: ingress/proxy and ASGI/server proof values
     must be explicit and no larger than `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES`; direct local
     Uvicorn/Compose is local-only unless deployment proof is supplied.
+12. Enterprise write requests and operator diagnostics require trusted-ingress proof through
+    `X-Lotus-Trusted-Ingress`; direct callers with only actor, service identity, and capability
+    headers are denied.
 
 ## Refactor Requirements
 
@@ -43,3 +46,5 @@ client, request, response, trace, or correlation data through logs, metrics, err
    deployment mode.
 6. Do not let legacy or local-only runtime shortcuts become bank-readiness claims. Keep retained
    compatibility behavior clearly scoped to local development unless enterprise evidence proves it.
+7. Keep `/ops`, `/ops/trust-telemetry`, and `/metrics` behind trusted ingress in enterprise mode
+   while preserving `/health` and readiness probes for platform orchestration.

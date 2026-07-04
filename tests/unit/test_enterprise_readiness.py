@@ -18,6 +18,7 @@ from app.enterprise_authorization import (
     SUPPORTED_WRITE_ROUTES,
     missing_supported_write_route_capability_rules,
 )
+from app.enterprise_trusted_ingress import TRUSTED_INGRESS_HEADER
 
 
 def _set_valid_enterprise_runtime_config(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -31,6 +32,7 @@ def _set_valid_enterprise_runtime_config(monkeypatch: pytest.MonkeyPatch) -> Non
         "ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES": "1048576",
         "ENTERPRISE_INGRESS_MAX_BODY_BYTES": "1048576",
         "ENTERPRISE_ASGI_MAX_BODY_BYTES": "1048576",
+        "ENTERPRISE_TRUSTED_INGRESS_SECRET": "trusted-ingress-proof-2026",
         "LOTUS_CORE_BASE_URL": "https://core.internal.example",
         "LOTUS_PERFORMANCE_BASE_URL": "https://performance.internal.example",
     }.items():
@@ -129,6 +131,7 @@ def test_capability_rule_coverage_supports_prefix_rules() -> None:
             "0",
             "missing_or_invalid_asgi_max_body_bytes",
         ),
+        ("ENTERPRISE_TRUSTED_INGRESS_SECRET", "", "missing_trusted_ingress_secret"),
         ("LOTUS_CORE_BASE_URL", "", "missing_lotus_core_base_url"),
         ("LOTUS_PERFORMANCE_BASE_URL", "", "missing_lotus_performance_base_url"),
     ],
@@ -350,6 +353,18 @@ def _enterprise_test_app() -> FastAPI:
     async def health() -> dict[str, str]:
         return {"status": "ok"}
 
+    @app.get("/ops")
+    async def ops() -> dict[str, str]:
+        return {"status": "ok"}
+
+    @app.get("/ops/trust-telemetry")
+    async def trust_telemetry() -> dict[str, str]:
+        return {"status": "ok"}
+
+    @app.get("/metrics")
+    async def metrics() -> str:
+        return "# HELP lotus_risk_test 1"
+
     @app.post("/writes")
     async def writes() -> dict[str, str]:
         return {"status": "ok"}
@@ -393,6 +408,60 @@ def test_enterprise_middleware_denies_unauthorized_writes(monkeypatch: pytest.Mo
     assert response.headers["Referrer-Policy"] == "no-referrer"
     assert response.headers["X-Content-Type-Options"] == "nosniff"
     assert response.headers["X-Enterprise-Policy-Version"] == "1.0.0"
+
+
+def test_enterprise_middleware_requires_trusted_ingress_before_write_authz(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("ENTERPRISE_ENFORCE_AUTHZ", "true")
+    monkeypatch.setenv("ENTERPRISE_TRUSTED_INGRESS_SECRET", "trusted-ingress-proof-2026")
+    monkeypatch.setenv("ENTERPRISE_CAPABILITY_RULES_JSON", '{"POST /writes":"risk.write"}')
+    headers = {
+        "X-Actor-Id": "actor-1",
+        "X-Tenant-Id": "tenant-1",
+        "X-Role": "advisor",
+        "X-Correlation-Id": "corr-403",
+        "X-Service-Identity": "lotus-gateway",
+        "X-Capabilities": "risk.write",
+    }
+    client = TestClient(_enterprise_test_app())
+
+    denied = client.post("/writes", content="{}", headers=headers)
+
+    assert denied.status_code == 403
+    assert denied.json()["error"]["details"]["reason"] == "missing_trusted_ingress"
+
+    allowed = client.post(
+        "/writes",
+        content="{}",
+        headers={**headers, TRUSTED_INGRESS_HEADER: "trusted-ingress-proof-2026"},
+    )
+    assert allowed.status_code == 200
+
+
+@pytest.mark.parametrize("path", ["/ops", "/ops/trust-telemetry", "/metrics"])
+def test_enterprise_middleware_protects_operator_endpoints_with_trusted_ingress(
+    monkeypatch: pytest.MonkeyPatch,
+    path: str,
+) -> None:
+    monkeypatch.setenv("ENTERPRISE_TRUSTED_INGRESS_SECRET", "trusted-ingress-proof-2026")
+    client = TestClient(_enterprise_test_app())
+
+    denied = client.get(path)
+    assert denied.status_code == 403
+    assert denied.json()["error"]["details"]["reason"] == "missing_trusted_ingress"
+
+    allowed = client.get(path, headers={TRUSTED_INGRESS_HEADER: "trusted-ingress-proof-2026"})
+    assert allowed.status_code == 200
+
+
+def test_enterprise_middleware_keeps_health_probe_unprotected_when_trusted_ingress_is_required(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("ENTERPRISE_TRUSTED_INGRESS_SECRET", "trusted-ingress-proof-2026")
+    client = TestClient(_enterprise_test_app())
+
+    assert client.get("/health").status_code == 200
 
 
 def test_enterprise_middleware_sets_policy_header(monkeypatch: pytest.MonkeyPatch) -> None:

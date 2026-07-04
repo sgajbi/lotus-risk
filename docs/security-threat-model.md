@@ -39,8 +39,10 @@ diagnostics, or downstream failure messages.
 | --- | --- | --- | --- |
 | Oversized POST payload attempts resource exhaustion | `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES` returns `413 PAYLOAD_TOO_LARGE` before handler execution, and enterprise startup requires machine-readable proof that external ingress/proxy plus ASGI/server body-limit values are at or below the app limit | `test_enterprise_middleware_payload_limit`, `test_validate_enterprise_runtime_config_rejects_body_limit_proof_above_app_limit`, and `docs/security-deployment-policy.md` | Direct local Uvicorn/Compose remains local-only unless approved deployment proof variables are supplied |
 | Caller invokes calculation POST without actor, tenant, role, or correlation context | `ENTERPRISE_ENFORCE_AUTHZ=true` requires `X-Actor-Id`, `X-Tenant-Id`, `X-Role`, and `X-Correlation-Id`; enterprise runtime enforcement fails startup when authorization is disabled | `test_authorize_write_request_enforces_headers_identity_and_capabilities`, `test_enterprise_middleware_denies_unauthorized_writes`, and `test_validate_enterprise_runtime_config_fails_closed_for_missing_bank_posture` | Local development mode may keep enforcement disabled, but that mode cannot support a bank-buyable production-readiness claim |
-| Caller presents actor context without service identity | Authorization fails with `missing_service_identity` unless `X-Service-Identity` or `Authorization` is present | `test_authorize_write_request_enforces_headers_identity_and_capabilities` | Gateway-backed token-validation evidence remains a platform integration proof item |
+| Caller presents spoofable actor, service identity, and capability headers without trusted ingress | Enterprise middleware requires `X-Lotus-Trusted-Ingress` to match the configured trusted-ingress secret before write authorization runs | `test_enterprise_middleware_requires_trusted_ingress_before_write_authz` | Gateway must strip caller-supplied trusted-ingress markers before injecting its own marker |
+| Caller presents actor context without service identity | Authorization fails with `missing_service_identity` unless `X-Service-Identity` or `Authorization` is present | `test_authorize_write_request_enforces_headers_identity_and_capabilities` | Gateway-backed token-validation must remain the source of propagated service identity |
 | Caller lacks endpoint capability or targets an unmapped write path | Well-formed capability rules from `ENTERPRISE_CAPABILITY_RULES_JSON` deny missing `X-Capabilities` entries and unmapped writes fail with `missing_capability_rule` | `test_authorize_write_request_enforces_headers_identity_and_capabilities` | Capability vocabulary and complete write-path mapping must stay governed by deployment configuration |
+| External caller requests operational diagnostics or metrics | `/ops`, `/ops/trust-telemetry`, and `/metrics` require trusted-ingress proof in enterprise mode while health probes remain available | `test_enterprise_middleware_protects_operator_endpoints_with_trusted_ingress` | Gateway/operator policy owns the list of approved operators and scrapers |
 | Sensitive metadata appears in audit events | `redact_sensitive` masks password, secret, token, authorization, ssn, account_number, and client_email keys recursively | `test_emit_audit_event_redacts_metadata` and `test_redact_sensitive_masks_nested_structures` | Redaction is key-based; newly introduced sensitive field names must update `_REDACT_FIELDS` with tests |
 | Downstream service returns unsafe details or malformed payloads | `app.upstream_errors` bounds upstream failure categories and messages | `tests/unit/test_upstream_errors.py` | Upstream contracts must continue publishing bounded problem details |
 | Deployment injects a malformed or credential-bearing downstream URL | Shared downstream URL validation permits only valid HTTP(S) service URLs and never echoes rejected values | `tests/unit/test_downstream_base_url.py` and `docs/configuration.md` | Approved endpoint ownership and network egress policy remain deployment responsibilities |
@@ -63,9 +65,11 @@ The governed deployment posture is now recorded in
 8. `ENTERPRISE_INGRESS_MAX_BODY_BYTES` and `ENTERPRISE_ASGI_MAX_BODY_BYTES` prove the effective
    ingress/proxy and ASGI/server request body limits are configured at or below
    `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES` for enterprise deployments.
-9. Downstream base URLs must be approved HTTP(S) service endpoints without embedded credentials,
+9. `ENTERPRISE_TRUSTED_INGRESS_SECRET` defines the service-owned trusted-ingress marker secret for
+   write requests and protected operational endpoints.
+10. Downstream base URLs must be approved HTTP(S) service endpoints without embedded credentials,
    query strings, fragments, whitespace, or control characters.
-10. Enterprise runtime enforcement fails application construction when required in-process bank
+11. Enterprise runtime enforcement fails application construction when required in-process bank
     configuration is absent or invalid.
 
 ## Evidence Commands
@@ -82,7 +86,6 @@ make typecheck
 
 ## Follow-Up Backlog
 
-1. Add gateway-backed token-validation evidence when platform identity contracts are available.
-2. Attach generated OpenAPI artifact evidence to the final PR.
-3. Validate the final enterprise deployment configuration in the target runtime before merge or
+1. Attach generated OpenAPI artifact evidence to the final PR.
+2. Validate the final enterprise deployment configuration in the target runtime before merge or
    release promotion.

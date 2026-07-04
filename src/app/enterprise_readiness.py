@@ -11,6 +11,11 @@ from app.enterprise_authorization import (
     missing_supported_write_route_capability_rules,
 )
 from app.enterprise_policy import enterprise_policy_version
+from app.enterprise_trusted_ingress import (
+    trusted_ingress_authorized,
+    trusted_ingress_config_issues,
+    trusted_ingress_required,
+)
 from app.error_response import error_response
 from app.integrations.downstream_profile_env import invalid_downstream_runtime_setting_issues
 
@@ -92,6 +97,7 @@ def _enterprise_bank_config_issues() -> list[str]:
     if not _env_has_positive_int("ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES"):
         issues.append("missing_or_invalid_max_write_payload_bytes")
     issues.extend(_external_body_limit_proof_issues())
+    issues.extend(trusted_ingress_config_issues())
     issues.extend(invalid_downstream_runtime_setting_issues())
     return issues
 
@@ -192,6 +198,24 @@ def _authorization_denied_response(
     )
 
 
+def _trusted_ingress_denied_response(request: Request) -> Response:
+    emit_audit_event(
+        action=f"DENY {request.method} {request.url.path}",
+        actor_id=request.headers.get("X-Actor-Id", "unknown"),
+        tenant_id=request.headers.get("X-Tenant-Id", "default"),
+        role=request.headers.get("X-Role", "unknown"),
+        correlation_id=request.headers.get("X-Correlation-Id"),
+        metadata={"reason": "missing_trusted_ingress"},
+    )
+    return error_response(
+        request,
+        status_code=403,
+        code="AUTHORIZATION_DENIED",
+        message="authorization_policy_denied",
+        details={"reason": "missing_trusted_ingress"},
+    )
+
+
 def _emit_write_audit_event(request: Request, response: Response) -> None:
     if request.method not in WRITE_METHODS:
         return
@@ -214,6 +238,11 @@ def _apply_enterprise_response_headers(response: Response) -> Response:
 
 def build_enterprise_audit_middleware() -> MiddlewareCallable:
     async def middleware(request: Request, call_next: MiddlewareNext) -> Response:
+        if trusted_ingress_required(
+            request.method, request.url.path
+        ) and not trusted_ingress_authorized(dict(request.headers)):
+            return _apply_enterprise_response_headers(_trusted_ingress_denied_response(request))
+
         payload_limit_response = _payload_limit_response(request)
         if payload_limit_response is not None:
             return _apply_enterprise_response_headers(payload_limit_response)

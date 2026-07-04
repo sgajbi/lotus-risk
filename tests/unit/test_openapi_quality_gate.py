@@ -37,6 +37,7 @@ def _operation(**overrides: object) -> dict[str, object]:
         "x-lotus-enterprise-authorization": {
             "required_context_headers": ["X-Actor-Id"],
             "service_identity_headers": ["Authorization", "X-Service-Identity"],
+            "trusted_ingress_header": "X-Lotus-Trusted-Ingress",
             "capabilities_header": "X-Capabilities",
             "capability_rules_env": "ENTERPRISE_CAPABILITY_RULES_JSON",
             "denial_code": "AUTHORIZATION_DENIED",

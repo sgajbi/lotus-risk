@@ -53,6 +53,7 @@ explicit invalid overrides for `LOTUS_CORE_*`, `LOTUS_PERFORMANCE_*`, or
 | `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES` | `1048576` | Explicit value aligned to ingress and ASGI limits |
 | `ENTERPRISE_INGRESS_MAX_BODY_BYTES` | unset | Required enterprise proof of ingress/proxy body limit |
 | `ENTERPRISE_ASGI_MAX_BODY_BYTES` | unset | Required enterprise proof of ASGI/server body limit |
+| `ENTERPRISE_TRUSTED_INGRESS_SECRET` | unset | Required enterprise shared secret for trusted ingress marker validation |
 
 Do not place secrets, bearer tokens, or credentials in capability rules, feature flags, base URLs,
 logs, examples, or committed environment files.
@@ -67,6 +68,12 @@ integers at or below `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES`; otherwise startup fai
 `missing_or_invalid_*_max_body_bytes` or `*_max_body_bytes_exceeds_app_limit` issue codes. The
 in-process `Content-Length` check remains defense in depth for write requests, not complete
 protection for chunked or streamed bodies.
+
+`ENTERPRISE_TRUSTED_INGRESS_SECRET` enables the service-owned trusted-ingress proof. Enterprise
+gateway or ingress must strip any caller-supplied `X-Lotus-Trusted-Ingress` header, validate caller
+credentials and operator access, then inject that header with the configured secret before
+forwarding write requests or protected operational endpoints to `lotus-risk`. The service never logs
+or echoes the configured secret.
 
 Capability-rule keys must use `<WRITE_METHOD> /absolute/path-prefix` form with a nonempty string
 capability value. When authorization is enabled, write requests without a matching rule fail closed

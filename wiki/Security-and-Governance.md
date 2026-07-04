@@ -64,6 +64,11 @@ Bank deployment mode is stricter than local development mode:
     in-process application limit.
 13. direct local Uvicorn/Compose runtime is local-only for body-limit posture unless an approved
     deployment supplies the machine-readable proof values.
+14. write requests, `/ops`, `/ops/trust-telemetry`, and `/metrics` require trusted-ingress proof in
+    enterprise mode; `/health`, `/health/live`, and `/health/ready` remain available for platform
+    probes.
+15. the gateway or ingress must strip caller-supplied `X-Lotus-Trusted-Ingress` and inject it only
+    after token and operator-access validation.
 
 ## Upstream Boundary Discipline
 

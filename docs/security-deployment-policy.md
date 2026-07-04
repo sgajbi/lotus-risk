@@ -34,6 +34,8 @@ Enterprise bank deployments must provide all of the following:
    settings.
 9. `ENTERPRISE_INGRESS_MAX_BODY_BYTES` and `ENTERPRISE_ASGI_MAX_BODY_BYTES` set to the effective
    ingress/proxy and ASGI/server body limits for the deployment.
+10. `ENTERPRISE_TRUSTED_INGRESS_SECRET` set to the secret value injected by the approved gateway or
+    ingress after caller/token/operator validation.
 
 The service must fail closed when these requirements are missing in enterprise mode. Runtime
 configuration validation in `src/app/enterprise_readiness.py` enforces the in-process portion of
@@ -41,7 +43,8 @@ this policy. When `ENTERPRISE_ENFORCE_RUNTIME_CONFIG=true`, service construction
 authorization is enabled and policy version, key ID, rotation days, positive payload limit, and both
 upstream base URLs are explicit. It also rejects malformed, zero, negative, or non-finite explicit
 downstream runtime overrides with bounded
-`invalid_downstream_runtime_setting:<ENV_NAME>` issue codes. Capability rules are required as nonempty string mappings.
+`invalid_downstream_runtime_setting:<ENV_NAME>` issue codes and rejects missing trusted-ingress
+proof with `missing_trusted_ingress_secret`. Capability rules are required as nonempty string mappings.
 They must cover every supported write-like analytics route published by the service:
 
 1. `POST /analytics/risk/calculate`,
@@ -64,20 +67,40 @@ prefixes resolve to the most specific path rule at request time.
 `lotus-risk` is not the platform identity provider. In enterprise deployment mode:
 
 1. `lotus-gateway` or the platform ingress layer validates caller credentials and token integrity.
-2. `lotus-risk` requires actor, tenant, role, correlation, and service identity evidence on
+2. The approved gateway or ingress strips any caller-supplied `X-Lotus-Trusted-Ingress` header and
+   injects that header only after caller credential, token-integrity, and operator-access checks.
+3. `lotus-risk` rejects write-like analytics requests and protected operational endpoints unless
+   `X-Lotus-Trusted-Ingress` matches `ENTERPRISE_TRUSTED_INGRESS_SECRET`.
+4. `lotus-risk` requires actor, tenant, role, correlation, and service identity evidence on
    write-like analytics requests.
-3. `lotus-risk` validates configured endpoint capability requirements against the caller capability
+5. `lotus-risk` validates configured endpoint capability requirements against the caller capability
    header.
-4. Correlation and trace identifiers support observability and auditability, but they are never
+6. Correlation and trace identifiers support observability and auditability, but they are never
    authorization proof.
 
-Gateway-backed token-validation evidence remains a platform integration proof item. It is not a
-reason to leave `lotus-risk` authorization enforcement disabled in an enterprise deployment.
+The trusted-ingress secret is service-owned proof that direct clients cannot authorize writes or
+operator diagnostics by supplying only actor, tenant, role, service identity, and capability headers.
+It is not a substitute for gateway token validation; it is the app-side enforcement point that proves
+the gateway token-validation evidence boundary is present before the service trusts propagated caller
+context.
 
 Generated OpenAPI documents this conditional enterprise caller-context contract through the
 `x-lotus-enterprise-authorization` extension on supported write-like analytics operations. The
 extension lists required context headers, service identity header alternatives, the capabilities
 header, the capability-rule environment variable, and the bounded 403 denial code.
+
+## Protected Operational Endpoints
+
+Enterprise mode protects operator-only diagnostics and metrics through the same trusted-ingress
+marker:
+
+1. `GET /ops`,
+2. `GET /ops/trust-telemetry`,
+3. `GET /metrics`.
+
+Health and readiness probes remain available without the trusted-ingress marker so platform
+orchestrators can continue liveness and readiness checks. The protected endpoints remain source-safe,
+but source-safe does not mean public.
 
 ## Request Body Limits
 

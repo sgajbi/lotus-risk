@@ -503,6 +503,7 @@ def test_openapi_documents_enterprise_authorization_context_for_write_routes() -
             "Authorization",
             "X-Service-Identity",
         ]
+        assert extension["trusted_ingress_header"] == "X-Lotus-Trusted-Ingress"
         assert extension["capabilities_header"] == "X-Capabilities"
         assert extension["capability_rules_env"] == "ENTERPRISE_CAPABILITY_RULES_JSON"
         assert extension["denial_code"] == "AUTHORIZATION_DENIED"

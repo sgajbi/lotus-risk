@@ -44,6 +44,7 @@ def _valid_schema() -> dict[str, object]:
                             "Authorization",
                             "X-Service-Identity",
                         ],
+                        "trusted_ingress_header": "X-Lotus-Trusted-Ingress",
                         "capabilities_header": "X-Capabilities",
                         "capability_rules_env": "ENTERPRISE_CAPABILITY_RULES_JSON",
                         "denial_code": "AUTHORIZATION_DENIED",
