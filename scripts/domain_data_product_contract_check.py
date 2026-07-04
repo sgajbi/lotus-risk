@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import sys
 from pathlib import Path
 from types import ModuleType
@@ -10,7 +11,30 @@ from typing import Any, cast
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 LOCAL_DECLARATIONS_DIR = REPO_ROOT / "contracts" / "domain-data-products"
-PLATFORM_ROOT = REPO_ROOT.parent / "lotus-platform"
+
+
+def _resolve_platform_root() -> Path:
+    configured_root = os.environ.get("LOTUS_PLATFORM_ROOT")
+    candidates = []
+    if configured_root:
+        candidates.append(Path(configured_root))
+    candidates.extend(
+        [
+            REPO_ROOT.parent / "lotus-platform",
+            REPO_ROOT / ".lotus-platform",
+            REPO_ROOT / "lotus-platform",
+        ]
+    )
+
+    for candidate in candidates:
+        resolved = candidate.expanduser().resolve()
+        if (resolved / "platform-contracts").exists():
+            return resolved
+
+    return candidates[0].expanduser().resolve()
+
+
+PLATFORM_ROOT = _resolve_platform_root()
 PLATFORM_DECLARATIONS_DIR = PLATFORM_ROOT / "platform-contracts" / "domain-data-products"
 PLATFORM_VOCABULARY_DIR = PLATFORM_ROOT / "platform-contracts" / "domain-vocabulary"
 PLATFORM_VALIDATOR_PATH = PLATFORM_DECLARATIONS_DIR / "validate_domain_data_product_contracts.py"

@@ -31,6 +31,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - name: Checkout Lotus Platform Contracts
+        uses: actions/checkout@v6
+        with:
+          repository: sgajbi/lotus-platform
+          path: .lotus-platform
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}

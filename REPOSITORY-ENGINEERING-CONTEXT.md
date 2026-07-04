@@ -182,6 +182,20 @@ Boundary rules:
 11. API errors preserve the standard Lotus `error` envelope while adding RFC 7807/problem-details
     compatibility fields inside the same object; do not replace this with a breaking top-level
     problem-details shape without a versioned migration.
+12. Upstream adapter exceptions must keep raw dependency text out of public `message` and
+    problem-details `detail` fields. Preserve diagnosis through structured `details` fields:
+    `service`, `operation`, `category`, `retryable`, and `upstream_status_code` where available.
+13. Operation-specific upstream HTTP states must be modeled at the shared downstream executor
+    boundary with explicit accepted statuses, not by bypassing common error normalization. The
+    lotus-performance async returns result endpoint treats `202` and `404` as pending; unexpected
+    result `4xx`/`5xx` statuses still use standard upstream classification.
+14. Shared stateful return parsing owns malformed upstream return-date classification for
+    risk/calculate, drawdown, rolling, and attribution consumers; malformed string dates are
+    dependency contract failures (`UPSTREAM_INVALID_RESPONSE`), while non-string dates remain
+    ignored as unusable rows.
+15. GitHub mesh-contract validation requires `lotus-platform` contract truth. Workflows provide it
+    as `.lotus-platform`; local runs can use either a sibling `../lotus-platform` checkout or
+    `LOTUS_PLATFORM_ROOT`.
 
 Canonical direct local validation ports:
 
