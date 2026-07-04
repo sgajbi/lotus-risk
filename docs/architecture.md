@@ -10,6 +10,9 @@ The service is a FastAPI application under `src/app`. Domain-facing request and 
 live under `src/app/contracts`, business calculations and orchestration helpers live under
 `src/app/services`, downstream adapters live under `src/app/integrations`, and cross-cutting
 middleware/observability/error helpers live under dedicated app modules.
+Service-layer code reaches concrete Prometheus-backed observability only through the sanctioned
+`src/app/services/observability_ports.py` adapter, keeping methodology and supportability helpers
+free of direct infrastructure imports.
 
 The application is assembled by `src/app/app_factory.py`, which registers correlation middleware,
 enterprise audit/readiness controls, HTTP observation middleware, standard error handlers, and the
@@ -53,5 +56,7 @@ owned by `lotus-platform` generated certification artifacts, not by this endpoin
 4. Keep concrete downstream client construction in lifespan/runtime composition, not routers.
 5. Keep middleware limited to correlation, audit, payload, policy, and telemetry concerns.
 6. Preserve existing risk methodology behavior unless a change is explicitly documented and tested.
+7. Keep service observability behind `app.services.observability_ports`; direct
+   `app.services -> app.observability` imports are blocked by architecture tests/import-linter.
 
 The initial quality baseline is recorded in `quality/baseline_report.md`.

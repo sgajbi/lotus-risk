@@ -230,6 +230,11 @@ Boundary rules:
     supportability metadata, upstream metrics, or explicit runtime dependency-status overrides
     until an implementation-backed active probe or periodic updater is intentionally introduced
     with bounded timeouts, tests, and operator docs.
+23. Service-layer modules must not import concrete `app.observability` functions directly.
+    `src/app/services/observability_ports.py` is the sanctioned adapter between service-facing
+    supportability, metric-duration, endpoint-execution recording ports and the Prometheus-backed
+    implementation in `app.observability`. Preserve this boundary with `.importlinter` and unit
+    architecture tests when adding new metrics.
 
 Canonical direct local validation ports:
 

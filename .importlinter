@@ -20,6 +20,18 @@ forbidden_modules =
     prometheus_client
 allow_indirect_imports = True
 
+[importlinter:contract:services_use_observability_port_adapter]
+name = Services use the sanctioned observability port adapter
+type = forbidden
+source_modules =
+    app.services
+forbidden_modules =
+    app.observability
+allow_indirect_imports = True
+unmatched_ignore_imports_alerting = none
+ignore_imports =
+    app.services.observability_ports -> app.observability
+
 [importlinter:contract:contracts_do_not_depend_on_infrastructure]
 name = DTO contracts do not import infrastructure clients
 type = forbidden
