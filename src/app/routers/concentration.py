@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Request
+from typing import Annotated
+
+from fastapi import APIRouter, Depends
 
 from app.api_errors import STANDARD_ERROR_RESPONSES
 from app.contracts.concentration import ConcentrationRequest, ConcentrationResponse
-from app.dependencies.downstream_clients import resolve_lotus_core_client
 from app.dependencies.request_context import request_actor_id, request_correlation_id
 from app.openapi_examples import CONCENTRATION_EXAMPLES, request_body_examples
+from app.runtime.downstream_clients import RuntimeDownstreamClients, runtime_downstream_clients
 from app.services.concentration_engine import calculate_concentration
 from app.services.endpoint_observation import observed_endpoint
 
@@ -27,16 +29,17 @@ router = APIRouter(tags=["risk-analytics"])
 )
 async def analytics_risk_concentration(
     payload: ConcentrationRequest,
-    request: Request,
+    runtime_clients: Annotated[RuntimeDownstreamClients, Depends(runtime_downstream_clients)],
+    correlation_id: Annotated[str | None, Depends(request_correlation_id)],
+    actor_id: Annotated[str | None, Depends(request_actor_id)],
 ) -> ConcentrationResponse:
-    core_client = resolve_lotus_core_client(request)
     return await observed_endpoint(
         endpoint="concentration",
         input_mode=payload.input_mode.value,
         operation=lambda: calculate_concentration(
             payload,
-            core_client=core_client,
-            correlation_id=request_correlation_id(request),
-            actor_id=request_actor_id(request),
+            core_client=runtime_clients.lotus_core(),
+            correlation_id=correlation_id,
+            actor_id=actor_id,
         ),
     )

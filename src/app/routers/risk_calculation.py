@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Request
+from typing import Annotated
+
+from fastapi import APIRouter, Depends
 
 from app.api_errors import STANDARD_ERROR_RESPONSES
 from app.contracts.risk import RiskAnalyticsRequest, RiskInputMode, RiskResponse
-from app.dependencies.downstream_clients import resolve_lotus_performance_client
 from app.dependencies.request_context import request_correlation_id
 from app.openapi_examples import RISK_CALCULATE_EXAMPLES, request_body_examples
+from app.runtime.downstream_clients import RuntimeDownstreamClients, runtime_downstream_clients
 from app.services.endpoint_observation import observed_endpoint
 from app.services.risk_engine import calculate_risk
 from app.services.risk_mode_adapter import calculate_risk_stateful
@@ -28,7 +30,8 @@ router = APIRouter(tags=["risk-analytics"])
 )
 async def analytics_risk_calculate(
     request_payload: RiskAnalyticsRequest,
-    request: Request,
+    runtime_clients: Annotated[RuntimeDownstreamClients, Depends(runtime_downstream_clients)],
+    correlation_id: Annotated[str | None, Depends(request_correlation_id)],
 ) -> RiskResponse:
     input_mode = request_payload.input_mode.value
     if request_payload.input_mode == RiskInputMode.STATELESS:
@@ -45,14 +48,13 @@ async def analytics_risk_calculate(
         stateful_input = request_payload.stateful_input
         if stateful_input is None:
             raise ValueError("stateful_input is required when input_mode=stateful")
-        performance_client = resolve_lotus_performance_client(request)
         return await observed_endpoint(
             endpoint="risk/calculate",
             input_mode=input_mode,
             operation=lambda: calculate_risk_stateful(
                 stateful_input,
-                performance_client=performance_client,
-                correlation_id=request_correlation_id(request),
+                performance_client=runtime_clients.lotus_performance(),
+                correlation_id=correlation_id,
             ),
         )
 

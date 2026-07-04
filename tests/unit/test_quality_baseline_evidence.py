@@ -28,6 +28,8 @@ def test_generated_baseline_separates_immutable_before_evidence_from_current_sta
     assert "# Lotus Risk Enterprise Refactor Current-State Baseline" in text
     assert "immutable initial baseline is commit `3254774`" in text
     assert "## Generation Identity" in text
+    assert "Process-local downstream composition now lives in `src/app/runtime`" in text
+    assert "RuntimeDownstreamClients" in text
     assert "tests/" not in source_hotspots
 
 
@@ -54,6 +56,8 @@ def test_generated_scorecard_preserves_security_hardening_evidence() -> None:
     scorecard = QUALITY_SCORECARD.read_text(encoding="utf-8")
 
     assert "downstream base URLs are hardened with negative tests" in scorecard
+    assert "trusted-ingress proof and protected operator endpoints" in scorecard
+    assert "typed `src/app/runtime` downstream composition boundary" in scorecard
     assert "enterprise runtime and unmapped writes fail closed" in scorecard
 
 

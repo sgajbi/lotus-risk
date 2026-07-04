@@ -236,16 +236,15 @@ def test_drawdown_endpoint_rejects_simulation_mode_at_contract_boundary() -> Non
     assert response.json()["error"]["code"] == "INVALID_REQUEST"
 
 
-def test_drawdown_endpoint_stateful_autowires_performance_client() -> None:
+def test_drawdown_endpoint_stateful_uses_runtime_performance_client_override() -> None:
+    _AutoWiredLotusPerformanceClient.calls = []
     with override_app_runtime(
-        lotus_performance_client=None,
-        lotus_performance_class=_AutoWiredLotusPerformanceClient,
+        lotus_performance_client=_AutoWiredLotusPerformanceClient(),
     ):
-        _AutoWiredLotusPerformanceClient.calls = []
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/drawdown",
-            headers={"X-Correlation-Id": "corr-dd-auto"},
+            headers={"X-Correlation-Id": "corr-dd-runtime"},
             json={
                 "input_mode": "stateful",
                 "stateful_input": {
@@ -256,4 +255,4 @@ def test_drawdown_endpoint_stateful_autowires_performance_client() -> None:
             },
         )
         assert response.status_code == 200
-        assert _AutoWiredLotusPerformanceClient.calls[0]["correlation_id"] == "corr-dd-auto"
+        assert _AutoWiredLotusPerformanceClient.calls[0]["correlation_id"] == "corr-dd-runtime"

@@ -13,13 +13,13 @@ completion claim.
 ## Generation Identity
 
 - Git branch: `refactor/enterprise-risk-backend`
-- Git commit: `dfffc1de6d9f3413848f7b14f93c6e7a24654ce9`
+- Git commit: `40e46df1a62a3b048cbcda255c19417c046a96c2`
 
 ## Current Code Size
 
-- Python source files under `src/`: 245
-- Python test files under `tests/`: 106
-- Python packages under `src/`: 10
+- Python source files under `src/`: 246
+- Python test files under `tests/`: 107
+- Python packages under `src/`: 11
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
 
 ### Largest Source Files
@@ -93,17 +93,19 @@ completion claim.
 ```text
 All checks passed!
 ```
-- Ruff format check: passed
+- Ruff format check: reported exit 1
 
 ```text
-367 files already formatted
+Would reformat: scripts\generate_quality_baseline.py
+Would reformat: tests\unit\test_quality_baseline_evidence.py
+2 files would be reformatted, 367 files already formatted
 ```
 - Type checking: passed
 
 ```text
-Success: no issues found in 351 source files
+Success: no issues found in 353 source files
 ```
-- Unit coverage snapshot: passed
+- Unit coverage snapshot: reported exit 1
 
 ```text
 ........................................................................ [ 12%]
@@ -111,14 +113,14 @@ Success: no issues found in 351 source files
 ........................................................................ [ 36%]
 ........................................................................ [ 48%]
 ........................................................................ [ 60%]
-........................................................................ [ 72%]
+................................F..F.................................... [ 72%]
 ...
-src\app\services\rolling_stateful_source_responses.py           45      1     16      1    97%   96
---------------------------------------------------------------------------------------------------------
-TOTAL                                                         6354     91   1060     73    98%
 
-199 files skipped due to complete coverage.
-596 passed in 12.31s
+200 files skipped due to complete coverage.
+=========================== short test summary info ===========================
+FAILED tests/unit/test_quality_baseline_evidence.py::test_generated_baseline_separates_immutable_before_evidence_from_current_state
+FAILED tests/unit/test_quality_baseline_evidence.py::test_generated_scorecard_preserves_security_hardening_evidence
+2 failed, 597 passed in 12.17s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -127,7 +129,7 @@ TOTAL                                                         6354     91   1060
 - Maintainability index summary: passed
 
 ```text
-src\app\api_errors.py - A (50.90)
+src\app\api_errors.py - A (49.88)
 src\app\api_error_examples.py - A (60.17)
 src\app\app_factory.py - A (100.00)
 src\app\app_lifecycle.py - A (59.25)
@@ -148,7 +150,7 @@ src\app\services\risk\__init__.py - A (100.00)
 - Dependency hygiene: passed
 
 ```text
-Scanning 245 files...
+Scanning 246 files...
 
 Success! No dependency issues found.
 ```
@@ -176,9 +178,10 @@ Known vulnerabilities: 0
    concentration analytics now lives in `src/app/routers/concentration.py`; historical
    attribution analytics now lives in `src/app/routers/historical_attribution.py`.
 2. Operational, capability, stateless source-product, and core calculation routes are split into
-   router modules. Downstream client resolution now lives in `src/app/dependencies/downstream_clients.py`
-   so routers no longer import `src/app/integrations` adapters directly. Request correlation and
-   actor identity extraction now lives in `src/app/dependencies/request_context.py`.
+   router modules. Process-local downstream composition now lives in `src/app/runtime`, where typed
+   `RuntimeDownstreamClients` resolves lifecycle-owned `lotus-core` and `lotus-performance` ports
+   without request-time concrete fallback construction. Request correlation and actor identity
+   extraction now lives in `src/app/dependencies/request_context.py`.
 3. Business calculations already live mostly under `src/app/services`, which gives the next slices
    a workable extraction boundary.
 4. Infrastructure clients already sit under `src/app/integrations`, and API routes now access them
@@ -247,9 +250,9 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc1-503-UPSTREAM_UNAVAILABLE-transport]
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 
-596 tests collected in 2.21s
+599 tests collected in 2.30s
 ```
-- Import-linter report-only: passed
+- Import-linter report-only: reported exit 1
 
 ```text
 =============
@@ -259,10 +262,10 @@ Import Linter
 
 ---------
 ...
-Calculation services stay independent from Prometheus KEPT
-DTO contracts do not import infrastructure clients KEPT
-Routers do not import downstream infrastructure clients directly KEPT
-Infrastructure adapters do not depend on API entry point KEPT
+    app.ops_runtime -> app.integrations.lotus_performance_client (l.9)
 
-Contracts: 5 kept, 0 broken.
+-   app.routers.operational -> app.trust_telemetry (l.29)
+    app.trust_telemetry -> app.trust_telemetry_builders (l.3)
+    app.trust_telemetry_builders -> app.ops_runtime (l.18)
+    app.ops_runtime -> app.integrations.lotus_core_client (l.8)
 ```

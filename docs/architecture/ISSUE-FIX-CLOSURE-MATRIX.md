@@ -22,7 +22,7 @@ documentation/wiki/context decision are recorded.
 | #183 | Require executable body-limit proof for enterprise bank readiness | Fixed locally | HTTP boundary controls/tests | Enterprise runtime validation now requires `ENTERPRISE_INGRESS_MAX_BODY_BYTES` and `ENTERPRISE_ASGI_MAX_BODY_BYTES` to prove external ingress/proxy and ASGI/server body limits are configured at or below `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES`. Direct local Uvicorn/Compose remains local-only unless deployment proof is supplied. | `tests/unit/test_enterprise_readiness.py`; `tests/unit/test_enterprise_deployment_policy_docs.py`; `tests/unit/test_security_evidence_docs.py`; `docs/security-deployment-policy.md`; `wiki/Security-and-Governance.md` |
 | #182 | Separate API DTO contracts from core calculation domain models | Open | Architecture boundaries | Pending | Pending |
 | #181 | Bound public upstream error messages in problem-details responses | Fixed locally | API error mapping/security | Public upstream messages now come from a bounded code-to-message policy while structured details retain service, operation, category, retryability, and upstream status. Same-pattern scan covered `UpstreamServiceError` handlers and async returns failure messages that previously flowed through `exc.message` into the public envelope. | `tests/unit/test_main_error_handlers.py`; `tests/integration/test_drawdown_endpoint.py`; `docs/domain-apis/risk-upstream-failure-behavior.md` |
-| #180 | Make downstream client resolution a typed runtime composition boundary | Open | Runtime composition/dependencies | Pending | Pending |
+| #180 | Make downstream client resolution a typed runtime composition boundary | Fixed locally | Runtime composition/dependencies | Added `src/app/runtime/downstream_clients.py` as the typed process-local downstream composition boundary, removed the request-time concrete fallback resolver, moved routers to typed runtime/context dependencies, and tightened architecture guards so routers cannot regain concrete downstream-client imports. Missing runtime state now returns structured `RUNTIME_COMPOSITION_ERROR` instead of silently constructing per-call clients. | `src/app/runtime/downstream_clients.py`; `tests/unit/test_runtime_downstream_clients.py`; `tests/unit/test_runtime_composition_boundaries.py`; `tests/integration/test_risk_calculate.py`; `make architecture-gate` |
 | #179 | Map concentration lotus-core payload shape failures to upstream invalid responses | Open | Concentration upstream mapping | Pending | Pending |
 | #178 | Preserve explicit empty projected positions in concentration simulation | Open | Concentration simulation semantics | Pending | Pending |
 | #177 | Constrain concentration simulation transaction operation vocabulary | Open | Concentration simulation validation | Pending | Pending |
@@ -58,8 +58,8 @@ documentation/wiki/context decision are recorded.
 
 ## Current Docs/Wiki/Context Decision
 
-This matrix is repo-local review evidence. No wiki source change is required for the current
-upstream-boundary slice because the changed truth is captured in repo-local domain API docs and
-repository context; the wiki source does not currently publish this level of adapter behavior.
-Wiki/source documentation will be updated in the specific slices that change public, operator,
-support, or onboarding truth.
+This matrix is repo-local review evidence. No wiki source change is required for the current #180
+runtime-composition slice because the changed truth is an internal backend composition boundary and
+is captured in repo architecture docs, repository context, quality evidence, and tests. Wiki/source
+documentation will be updated in the specific slices that change public, operator, support, or
+onboarding truth.

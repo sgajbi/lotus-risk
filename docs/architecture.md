@@ -15,6 +15,12 @@ The application is assembled by `src/app/app_factory.py`, which registers correl
 enterprise audit/readiness controls, HTTP observation middleware, standard error handlers, and the
 router modules under `src/app/routers/`.
 
+Process-local runtime composition lives under `src/app/runtime`. FastAPI lifespan creates the
+concrete `lotus-core` and `lotus-performance` clients with reusable HTTP pools; API routers receive
+a typed `RuntimeDownstreamClients` dependency and resolve stateful ports from that boundary only.
+If lifespan state is missing for a stateful endpoint, the app fails closed with
+`RUNTIME_COMPOSITION_ERROR` instead of constructing per-request fallback clients.
+
 ## Runtime Surfaces
 
 | Surface | Router or module | Purpose |
@@ -44,7 +50,8 @@ owned by `lotus-platform` generated certification artifacts, not by this endpoin
 1. Keep calculation logic in services and pure helpers.
 2. Keep route declarations in focused router modules rather than the ASGI export file.
 3. Keep downstream HTTP clients behind service-facing protocols.
-4. Keep middleware limited to correlation, audit, payload, policy, and telemetry concerns.
-5. Preserve existing risk methodology behavior unless a change is explicitly documented and tested.
+4. Keep concrete downstream client construction in lifespan/runtime composition, not routers.
+5. Keep middleware limited to correlation, audit, payload, policy, and telemetry concerns.
+6. Preserve existing risk methodology behavior unless a change is explicitly documented and tested.
 
 The initial quality baseline is recorded in `quality/baseline_report.md`.
