@@ -10,7 +10,7 @@ documentation/wiki/context decision are recorded.
 | Issue | Title | Status | Fix surface | Same-pattern scan | Evidence |
 | --- | --- | --- | --- | --- | --- |
 | #195 | Prune or classify merged lotus-risk remote branches that still appear unmerged | Fixed locally | Remote branch hygiene | `origin/feat/sync-agent-operating-contract` was superseded because it would delete the target-repo-root rule; `origin/codex/sync-agent-operating-contract-20260704` had no diff from `origin/main`. Both remote branches were deleted. | `git branch -r --no-merged origin/main` returns no branches after prune. |
-| #193 | Make cleanup scope match generated artifact and cache policy | Open | Generated artifact cleanup | Pending | Pending |
+| #193 | Make cleanup scope match generated artifact and cache policy | Fixed locally | Generated artifact cleanup | Added `scripts/clean_generated_artifacts.py`, wired `make clean`, expanded ignored cache policy, and tested that cleanup removes only allowlisted byproducts while protecting `.git`, `.venv`, `node_modules`, and source truth. | `tests/unit/scripts/test_clean_generated_artifacts.py`; `make clean` delegates to the script. |
 | #191 | Align risk observability domain API docs with monitoring contract | Open | Observability docs/API docs | Pending | Pending |
 | #190 | Make endpoint execution metrics include response-model validation failures | Open | Endpoint metrics/error handling | Pending | Pending |
 | #189 | Prove domain-data-product trust metadata against route response schemas | Open | Domain-product contracts/tests | Pending | Pending |
@@ -18,7 +18,7 @@ documentation/wiki/context decision are recorded.
 | #187 | Make proof evidence manifests stale-aware instead of pinning old PR metadata | Open | Proof artifacts | Pending | Pending |
 | #186 | Bound position time-series pagination in historical attribution exposure sourcing | Open | Historical attribution upstream pagination | Pending | Pending |
 | #185 | Reject invalid downstream timeout and pool overrides in enterprise mode | Open | Runtime configuration validation | Pending | Pending |
-| #184 | Align PR-grade local CI targets with governed merge and main gates | Open | Makefile/GitHub workflows | Pending | Pending |
+| #184 | Align PR-grade local CI targets with governed merge and main gates | Fixed locally | Makefile/GitHub workflows | `make ci` now aggregates the deterministic PR-grade local gates used by PR/main lanes; `ci-local` is explicitly documented as a split-suite coverage loop without Docker rather than PR parity. | `tests/unit/test_ci_gate_contract.py`; README and repo context command truth updated. |
 | #183 | Require executable body-limit proof for enterprise bank readiness | Open | HTTP boundary controls/tests | Pending | Pending |
 | #182 | Separate API DTO contracts from core calculation domain models | Open | Architecture boundaries | Pending | Pending |
 | #181 | Bound public upstream error messages in problem-details responses | Open | API error mapping/security | Pending | Pending |
@@ -32,7 +32,7 @@ documentation/wiki/context decision are recorded.
 | #173 | Clarify integration capabilities so simulation support is workflow-scoped | Open | Integration capabilities/API docs | Pending | Pending |
 | #172 | Normalize upstream request fingerprint operation keys across portfolios | Open | Auditability/lineage fingerprinting | Pending | Pending |
 | #171 | Bound upstream dependency operation labels in metrics, contracts, and runbooks | Open | Observability labels/contracts/docs | Pending | Pending |
-| #170 | Run mesh contract validation in GitHub feature, PR, and main gates | Open | CI mesh gates | Pending | Pending |
+| #170 | Run mesh contract validation in GitHub feature, PR, and main gates | Fixed locally | CI mesh gates | Feature, PR Merge, and Main Releasability workflows now run `make mesh-contract-validate` through the repo-native aggregate validator instead of duplicating component commands. | `tests/unit/test_ci_gate_contract.py` verifies all three workflow files. |
 | #169 | Align stateful risk Sharpe risk-free sourcing with declared source authority | Open | Stateful risk source authority | Pending | Pending |
 | #168 | Require explicit trust-telemetry coverage for every active risk data product | Open | Trust telemetry contracts/tests | Pending | Pending |
 | #167 | Complete service observability boundary behind narrow ports | Open | Observability ports/architecture | Pending | Pending |
