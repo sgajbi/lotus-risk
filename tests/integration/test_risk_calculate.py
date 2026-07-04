@@ -499,16 +499,15 @@ def test_risk_calculate_stateful_mode_preserves_gross_metric_basis_and_currency(
     assert payload["series_selection"]["include_benchmark"] is False
 
 
-def test_risk_calculate_stateful_mode_autowires_lotus_performance_client() -> None:
+def test_risk_calculate_stateful_mode_uses_runtime_performance_client_override() -> None:
+    _AutoWiredLotusPerformanceClient.calls = []
     with override_app_runtime(
-        lotus_performance_client=None,
-        lotus_performance_class=_AutoWiredLotusPerformanceClient,
+        lotus_performance_client=_AutoWiredLotusPerformanceClient(),
     ):
-        _AutoWiredLotusPerformanceClient.calls = []
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/calculate",
-            headers={"X-Correlation-Id": "corr-autowire"},
+            headers={"X-Correlation-Id": "corr-runtime"},
             json={
                 "input_mode": "stateful",
                 "stateful_input": {
@@ -520,7 +519,35 @@ def test_risk_calculate_stateful_mode_autowires_lotus_performance_client() -> No
             },
         )
         assert response.status_code == 200
-        assert _AutoWiredLotusPerformanceClient.calls[0]["correlation_id"] == "corr-autowire"
+        assert _AutoWiredLotusPerformanceClient.calls[0]["correlation_id"] == "corr-runtime"
+
+
+def test_risk_calculate_stateful_mode_fails_closed_without_runtime_client() -> None:
+    with override_app_runtime(lotus_performance_client=None):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/calculate",
+            headers={"X-Correlation-Id": "corr-runtime-missing"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2025-01-03",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "metrics": ["VOLATILITY"],
+                },
+            },
+        )
+
+    body = response.json()["error"]
+    assert response.status_code == 500
+    assert body["code"] == "RUNTIME_COMPOSITION_ERROR"
+    assert body["message"] == "Runtime dependency composition is not initialized."
+    assert body["correlation_id"] == "corr-runtime-missing"
+    assert body["details"] == {
+        "dependency": "lotus-performance",
+        "state_attribute": "lotus_performance_client",
+    }
 
 
 def test_risk_calculate_stateful_surfaces_upstream_unavailable_with_dependency_error() -> None:

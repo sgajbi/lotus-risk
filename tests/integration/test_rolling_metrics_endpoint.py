@@ -505,12 +505,11 @@ def test_rolling_metrics_endpoint_stateless_marks_no_aligned_dependency_observat
     ]
 
 
-def test_rolling_metrics_endpoint_stateful_autowires_performance_client() -> None:
+def test_rolling_metrics_endpoint_stateful_uses_runtime_client_overrides() -> None:
+    _AutoWiredLotusPerformanceClient.calls = []
     with override_app_runtime(
-        lotus_performance_client=None,
-        lotus_core_client=None,
-        lotus_performance_class=_AutoWiredLotusPerformanceClient,
-        lotus_core_class=lambda: RecordingLotusCoreReferenceClient(
+        lotus_performance_client=_AutoWiredLotusPerformanceClient(),
+        lotus_core_client=RecordingLotusCoreReferenceClient(
             risk_free_response=build_risk_free_series_response(
                 points=[
                     {
@@ -527,11 +526,10 @@ def test_rolling_metrics_endpoint_stateful_autowires_performance_client() -> Non
             )
         ),
     ):
-        _AutoWiredLotusPerformanceClient.calls = []
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/rolling-metrics",
-            headers={"X-Correlation-Id": "corr-rolling-auto"},
+            headers={"X-Correlation-Id": "corr-rolling-runtime"},
             json={
                 "input_mode": "stateful",
                 "stateful_input": {
@@ -546,7 +544,7 @@ def test_rolling_metrics_endpoint_stateful_autowires_performance_client() -> Non
             },
         )
         assert response.status_code == 200
-        assert _AutoWiredLotusPerformanceClient.calls[0]["correlation_id"] == "corr-rolling-auto"
+        assert _AutoWiredLotusPerformanceClient.calls[0]["correlation_id"] == "corr-rolling-runtime"
 
 
 def test_rolling_metrics_endpoint_rejects_simulation_mode_at_contract_boundary() -> None:

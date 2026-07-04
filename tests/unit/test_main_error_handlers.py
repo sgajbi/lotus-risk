@@ -13,6 +13,7 @@ from app.api_errors import (
     handle_upstream_service_error,
 )
 from app.routers.risk_calculation import analytics_risk_calculate
+from app.runtime.downstream_clients import RuntimeDownstreamClients
 from app.upstream_errors import UpstreamServiceError
 
 
@@ -74,6 +75,11 @@ def test_handle_upstream_service_error_returns_dependency_envelope() -> None:
 
 def test_analytics_risk_calculate_unsupported_mode_guard_branch() -> None:
     request_payload = SimpleNamespace(input_mode=SimpleNamespace(value="unsupported_mode"))
-    request = Request({"type": "http", "method": "POST", "path": "/", "headers": []})
     with pytest.raises(ValueError, match="Unsupported input_mode=unsupported_mode"):
-        asyncio.run(analytics_risk_calculate(cast(Any, request_payload), request))
+        asyncio.run(
+            analytics_risk_calculate(
+                cast(Any, request_payload),
+                RuntimeDownstreamClients(app_state=SimpleNamespace()),
+                None,
+            )
+        )

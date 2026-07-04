@@ -7,6 +7,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api_error_examples import STANDARD_ERROR_RESPONSES
 from app.error_response import error_response
+from app.runtime.downstream_clients import RuntimeCompositionError
 from app.upstream_errors import UpstreamServiceError
 
 ExceptionHandler = Callable[[Request, Exception], Response | Awaitable[Response]]
@@ -89,6 +90,21 @@ async def handle_upstream_service_error(request: Request, exc: UpstreamServiceEr
     )
 
 
+async def handle_runtime_composition_error(
+    request: Request, exc: RuntimeCompositionError
+) -> Response:
+    return error_response(
+        request,
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        code="RUNTIME_COMPOSITION_ERROR",
+        message="Runtime dependency composition is not initialized.",
+        details={
+            "dependency": exc.dependency_name,
+            "state_attribute": exc.state_attribute,
+        },
+    )
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(
         RequestValidationError, cast(ExceptionHandler, handle_validation_error)
@@ -99,6 +115,10 @@ def register_exception_handlers(app: FastAPI) -> None:
     )
     app.add_exception_handler(HTTPException, cast(ExceptionHandler, handle_http_exception))
     app.add_exception_handler(ValueError, cast(ExceptionHandler, handle_value_error))
+    app.add_exception_handler(
+        RuntimeCompositionError,
+        cast(ExceptionHandler, handle_runtime_composition_error),
+    )
     app.add_exception_handler(
         UpstreamServiceError,
         cast(ExceptionHandler, handle_upstream_service_error),

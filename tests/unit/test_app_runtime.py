@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import app.dependencies.downstream_clients as downstream_clients_module
 from app.main import app
+from app.runtime.downstream_clients import runtime_downstream_clients
 from tests.support.app_runtime import override_app_runtime
 
 
@@ -13,55 +13,39 @@ class _FakeCoreClient:
     pass
 
 
-class _FakePerformanceClass:
-    pass
-
-
-class _FakeCoreClass:
-    pass
-
-
-def test_override_app_runtime_restores_clients_and_classes_after_exit() -> None:
+def test_override_app_runtime_restores_clients_and_runtime_override_after_exit() -> None:
     original_performance_client = getattr(app.state, "lotus_performance_client", None)
     original_core_client = getattr(app.state, "lotus_core_client", None)
     original_dependency_statuses = getattr(app.state, "dependency_statuses", None)
-    original_performance_class = getattr(downstream_clients_module, "LotusPerformanceClient")
-    original_core_class = getattr(downstream_clients_module, "LotusCoreClient")
+    original_runtime_override = app.dependency_overrides.get(runtime_downstream_clients)
 
     with override_app_runtime(
         lotus_performance_client=_FakePerformanceClient(),
         lotus_core_client=_FakeCoreClient(),
-        lotus_performance_class=_FakePerformanceClass,
-        lotus_core_class=_FakeCoreClass,
         dependency_statuses={"lotus-core": {"status": "degraded"}},
     ):
         assert isinstance(app.state.lotus_performance_client, _FakePerformanceClient)
         assert isinstance(app.state.lotus_core_client, _FakeCoreClient)
         assert app.state.dependency_statuses == {"lotus-core": {"status": "degraded"}}
-        assert getattr(downstream_clients_module, "LotusPerformanceClient") is _FakePerformanceClass
-        assert getattr(downstream_clients_module, "LotusCoreClient") is _FakeCoreClass
+        assert runtime_downstream_clients in app.dependency_overrides
 
     assert app.state.lotus_performance_client is original_performance_client
     assert app.state.lotus_core_client is original_core_client
     assert app.state.dependency_statuses is original_dependency_statuses
-    assert (
-        getattr(downstream_clients_module, "LotusPerformanceClient") is original_performance_class
-    )
-    assert getattr(downstream_clients_module, "LotusCoreClient") is original_core_class
+    assert app.dependency_overrides.get(runtime_downstream_clients) is original_runtime_override
 
 
 def test_override_app_runtime_restores_state_after_exception() -> None:
     original_performance_client = getattr(app.state, "lotus_performance_client", None)
-    original_core_class = getattr(downstream_clients_module, "LotusCoreClient")
+    original_runtime_override = app.dependency_overrides.get(runtime_downstream_clients)
 
     try:
         with override_app_runtime(
             lotus_performance_client=_FakePerformanceClient(),
-            lotus_core_class=_FakeCoreClass,
         ):
             raise RuntimeError("boom")
     except RuntimeError:
         pass
 
     assert app.state.lotus_performance_client is original_performance_client
-    assert getattr(downstream_clients_module, "LotusCoreClient") is original_core_class
+    assert app.dependency_overrides.get(runtime_downstream_clients) is original_runtime_override

@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Request
+from typing import Annotated
+
+from fastapi import APIRouter, Depends
 
 from app.api_errors import STANDARD_ERROR_RESPONSES
 from app.contracts.rolling import (
@@ -6,12 +8,9 @@ from app.contracts.rolling import (
     RollingInputMode,
     RollingResponse,
 )
-from app.dependencies.downstream_clients import (
-    resolve_lotus_core_client,
-    resolve_lotus_performance_client,
-)
 from app.dependencies.request_context import request_correlation_id
 from app.openapi_examples import ROLLING_METRICS_EXAMPLES, request_body_examples
+from app.runtime.downstream_clients import RuntimeDownstreamClients, runtime_downstream_clients
 from app.services.endpoint_observation import observed_endpoint
 from app.services.rolling_engine import calculate_rolling_metrics
 from app.services.rolling_mode_adapter import calculate_rolling_metrics_stateful
@@ -35,7 +34,8 @@ router = APIRouter(tags=["risk-analytics"])
 )
 async def analytics_risk_rolling_metrics(
     request_payload: RollingAnalyticsRequest,
-    request: Request,
+    runtime_clients: Annotated[RuntimeDownstreamClients, Depends(runtime_downstream_clients)],
+    correlation_id: Annotated[str | None, Depends(request_correlation_id)],
 ) -> RollingResponse:
     if request_payload.input_mode == RollingInputMode.STATELESS:
         return await _stateless_rolling_response(request_payload)
@@ -43,7 +43,8 @@ async def analytics_risk_rolling_metrics(
     if request_payload.input_mode == RollingInputMode.STATEFUL:
         return await _stateful_rolling_response(
             request_payload=request_payload,
-            request=request,
+            runtime_clients=runtime_clients,
+            correlation_id=correlation_id,
         )
 
     raise ValueError(
@@ -70,20 +71,19 @@ async def _stateless_rolling_response(
 async def _stateful_rolling_response(
     *,
     request_payload: RollingAnalyticsRequest,
-    request: Request,
+    runtime_clients: RuntimeDownstreamClients,
+    correlation_id: str | None,
 ) -> RollingResponse:
     stateful_input = request_payload.stateful_input
     if stateful_input is None:
         raise ValueError("stateful_input is required when input_mode=stateful")
-    performance_client = resolve_lotus_performance_client(request)
-    core_client = resolve_lotus_core_client(request)
     return await observed_endpoint(
         endpoint="rolling-metrics",
         input_mode=request_payload.input_mode.value,
         operation=lambda: calculate_rolling_metrics_stateful(
             stateful_input,
-            performance_client=performance_client,
-            core_client=core_client,
-            correlation_id=request_correlation_id(request),
+            performance_client=runtime_clients.lotus_performance(),
+            core_client=runtime_clients.lotus_core(),
+            correlation_id=correlation_id,
         ),
     )

@@ -14,6 +14,7 @@ from app.routers.drawdown import analytics_risk_drawdown
 from app.routers.historical_attribution import analytics_risk_historical_attribution
 from app.routers.risk_calculation import analytics_risk_calculate
 from app.routers.rolling import analytics_risk_rolling_metrics
+from app.runtime.downstream_clients import RuntimeDownstreamClients
 
 
 def _request(path: str = "/analytics/risk/calculate", method: str = "POST") -> Request:
@@ -129,7 +130,13 @@ def test_analytics_routers_keep_defensive_missing_payload_guards(
     setattr(payload, missing_field, None)
 
     with pytest.raises(ValueError, match=message):
-        asyncio.run(handler(cast(Any, payload), cast(Request, object())))
+        asyncio.run(
+            handler(
+                cast(Any, payload),
+                RuntimeDownstreamClients(app_state=SimpleNamespace()),
+                None,
+            )
+        )
 
 
 @pytest.mark.parametrize(
@@ -152,4 +159,10 @@ def test_analytics_routers_keep_defensive_unsupported_mode_guards(
     )
 
     with pytest.raises(ValueError, match=f"Unsupported input_mode=simulation for {path}"):
-        asyncio.run(handler(cast(Any, payload), cast(Request, object())))
+        asyncio.run(
+            handler(
+                cast(Any, payload),
+                RuntimeDownstreamClients(app_state=SimpleNamespace()),
+                None,
+            )
+        )

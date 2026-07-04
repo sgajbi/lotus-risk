@@ -213,7 +213,13 @@ Boundary rules:
     (`/ops`, `/ops/trust-telemetry`, and `/metrics`) must reject missing or invalid
     `X-Lotus-Trusted-Ingress` before trusting propagated actor, service identity, or capability
     headers. Health and readiness probes remain platform-compatible.
-20. Keep runtime posture modern and current: retained local compatibility or direct-run behavior
+20. Runtime downstream composition lives under `src/app/runtime`. Lifespan creates concrete
+    `lotus-core` and `lotus-performance` clients with reusable HTTP pools; routers receive the
+    typed `RuntimeDownstreamClients` dependency and resolve stateful ports from that boundary only.
+    Request-time code must fail closed with `RUNTIME_COMPOSITION_ERROR` when required runtime state
+    is missing; do not reintroduce concrete client construction, class monkeypatch fallbacks, or
+    service-locator helpers under router/dependency modules.
+21. Keep runtime posture modern and current: retained local compatibility or direct-run behavior
     must be explicitly scoped to local development and must not become a bank-readiness, production,
     or enterprise claim without machine-readable proof and tests. Do not add new legacy aliases,
     local-only shortcuts, or stale compatibility surfaces while fixing issue slices.
