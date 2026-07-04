@@ -138,6 +138,8 @@ Canonical direct local upstream URLs for live characterization and operator chec
 - `make install` - install development dependencies
 - `make check` - fast local gate
 - `make ci` - PR-grade local gate
+- `make clean` - remove known generated/local artifacts; regenerate OpenAPI and quality evidence
+  afterwards when PR proof needs fresh artifacts
 - `make test-unit` - unit suite
 - `make test-integration` - integration suite
 - `make test-e2e` - e2e suite
@@ -164,16 +166,18 @@ Repo-native validation mapping:
 The enforced gates currently include:
 
 1. lint,
-2. no-alias contract governance,
-3. typecheck,
-4. OpenAPI quality,
-5. API vocabulary validation,
-6. repo-native domain product declaration validation,
-7. migration smoke,
-8. test-pyramid validation,
-9. security audit,
-10. coverage-backed testing,
-11. Docker build validation.
+2. architecture boundary governance,
+3. no-alias contract governance,
+4. typecheck,
+5. OpenAPI quality and generated artifact validation,
+6. API vocabulary validation,
+7. mesh contract validation across domain products, trust telemetry, and observability contracts,
+8. source-size, complexity, dependency-hygiene, and dead-code gates,
+9. migration smoke,
+10. test-pyramid validation,
+11. security audit,
+12. coverage-backed testing,
+13. Docker build validation.
 
 ## Integration Contract
 

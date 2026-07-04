@@ -13,12 +13,12 @@ completion claim.
 ## Generation Identity
 
 - Git branch: `refactor/enterprise-risk-backend`
-- Git commit: `4b3d423bfb2aebc6a2dc2b074f5e70aaf2a5e7df`
+- Git commit: `df0fe697e907f0e2d35f476880fa42602802cb0b`
 
 ## Current Code Size
 
 - Python source files under `src/`: 244
-- Python test files under `tests/`: 104
+- Python test files under `tests/`: 106
 - Python packages under `src/`: 10
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
 
@@ -93,32 +93,33 @@ completion claim.
 ```text
 All checks passed!
 ```
-- Ruff format check: passed
+- Ruff format check: reported exit 1
 
 ```text
-363 files already formatted
+Would reformat: scripts\generate_quality_baseline.py
+1 file would be reformatted, 365 files already formatted
 ```
 - Type checking: passed
 
 ```text
-Success: no issues found in 348 source files
+Success: no issues found in 350 source files
 ```
-- Unit coverage snapshot: passed
+- Unit coverage snapshot: reported exit 1
 
 ```text
-........................................................................ [ 12%]
+F....................................................................... [ 12%]
 ........................................................................ [ 25%]
 ........................................................................ [ 38%]
 ........................................................................ [ 51%]
-........................................................................ [ 64%]
-........................................................................ [ 77%]
+........................................................................ [ 63%]
+........................................................................ [ 76%]
 ...
-src\app\services\rolling_stateful_source_responses.py           45      1     16      1    97%   96
---------------------------------------------------------------------------------------------------------
 TOTAL                                                         6247     89   1030     73    98%
 
 198 files skipped due to complete coverage.
-558 passed in 12.17s
+=========================== short test summary info ===========================
+FAILED tests/unit/scripts/test_clean_generated_artifacts.py::test_clean_generated_artifacts_removes_only_allowlisted_byproducts
+1 failed, 563 passed in 13.77s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -235,19 +236,19 @@ needs current CI status, generated OpenAPI artifact evidence, and reviewer-ready
 - Unit test collection: passed
 
 ```text
+tests/unit/scripts/test_clean_generated_artifacts.py::test_clean_generated_artifacts_removes_only_allowlisted_byproducts
+tests/unit/scripts/test_clean_generated_artifacts.py::test_clean_generated_artifacts_dry_run_reports_without_removing
 tests/unit/test_agent_effectiveness_review.py::test_agent_effectiveness_review_records_all_required_areas
 tests/unit/test_agent_effectiveness_review.py::test_codebase_review_playbook_requires_recurring_effectiveness_review
 tests/unit/test_agent_effectiveness_review.py::test_second_effectiveness_review_records_configuration_and_context_improvements
 tests/unit/test_agent_effectiveness_review.py::test_third_effectiveness_review_records_problem_details_and_modularity_evidence
-tests/unit/test_agent_effectiveness_review.py::test_fourth_effectiveness_review_records_recent_modularity_evidence
-tests/unit/test_agent_effectiveness_review.py::test_fifth_effectiveness_review_records_current_refactor_loop_evidence
 ...
 tests/unit/test_upstream_errors.py::test_classify_upstream_http_error_matrix[504-502-UPSTREAM_FAILURE-upstream_failure-True]
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc0-504-UPSTREAM_TIMEOUT-timeout]
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc1-503-UPSTREAM_UNAVAILABLE-transport]
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 
-558 tests collected in 2.15s
+564 tests collected in 3.72s
 ```
 - Import-linter report-only: passed
 

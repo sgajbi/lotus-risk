@@ -17,7 +17,7 @@ pre-commit:
 
 check: lint no-alias-gate typecheck openapi-gate openapi-artifact-gate api-vocabulary-gate mesh-contract-validate source-size-gate test
 
-ci: lint no-alias-gate typecheck openapi-gate openapi-artifact-gate api-vocabulary-gate migration-smoke source-size-gate test-all security-audit
+ci: lint check-deps architecture-gate no-alias-gate typecheck openapi-gate openapi-artifact-gate api-vocabulary-gate mesh-contract-validate complexity-gate source-size-gate dependency-hygiene-gate dead-code-gate migration-smoke test-pyramid-gate test-all security-audit docker-build
 
 quality-baseline:
 	python scripts/generate_quality_baseline.py
@@ -58,7 +58,7 @@ test-all-no-cov:
 test-all-parallel:
 	python -c "import importlib.util, subprocess, sys; args=[sys.executable,'-m','pytest','--cov=src','--cov-report=','--cov-fail-under=$(COVERAGE_FAIL_UNDER)']; args += (['-n','auto','--dist','loadscope'] if importlib.util.find_spec('xdist') else []); raise SystemExit(subprocess.call(args))"
 
-# Local execution flow aligned with the Pull Request Merge Gate workflow
+# Split-suite local coverage loop without Docker. Use `make ci` for PR-grade parity.
 ci-local: lint check-deps
 	COVERAGE_FILE=.coverage.unit python -m pytest tests/unit --cov=src --cov-report=
 	COVERAGE_FILE=.coverage.integration python -m pytest tests/integration --cov=src --cov-report=
@@ -149,7 +149,7 @@ format:
 	python -m ruff format .
 
 clean:
-	python -c "import shutil, pathlib; [shutil.rmtree(p, ignore_errors=True) for p in ['__pycache__', '.pytest_cache', 'htmlcov', '.ruff_cache', '.mypy_cache']]; pathlib.Path('.coverage').unlink(missing_ok=True)"
+	python scripts/clean_generated_artifacts.py
 
 run:
 	uvicorn src.app.main:app --reload --port 8130

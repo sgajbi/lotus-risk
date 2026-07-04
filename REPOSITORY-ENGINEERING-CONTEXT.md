@@ -207,6 +207,8 @@ Use these commands as the primary local contract:
    `make test-e2e`
 7. validate repo-native domain product declarations
    `make domain-data-product-gate`
+8. remove known local/generated artifacts
+   `make clean`
 
 ## Validation And CI Expectations
 
@@ -223,6 +225,9 @@ Important validation expectations:
 3. split test suites plus coverage and Docker build are part of the merge gate,
 4. risk correctness and evidence posture must remain aligned with the product and gateway contract.
 5. repo-native domain product declarations must stay aligned with RFC-0084 trust registries and any transitional platform mirrors until aggregation fully federates.
+6. `make ci` is the PR-grade local aggregate and includes architecture, mesh-contract,
+   complexity, source-size, dependency-hygiene, dead-code, migration, test-pyramid, coverage,
+   security, and Docker evidence; `ci-local` is only a split-suite coverage loop without Docker.
 
 ## Standards And RFCs That Govern This Repository
 

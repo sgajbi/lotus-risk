@@ -53,6 +53,8 @@ jobs:
         run: make openapi-artifact-gate
       - name: API Vocabulary Gate
         run: make api-vocabulary-gate
+      - name: Mesh Contract Validation
+        run: make mesh-contract-validate
       - name: Architecture Gate
         run: make architecture-gate
       - name: Complexity Gate
