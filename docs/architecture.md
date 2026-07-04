@@ -48,6 +48,22 @@ The service publishes raw local trust telemetry through `/ops/trust-telemetry` a
 repo-native fixtures under `contracts/trust-telemetry/`. Platform-certified mesh posture remains
 owned by `lotus-platform` generated certification artifacts, not by this endpoint alone.
 
+## Contract Model Classification
+
+`src/app/contracts` contains three kinds of models. Keep the distinction explicit when refactoring:
+
+| Classification | Meaning | Current examples | Service-layer rule |
+| --- | --- | --- | --- |
+| Public API DTO | Transport request/response shape governed by OpenAPI compatibility | endpoint request envelopes, response envelopes, response driver DTOs such as concentration top-position and top-issuer drivers | Construct at router/application response-mapping boundaries; lower-level calculation helpers should not depend on these shapes |
+| Shared application value | Stable internal value object currently published through contract facades for compatibility | `ReturnPoint`, request period values, supportability state objects, selected domain enums | May be used by services until a dedicated domain package exists; avoid adding transport-only metadata or aliases to these values |
+| Compatibility facade | Re-export module that preserves legacy import paths while implementation is split into smaller contract modules | `app.contracts.risk`, `app.contracts.concentration`, `app.contracts.rolling` | Do not use facade convenience as permission to couple pure helpers to response DTO construction |
+
+The concentration calculation path is the first representative DTO-boundary migration. Pure
+concentration math now returns internal driver values from
+`src/app/services/concentration/datamodels.py`; `response_builder.py` maps those values to the
+public Pydantic response DTOs. This preserves JSON/OpenAPI compatibility while shrinking the blast
+radius of future response-contract changes.
+
 ## Refactor Direction
 
 1. Keep calculation logic in services and pure helpers.
@@ -58,5 +74,7 @@ owned by `lotus-platform` generated certification artifacts, not by this endpoin
 6. Preserve existing risk methodology behavior unless a change is explicitly documented and tested.
 7. Keep service observability behind `app.services.observability_ports`; direct
    `app.services -> app.observability` imports are blocked by architecture tests/import-linter.
+8. Keep public API response DTO construction out of lower-level calculation helpers; map internal
+   application/domain values to public DTOs at the application response boundary.
 
 The initial quality baseline is recorded in `quality/baseline_report.md`.

@@ -1,12 +1,16 @@
 from __future__ import annotations
 
-from app.contracts.concentration import TopIssuerDriver, TopPositionDriver
-from app.services.concentration.datamodels import IssuerEntry, PositionEntry
+from app.services.concentration.datamodels import (
+    IssuerEntry,
+    PositionEntry,
+    TopIssuerDriverValue,
+    TopPositionDriverValue,
+)
 
 _ROUND_PRECISION = 6
 
 
-def _round(value: float) -> float:
+def _round(value: float) -> float:  # monetary-float-allow: concentration ratio, not money.
     return round(value, _ROUND_PRECISION)
 
 
@@ -28,24 +32,24 @@ def _single_position_metrics(values: list[float], *, top_n: int) -> tuple[float,
     return top_weight, top_n_weight
 
 
-def _top_position_driver(entries: list[PositionEntry]) -> TopPositionDriver:
+def _top_position_driver(entries: list[PositionEntry]) -> TopPositionDriverValue:
     total = sum(abs(entry.value) for entry in entries)
     if total <= 0 or not entries:
-        return TopPositionDriver(security_id=None, security_name=None, weight=0.0)
+        return TopPositionDriverValue(security_id=None, security_name=None, weight=0.0)
     top_entry = max(entries, key=lambda entry: (abs(entry.value), entry.security_id or ""))
-    return TopPositionDriver(
+    return TopPositionDriverValue(
         security_id=top_entry.security_id,
         security_name=top_entry.security_name,
         weight=_round(abs(top_entry.value) / total),
     )
 
 
-def _top_issuer_driver(entries: list[IssuerEntry]) -> TopIssuerDriver:
+def _top_issuer_driver(entries: list[IssuerEntry]) -> TopIssuerDriverValue:
     total = sum(abs(entry.value) for entry in entries)
     if total <= 0 or not entries:
-        return TopIssuerDriver(issuer_id=None, issuer_name=None, weight=0.0)
+        return TopIssuerDriverValue(issuer_id=None, issuer_name=None, weight=0.0)
     top_entry = max(entries, key=lambda entry: (abs(entry.value), entry.issuer_id or ""))
-    return TopIssuerDriver(
+    return TopIssuerDriverValue(
         issuer_id=top_entry.issuer_id,
         issuer_name=top_entry.issuer_name,
         weight=_round(abs(top_entry.value) / total),

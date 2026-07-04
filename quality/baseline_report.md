@@ -13,12 +13,12 @@ completion claim.
 ## Generation Identity
 
 - Git branch: `refactor/enterprise-risk-backend`
-- Git commit: `b7de1c122428affb056cd0e835a59389b3ee8ddf`
+- Git commit: `5110488832aeb9ea4f143b5660f4b5a4825ed24b`
 
 ## Current Code Size
 
 - Python source files under `src/`: 247
-- Python test files under `tests/`: 108
+- Python test files under `tests/`: 109
 - Python packages under `src/`: 11
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
 
@@ -96,12 +96,12 @@ All checks passed!
 - Ruff format check: passed
 
 ```text
-371 files already formatted
+372 files already formatted
 ```
 - Type checking: passed
 
 ```text
-Success: no issues found in 355 source files
+Success: no issues found in 356 source files
 ```
 - Unit coverage snapshot: passed
 
@@ -115,10 +115,10 @@ Success: no issues found in 355 source files
 ...
 src\app\services\rolling_stateful_source_responses.py           45      1     16      1    97%   96
 --------------------------------------------------------------------------------------------------------
-TOTAL                                                         6384     85   1058     73    98%
+TOTAL                                                         6397     85   1058     73    98%
 
 201 files skipped due to complete coverage.
-602 passed in 11.87s
+604 passed in 11.10s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -248,7 +248,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc1-503-UPSTREAM_UNAVAILABLE-transport]
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 
-602 tests collected in 2.03s
+604 tests collected in 2.07s
 ```
 - Import-linter report-only: reported exit 1
 
