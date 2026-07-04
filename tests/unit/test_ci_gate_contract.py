@@ -62,3 +62,12 @@ def test_governed_workflows_run_mesh_contract_validation() -> None:
         assert "repository: sgajbi/lotus-platform" in text, workflow
         assert "path: .lotus-platform" in text, workflow
         assert "run: make mesh-contract-validate" in text, workflow
+        assert text.index("Dependency Hygiene Gate") < text.index(
+            "Checkout Lotus Platform Contracts"
+        ), workflow
+        assert text.index("Dead Code Gate") < text.index("Checkout Lotus Platform Contracts"), (
+            workflow
+        )
+        assert text.index("Checkout Lotus Platform Contracts") < text.index(
+            "Mesh Contract Validation"
+        ), workflow
