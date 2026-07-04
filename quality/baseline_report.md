@@ -13,7 +13,7 @@ completion claim.
 ## Generation Identity
 
 - Git branch: `refactor/enterprise-risk-backend`
-- Git commit: `8a6dbed99a7b7d0f4eaf859d6a3ea56076e20a59`
+- Git commit: `3eb50016ff9848c07fc6ef7668537afc35796ea3`
 
 ## Current Code Size
 
@@ -36,9 +36,9 @@ completion claim.
 | src/app/services/risk/period_metrics.py | 211 | 6797 |
 | src/app/services/risk/benchmark_period_metrics.py | 211 | 6678 |
 | src/app/openapi_request_examples/analytics.py | 210 | 6967 |
+| src/app/enterprise_readiness.py | 209 | 7095 |
 | src/app/services/scenario_governance.py | 208 | 7313 |
 | src/app/integrations/downstream_request_execution.py | 208 | 5311 |
-| src/app/enterprise_readiness.py | 207 | 6938 |
 | src/app/services/rolling_metric_series.py | 206 | 6370 |
 | src/app/upstream_errors.py | 201 | 5199 |
 | src/app/trust_telemetry_builders.py | 200 | 7732 |
@@ -107,18 +107,18 @@ Success: no issues found in 350 source files
 
 ```text
 ........................................................................ [ 12%]
-........................................................................ [ 25%]
-........................................................................ [ 37%]
-........................................................................ [ 50%]
-........................................................................ [ 62%]
-........................................................................ [ 75%]
+........................................................................ [ 24%]
+........................................................................ [ 36%]
+........................................................................ [ 49%]
+........................................................................ [ 61%]
+........................................................................ [ 73%]
 ...
 src\app\services\rolling_stateful_source_responses.py           45      1     16      1    97%   96
 --------------------------------------------------------------------------------------------------------
-TOTAL                                                         6270     89   1034     73    98%
+TOTAL                                                         6303     89   1046     73    98%
 
 198 files skipped due to complete coverage.
-573 passed in 13.50s
+585 passed in 12.50s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -247,7 +247,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc1-503-UPSTREAM_UNAVAILABLE-transport]
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 
-573 tests collected in 2.46s
+585 tests collected in 3.01s
 ```
 - Import-linter report-only: passed
 

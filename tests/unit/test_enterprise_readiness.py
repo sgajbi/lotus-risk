@@ -134,6 +134,49 @@ def test_validate_enterprise_runtime_config_fails_closed_for_missing_bank_postur
         validate_enterprise_runtime_config()
 
 
+@pytest.mark.parametrize(
+    ("setting", "value"),
+    [
+        ("LOTUS_CORE_TIMEOUT_SECONDS", "not-a-number"),
+        ("LOTUS_CORE_MAX_CONNECTIONS", "0"),
+        ("LOTUS_CORE_MAX_KEEPALIVE_CONNECTIONS", "-1"),
+        ("LOTUS_CORE_KEEPALIVE_EXPIRY_SECONDS", "nan"),
+        ("LOTUS_PERFORMANCE_TIMEOUT_SECONDS", "inf"),
+        ("LOTUS_PERFORMANCE_MAX_CONNECTIONS", "0"),
+        ("LOTUS_PERFORMANCE_MAX_KEEPALIVE_CONNECTIONS", "-1"),
+        ("LOTUS_PERFORMANCE_KEEPALIVE_EXPIRY_SECONDS", ""),
+        ("LOTUS_PERFORMANCE_ASYNC_POLL_INTERVAL_SECONDS", "0"),
+        ("LOTUS_PERFORMANCE_ASYNC_MAX_POLLS", "1.5"),
+    ],
+)
+def test_validate_enterprise_runtime_config_rejects_invalid_downstream_overrides(
+    monkeypatch: pytest.MonkeyPatch,
+    setting: str,
+    value: str,
+) -> None:
+    _set_valid_enterprise_runtime_config(monkeypatch)
+    monkeypatch.setenv(setting, value)
+
+    with pytest.raises(RuntimeError) as exc_info:
+        validate_enterprise_runtime_config()
+
+    error = str(exc_info.value)
+    assert f"invalid_downstream_runtime_setting:{setting}" in error
+    if value:
+        assert value not in error
+
+
+def test_validate_runtime_config_preserves_local_downstream_override_fallbacks(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _set_valid_enterprise_runtime_config(monkeypatch)
+    monkeypatch.setenv("ENTERPRISE_ENFORCE_RUNTIME_CONFIG", "false")
+    monkeypatch.setenv("LOTUS_CORE_TIMEOUT_SECONDS", "not-a-number")
+    monkeypatch.setenv("LOTUS_PERFORMANCE_ASYNC_MAX_POLLS", "-7")
+
+    assert validate_enterprise_runtime_config() == []
+
+
 def test_authorize_write_request_enforces_headers_identity_and_capabilities(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

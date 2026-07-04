@@ -199,6 +199,11 @@ Boundary rules:
 16. Enterprise authorization route truth lives in `enterprise_authorization.SUPPORTED_WRITE_ROUTES`.
     Startup capability-rule coverage, request-time capability matching, generated OpenAPI
     caller-context extensions, and OpenAPI quality gates must remain aligned to that inventory.
+17. Enterprise downstream runtime-control validation lives in
+    `integrations.downstream_profile_env.invalid_downstream_runtime_setting_issues`. Local
+    development may fall back to defaults for invalid timeout, pool, keepalive, and async polling
+    overrides, but enterprise runtime enforcement must reject explicit invalid overrides with
+    bounded `invalid_downstream_runtime_setting:<ENV_NAME>` issue codes.
 
 Canonical direct local validation ports:
 

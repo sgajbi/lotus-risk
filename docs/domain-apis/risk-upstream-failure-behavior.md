@@ -72,6 +72,10 @@ The following explicit downstream transport posture is defined in
 - `lotus-performance` also controls async polling through
   `LOTUS_PERFORMANCE_ASYNC_POLL_INTERVAL_SECONDS` and
   `LOTUS_PERFORMANCE_ASYNC_MAX_POLLS`.
+- Local development falls back to defaults for malformed downstream profile overrides, while
+  enterprise runtime enforcement rejects explicit invalid timeout, pool, keepalive, and async
+  polling overrides with bounded `invalid_downstream_runtime_setting:<ENV_NAME>` startup issue
+  codes.
 - FastAPI lifespan startup creates one reusable HTTP connection pool per upstream dependency.
   Lifespan shutdown marks the service draining, closes both owned pools, and preserves any
   explicitly injected client used by tests or controlled runtimes.

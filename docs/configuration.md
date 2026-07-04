@@ -32,6 +32,13 @@ The service never includes a rejected URL value in the validation error because 
 credentials. Production ASGI runtimes must keep lifespan support enabled so connection and
 keepalive limits apply to reusable application-owned pools.
 
+Local development keeps permissive fallback semantics for invalid timeout, pool, keepalive, and
+async polling overrides: malformed, zero, or negative values fall back to the documented defaults.
+Enterprise bank runtime enforcement is stricter. When `ENTERPRISE_ENFORCE_RUNTIME_CONFIG=true`,
+explicit invalid overrides for `LOTUS_CORE_*`, `LOTUS_PERFORMANCE_*`, or
+`LOTUS_PERFORMANCE_ASYNC_*` runtime controls fail application construction with bounded
+`invalid_downstream_runtime_setting:<ENV_NAME>` issue codes and never echo configured values.
+
 ## Enterprise Security
 
 | Setting | Local default | Enterprise bank posture |
