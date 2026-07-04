@@ -6,7 +6,26 @@ from typing import Any
 
 WRITE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
-_REQUIRED_HEADERS = {"x-actor-id", "x-tenant-id", "x-role", "x-correlation-id"}
+ENTERPRISE_AUTHORIZATION_REQUIRED_HEADERS = (
+    "X-Actor-Id",
+    "X-Tenant-Id",
+    "X-Role",
+    "X-Correlation-Id",
+)
+ENTERPRISE_SERVICE_IDENTITY_HEADERS = ("Authorization", "X-Service-Identity")
+ENTERPRISE_CAPABILITIES_HEADER = "X-Capabilities"
+SUPPORTED_WRITE_ROUTES = (
+    ("POST", "/analytics/risk/calculate"),
+    ("POST", "/analytics/risk/concentration"),
+    ("POST", "/analytics/risk/drawdown"),
+    ("POST", "/analytics/risk/historical-attribution"),
+    ("POST", "/analytics/risk/mandate-health-context"),
+    ("POST", "/analytics/risk/regime-scenario-pack/evaluate"),
+    ("POST", "/analytics/risk/risk-event-cohorts/evaluate"),
+    ("POST", "/analytics/risk/rolling-metrics"),
+)
+
+_REQUIRED_HEADERS = {header.lower() for header in ENTERPRISE_AUTHORIZATION_REQUIRED_HEADERS}
 
 
 def _env_enabled(name: str, default: str = "true") -> bool:
@@ -41,10 +60,15 @@ def _path_matches_rule(path: str, rule_path: str) -> bool:
     return path == normalized_rule_path or path.startswith(f"{normalized_rule_path}/")
 
 
-def _required_capability(method: str, path: str) -> str | None:
+def _required_capability_from_rules(
+    rules: dict[str, str],
+    *,
+    method: str,
+    path: str,
+) -> str | None:
     method = method.upper()
     matching_rules: list[tuple[int, str]] = []
-    for key, capability in load_capability_rules().items():
+    for key, capability in rules.items():
         prefix = f"{method} "
         rule_path = key[len(prefix) :]
         if key.upper().startswith(prefix) and _path_matches_rule(path, rule_path):
@@ -52,6 +76,21 @@ def _required_capability(method: str, path: str) -> str | None:
     if not matching_rules:
         return None
     return max(matching_rules, key=lambda item: item[0])[1]
+
+
+def _required_capability(method: str, path: str) -> str | None:
+    return _required_capability_from_rules(load_capability_rules(), method=method, path=path)
+
+
+def missing_supported_write_route_capability_rules(
+    rules: dict[str, str] | None = None,
+) -> list[str]:
+    capability_rules = load_capability_rules() if rules is None else rules
+    return [
+        f"{method} {path}"
+        for method, path in SUPPORTED_WRITE_ROUTES
+        if _required_capability_from_rules(capability_rules, method=method, path=path) is None
+    ]
 
 
 def _authorization_enforced(method: str) -> bool:
@@ -114,4 +153,13 @@ def authorize_write_request(
     return True, None
 
 
-__all__ = ["WRITE_METHODS", "authorize_write_request", "load_capability_rules"]
+__all__ = [
+    "ENTERPRISE_AUTHORIZATION_REQUIRED_HEADERS",
+    "ENTERPRISE_CAPABILITIES_HEADER",
+    "ENTERPRISE_SERVICE_IDENTITY_HEADERS",
+    "SUPPORTED_WRITE_ROUTES",
+    "WRITE_METHODS",
+    "authorize_write_request",
+    "load_capability_rules",
+    "missing_supported_write_route_capability_rules",
+]

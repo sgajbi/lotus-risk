@@ -196,6 +196,9 @@ Boundary rules:
 15. GitHub mesh-contract validation requires `lotus-platform` contract truth. Workflows provide it
     as `.lotus-platform`; local runs can use either a sibling `../lotus-platform` checkout or
     `LOTUS_PLATFORM_ROOT`.
+16. Enterprise authorization route truth lives in `enterprise_authorization.SUPPORTED_WRITE_ROUTES`.
+    Startup capability-rule coverage, request-time capability matching, generated OpenAPI
+    caller-context extensions, and OpenAPI quality gates must remain aligned to that inventory.
 
 Canonical direct local validation ports:
 

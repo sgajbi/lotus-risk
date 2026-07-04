@@ -35,7 +35,19 @@ def _valid_schema() -> dict[str, object]:
                     },
                     "responses": {
                         "200": {"description": "Risk analytics response"},
+                        "403": {"description": "Authorization denied"},
                         "422": {"description": "Validation error"},
+                    },
+                    "x-lotus-enterprise-authorization": {
+                        "required_context_headers": ["X-Actor-Id"],
+                        "service_identity_headers": [
+                            "Authorization",
+                            "X-Service-Identity",
+                        ],
+                        "capabilities_header": "X-Capabilities",
+                        "capability_rules_env": "ENTERPRISE_CAPABILITY_RULES_JSON",
+                        "denial_code": "AUTHORIZATION_DENIED",
+                        "denial_reason": "authorization_policy_denied",
                     },
                 }
             }

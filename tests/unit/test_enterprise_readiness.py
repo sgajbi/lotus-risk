@@ -14,6 +14,10 @@ from app.enterprise_readiness import (
     redact_sensitive,
     validate_enterprise_runtime_config,
 )
+from app.enterprise_authorization import (
+    SUPPORTED_WRITE_ROUTES,
+    missing_supported_write_route_capability_rules,
+)
 
 
 def _set_valid_enterprise_runtime_config(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -23,9 +27,7 @@ def _set_valid_enterprise_runtime_config(monkeypatch: pytest.MonkeyPatch) -> Non
         "ENTERPRISE_POLICY_VERSION": "2.0.0",
         "ENTERPRISE_PRIMARY_KEY_ID": "key-2026-01",
         "ENTERPRISE_SECRET_ROTATION_DAYS": "30",
-        "ENTERPRISE_CAPABILITY_RULES_JSON": (
-            '{"POST /analytics/risk/calculate":"risk.analytics.write"}'
-        ),
+        "ENTERPRISE_CAPABILITY_RULES_JSON": ('{"POST /analytics/risk":"risk.analytics.write"}'),
         "ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES": "1048576",
         "LOTUS_CORE_BASE_URL": "https://core.internal.example",
         "LOTUS_PERFORMANCE_BASE_URL": "https://performance.internal.example",
@@ -62,6 +64,44 @@ def test_validate_enterprise_runtime_config_accepts_complete_bank_posture(
     _set_valid_enterprise_runtime_config(monkeypatch)
 
     assert validate_enterprise_runtime_config() == []
+
+
+def test_supported_write_route_inventory_covers_current_analytics_posts() -> None:
+    assert SUPPORTED_WRITE_ROUTES == (
+        ("POST", "/analytics/risk/calculate"),
+        ("POST", "/analytics/risk/concentration"),
+        ("POST", "/analytics/risk/drawdown"),
+        ("POST", "/analytics/risk/historical-attribution"),
+        ("POST", "/analytics/risk/mandate-health-context"),
+        ("POST", "/analytics/risk/regime-scenario-pack/evaluate"),
+        ("POST", "/analytics/risk/risk-event-cohorts/evaluate"),
+        ("POST", "/analytics/risk/rolling-metrics"),
+    )
+
+
+def test_enterprise_runtime_config_fails_when_write_route_capability_is_unmapped(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _set_valid_enterprise_runtime_config(monkeypatch)
+    monkeypatch.setenv(
+        "ENTERPRISE_CAPABILITY_RULES_JSON",
+        '{"POST /analytics/risk/calculate":"risk.analytics.write"}',
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="missing_capability_rule:POST /analytics/risk/drawdown",
+    ):
+        validate_enterprise_runtime_config()
+
+
+def test_capability_rule_coverage_supports_prefix_rules() -> None:
+    assert (
+        missing_supported_write_route_capability_rules(
+            {"POST /analytics/risk": "risk.analytics.write"}
+        )
+        == []
+    )
 
 
 @pytest.mark.parametrize(
