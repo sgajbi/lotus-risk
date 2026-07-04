@@ -10,7 +10,9 @@ supportability metrics, analytics freshness buckets, readiness state, and Promet
    the bounded correlation-ID policy; malformed trace context is replaced with valid W3C context.
 2. Metrics labels must stay bounded and must never expose portfolio identifiers, client
    identifiers, trace identifiers, correlation identifiers, request bodies, or response bodies.
-3. Readiness must distinguish ready, degraded, and draining dependency posture.
+3. Readiness must distinguish service ready, configured-only dependency rows, explicit
+   degraded/unavailable dependency overrides, and draining posture without claiming live upstream
+   reachability from configured URLs alone.
 4. Downstream failures must preserve source service, operation, retryability, and mapped platform
    error category.
 5. Request observations are emitted as structured `request_observation` events with bounded method,

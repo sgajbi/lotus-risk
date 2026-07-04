@@ -253,7 +253,7 @@ def test_build_declared_product_trust_telemetry_snapshot_uses_repo_native_catalo
     ]
     assert snapshot.declared_dependencies[0].producer_repository == "lotus-performance"
     assert "correlation_id" in snapshot.declared_dependencies[0].required_trust_metadata
-    assert snapshot.declared_dependencies[0].runtime_status == "ok"
+    assert snapshot.declared_dependencies[0].runtime_status == "configured"
     assert snapshot.declared_dependencies[2].runtime_status == "degraded"
     assert snapshot.declared_dependencies[2].runtime_category == "data_gap"
     assert snapshot.declared_dependencies[2].runtime_issue_code == "RISK_FREE_SERIES_STALE"

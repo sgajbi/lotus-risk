@@ -13,7 +13,7 @@ completion claim.
 ## Generation Identity
 
 - Git branch: `refactor/enterprise-risk-backend`
-- Git commit: `40e46df1a62a3b048cbcda255c19417c046a96c2`
+- Git commit: `a41b60b94446fe8835994db8be77da342f92dae3`
 
 ## Current Code Size
 
@@ -93,19 +93,17 @@ completion claim.
 ```text
 All checks passed!
 ```
-- Ruff format check: reported exit 1
+- Ruff format check: passed
 
 ```text
-Would reformat: scripts\generate_quality_baseline.py
-Would reformat: tests\unit\test_quality_baseline_evidence.py
-2 files would be reformatted, 367 files already formatted
+369 files already formatted
 ```
 - Type checking: passed
 
 ```text
 Success: no issues found in 353 source files
 ```
-- Unit coverage snapshot: reported exit 1
+- Unit coverage snapshot: passed
 
 ```text
 ........................................................................ [ 12%]
@@ -113,14 +111,14 @@ Success: no issues found in 353 source files
 ........................................................................ [ 36%]
 ........................................................................ [ 48%]
 ........................................................................ [ 60%]
-................................F..F.................................... [ 72%]
+........................................................................ [ 72%]
 ...
+src\app\services\rolling_stateful_source_responses.py           45      1     16      1    97%   96
+--------------------------------------------------------------------------------------------------------
+TOTAL                                                         6368     85   1058     73    98%
 
 200 files skipped due to complete coverage.
-=========================== short test summary info ===========================
-FAILED tests/unit/test_quality_baseline_evidence.py::test_generated_baseline_separates_immutable_before_evidence_from_current_state
-FAILED tests/unit/test_quality_baseline_evidence.py::test_generated_scorecard_preserves_security_hardening_evidence
-2 failed, 597 passed in 12.17s
+599 passed in 10.89s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -250,7 +248,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc1-503-UPSTREAM_UNAVAILABLE-transport]
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 
-599 tests collected in 2.30s
+599 tests collected in 1.92s
 ```
 - Import-linter report-only: reported exit 1
 

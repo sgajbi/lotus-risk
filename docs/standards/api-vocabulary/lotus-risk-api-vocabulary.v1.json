@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-06-05T11:26:41.240256+00:00",
+  "generatedAt": "2026-07-04T14:15:55.131796+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.affected_portfolios",
@@ -779,13 +779,13 @@
       "semanticId": "lotus.dependencies",
       "canonicalTerm": "dependencies",
       "preferredName": "dependencies",
-      "description": "Dependency runtime states used to determine readiness.",
+      "description": "Dependency configuration states and optional runtime override states used to determine readiness.",
       "example": [
         {
           "base_url": "http://performance.dev.lotus",
-          "detail": "configured",
+          "detail": "configured_only_no_probe",
           "service": "lotus-performance",
-          "status": "ok"
+          "status": "configured"
         }
       ],
       "type": "array",
@@ -823,7 +823,7 @@
       "canonicalTerm": "detail",
       "preferredName": "detail",
       "description": "Additional runtime detail for operators.",
-      "example": "configured",
+      "example": "configured_only_no_probe",
       "type": "object",
       "locations": [
         "body"

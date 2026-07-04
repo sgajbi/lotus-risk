@@ -74,7 +74,8 @@ The user further clarified that benchmark exposure can reasonably be exposed by 
    - canonical stateful returns-series request construction
    - explicit longest-window sourcing for required periods
    - typed upstream failure classification with deterministic Lotus error codes and retryability metadata
-   - dependency-aware `/health/ready` and `/ops` reporting
+   - configured-only `/health/ready` and `/ops` dependency reporting with explicit
+     degraded/unavailable override support
    - improved Docker/runtime URL handling
    - better characterization, contract, integration, and smoke coverage
 4. Simulation is correctly implemented only where it is naturally valid today:
@@ -102,7 +103,7 @@ The user further clarified that benchmark exposure can reasonably be exposed by 
 | Unsupported modes must be explicit and deterministic | Implemented on feature branch | unsupported simulation modes are removed from non-concentration request schemas and rejected at validation boundary | Keep and preserve |
 | Production hardening of upstream behavior | Improved, not complete | better runtime wiring and tests exist, but no final service-wide readiness sign-off | Open |
 | Full integrated validation against real upstreams | Partial | live Docker validation passes for operational endpoints, stateful risk, drawdown, rolling including Sharpe for the validated USD YTD path, historical-attribution total/active risk, concentration stateful, and concentration simulation | Open until final issuer active-risk semantics are resolved and full release evidence is assembled |
-| Production-grade observability | Implemented on feature branch | correlation/error propagation improved; dependency-aware `/health/ready` and `/ops` now expose structured issue metadata (`category`, `issue_code`) for degraded and unavailable dependencies | Keep and preserve |
+| Production-grade observability | Implemented on feature branch | correlation/error propagation improved; `/health/ready` and `/ops` now expose configured-only dependency rows by default plus structured issue metadata (`category`, `issue_code`) for explicit degraded and unavailable dependency overrides | Keep and preserve |
 
 ## Design Reasoning and Trade-offs
 

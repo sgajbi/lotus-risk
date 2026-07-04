@@ -25,9 +25,15 @@ These endpoints are more useful than a plain process-up check.
 They tell you:
 
 1. whether dependency configuration is healthy,
-2. whether `lotus-core` and `lotus-performance` are reachable,
+2. which `lotus-core` and `lotus-performance` base URLs are configured,
 3. whether the service is draining,
-4. whether a stateful analytics path is likely to succeed.
+4. whether an explicit runtime override has marked a dependency degraded or unavailable.
+
+They do not actively probe upstream reachability. A dependency row with `status: "configured"` and
+`detail: "configured_only_no_probe"` is a configured-only signal. To diagnose live upstream
+reachability or data-contract failures, use endpoint-level error responses,
+`metadata.calculation_supportability`, `lotus_risk_upstream_requests_total`, and the upstream
+dependency alert steps below.
 
 ## Canonical Local Upstreams
 
