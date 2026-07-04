@@ -31,7 +31,16 @@ def _operation(**overrides: object) -> dict[str, object]:
         },
         "responses": {
             "200": {"description": "Risk analytics response"},
+            "403": {"description": "Authorization denied"},
             "422": {"description": "Validation error"},
+        },
+        "x-lotus-enterprise-authorization": {
+            "required_context_headers": ["X-Actor-Id"],
+            "service_identity_headers": ["Authorization", "X-Service-Identity"],
+            "capabilities_header": "X-Capabilities",
+            "capability_rules_env": "ENTERPRISE_CAPABILITY_RULES_JSON",
+            "denial_code": "AUTHORIZATION_DENIED",
+            "denial_reason": "authorization_policy_denied",
         },
     }
     operation.update(overrides)
@@ -73,3 +82,19 @@ def test_openapi_quality_gate_accepts_documented_json_mutation_operation() -> No
     errors = evaluate_schema(_schema(_operation()), service_name="lotus-risk")
 
     assert errors == []
+
+
+def test_openapi_quality_gate_rejects_missing_enterprise_authz_extension() -> None:
+    operation = _operation()
+    operation.pop("x-lotus-enterprise-authorization")
+
+    errors = evaluate_schema(_schema(operation), service_name="lotus-risk")
+
+    assert any(
+        (
+            "POST /analytics/risk/calculate: missing enterprise authorization "
+            "caller-context extension"
+        )
+        in error
+        for error in errors
+    )

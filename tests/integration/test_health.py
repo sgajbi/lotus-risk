@@ -476,6 +476,39 @@ def test_openapi_declares_standard_error_models_for_risk_endpoints() -> None:
         )
 
 
+def test_openapi_documents_enterprise_authorization_context_for_write_routes() -> None:
+    client = TestClient(app)
+    spec = client.get("/openapi.json").json()
+    write_routes = (
+        "/analytics/risk/calculate",
+        "/analytics/risk/concentration",
+        "/analytics/risk/drawdown",
+        "/analytics/risk/historical-attribution",
+        "/analytics/risk/mandate-health-context",
+        "/analytics/risk/regime-scenario-pack/evaluate",
+        "/analytics/risk/risk-event-cohorts/evaluate",
+        "/analytics/risk/rolling-metrics",
+    )
+
+    for path in write_routes:
+        operation = spec["paths"][path]["post"]
+        extension = operation["x-lotus-enterprise-authorization"]
+        assert extension["required_context_headers"] == [
+            "X-Actor-Id",
+            "X-Tenant-Id",
+            "X-Role",
+            "X-Correlation-Id",
+        ]
+        assert extension["service_identity_headers"] == [
+            "Authorization",
+            "X-Service-Identity",
+        ]
+        assert extension["capabilities_header"] == "X-Capabilities"
+        assert extension["capability_rules_env"] == "ENTERPRISE_CAPABILITY_RULES_JSON"
+        assert extension["denial_code"] == "AUTHORIZATION_DENIED"
+        assert "403" in operation["responses"]
+
+
 def test_openapi_exposes_enriched_rolling_metadata_examples() -> None:
     client = TestClient(app)
     spec = client.get("/openapi.json").json()

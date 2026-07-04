@@ -8,6 +8,7 @@ from app.enterprise_authorization import (
     WRITE_METHODS,
     authorize_write_request,
     load_capability_rules,
+    missing_supported_write_route_capability_rules,
 )
 from app.enterprise_policy import enterprise_policy_version
 from app.error_response import error_response
@@ -82,8 +83,11 @@ def _enterprise_bank_config_issues() -> list[str]:
     ):
         if not _env_has_value(env_name):
             issues.append(issue)
-    if not load_capability_rules():
+    capability_rules = load_capability_rules()
+    if not capability_rules:
         issues.append("missing_capability_rules")
+    for route_key in missing_supported_write_route_capability_rules(capability_rules):
+        issues.append(f"missing_capability_rule:{route_key}")
     if not _env_has_positive_int("ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES"):
         issues.append("missing_or_invalid_max_write_payload_bytes")
     return issues

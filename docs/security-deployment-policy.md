@@ -33,12 +33,24 @@ Enterprise bank deployments must provide all of the following:
 The service must fail closed when these requirements are missing in enterprise mode. Runtime
 configuration validation in `src/app/enterprise_readiness.py` enforces the in-process portion of
 this policy. When `ENTERPRISE_ENFORCE_RUNTIME_CONFIG=true`, service construction fails unless
-authorization is enabled and policy version, key ID, rotation days, nonempty string capability
-rules, positive payload limit, and both upstream base URLs are explicit.
-Capability rules are required as nonempty string mappings.
-Every authorization-enforced write path must match a well-formed write-method capability rule;
-unmapped writes fail closed with `missing_capability_rule`, and overlapping prefixes resolve to the
-most specific path rule.
+authorization is enabled and policy version, key ID, rotation days, positive payload limit, and both
+upstream base URLs are explicit. Capability rules are required as nonempty string mappings and must
+cover every supported write-like analytics route published by the service:
+
+1. `POST /analytics/risk/calculate`,
+2. `POST /analytics/risk/concentration`,
+3. `POST /analytics/risk/drawdown`,
+4. `POST /analytics/risk/historical-attribution`,
+5. `POST /analytics/risk/mandate-health-context`,
+6. `POST /analytics/risk/regime-scenario-pack/evaluate`,
+7. `POST /analytics/risk/risk-event-cohorts/evaluate`,
+8. `POST /analytics/risk/rolling-metrics`.
+
+Every authorization-enforced write path must match a well-formed write-method capability rule before
+enterprise application construction succeeds. Prefix rules remain supported, so
+`"POST /analytics/risk": "risk.analytics.write"` can cover the full current analytics surface.
+Unmapped writes fail startup with `missing_capability_rule:<METHOD> <PATH>`, and overlapping
+prefixes resolve to the most specific path rule at request time.
 
 ## Identity Boundary
 
@@ -54,6 +66,11 @@ most specific path rule.
 
 Gateway-backed token-validation evidence remains a platform integration proof item. It is not a
 reason to leave `lotus-risk` authorization enforcement disabled in an enterprise deployment.
+
+Generated OpenAPI documents this conditional enterprise caller-context contract through the
+`x-lotus-enterprise-authorization` extension on supported write-like analytics operations. The
+extension lists required context headers, service identity header alternatives, the capabilities
+header, the capability-rule environment variable, and the bounded 403 denial code.
 
 ## Request Body Limits
 
@@ -76,6 +93,7 @@ Use these commands for focused local evidence after changing enterprise deployme
 
 ```text
 python -m pytest tests/unit/test_enterprise_readiness.py tests/unit/test_security_evidence_docs.py tests/unit/test_enterprise_deployment_policy_docs.py -q
+python -m pytest tests/unit/test_openapi_quality_gate.py tests/integration/test_health.py -q
 make security-audit
 make lint
 make typecheck

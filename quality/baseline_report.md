@@ -13,7 +13,7 @@ completion claim.
 ## Generation Identity
 
 - Git branch: `refactor/enterprise-risk-backend`
-- Git commit: `1b2a5935fbe8c30f3411c7056828ab57b9e3ca18`
+- Git commit: `8a6dbed99a7b7d0f4eaf859d6a3ea56076e20a59`
 
 ## Current Code Size
 
@@ -38,8 +38,8 @@ completion claim.
 | src/app/openapi_request_examples/analytics.py | 210 | 6967 |
 | src/app/services/scenario_governance.py | 208 | 7313 |
 | src/app/integrations/downstream_request_execution.py | 208 | 5311 |
+| src/app/enterprise_readiness.py | 207 | 6938 |
 | src/app/services/rolling_metric_series.py | 206 | 6370 |
-| src/app/enterprise_readiness.py | 203 | 6697 |
 | src/app/upstream_errors.py | 201 | 5199 |
 | src/app/trust_telemetry_builders.py | 200 | 7732 |
 | src/app/contracts/drawdown_metric_outputs.py | 194 | 7451 |
@@ -110,15 +110,15 @@ Success: no issues found in 350 source files
 ........................................................................ [ 25%]
 ........................................................................ [ 37%]
 ........................................................................ [ 50%]
-........................................................................ [ 63%]
+........................................................................ [ 62%]
 ........................................................................ [ 75%]
 ...
 src\app\services\rolling_stateful_source_responses.py           45      1     16      1    97%   96
 --------------------------------------------------------------------------------------------------------
-TOTAL                                                         6255     89   1032     73    98%
+TOTAL                                                         6270     89   1034     73    98%
 
 198 files skipped due to complete coverage.
-569 passed in 13.39s
+573 passed in 13.50s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -247,7 +247,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc1-503-UPSTREAM_UNAVAILABLE-transport]
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 
-569 tests collected in 2.45s
+573 tests collected in 2.46s
 ```
 - Import-linter report-only: passed
 

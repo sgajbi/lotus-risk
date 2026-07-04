@@ -18,9 +18,11 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution path
 force_repo_src_first(PROJECT_ROOT)
 
 from app.main import app  # noqa: E402
+from app.enterprise_authorization import SUPPORTED_WRITE_ROUTES  # noqa: E402
 
 ALLOWED_METHODS = {"get", "post", "put", "patch", "delete"}
 JSON_MUTATION_METHODS = {"post", "put", "patch"}
+SUPPORTED_WRITE_ROUTE_KEYS = {(method.lower(), path) for method, path in SUPPORTED_WRITE_ROUTES}
 
 
 def _has_success_response(operation: dict[str, Any]) -> bool:
@@ -39,6 +41,23 @@ def _has_error_response(operation: dict[str, Any]) -> bool:
 def _has_json_request_examples(operation: dict[str, Any]) -> bool:
     json_content = operation.get("requestBody", {}).get("content", {}).get("application/json", {})
     return bool(json_content.get("examples") or json_content.get("example"))
+
+
+def _has_enterprise_authorization_extension(operation: dict[str, Any]) -> bool:
+    extension = operation.get("x-lotus-enterprise-authorization")
+    if not isinstance(extension, dict):
+        return False
+    return all(
+        extension.get(field)
+        for field in (
+            "required_context_headers",
+            "service_identity_headers",
+            "capabilities_header",
+            "capability_rules_env",
+            "denial_code",
+            "denial_reason",
+        )
+    )
 
 
 def _is_ref_only(prop_schema: dict[str, Any]) -> bool:
@@ -84,6 +103,19 @@ def evaluate_schema(schema: dict[str, Any], *, service_name: str) -> list[str]:
             if method.lower() in JSON_MUTATION_METHODS and operation.get("requestBody"):
                 if not _has_json_request_examples(operation):
                     missing_docs.append((method_upper, path, "JSON request example"))
+            if (method.lower(), path) in SUPPORTED_WRITE_ROUTE_KEYS:
+                if not _has_enterprise_authorization_extension(operation):
+                    missing_docs.append(
+                        (
+                            method_upper,
+                            path,
+                            "enterprise authorization caller-context extension",
+                        )
+                    )
+                if "403" not in {
+                    str(status_code) for status_code in operation.get("responses", {})
+                }:
+                    missing_docs.append((method_upper, path, "403 authorization response"))
 
     schemas = schema.get("components", {}).get("schemas", {})
     if isinstance(schemas, dict):

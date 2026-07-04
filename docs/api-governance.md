@@ -39,6 +39,10 @@ The repo runs OpenAPI quality, API vocabulary, no-alias, type, lint, security, a
 through `Makefile`. `make openapi-gate` evaluates the generated FastAPI OpenAPI schema and fails
 missing summaries, descriptions, tags, operation IDs, success/error responses, JSON request
 examples for mutation endpoints, schema field descriptions/examples, and duplicate operation IDs.
+For supported write-like analytics operations, the same gate also requires the governed
+`x-lotus-enterprise-authorization` extension so generated API consumers can discover the conditional
+enterprise caller-context headers, service-identity proof, capabilities header, capability-rule
+environment variable, and bounded 403 denial behavior.
 `make openapi-artifact-gate` exports `output/openapi/lotus-risk.openapi.json` and validates the
 artifact against the repository's Spectral policy expectations from `.spectral.yaml`. The generated
 artifact is ignored by Git and should be attached as CI/PR evidence rather than committed.
