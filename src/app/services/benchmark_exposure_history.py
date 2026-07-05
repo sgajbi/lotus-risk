@@ -8,6 +8,11 @@ from typing import Any, Protocol
 from app.contracts.attribution import ExposurePoint, GroupingDimension
 from app.upstream_errors import invalid_upstream_payload, missing_upstream_data
 
+BENCHMARK_EXPOSURE_CONTEXT_OPERATION = "/integration/benchmarks/exposure-context"
+BENCHMARK_EXPOSURE_PAGE_SIZE = 1000
+BENCHMARK_EXPOSURE_MAX_PAGES = 25
+BENCHMARK_EXPOSURE_MAX_ROWS = 10000
+
 
 class BenchmarkExposurePerformanceClientProtocol(Protocol):
     async def get_benchmark_exposure_context(
@@ -35,7 +40,7 @@ def _as_decimal(value: Any) -> Decimal:
     except (InvalidOperation, ValueError) as exc:
         raise invalid_upstream_payload(
             service="lotus-performance",
-            operation="/integration/benchmarks/exposure-context",
+            operation=BENCHMARK_EXPOSURE_CONTEXT_OPERATION,
             message=f"Invalid benchmark exposure weight from lotus-performance: {value}",
         ) from exc
 
@@ -91,8 +96,28 @@ def _require_context_value(
 def _invalid_benchmark_exposure_context(message: str) -> ValueError:
     return invalid_upstream_payload(
         service="lotus-performance",
-        operation="/integration/benchmarks/exposure-context",
+        operation=BENCHMARK_EXPOSURE_CONTEXT_OPERATION,
         message=f"lotus-performance benchmark exposure context {message}",
+    )
+
+
+def _invalid_benchmark_exposure_pagination(
+    *,
+    reason: str,
+    page_count: int,
+    row_count: int,
+) -> ValueError:
+    return invalid_upstream_payload(
+        service="lotus-performance",
+        operation=BENCHMARK_EXPOSURE_CONTEXT_OPERATION,
+        message="lotus-performance benchmark exposure context unsafe pagination",
+        details={
+            "reason": reason,
+            "page_count": page_count,
+            "row_count": row_count,
+            "max_pages": BENCHMARK_EXPOSURE_MAX_PAGES,
+            "max_rows": BENCHMARK_EXPOSURE_MAX_ROWS,
+        },
     )
 
 
@@ -110,7 +135,7 @@ def _build_request_payload(
         },
         "frequency": "DAILY",
         "grouping_dimensions": request.grouping_dimensions,
-        "page": {"page_size": 1000, "page_token": page_token},
+        "page": {"page_size": BENCHMARK_EXPOSURE_PAGE_SIZE, "page_token": page_token},
     }
     if request.reporting_currency:
         payload["reporting_currency"] = request.reporting_currency
@@ -166,7 +191,7 @@ async def _fetch_benchmark_exposure_page(
     if not isinstance(rows, list):
         raise invalid_upstream_payload(
             service="lotus-performance",
-            operation="/integration/benchmarks/exposure-context",
+            operation=BENCHMARK_EXPOSURE_CONTEXT_OPERATION,
             message="lotus-performance benchmark exposure context payload missing 'rows' list",
         )
 
@@ -198,20 +223,42 @@ async def fetch_benchmark_exposure_history(
 
     page_token: str | None = None
     benchmark_exposures: list[ExposurePoint] = []
+    seen_page_tokens: set[str] = set()
+    page_count = 0
     while True:
         exposure_points, next_page_token = await _fetch_benchmark_exposure_page(
             request=request,
             page_token=page_token,
         )
+        page_count += 1
         benchmark_exposures.extend(exposure_points)
+        if len(benchmark_exposures) > BENCHMARK_EXPOSURE_MAX_ROWS:
+            raise _invalid_benchmark_exposure_pagination(
+                reason="max_rows_exceeded",
+                page_count=page_count,
+                row_count=len(benchmark_exposures),
+            )
         if next_page_token is None:
             break
+        if next_page_token in seen_page_tokens or next_page_token == page_token:
+            raise _invalid_benchmark_exposure_pagination(
+                reason="repeated_page_token",
+                page_count=page_count,
+                row_count=len(benchmark_exposures),
+            )
+        if page_count >= BENCHMARK_EXPOSURE_MAX_PAGES:
+            raise _invalid_benchmark_exposure_pagination(
+                reason="max_pages_exceeded",
+                page_count=page_count,
+                row_count=len(benchmark_exposures),
+            )
+        seen_page_tokens.add(next_page_token)
         page_token = next_page_token
 
     if not benchmark_exposures:
         raise missing_upstream_data(
             service="lotus-performance",
-            operation="/integration/benchmarks/exposure-context",
+            operation=BENCHMARK_EXPOSURE_CONTEXT_OPERATION,
             message=(
                 "unable to build benchmark exposure history from lotus-performance "
                 "benchmark exposure context"

@@ -617,7 +617,7 @@ def test_historical_attribution_stateful_active_risk_rejects_missing_benchmark_r
     assert response.status_code == 424
     body = response.json()["error"]
     assert body["code"] == "FAILED_DEPENDENCY"
-    assert "no benchmark returns" in body["message"]
+    assert body["message"] == "Required upstream dependency data is unavailable."
     assert body["correlation_id"] == "corr-attr-missing-bmk-return"
     assert body["details"]["service"] == "lotus-performance"
 
@@ -655,7 +655,7 @@ def test_historical_attribution_stateful_active_risk_rejects_bad_benchmark_conte
     assert response.status_code == 502
     body = response.json()["error"]
     assert body["code"] == "UPSTREAM_INVALID_RESPONSE"
-    assert "benchmark exposure context payload missing" in body["message"]
+    assert body["message"] == "Upstream dependency returned an invalid response."
     assert body["correlation_id"] == "corr-attr-bad-bmk-context"
 
 
