@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-07-05T03:52:29.944105+00:00",
+  "generatedAt": "2026-07-05T03:57:41.343031+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.affected_portfolios",
@@ -39,6 +39,9 @@
       ],
       "observedTypes": [
         "array"
+      ],
+      "fieldPaths": [
+        "affected_portfolios"
       ]
     },
     {
@@ -53,6 +56,9 @@
       ],
       "observedTypes": [
         "integer"
+      ],
+      "fieldPaths": [
+        "source_metric.aligned_observation_count"
       ]
     },
     {
@@ -67,6 +73,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "metadata.alignment_policy"
       ]
     },
     {
@@ -83,6 +92,9 @@
       ],
       "observedTypes": [
         "DrawdownAnalysisOptions"
+      ],
+      "fieldPaths": [
+        "analysis_options"
       ]
     },
     {
@@ -97,6 +109,9 @@
       ],
       "observedTypes": [
         "integer"
+      ],
+      "fieldPaths": [
+        "metadata.annualization_basis"
       ]
     },
     {
@@ -111,6 +126,9 @@
       ],
       "observedTypes": [
         "integer"
+      ],
+      "fieldPaths": [
+        "metadata.annualization_factor"
       ]
     },
     {
@@ -125,6 +143,9 @@
       ],
       "observedTypes": [
         "object"
+      ],
+      "fieldPaths": [
+        "source_metric.annualized_tracking_error"
       ]
     },
     {
@@ -141,6 +162,9 @@
       ],
       "observedTypes": [
         "array"
+      ],
+      "fieldPaths": [
+        "governance_evidence.applicability_scope"
       ]
     },
     {
@@ -155,6 +179,9 @@
       ],
       "observedTypes": [
         "ScenarioPackApplicabilityStatus"
+      ],
+      "fieldPaths": [
+        "governance_evidence.applicability_status"
       ]
     },
     {
@@ -169,6 +196,9 @@
       ],
       "observedTypes": [
         "boolean"
+      ],
+      "fieldPaths": [
+        "metadata.risk_free_context.applied"
       ]
     },
     {
@@ -183,6 +213,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "governance_evidence.approved_at"
       ]
     },
     {
@@ -197,6 +230,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "governance_evidence.approved_by"
       ]
     },
     {
@@ -213,6 +249,9 @@
       ],
       "observedTypes": [
         "array"
+      ],
+      "fieldPaths": [
+        "products[].approved_consumers"
       ]
     },
     {
@@ -227,6 +266,10 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "scope.as_of_date",
+        "as_of_date"
       ]
     },
     {
@@ -241,6 +284,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "products[].authoritative_domain"
       ]
     },
     {
@@ -255,6 +301,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "dependencies[].base_url"
       ]
     },
     {
@@ -274,6 +323,10 @@
         "object",
         "BenchmarkRequestContext",
         "RollingRequestDependencyContext"
+      ],
+      "fieldPaths": [
+        "benchmark_context",
+        "metadata.benchmark_context"
       ]
     },
     {
@@ -290,6 +343,9 @@
       ],
       "observedTypes": [
         "BenchmarkDrawdownPolicy"
+      ],
+      "fieldPaths": [
+        "benchmark_policy"
       ]
     },
     {
@@ -309,6 +365,9 @@
       ],
       "observedTypes": [
         "array"
+      ],
+      "fieldPaths": [
+        "benchmark_returns"
       ]
     },
     {
@@ -323,6 +382,9 @@
       ],
       "observedTypes": [
         "boolean"
+      ],
+      "fieldPaths": [
+        "breach"
       ]
     },
     {
@@ -337,6 +399,11 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "exposures[].bucket",
+        "exposure_components[].bucket",
+        "scenario_results[].position_contributions[].bucket"
       ]
     },
     {
@@ -354,6 +421,9 @@
       ],
       "observedTypes": [
         "object"
+      ],
+      "fieldPaths": [
+        "affected_portfolios[].bucket_impacts"
       ]
     },
     {
@@ -370,6 +440,9 @@
       ],
       "observedTypes": [
         "BuildMetadata"
+      ],
+      "fieldPaths": [
+        "build"
       ]
     },
     {
@@ -384,6 +457,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "build.build_timestamp"
       ]
     },
     {
@@ -400,6 +476,43 @@
         "ScenarioSupportabilityState",
         "RiskEventCohortSupportabilityState",
         "RiskCalculationSupportability"
+      ],
+      "fieldPaths": [
+        "metadata.calculation_supportability"
+      ]
+    },
+    {
+      "semanticId": "lotus.calculation_supportability_reason",
+      "canonicalTerm": "calculation_supportability_reason",
+      "preferredName": "calculation_supportability_reason",
+      "description": "Bounded supportability reason that is safe for UI and operator metrics.",
+      "example": "calculation_complete",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ],
+      "fieldPaths": [
+        "metadata.calculation_supportability.reason"
+      ]
+    },
+    {
+      "semanticId": "lotus.calculation_supportability_state",
+      "canonicalTerm": "calculation_supportability_state",
+      "preferredName": "calculation_supportability_state",
+      "description": "Bounded supportability state for the risk calculation payload.",
+      "example": "ready",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ],
+      "fieldPaths": [
+        "metadata.calculation_supportability.state"
       ]
     },
     {
@@ -414,6 +527,10 @@
       ],
       "observedTypes": [
         "object"
+      ],
+      "fieldPaths": [
+        "dependencies[].category",
+        "products[].dependency_signals[].category"
       ]
     },
     {
@@ -428,6 +545,10 @@
       ],
       "observedTypes": [
         "number"
+      ],
+      "fieldPaths": [
+        "analysis_options.cdar_alpha",
+        "metadata.cdar_alpha"
       ]
     },
     {
@@ -444,6 +565,9 @@
       ],
       "observedTypes": [
         "OpsChecks"
+      ],
+      "fieldPaths": [
+        "checks"
       ]
     },
     {
@@ -458,6 +582,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "build.ci_pipeline_run_id"
       ]
     },
     {
@@ -472,6 +599,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "governance_evidence.cio_approval_ref"
       ]
     },
     {
@@ -486,6 +616,9 @@
       ],
       "observedTypes": [
         "ScenarioPackApprovalStatus"
+      ],
+      "fieldPaths": [
+        "governance_evidence.cio_approval_status"
       ]
     },
     {
@@ -500,6 +633,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "cohort_id"
       ]
     },
     {
@@ -514,6 +650,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "consumer_declaration_fingerprint"
       ]
     },
     {
@@ -528,6 +667,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "consumer_declaration_source"
       ]
     },
     {
@@ -542,6 +684,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "declared_dependencies[].consumption_mode"
       ]
     },
     {
@@ -556,6 +701,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "metadata.contract_version"
       ]
     },
     {
@@ -570,6 +718,9 @@
       ],
       "observedTypes": [
         "number"
+      ],
+      "fieldPaths": [
+        "scenario_results[].position_contributions[].contribution_loss_pct"
       ]
     },
     {
@@ -584,6 +735,10 @@
       ],
       "observedTypes": [
         "object"
+      ],
+      "fieldPaths": [
+        "correlation_id",
+        "metadata.correlation_id"
       ]
     },
     {
@@ -598,6 +753,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "metadata.covariance_method"
       ]
     },
     {
@@ -612,6 +770,9 @@
       ],
       "observedTypes": [
         "number"
+      ],
+      "fieldPaths": [
+        "issuer_concentration.coverage_ratio_current"
       ]
     },
     {
@@ -626,6 +787,9 @@
       ],
       "observedTypes": [
         "number"
+      ],
+      "fieldPaths": [
+        "issuer_concentration.coverage_ratio_proposed"
       ]
     },
     {
@@ -640,6 +804,9 @@
       ],
       "observedTypes": [
         "IssuerCoverageStatus"
+      ],
+      "fieldPaths": [
+        "issuer_concentration.coverage_status"
       ]
     },
     {
@@ -654,6 +821,9 @@
       ],
       "observedTypes": [
         "integer"
+      ],
+      "fieldPaths": [
+        "issuer_concentration.covered_position_count_current"
       ]
     },
     {
@@ -668,6 +838,9 @@
       ],
       "observedTypes": [
         "integer"
+      ],
+      "fieldPaths": [
+        "issuer_concentration.covered_position_count_proposed"
       ]
     },
     {
@@ -684,6 +857,9 @@
       ],
       "observedTypes": [
         "array"
+      ],
+      "fieldPaths": [
+        "products[].current_routes"
       ]
     },
     {
@@ -698,6 +874,10 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "returns[].date",
+        "benchmark_returns[].date"
       ]
     },
     {
@@ -712,6 +892,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "declaration_fingerprint"
       ]
     },
     {
@@ -726,6 +909,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "declaration_source"
       ]
     },
     {
@@ -761,6 +947,9 @@
       ],
       "observedTypes": [
         "array"
+      ],
+      "fieldPaths": [
+        "declared_dependencies"
       ]
     },
     {
@@ -775,6 +964,9 @@
       ],
       "observedTypes": [
         "integer"
+      ],
+      "fieldPaths": [
+        "summary.declared_dependency_count"
       ]
     },
     {
@@ -789,6 +981,9 @@
       ],
       "observedTypes": [
         "integer"
+      ],
+      "fieldPaths": [
+        "summary.declared_product_count"
       ]
     },
     {
@@ -803,6 +998,9 @@
       ],
       "observedTypes": [
         "integer"
+      ],
+      "fieldPaths": [
+        "summary.degraded_dependency_count"
       ]
     },
     {
@@ -819,6 +1017,9 @@
       ],
       "observedTypes": [
         "array"
+      ],
+      "fieldPaths": [
+        "summary.degraded_dependency_products"
       ]
     },
     {
@@ -833,6 +1034,9 @@
       ],
       "observedTypes": [
         "integer"
+      ],
+      "fieldPaths": [
+        "metadata.calculation_supportability.degraded_metric_count"
       ]
     },
     {
@@ -854,6 +1058,26 @@
       ],
       "observedTypes": [
         "array"
+      ],
+      "fieldPaths": [
+        "dependencies"
+      ]
+    },
+    {
+      "semanticId": "lotus.dependency_runtime_status",
+      "canonicalTerm": "dependency_runtime_status",
+      "preferredName": "dependency_runtime_status",
+      "description": "Dependency runtime state.",
+      "example": "configured",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ],
+      "fieldPaths": [
+        "dependencies[].status"
       ]
     },
     {
@@ -876,6 +1100,9 @@
       ],
       "observedTypes": [
         "array"
+      ],
+      "fieldPaths": [
+        "products[].dependency_signals"
       ]
     },
     {
@@ -890,6 +1117,10 @@
       ],
       "observedTypes": [
         "object"
+      ],
+      "fieldPaths": [
+        "dependencies[].detail",
+        "products[].dependency_signals[].detail"
       ]
     },
     {
@@ -905,6 +1136,12 @@
       "observedTypes": [
         "object",
         "string"
+      ],
+      "fieldPaths": [
+        "exposure_components[].display_name",
+        "scenario_results[].display_name",
+        "scenario_results[].position_contributions[].display_name",
+        "display_name"
       ]
     },
     {
@@ -919,6 +1156,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "affected_portfolios[].dominant_bucket"
       ]
     },
     {
@@ -933,6 +1173,10 @@
       ],
       "observedTypes": [
         "boolean"
+      ],
+      "fieldPaths": [
+        "checks.draining",
+        "products[].draining"
       ]
     },
     {
@@ -947,6 +1191,10 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "analysis_options.duration_unit",
+        "metadata.duration_unit"
       ]
     },
     {
@@ -961,6 +1209,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "governance_evidence.effective_from"
       ]
     },
     {
@@ -975,6 +1226,9 @@
       ],
       "observedTypes": [
         "ScenarioPackEffectivePeriodStatus"
+      ],
+      "fieldPaths": [
+        "governance_evidence.effective_period_status"
       ]
     },
     {
@@ -989,6 +1243,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "governance_evidence.effective_to"
       ]
     },
     {
@@ -1003,6 +1260,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "products[].emitted_at"
       ]
     },
     {
@@ -1017,6 +1277,9 @@
       ],
       "observedTypes": [
         "integer"
+      ],
+      "fieldPaths": [
+        "metadata.calculation_supportability.empty_period_count"
       ]
     },
     {
@@ -1031,6 +1294,10 @@
       ],
       "observedTypes": [
         "boolean"
+      ],
+      "fieldPaths": [
+        "features[].enabled",
+        "workflows[].enabled"
       ]
     },
     {
@@ -1045,6 +1312,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "workflows[].endpoint_path"
       ]
     },
     {
@@ -1059,6 +1329,9 @@
       ],
       "observedTypes": [
         "EnrichmentPolicy"
+      ],
+      "fieldPaths": [
+        "enrichment_policy"
       ]
     },
     {
@@ -1073,6 +1346,9 @@
       ],
       "observedTypes": [
         "integer"
+      ],
+      "fieldPaths": [
+        "metadata.calculation_supportability.evaluated_period_count"
       ]
     },
     {
@@ -1095,6 +1371,9 @@
       ],
       "observedTypes": [
         "array"
+      ],
+      "fieldPaths": [
+        "excluded_portfolios"
       ]
     },
     {
@@ -1109,6 +1388,9 @@
       ],
       "observedTypes": [
         "number"
+      ],
+      "fieldPaths": [
+        "scenario_results[].expected_loss_pct"
       ]
     },
     {
@@ -1136,6 +1418,9 @@
       ],
       "observedTypes": [
         "array"
+      ],
+      "fieldPaths": [
+        "exposure_components"
       ]
     },
     {
@@ -1154,6 +1439,9 @@
       ],
       "observedTypes": [
         "object"
+      ],
+      "fieldPaths": [
+        "portfolios[].exposure_weights"
       ]
     },
     {
@@ -1181,6 +1469,9 @@
       ],
       "observedTypes": [
         "array"
+      ],
+      "fieldPaths": [
+        "exposures"
       ]
     },
     {
@@ -1195,6 +1486,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "declared_dependencies[].failure_posture"
       ]
     },
     {
@@ -1214,6 +1508,9 @@
       ],
       "observedTypes": [
         "array"
+      ],
+      "fieldPaths": [
+        "features"
       ]
     },
     {
@@ -1228,6 +1525,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "metadata.frequency"
       ]
     },
     {
@@ -1242,6 +1542,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "metadata.calculation_supportability.freshness_bucket"
       ]
     },
     {
@@ -1256,6 +1559,9 @@
       ],
       "observedTypes": [
         "object"
+      ],
+      "fieldPaths": [
+        "period.from_date"
       ]
     },
     {
@@ -1270,6 +1576,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "build.git_branch"
       ]
     },
     {
@@ -1284,6 +1593,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "build.git_commit_sha"
       ]
     },
     {
@@ -1300,6 +1612,9 @@
       ],
       "observedTypes": [
         "ScenarioPackGovernanceEvidence"
+      ],
+      "fieldPaths": [
+        "governance_evidence"
       ]
     },
     {
@@ -1314,6 +1629,26 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "health_state"
+      ]
+    },
+    {
+      "semanticId": "lotus.health_status",
+      "canonicalTerm": "health_status",
+      "preferredName": "health_status",
+      "description": "Health status indicator.",
+      "example": "ok",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ],
+      "fieldPaths": [
+        "status"
       ]
     },
     {
@@ -1328,6 +1663,10 @@
       ],
       "observedTypes": [
         "number"
+      ],
+      "fieldPaths": [
+        "risk_proxy.hhi_current",
+        "issuer_concentration.hhi_current"
       ]
     },
     {
@@ -1342,6 +1681,10 @@
       ],
       "observedTypes": [
         "number"
+      ],
+      "fieldPaths": [
+        "risk_proxy.hhi_delta",
+        "issuer_concentration.hhi_delta"
       ]
     },
     {
@@ -1356,6 +1699,10 @@
       ],
       "observedTypes": [
         "number"
+      ],
+      "fieldPaths": [
+        "risk_proxy.hhi_proposed",
+        "issuer_concentration.hhi_proposed"
       ]
     },
     {
@@ -1370,6 +1717,9 @@
       ],
       "observedTypes": [
         "object"
+      ],
+      "fieldPaths": [
+        "idempotency-key"
       ]
     },
     {
@@ -1384,6 +1734,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "build.image_digest"
       ]
     },
     {
@@ -1398,6 +1751,10 @@
       ],
       "observedTypes": [
         "number"
+      ],
+      "fieldPaths": [
+        "affected_portfolios[].impact_score",
+        "excluded_portfolios[].impact_score"
       ]
     },
     {
@@ -1413,6 +1770,10 @@
       "observedTypes": [
         "boolean",
         "object"
+      ],
+      "fieldPaths": [
+        "benchmark_policy.include_benchmark",
+        "metadata.include_benchmark"
       ]
     },
     {
@@ -1427,6 +1788,10 @@
       ],
       "observedTypes": [
         "boolean"
+      ],
+      "fieldPaths": [
+        "analysis_options.include_episode_list",
+        "metadata.include_episode_list"
       ]
     },
     {
@@ -1441,6 +1806,9 @@
       ],
       "observedTypes": [
         "boolean"
+      ],
+      "fieldPaths": [
+        "metadata.include_time_series"
       ]
     },
     {
@@ -1455,6 +1823,10 @@
       ],
       "observedTypes": [
         "boolean"
+      ],
+      "fieldPaths": [
+        "analysis_options.include_underwater_series",
+        "metadata.include_underwater_series"
       ]
     },
     {
@@ -1473,6 +1845,9 @@
         "RollingInputMode",
         "ConcentrationInputMode",
         "AttributionInputMode"
+      ],
+      "fieldPaths": [
+        "input_mode"
       ]
     },
     {
@@ -1487,6 +1862,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "input_mode_affordance_authority"
       ]
     },
     {
@@ -1505,6 +1883,9 @@
       ],
       "observedTypes": [
         "array"
+      ],
+      "fieldPaths": [
+        "input_modes"
       ]
     },
     {
@@ -1519,6 +1900,10 @@
       ],
       "observedTypes": [
         "object"
+      ],
+      "fieldPaths": [
+        "dependencies[].issue_code",
+        "products[].dependency_signals[].issue_code"
       ]
     },
     {
@@ -1535,6 +1920,9 @@
       ],
       "observedTypes": [
         "IssuerConcentration"
+      ],
+      "fieldPaths": [
+        "issuer_concentration"
       ]
     },
     {
@@ -1549,6 +1937,9 @@
       ],
       "observedTypes": [
         "IssuerGroupingLevel"
+      ],
+      "fieldPaths": [
+        "issuer_grouping_level"
       ]
     },
     {
@@ -1563,6 +1954,10 @@
       ],
       "observedTypes": [
         "object"
+      ],
+      "fieldPaths": [
+        "issuer_concentration.top_issuer_current.issuer_id",
+        "issuer_concentration.top_issuer_proposed.issuer_id"
       ]
     },
     {
@@ -1577,6 +1972,10 @@
       ],
       "observedTypes": [
         "object"
+      ],
+      "fieldPaths": [
+        "issuer_concentration.top_issuer_current.issuer_name",
+        "issuer_concentration.top_issuer_proposed.issuer_name"
       ]
     },
     {
@@ -1591,6 +1990,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "features[].key"
       ]
     },
     {
@@ -1605,6 +2007,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "products[].lifecycle_status"
       ]
     },
     {
@@ -1620,6 +2025,11 @@
       "observedTypes": [
         "object",
         "string"
+      ],
+      "fieldPaths": [
+        "products[].lineage_version",
+        "lineage_version",
+        "metadata.lineage_version"
       ]
     },
     {
@@ -1634,6 +2044,26 @@
       ],
       "observedTypes": [
         "boolean"
+      ],
+      "fieldPaths": [
+        "checks.live"
+      ]
+    },
+    {
+      "semanticId": "lotus.liveness_status",
+      "canonicalTerm": "liveness_status",
+      "preferredName": "liveness_status",
+      "description": "Liveness status indicator.",
+      "example": "live",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ],
+      "fieldPaths": [
+        "status"
       ]
     },
     {
@@ -1648,6 +2078,10 @@
       ],
       "observedTypes": [
         "object"
+      ],
+      "fieldPaths": [
+        "portfolios[].mandate_id",
+        "affected_portfolios[].mandate_id"
       ]
     },
     {
@@ -1662,6 +2096,9 @@
       ],
       "observedTypes": [
         "number"
+      ],
+      "fieldPaths": [
+        "metadata.mar_annual_rate"
       ]
     },
     {
@@ -1676,6 +2113,9 @@
       ],
       "observedTypes": [
         "number"
+      ],
+      "fieldPaths": [
+        "maximum_allowed_loss_pct"
       ]
     },
     {
@@ -1698,6 +2138,9 @@
         "RollingMetadata",
         "object",
         "HistoricalAttributionMetadata"
+      ],
+      "fieldPaths": [
+        "metadata"
       ]
     },
     {
@@ -1714,6 +2157,9 @@
       ],
       "observedTypes": [
         "MandateRiskHealthMethodologyPosture"
+      ],
+      "fieldPaths": [
+        "methodology_posture"
       ]
     },
     {
@@ -1728,6 +2174,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "governance_evidence.methodology_ref"
       ]
     },
     {
@@ -1742,6 +2191,10 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "methodology_posture.methodology_version",
+        "metadata.methodology_version"
       ]
     },
     {
@@ -1761,6 +2214,9 @@
       ],
       "observedTypes": [
         "array"
+      ],
+      "fieldPaths": [
+        "metadata.calculation_supportability.metric_labels"
       ]
     },
     {
@@ -1775,6 +2231,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "source_metric.metric_name"
       ]
     },
     {
@@ -1789,6 +2248,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "metadata.min_observations_policy"
       ]
     },
     {
@@ -1803,6 +2265,10 @@
       ],
       "observedTypes": [
         "number"
+      ],
+      "fieldPaths": [
+        "analysis_options.minimum_episode_depth_bps",
+        "metadata.minimum_episode_depth_bps"
       ]
     },
     {
@@ -1817,6 +2283,9 @@
       ],
       "observedTypes": [
         "number"
+      ],
+      "fieldPaths": [
+        "minimum_impact_score"
       ]
     },
     {
@@ -1832,6 +2301,10 @@
       "observedTypes": [
         "string",
         "object"
+      ],
+      "fieldPaths": [
+        "benchmark_policy.missing_benchmark_policy",
+        "metadata.missing_benchmark_policy"
       ]
     },
     {
@@ -1846,6 +2319,9 @@
       ],
       "observedTypes": [
         "integer"
+      ],
+      "fieldPaths": [
+        "summary.missing_runtime_service_count"
       ]
     },
     {
@@ -1860,6 +2336,9 @@
       ],
       "observedTypes": [
         "array"
+      ],
+      "fieldPaths": [
+        "summary.missing_runtime_services"
       ]
     },
     {
@@ -1874,6 +2353,9 @@
       ],
       "observedTypes": [
         "object"
+      ],
+      "fieldPaths": [
+        "period.name"
       ]
     },
     {
@@ -1888,6 +2370,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "scope.net_or_gross"
       ]
     },
     {
@@ -1902,6 +2387,9 @@
       ],
       "observedTypes": [
         "object"
+      ],
+      "fieldPaths": [
+        "issuer_concentration.note"
       ]
     },
     {
@@ -1919,13 +2407,16 @@
       ],
       "observedTypes": [
         "array"
+      ],
+      "fieldPaths": [
+        "workflows[].notes"
       ]
     },
     {
       "semanticId": "lotus.ops_status",
       "canonicalTerm": "ops_status",
       "preferredName": "ops_status",
-      "description": "Current service operations posture used as raw input for future certification.",
+      "description": "Overall operational status.",
       "example": "ok",
       "type": "string",
       "locations": [
@@ -1933,6 +2424,10 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "status",
+        "products[].ops_status"
       ]
     },
     {
@@ -1949,6 +2444,9 @@
       ],
       "observedTypes": [
         "RiskRequestPeriod"
+      ],
+      "fieldPaths": [
+        "period"
       ]
     },
     {
@@ -1963,6 +2461,26 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "period_name"
+      ]
+    },
+    {
+      "semanticId": "lotus.period_type",
+      "canonicalTerm": "period_type",
+      "preferredName": "period_type",
+      "description": "Period type used for metric aggregation. Prefer canonical values EXPLICIT, YEAR, MTD, QTD, YTD, 1Y, 3Y, 5Y, and SI. Legacy aliases ONE_YEAR, THREE_YEAR, FIVE_YEAR, and ITD are accepted and normalized.",
+      "example": "3Y",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ],
+      "fieldPaths": [
+        "period.type"
       ]
     },
     {
@@ -1977,6 +2495,9 @@
       ],
       "observedTypes": [
         "number"
+      ],
+      "fieldPaths": [
+        "metadata.risk_free_context.periodic_rate"
       ]
     },
     {
@@ -1991,6 +2512,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "policy_version"
       ]
     },
     {
@@ -2005,6 +2529,9 @@
       ],
       "observedTypes": [
         "object"
+      ],
+      "fieldPaths": [
+        "governance_evidence.portfolio_applicability_ref"
       ]
     },
     {
@@ -2020,6 +2547,12 @@
       "observedTypes": [
         "string",
         "object"
+      ],
+      "fieldPaths": [
+        "portfolio_id",
+        "portfolios[].portfolio_id",
+        "affected_portfolios[].portfolio_id",
+        "excluded_portfolios[].portfolio_id"
       ]
     },
     {
@@ -2034,6 +2567,10 @@
       ],
       "observedTypes": [
         "object"
+      ],
+      "fieldPaths": [
+        "portfolios[].portfolio_manager_id",
+        "affected_portfolios[].portfolio_manager_id"
       ]
     },
     {
@@ -2048,6 +2585,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "portfolio_open_date"
       ]
     },
     {
@@ -2073,6 +2613,9 @@
       ],
       "observedTypes": [
         "array"
+      ],
+      "fieldPaths": [
+        "portfolios"
       ]
     },
     {
@@ -2096,6 +2639,9 @@
       ],
       "observedTypes": [
         "array"
+      ],
+      "fieldPaths": [
+        "scenario_results[].position_contributions"
       ]
     },
     {
@@ -2110,6 +2656,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "declared_dependencies[].producer_repository"
       ]
     },
     {
@@ -2124,6 +2673,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "products[].product_family"
       ]
     },
     {
@@ -2138,6 +2690,12 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "declared_dependencies[].product_name",
+        "products[].product_name",
+        "product_name",
+        "metadata.product_name"
       ]
     },
     {
@@ -2152,6 +2710,11 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "products[].product_version",
+        "product_version",
+        "metadata.product_version"
       ]
     },
     {
@@ -2209,13 +2772,16 @@
       ],
       "observedTypes": [
         "array"
+      ],
+      "fieldPaths": [
+        "products"
       ]
     },
     {
       "semanticId": "lotus.readiness_status",
       "canonicalTerm": "readiness_status",
       "preferredName": "readiness_status",
-      "description": "Current service readiness posture used as raw input for future certification.",
+      "description": "Readiness state.",
       "example": "ready",
       "type": "string",
       "locations": [
@@ -2223,6 +2789,10 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "status",
+        "products[].readiness_status"
       ]
     },
     {
@@ -2237,20 +2807,9 @@
       ],
       "observedTypes": [
         "boolean"
-      ]
-    },
-    {
-      "semanticId": "lotus.reason",
-      "canonicalTerm": "reason",
-      "preferredName": "reason",
-      "description": "Deterministic explanation of how risk-free configuration affected this response.",
-      "example": "ANNUAL_RATE_APPLIED",
-      "type": "string",
-      "locations": [
-        "body"
       ],
-      "observedTypes": [
-        "string"
+      "fieldPaths": [
+        "checks.ready"
       ]
     },
     {
@@ -2268,6 +2827,11 @@
       ],
       "observedTypes": [
         "array"
+      ],
+      "fieldPaths": [
+        "reason_codes",
+        "affected_portfolios[].reason_codes",
+        "excluded_portfolios[].reason_codes"
       ]
     },
     {
@@ -2282,6 +2846,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "build.repo_url"
       ]
     },
     {
@@ -2296,6 +2863,9 @@
       ],
       "observedTypes": [
         "object"
+      ],
+      "fieldPaths": [
+        "scope.reporting_currency"
       ]
     },
     {
@@ -2311,6 +2881,11 @@
       "observedTypes": [
         "object",
         "string"
+      ],
+      "fieldPaths": [
+        "products[].request_fingerprint",
+        "request_fingerprint",
+        "metadata.request_fingerprint"
       ]
     },
     {
@@ -2325,6 +2900,10 @@
       ],
       "observedTypes": [
         "boolean"
+      ],
+      "fieldPaths": [
+        "metadata.risk_free_context.requested",
+        "metadata.benchmark_context.requested"
       ]
     },
     {
@@ -2342,6 +2921,9 @@
       ],
       "observedTypes": [
         "array"
+      ],
+      "fieldPaths": [
+        "metadata.requested_attribution_types"
       ]
     },
     {
@@ -2359,6 +2941,9 @@
       ],
       "observedTypes": [
         "array"
+      ],
+      "fieldPaths": [
+        "metadata.requested_grouping_dimensions"
       ]
     },
     {
@@ -2377,6 +2962,11 @@
       ],
       "observedTypes": [
         "array"
+      ],
+      "fieldPaths": [
+        "metadata.benchmark_context.requested_metrics",
+        "metadata.requested_metrics",
+        "metadata.risk_free_context.requested_metrics"
       ]
     },
     {
@@ -2391,6 +2981,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "declared_dependencies[].required_product_version"
       ]
     },
     {
@@ -2409,6 +3002,10 @@
       ],
       "observedTypes": [
         "array"
+      ],
+      "fieldPaths": [
+        "declared_dependencies[].required_trust_metadata",
+        "products[].required_trust_metadata"
       ]
     },
     {
@@ -2448,6 +3045,9 @@
       ],
       "observedTypes": [
         "object"
+      ],
+      "fieldPaths": [
+        "results"
       ]
     },
     {
@@ -2467,6 +3067,9 @@
       ],
       "observedTypes": [
         "array"
+      ],
+      "fieldPaths": [
+        "returns"
       ]
     },
     {
@@ -2481,6 +3084,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "risk_event_id"
       ]
     },
     {
@@ -2495,6 +3101,9 @@
       ],
       "observedTypes": [
         "object"
+      ],
+      "fieldPaths": [
+        "metadata.risk_free_annual_rate"
       ]
     },
     {
@@ -2512,6 +3121,26 @@
       "observedTypes": [
         "RiskFreeContext",
         "RollingRequestDependencyContext"
+      ],
+      "fieldPaths": [
+        "metadata.risk_free_context"
+      ]
+    },
+    {
+      "semanticId": "lotus.risk_free_context_reason",
+      "canonicalTerm": "risk_free_context_reason",
+      "preferredName": "risk_free_context_reason",
+      "description": "Deterministic explanation of how risk-free configuration affected this response.",
+      "example": "ANNUAL_RATE_APPLIED",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ],
+      "fieldPaths": [
+        "metadata.risk_free_context.reason"
       ]
     },
     {
@@ -2526,6 +3155,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "metadata.risk_free_mode"
       ]
     },
     {
@@ -2542,6 +3174,9 @@
       ],
       "observedTypes": [
         "ConcentrationRiskProxy"
+      ],
+      "fieldPaths": [
+        "risk_proxy"
       ]
     },
     {
@@ -2556,6 +3191,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "rounding_policy_version"
       ]
     },
     {
@@ -2570,6 +3208,9 @@
       ],
       "observedTypes": [
         "object"
+      ],
+      "fieldPaths": [
+        "declared_dependencies[].runtime_category"
       ]
     },
     {
@@ -2584,6 +3225,9 @@
       ],
       "observedTypes": [
         "object"
+      ],
+      "fieldPaths": [
+        "declared_dependencies[].runtime_detail"
       ]
     },
     {
@@ -2598,6 +3242,9 @@
       ],
       "observedTypes": [
         "object"
+      ],
+      "fieldPaths": [
+        "declared_dependencies[].runtime_issue_code"
       ]
     },
     {
@@ -2612,6 +3259,9 @@
       ],
       "observedTypes": [
         "object"
+      ],
+      "fieldPaths": [
+        "declared_dependencies[].runtime_status"
       ]
     },
     {
@@ -2626,6 +3276,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "scenario_results[].scenario_id"
       ]
     },
     {
@@ -2640,6 +3293,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "scenario_pack_id"
       ]
     },
     {
@@ -2674,6 +3330,9 @@
       ],
       "observedTypes": [
         "array"
+      ],
+      "fieldPaths": [
+        "scenario_results"
       ]
     },
     {
@@ -2690,6 +3349,9 @@
       ],
       "observedTypes": [
         "RiskRequestScope"
+      ],
+      "fieldPaths": [
+        "scope"
       ]
     },
     {
@@ -2705,6 +3367,12 @@
       "observedTypes": [
         "string",
         "object"
+      ],
+      "fieldPaths": [
+        "exposure_components[].security_id",
+        "scenario_results[].position_contributions[].security_id",
+        "single_position_concentration.top_position_current.security_id",
+        "single_position_concentration.top_position_proposed.security_id"
       ]
     },
     {
@@ -2719,6 +3387,10 @@
       ],
       "observedTypes": [
         "object"
+      ],
+      "fieldPaths": [
+        "single_position_concentration.top_position_current.security_name",
+        "single_position_concentration.top_position_proposed.security_name"
       ]
     },
     {
@@ -2733,6 +3405,11 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "service",
+        "dependencies[].service",
+        "products[].dependency_signals[].service"
       ]
     },
     {
@@ -2750,6 +3427,9 @@
       ],
       "observedTypes": [
         "object"
+      ],
+      "fieldPaths": [
+        "scenario_results[].shock_by_bucket"
       ]
     },
     {
@@ -2764,6 +3444,9 @@
       ],
       "observedTypes": [
         "number"
+      ],
+      "fieldPaths": [
+        "scenario_results[].position_contributions[].shock_pct"
       ]
     },
     {
@@ -2791,6 +3474,9 @@
       ],
       "observedTypes": [
         "object"
+      ],
+      "fieldPaths": [
+        "simulation_input"
       ]
     },
     {
@@ -2807,6 +3493,9 @@
       ],
       "observedTypes": [
         "SinglePositionConcentration"
+      ],
+      "fieldPaths": [
+        "single_position_concentration"
       ]
     },
     {
@@ -2823,6 +3512,9 @@
       ],
       "observedTypes": [
         "MandateRiskHealthSourceMetric"
+      ],
+      "fieldPaths": [
+        "source_metric"
       ]
     },
     {
@@ -2837,6 +3529,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "methodology_posture.source_metrics_product"
       ]
     },
     {
@@ -2851,6 +3546,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "methodology_posture.source_product_name"
       ]
     },
     {
@@ -2865,6 +3563,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "methodology_posture.source_product_version"
       ]
     },
     {
@@ -2879,6 +3580,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "affected_portfolios[].source_ref"
       ]
     },
     {
@@ -2893,6 +3597,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "source_request_fingerprint"
       ]
     },
     {
@@ -2907,6 +3614,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "methodology_posture.source_route"
       ]
     },
     {
@@ -2921,6 +3631,11 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "source_service",
+        "methodology_posture.source_service",
+        "metadata.source_service"
       ]
     },
     {
@@ -2938,20 +3653,11 @@
       ],
       "observedTypes": [
         "array"
-      ]
-    },
-    {
-      "semanticId": "lotus.state",
-      "canonicalTerm": "state",
-      "preferredName": "state",
-      "description": "Bounded supportability state for the risk calculation payload.",
-      "example": "ready",
-      "type": "string",
-      "locations": [
-        "body"
       ],
-      "observedTypes": [
-        "string"
+      "fieldPaths": [
+        "products[].source_services",
+        "source_services",
+        "metadata.source_services"
       ]
     },
     {
@@ -2966,6 +3672,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "metadata.stateful_active_risk_gate_reason"
       ]
     },
     {
@@ -2980,6 +3689,9 @@
       ],
       "observedTypes": [
         "array"
+      ],
+      "fieldPaths": [
+        "metadata.stateful_active_risk_gated_grouping_dimensions"
       ]
     },
     {
@@ -2999,6 +3711,9 @@
       ],
       "observedTypes": [
         "array"
+      ],
+      "fieldPaths": [
+        "metadata.stateful_active_risk_supported_grouping_dimensions"
       ]
     },
     {
@@ -3042,6 +3757,9 @@
       ],
       "observedTypes": [
         "object"
+      ],
+      "fieldPaths": [
+        "stateful_input"
       ]
     },
     {
@@ -3079,20 +3797,9 @@
       ],
       "observedTypes": [
         "object"
-      ]
-    },
-    {
-      "semanticId": "lotus.status",
-      "canonicalTerm": "status",
-      "preferredName": "status",
-      "description": "Health status indicator.",
-      "example": "ok",
-      "type": "string",
-      "locations": [
-        "body"
       ],
-      "observedTypes": [
-        "string"
+      "fieldPaths": [
+        "stateless_input"
       ]
     },
     {
@@ -3109,6 +3816,9 @@
       ],
       "observedTypes": [
         "TrustTelemetryReviewSummary"
+      ],
+      "fieldPaths": [
+        "summary"
       ]
     },
     {
@@ -3123,6 +3833,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "workflows[].support_status"
       ]
     },
     {
@@ -3141,6 +3854,10 @@
       ],
       "observedTypes": [
         "array"
+      ],
+      "fieldPaths": [
+        "supported_input_modes",
+        "workflows[].supported_input_modes"
       ]
     },
     {
@@ -3155,6 +3872,9 @@
       ],
       "observedTypes": [
         "object"
+      ],
+      "fieldPaths": [
+        "threshold_breached"
       ]
     },
     {
@@ -3169,6 +3889,9 @@
       ],
       "observedTypes": [
         "object"
+      ],
+      "fieldPaths": [
+        "period.to_date"
       ]
     },
     {
@@ -3185,6 +3908,9 @@
       ],
       "observedTypes": [
         "TopIssuerDriver"
+      ],
+      "fieldPaths": [
+        "issuer_concentration.top_issuer_current"
       ]
     },
     {
@@ -3201,6 +3927,9 @@
       ],
       "observedTypes": [
         "TopIssuerDriver"
+      ],
+      "fieldPaths": [
+        "issuer_concentration.top_issuer_proposed"
       ]
     },
     {
@@ -3215,6 +3944,9 @@
       ],
       "observedTypes": [
         "number"
+      ],
+      "fieldPaths": [
+        "issuer_concentration.top_issuer_weight_current"
       ]
     },
     {
@@ -3229,6 +3961,9 @@
       ],
       "observedTypes": [
         "number"
+      ],
+      "fieldPaths": [
+        "issuer_concentration.top_issuer_weight_delta"
       ]
     },
     {
@@ -3243,6 +3978,9 @@
       ],
       "observedTypes": [
         "number"
+      ],
+      "fieldPaths": [
+        "issuer_concentration.top_issuer_weight_proposed"
       ]
     },
     {
@@ -3257,6 +3995,9 @@
       ],
       "observedTypes": [
         "integer"
+      ],
+      "fieldPaths": [
+        "single_position_concentration.top_n"
       ]
     },
     {
@@ -3271,6 +4012,9 @@
       ],
       "observedTypes": [
         "number"
+      ],
+      "fieldPaths": [
+        "single_position_concentration.top_n_cumulative_weight_current"
       ]
     },
     {
@@ -3285,6 +4029,9 @@
       ],
       "observedTypes": [
         "number"
+      ],
+      "fieldPaths": [
+        "single_position_concentration.top_n_cumulative_weight_delta"
       ]
     },
     {
@@ -3299,6 +4046,9 @@
       ],
       "observedTypes": [
         "number"
+      ],
+      "fieldPaths": [
+        "single_position_concentration.top_n_cumulative_weight_proposed"
       ]
     },
     {
@@ -3313,6 +4063,10 @@
       ],
       "observedTypes": [
         "integer"
+      ],
+      "fieldPaths": [
+        "analysis_options.top_n_episodes",
+        "metadata.top_n_episodes"
       ]
     },
     {
@@ -3329,6 +4083,9 @@
       ],
       "observedTypes": [
         "TopPositionDriver"
+      ],
+      "fieldPaths": [
+        "single_position_concentration.top_position_current"
       ]
     },
     {
@@ -3345,6 +4102,9 @@
       ],
       "observedTypes": [
         "TopPositionDriver"
+      ],
+      "fieldPaths": [
+        "single_position_concentration.top_position_proposed"
       ]
     },
     {
@@ -3359,6 +4119,9 @@
       ],
       "observedTypes": [
         "number"
+      ],
+      "fieldPaths": [
+        "single_position_concentration.top_position_weight_current"
       ]
     },
     {
@@ -3373,6 +4136,9 @@
       ],
       "observedTypes": [
         "number"
+      ],
+      "fieldPaths": [
+        "single_position_concentration.top_position_weight_delta"
       ]
     },
     {
@@ -3387,6 +4153,9 @@
       ],
       "observedTypes": [
         "number"
+      ],
+      "fieldPaths": [
+        "single_position_concentration.top_position_weight_proposed"
       ]
     },
     {
@@ -3401,6 +4170,9 @@
       ],
       "observedTypes": [
         "integer"
+      ],
+      "fieldPaths": [
+        "issuer_concentration.total_position_count_current"
       ]
     },
     {
@@ -3415,6 +4187,9 @@
       ],
       "observedTypes": [
         "integer"
+      ],
+      "fieldPaths": [
+        "issuer_concentration.total_position_count_proposed"
       ]
     },
     {
@@ -3430,20 +4205,26 @@
       "observedTypes": [
         "object",
         "string"
+      ],
+      "fieldPaths": [
+        "tracking_error_attention_threshold"
       ]
     },
     {
-      "semanticId": "lotus.type",
-      "canonicalTerm": "type",
-      "preferredName": "type",
-      "description": "Period type used for metric aggregation. Prefer canonical values EXPLICIT, YEAR, MTD, QTD, YTD, 1Y, 3Y, 5Y, and SI. Legacy aliases ONE_YEAR, THREE_YEAR, FIVE_YEAR, and ITD are accepted and normalized.",
-      "example": "3Y",
+      "semanticId": "lotus.trust_dependency_status",
+      "canonicalTerm": "trust_dependency_status",
+      "preferredName": "trust_dependency_status",
+      "description": "Current dependency runtime state observed by lotus-risk.",
+      "example": "ok",
       "type": "string",
       "locations": [
         "body"
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "products[].dependency_signals[].status"
       ]
     },
     {
@@ -3458,6 +4239,9 @@
       ],
       "observedTypes": [
         "integer"
+      ],
+      "fieldPaths": [
+        "summary.unavailable_dependency_count"
       ]
     },
     {
@@ -3472,6 +4256,9 @@
       ],
       "observedTypes": [
         "array"
+      ],
+      "fieldPaths": [
+        "summary.unavailable_dependency_products"
       ]
     },
     {
@@ -3486,6 +4273,9 @@
       ],
       "observedTypes": [
         "integer"
+      ],
+      "fieldPaths": [
+        "issuer_concentration.uncovered_position_count_current"
       ]
     },
     {
@@ -3500,6 +4290,9 @@
       ],
       "observedTypes": [
         "integer"
+      ],
+      "fieldPaths": [
+        "issuer_concentration.uncovered_position_count_proposed"
       ]
     },
     {
@@ -3516,6 +4309,11 @@
       ],
       "observedTypes": [
         "object"
+      ],
+      "fieldPaths": [
+        "products[].upstream_request_fingerprints",
+        "upstream_request_fingerprints",
+        "metadata.upstream_request_fingerprints"
       ]
     },
     {
@@ -3530,6 +4328,9 @@
       ],
       "observedTypes": [
         "boolean"
+      ],
+      "fieldPaths": [
+        "metadata.use_log_returns"
       ]
     },
     {
@@ -3547,6 +4348,9 @@
       ],
       "observedTypes": [
         "array"
+      ],
+      "fieldPaths": [
+        "declared_dependencies[].validation_lanes"
       ]
     },
     {
@@ -3566,6 +4370,9 @@
       ],
       "observedTypes": [
         "object"
+      ],
+      "fieldPaths": [
+        "valuation_context"
       ]
     },
     {
@@ -3580,6 +4387,10 @@
       ],
       "observedTypes": [
         "number"
+      ],
+      "fieldPaths": [
+        "returns[].value",
+        "benchmark_returns[].value"
       ]
     },
     {
@@ -3594,6 +4405,9 @@
       ],
       "observedTypes": [
         "number"
+      ],
+      "fieldPaths": [
+        "metadata.var_confidence"
       ]
     },
     {
@@ -3608,6 +4422,9 @@
       ],
       "observedTypes": [
         "integer"
+      ],
+      "fieldPaths": [
+        "metadata.var_horizon_days"
       ]
     },
     {
@@ -3622,6 +4439,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "metadata.var_method"
       ]
     },
     {
@@ -3636,6 +4456,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "version"
       ]
     },
     {
@@ -3650,6 +4473,15 @@
       ],
       "observedTypes": [
         "number"
+      ],
+      "fieldPaths": [
+        "exposures[].weight",
+        "exposure_components[].weight",
+        "scenario_results[].position_contributions[].weight",
+        "single_position_concentration.top_position_current.weight",
+        "single_position_concentration.top_position_proposed.weight",
+        "issuer_concentration.top_issuer_current.weight",
+        "issuer_concentration.top_issuer_proposed.weight"
       ]
     },
     {
@@ -3664,6 +4496,9 @@
       ],
       "observedTypes": [
         "integer"
+      ],
+      "fieldPaths": [
+        "metadata.window_count_requested"
       ]
     },
     {
@@ -3682,6 +4517,9 @@
       ],
       "observedTypes": [
         "array"
+      ],
+      "fieldPaths": [
+        "metadata.window_lengths_requested"
       ]
     },
     {
@@ -3696,6 +4534,9 @@
       ],
       "observedTypes": [
         "string"
+      ],
+      "fieldPaths": [
+        "workflows[].workflow_key"
       ]
     },
     {
@@ -3724,6 +4565,9 @@
       ],
       "observedTypes": [
         "array"
+      ],
+      "fieldPaths": [
+        "workflows"
       ]
     },
     {
@@ -3738,6 +4582,9 @@
       ],
       "observedTypes": [
         "number"
+      ],
+      "fieldPaths": [
+        "worst_case_loss_pct"
       ]
     },
     {
@@ -3752,6 +4599,9 @@
       ],
       "observedTypes": [
         "object"
+      ],
+      "fieldPaths": [
+        "period.year"
       ]
     }
   ],
@@ -3786,8 +4636,8 @@
             "location": "body",
             "required": true,
             "type": "string",
-            "semanticId": "lotus.status",
-            "attributeRef": "#/attributeCatalog/lotus.status"
+            "semanticId": "lotus.health_status",
+            "attributeRef": "#/attributeCatalog/lotus.health_status"
           },
           {
             "name": "service",
@@ -3816,8 +4666,8 @@
             "location": "body",
             "required": true,
             "type": "string",
-            "semanticId": "lotus.status",
-            "attributeRef": "#/attributeCatalog/lotus.status"
+            "semanticId": "lotus.liveness_status",
+            "attributeRef": "#/attributeCatalog/lotus.liveness_status"
           }
         ]
       }
@@ -3838,8 +4688,8 @@
             "location": "body",
             "required": true,
             "type": "string",
-            "semanticId": "lotus.status",
-            "attributeRef": "#/attributeCatalog/lotus.status"
+            "semanticId": "lotus.readiness_status",
+            "attributeRef": "#/attributeCatalog/lotus.readiness_status"
           },
           {
             "name": "dependencies",
@@ -3870,8 +4720,8 @@
             "location": "body",
             "required": true,
             "type": "string",
-            "semanticId": "lotus.status",
-            "attributeRef": "#/attributeCatalog/lotus.status"
+            "semanticId": "lotus.dependency_runtime_status",
+            "attributeRef": "#/attributeCatalog/lotus.dependency_runtime_status"
           },
           {
             "name": "dependencies[].detail",
@@ -4120,8 +4970,8 @@
             "location": "body",
             "required": true,
             "type": "string",
-            "semanticId": "lotus.status",
-            "attributeRef": "#/attributeCatalog/lotus.status"
+            "semanticId": "lotus.ops_status",
+            "attributeRef": "#/attributeCatalog/lotus.ops_status"
           },
           {
             "name": "checks",
@@ -4192,8 +5042,8 @@
             "location": "body",
             "required": true,
             "type": "string",
-            "semanticId": "lotus.status",
-            "attributeRef": "#/attributeCatalog/lotus.status"
+            "semanticId": "lotus.dependency_runtime_status",
+            "attributeRef": "#/attributeCatalog/lotus.dependency_runtime_status"
           },
           {
             "name": "dependencies[].detail",
@@ -4598,8 +5448,8 @@
             "location": "body",
             "required": true,
             "type": "string",
-            "semanticId": "lotus.status",
-            "attributeRef": "#/attributeCatalog/lotus.status"
+            "semanticId": "lotus.trust_dependency_status",
+            "attributeRef": "#/attributeCatalog/lotus.trust_dependency_status"
           },
           {
             "name": "products[].dependency_signals[].detail",
@@ -4828,8 +5678,8 @@
             "location": "body",
             "required": true,
             "type": "string",
-            "semanticId": "lotus.type",
-            "attributeRef": "#/attributeCatalog/lotus.type"
+            "semanticId": "lotus.period_type",
+            "attributeRef": "#/attributeCatalog/lotus.period_type"
           },
           {
             "name": "period.name",
@@ -6093,8 +6943,8 @@
             "location": "body",
             "required": false,
             "type": "string",
-            "semanticId": "lotus.reason",
-            "attributeRef": "#/attributeCatalog/lotus.reason"
+            "semanticId": "lotus.risk_free_context_reason",
+            "attributeRef": "#/attributeCatalog/lotus.risk_free_context_reason"
           },
           {
             "name": "metadata.risk_free_context.periodic_rate",
@@ -6141,16 +6991,16 @@
             "location": "body",
             "required": true,
             "type": "string",
-            "semanticId": "lotus.state",
-            "attributeRef": "#/attributeCatalog/lotus.state"
+            "semanticId": "lotus.calculation_supportability_state",
+            "attributeRef": "#/attributeCatalog/lotus.calculation_supportability_state"
           },
           {
             "name": "metadata.calculation_supportability.reason",
             "location": "body",
             "required": true,
             "type": "string",
-            "semanticId": "lotus.reason",
-            "attributeRef": "#/attributeCatalog/lotus.reason"
+            "semanticId": "lotus.calculation_supportability_reason",
+            "attributeRef": "#/attributeCatalog/lotus.calculation_supportability_reason"
           },
           {
             "name": "metadata.calculation_supportability.freshness_bucket",
@@ -6556,16 +7406,16 @@
             "location": "body",
             "required": true,
             "type": "string",
-            "semanticId": "lotus.state",
-            "attributeRef": "#/attributeCatalog/lotus.state"
+            "semanticId": "lotus.calculation_supportability_state",
+            "attributeRef": "#/attributeCatalog/lotus.calculation_supportability_state"
           },
           {
             "name": "metadata.calculation_supportability.reason",
             "location": "body",
             "required": true,
             "type": "string",
-            "semanticId": "lotus.reason",
-            "attributeRef": "#/attributeCatalog/lotus.reason"
+            "semanticId": "lotus.calculation_supportability_reason",
+            "attributeRef": "#/attributeCatalog/lotus.calculation_supportability_reason"
           },
           {
             "name": "metadata.calculation_supportability.freshness_bucket",
@@ -6891,16 +7741,16 @@
             "location": "body",
             "required": true,
             "type": "string",
-            "semanticId": "lotus.state",
-            "attributeRef": "#/attributeCatalog/lotus.state"
+            "semanticId": "lotus.calculation_supportability_state",
+            "attributeRef": "#/attributeCatalog/lotus.calculation_supportability_state"
           },
           {
             "name": "metadata.calculation_supportability.reason",
             "location": "body",
             "required": true,
             "type": "string",
-            "semanticId": "lotus.reason",
-            "attributeRef": "#/attributeCatalog/lotus.reason"
+            "semanticId": "lotus.calculation_supportability_reason",
+            "attributeRef": "#/attributeCatalog/lotus.calculation_supportability_reason"
           },
           {
             "name": "metadata.calculation_supportability.freshness_bucket",
@@ -7665,16 +8515,16 @@
             "location": "body",
             "required": true,
             "type": "string",
-            "semanticId": "lotus.state",
-            "attributeRef": "#/attributeCatalog/lotus.state"
+            "semanticId": "lotus.calculation_supportability_state",
+            "attributeRef": "#/attributeCatalog/lotus.calculation_supportability_state"
           },
           {
             "name": "metadata.calculation_supportability.reason",
             "location": "body",
             "required": true,
             "type": "string",
-            "semanticId": "lotus.reason",
-            "attributeRef": "#/attributeCatalog/lotus.reason"
+            "semanticId": "lotus.calculation_supportability_reason",
+            "attributeRef": "#/attributeCatalog/lotus.calculation_supportability_reason"
           },
           {
             "name": "metadata.calculation_supportability.freshness_bucket",
