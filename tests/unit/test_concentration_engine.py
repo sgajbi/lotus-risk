@@ -122,7 +122,7 @@ async def test_calculate_concentration_stateless_uses_projected_values_when_prov
         "calculation_supportability": {
             "state": "ready",
             "reason": "calculation_complete",
-            "freshness_bucket": "unknown",
+            "freshness_bucket": "current",
             "metric_labels": RISK_CALCULATION_SUPPORTABILITY_METRIC_LABELS,
             "degraded_metric_count": 0,
             "empty_period_count": 0,

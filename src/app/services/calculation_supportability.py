@@ -199,7 +199,7 @@ def supportability_from_concentration_response(
     return RiskCalculationSupportability(
         state="ready",
         reason="calculation_complete",
-        freshness_bucket="unknown",
+        freshness_bucket="current",
         evaluated_period_count=1,
     )
 
