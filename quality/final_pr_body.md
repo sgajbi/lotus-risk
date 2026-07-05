@@ -44,8 +44,8 @@ Measured highlights:
 - Largest behavior units: `calculate_risk` was `284` lines, `calculate_rolling_metrics` was `230`
   lines, and `LotusPerformanceClient` was `256` lines; largest remaining function is
   `_issuer_concentration` at `37` lines and `LotusPerformanceClient` is `52` lines.
-- Latest generated baseline records `244` Python source files, `103` Python test files, `347`
-  mypy-checked source files, and `554` unit tests.
+- Latest `make check` records `656` unit tests across `112` Python test files; the authoritative
+  current scorecard is `quality/quality_scorecard.md`.
 - Current baseline reports no C-or-worse cyclomatic-complexity candidates.
 - Source-size gate enforces the current `450` line ceiling.
 
@@ -64,17 +64,18 @@ Measured highlights:
 
 - Operation IDs, tags, summaries, descriptions, request examples, standard error examples, and
   duplicate operation ID checks are governed by `make openapi-gate`.
-- `make openapi-artifact-gate` exports `output/openapi/lotus-risk.openapi.json`.
-- OpenAPI artifact evidence is recorded in `quality/openapi_artifact_evidence.md`.
-- Current artifact evidence: OpenAPI `3.1.0`, `16` paths, `16` operations, SHA-256
-  `9FA31D518B37B95A4F73079A7393ADDF81A041F8BDA4309CA23D5D42598055F8`.
+- `make openapi-artifact-gate` exports `output/openapi/lotus-risk.openapi.json` and generated
+  evidence manifests under `output/openapi/`.
+- OpenAPI artifact evidence contract is recorded in `quality/openapi_artifact_evidence.md`; exact
+  branch, commit, timestamp, checksum, size, path count, operation count, repository URL, and CI run
+  identity come from `output/openapi/lotus-risk.openapi.evidence.json`.
 
 # Testing Improvements
 
 - Unit coverage now protects app factory wiring, router extraction, downstream boundaries, OpenAPI
   governance, enterprise readiness, error mapping, observability contracts, and core analytics
   behavior.
-- Local `make check` passed with `554` unit tests.
+- Local `make check` passed with `656` unit tests.
 - PR merge gate runs unit, integration, and e2e suites with combined coverage enforcement.
 
 # Security Improvements
@@ -130,7 +131,7 @@ Latest local results:
 
 - `make check`: passed, including lint, format check, no-alias guard, typecheck, OpenAPI gate,
   OpenAPI artifact gate, API vocabulary gate, mesh contract validation, source-size gate, and
-  `554` unit tests.
+  `656` unit tests.
 - `make security-audit`: passed with `Known vulnerabilities: 0`.
 - Latest pushed branch checks before PR creation:
   - `Quality Baseline`: success.
@@ -138,9 +139,8 @@ Latest local results:
 
 PR evidence after opening:
 
-- `Pull Request Merge Gate` passed on PR #149.
 - Attach or reference `output/openapi/lotus-risk.openapi.json` using
-  `quality/openapi_artifact_evidence.md` as the checksum manifest.
+  `output/openapi/lotus-risk.openapi.evidence.json` as the checksum manifest.
 
 # Known Limitations
 
@@ -176,11 +176,13 @@ PR evidence after opening:
 
 # Post-Merge Hygiene
 
-- [x] Delete remote feature branch.
-- [x] Delete local feature branch.
-- [x] Sync local `main` with `origin/main`.
-- [x] Publish repo-authored wiki source to the GitHub wiki target.
+- [ ] Delete remote feature branch.
+- [ ] Delete local feature branch.
+- [ ] Sync local `main` with `origin/main`.
+- [ ] Publish repo-authored wiki source to the GitHub wiki target.
 
 # Post-Merge Closure
 
-Post-merge closure evidence is recorded in `quality/final_refactor_closure_audit.md`.
+Historical post-merge closure evidence for PR #149 is recorded in
+`quality/final_refactor_closure_audit.md`. Current post-merge closure evidence must be recorded for
+the final PR after it is merged.

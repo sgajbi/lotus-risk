@@ -32,16 +32,15 @@ def test_final_pr_readiness_pack_contains_required_pr_sections() -> None:
 
 def test_final_pr_readiness_pack_pins_evidence_commands_and_risks() -> None:
     text = READINESS_DOC.read_text(encoding="utf-8")
+    normalized_text = " ".join(text.split())
 
     required_terms = (
-        "feat/enterprise-risk-refactor-continuation",
+        "refactor/enterprise-risk-backend",
         "quality/quality_scorecard.md",
         "quality/openapi_artifact_evidence.md",
-        "554",
-        "103",
-        "244",
-        "347",
-        "50",
+        "output/openapi/lotus-risk.openapi.evidence.json",
+        "656",
+        "112",
         "quality/baseline_report.md",
         "regenerated immediately before final PR assembly",
         "make openapi-artifact-gate",
@@ -55,27 +54,54 @@ def test_final_pr_readiness_pack_pins_evidence_commands_and_risks() -> None:
         "Sync-RepoWikis.ps1 -Publish",
         "Operations-Runbook.md",
         "Security-and-Governance.md",
+        "Supported-Features.md",
         "gateway-backed token-validation evidence",
         "production telemetry",
         "not a completion claim",
+        "immutable audit record, not current PR evidence",
     )
 
     for term in required_terms:
-        assert term in text
+        assert term in text or term in normalized_text
 
 
-def test_openapi_artifact_evidence_manifest_records_attachment_metadata() -> None:
+def test_current_readiness_docs_do_not_pin_stale_historical_metadata() -> None:
+    current_text = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (READINESS_DOC, OPENAPI_ARTIFACT_EVIDENCE_DOC, FINAL_PR_BODY_DOC)
+    )
+
+    stale_terms = (
+        "feat/enterprise-risk-refactor-continuation",
+        "9FA31D518B37B95A4F73079A7393ADDF81A041F8BDA4309CA23D5D42598055F8",
+        "`554` unit tests",
+        "`103` Python test files",
+        "Pull Request Merge Gate` passed on PR #149",
+    )
+
+    for term in stale_terms:
+        assert term not in current_text
+
+
+def test_openapi_artifact_evidence_contract_records_generated_manifest_boundary() -> None:
     text = OPENAPI_ARTIFACT_EVIDENCE_DOC.read_text(encoding="utf-8")
 
     required_terms = (
         "output/openapi/lotus-risk.openapi.json",
+        "output/openapi/lotus-risk.openapi.evidence.json",
+        "output/openapi/lotus-risk.openapi.evidence.md",
         "make openapi-artifact-gate",
         "make openapi-gate",
-        "SHA-256",
+        "Git branch",
+        "Git commit SHA",
+        "Repository URL",
+        "CI pipeline/run ID",
+        "UTC generation timestamp",
         "Artifact size bytes",
         "Path count",
         "Operation count",
-        "feat/enterprise-risk-refactor-continuation",
+        "Artifact SHA-256",
+        "Do not pin current branch names",
     )
 
     for term in required_terms:
@@ -104,10 +130,12 @@ def test_final_pr_body_covers_enterprise_refactor_pr_requirements() -> None:
         "# Review Focus Areas",
         "quality/quality_scorecard.md",
         "quality/openapi_artifact_evidence.md",
+        "output/openapi/lotus-risk.openapi.evidence.json",
         "Known vulnerabilities: 0",
         "Pull Request Merge Gate",
         "Sync-RepoWikis.ps1 -Publish -Repository lotus-risk",
         "quality/final_refactor_closure_audit.md",
+        "Historical post-merge closure evidence for PR #149",
     )
 
     for term in required_terms:
@@ -118,6 +146,8 @@ def test_final_refactor_closure_audit_records_post_merge_definition_of_done() ->
     text = FINAL_REFACTOR_CLOSURE_AUDIT_DOC.read_text(encoding="utf-8")
 
     required_terms = (
+        "historical audit record",
+        "Do not use it as current PR readiness proof",
         "https://github.com/sgajbi/lotus-risk/pull/149",
         "e98ecaf56dd59979e53d7ce948b8e5827be523b9",
         "Definition Of Done Audit",
