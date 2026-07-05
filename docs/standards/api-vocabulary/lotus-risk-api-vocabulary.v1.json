@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-07-04T14:15:55.131796+00:00",
+  "generatedAt": "2026-07-05T01:11:48.454039+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.affected_portfolios",
@@ -1260,7 +1260,7 @@
       "semanticId": "lotus.hhi_proposed",
       "canonicalTerm": "hhi_proposed",
       "preferredName": "hhi_proposed",
-      "description": "Proposed position-level Herfindahl-Hirschman Index on the conventional 0..10000 scale after projected positions are applied; falls back to current HHI when no proposed position values are available.",
+      "description": "Proposed position-level Herfindahl-Hirschman Index on the conventional 0..10000 scale after projected positions are applied. Stateless and stateful requests fall back to current HHI when no proposed position values are available; simulation requests treat an explicit empty projected book as zero proposed concentration.",
       "example": 2710.0,
       "type": "number",
       "locations": [
@@ -3090,7 +3090,7 @@
       "semanticId": "lotus.top_issuer_weight_proposed",
       "canonicalTerm": "top_issuer_weight_proposed",
       "preferredName": "top_issuer_weight_proposed",
-      "description": "Highest issuer-level proposed concentration weight from covered mapped issuer buckets, falling back to baseline top issuer weight when proposed issuer buckets are unavailable.",
+      "description": "Highest issuer-level proposed concentration weight from covered mapped issuer buckets, falling back to baseline top issuer weight for stateless/stateful requests when proposed issuer buckets are unavailable. Simulation requests treat an explicit empty projected book as zero proposed issuer concentration.",
       "example": 0.21,
       "type": "number",
       "locations": [
@@ -3146,7 +3146,7 @@
       "semanticId": "lotus.top_n_cumulative_weight_proposed",
       "canonicalTerm": "top_n_cumulative_weight_proposed",
       "preferredName": "top_n_cumulative_weight_proposed",
-      "description": "Cumulative proposed weight of the largest N positive extracted position values as a decimal ratio in the 0..1 range; falls back to the baseline top-N cumulative weight when no proposed position values are available.",
+      "description": "Cumulative proposed weight of the largest N positive extracted position values as a decimal ratio in the 0..1 range. Stateless and stateful requests fall back to the baseline top-N cumulative weight when no proposed values are available; simulation requests treat an explicit empty projected book as zero proposed concentration.",
       "example": 0.4551,
       "type": "number",
       "locations": [
@@ -3234,7 +3234,7 @@
       "semanticId": "lotus.top_position_weight_proposed",
       "canonicalTerm": "top_position_weight_proposed",
       "preferredName": "top_position_weight_proposed",
-      "description": "Highest single-position weight in the proposed state as a decimal ratio in the 0..1 range; falls back to the baseline top-position weight when no proposed position values are available.",
+      "description": "Highest single-position weight in the proposed state as a decimal ratio in the 0..1 range. Stateless and stateful requests fall back to the baseline top-position weight when no proposed values are available; simulation requests treat an explicit empty projected book as zero proposed concentration.",
       "example": 0.142,
       "type": "number",
       "locations": [

@@ -209,7 +209,7 @@ async def test_simulation_mode_requires_session_id_in_create_response() -> None:
 
 
 @pytest.mark.asyncio
-async def test_simulation_mode_falls_back_to_baseline_and_parses_metadata() -> None:
+async def test_simulation_mode_preserves_explicit_empty_projected_state() -> None:
     client = _RecordingCoreClient()
     client.create_response = {
         "session": {
@@ -255,7 +255,18 @@ async def test_simulation_mode_falls_back_to_baseline_and_parses_metadata() -> N
     assert response.metadata.enrichment_policy.value == "merge_caller_then_core"
     assert response.metadata.include_cash_positions is True
     assert response.metadata.include_zero_quantity_positions is False
-    assert response.risk_proxy.hhi_current == response.risk_proxy.hhi_proposed
+    assert response.risk_proxy.hhi_current == 10000.0
+    assert response.risk_proxy.hhi_proposed == 0.0
+    assert response.risk_proxy.hhi_delta == -10000.0
+    assert response.single_position_concentration.top_position_weight_current == 1.0
+    assert response.single_position_concentration.top_position_weight_proposed == 0.0
+    assert response.single_position_concentration.top_position_weight_delta == -1.0
+    assert response.single_position_concentration.top_position_proposed.security_id is None
+    assert response.single_position_concentration.top_position_proposed.weight == 0.0
+    assert response.issuer_concentration.hhi_proposed == 0.0
+    assert response.issuer_concentration.top_issuer_proposed.issuer_id is None
+    assert response.issuer_concentration.covered_position_count_proposed == 0
+    assert response.issuer_concentration.total_position_count_proposed == 0
     assert client.last_snapshot_payload is not None
     assert client.last_snapshot_payload["reporting_currency"] == "USD"
 
@@ -317,6 +328,35 @@ async def test_simulation_mode_requires_sections_dict() -> None:
         "category": "invalid_response",
         "snapshot_mode": "SIMULATION",
         "reason": "missing_sections",
+    }
+
+
+@pytest.mark.asyncio
+async def test_simulation_mode_requires_projected_positions_section() -> None:
+    client = _RecordingCoreClient()
+    client.create_response = {"session": {"session_id": "SIM_0001"}}
+    client.snapshot_response = {
+        "sections": {"positions_baseline": [{"security_id": "SEC_A", "market_value_base": "100"}]}
+    }
+    request = ConcentrationRequest.model_validate(
+        {
+            "input_mode": "simulation",
+            "simulation_input": {
+                "portfolio_id": "DEMO_DPM_EUR_001",
+                "as_of_date": "2026-02-27",
+                "simulation_changes": [],
+            },
+        }
+    )
+    with pytest.raises(UpstreamServiceError) as exc_info:
+        await calculate_concentration(request, core_client=client)
+    assert exc_info.value.code == "UPSTREAM_INVALID_RESPONSE"
+    assert exc_info.value.details == {
+        "service": "lotus-core",
+        "operation": "/integration/portfolios/{portfolio_id}/core-snapshot",
+        "category": "invalid_response",
+        "snapshot_mode": "SIMULATION",
+        "reason": "missing_positions_projected",
     }
 
 

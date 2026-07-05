@@ -342,6 +342,64 @@ def test_simulation_api_characterizes_session_creation_and_snapshot_contract() -
     assert body["issuer_concentration"]["uncovered_position_count_proposed"] == 0
 
 
+def test_simulation_api_preserves_explicit_empty_projected_positions() -> None:
+    core_client = _RecordingLotusCoreClient(
+        simulation_snapshot_response={
+            "simulation": {"session_id": "SIM_9000", "version": 7},
+            "sections": {
+                "positions_baseline": [{"security_id": "SEC_A", "market_value_base": "100"}],
+                "positions_projected": [],
+                "instrument_enrichment": [
+                    {
+                        "security_id": "SEC_A",
+                        "instrument_name": "Alpha Global Equity",
+                        "issuer_id": "ISSUER_A",
+                        "issuer_name": "Alpha Group",
+                    }
+                ],
+            },
+        }
+    )
+    with override_app_runtime(lotus_core_client=core_client):
+        client = TestClient(app)
+
+        response = client.post(
+            "/analytics/risk/concentration",
+            json={
+                "input_mode": "simulation",
+                "simulation_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-02-27",
+                    "session_id": "SIM_EXISTING",
+                    "start_new_session": False,
+                    "simulation_changes": [],
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["risk_proxy"]["hhi_current"] == 10000.0
+    assert body["risk_proxy"]["hhi_proposed"] == 0.0
+    assert body["risk_proxy"]["hhi_delta"] == -10000.0
+    assert body["single_position_concentration"]["top_position_weight_current"] == 1.0
+    assert body["single_position_concentration"]["top_position_weight_proposed"] == 0.0
+    assert body["single_position_concentration"]["top_position_weight_delta"] == -1.0
+    assert body["single_position_concentration"]["top_position_proposed"] == {
+        "security_id": None,
+        "security_name": None,
+        "weight": 0.0,
+    }
+    assert body["issuer_concentration"]["hhi_proposed"] == 0.0
+    assert body["issuer_concentration"]["top_issuer_proposed"] == {
+        "issuer_id": None,
+        "issuer_name": None,
+        "weight": 0.0,
+    }
+    assert body["issuer_concentration"]["covered_position_count_proposed"] == 0
+    assert body["issuer_concentration"]["total_position_count_proposed"] == 0
+
+
 def test_simulation_api_maps_invalid_create_session_payload_to_upstream_response() -> None:
     core_client = _RecordingLotusCoreClient(create_response={"session": "malformed"})
     with override_app_runtime(lotus_core_client=core_client):
@@ -391,5 +449,39 @@ def test_simulation_api_maps_invalid_snapshot_payload_to_upstream_response() -> 
         response.json(),
         operation="/integration/portfolios/{portfolio_id}/core-snapshot",
         reason="missing_sections",
+        snapshot_mode="SIMULATION",
+    )
+
+
+def test_simulation_api_maps_missing_projected_positions_to_upstream_response() -> None:
+    core_client = _RecordingLotusCoreClient(
+        simulation_snapshot_response={
+            "sections": {
+                "positions_baseline": [{"security_id": "SEC_A", "market_value_base": "100"}]
+            }
+        }
+    )
+    with override_app_runtime(lotus_core_client=core_client):
+        client = TestClient(app)
+
+        response = client.post(
+            "/analytics/risk/concentration",
+            json={
+                "input_mode": "simulation",
+                "simulation_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-02-27",
+                    "session_id": "SIM_EXISTING",
+                    "start_new_session": False,
+                    "simulation_changes": [],
+                },
+            },
+        )
+
+    assert response.status_code == 502
+    _assert_upstream_invalid_response(
+        response.json(),
+        operation="/integration/portfolios/{portfolio_id}/core-snapshot",
+        reason="missing_positions_projected",
         snapshot_mode="SIMULATION",
     )

@@ -75,8 +75,11 @@ For each state:
    - `single_position_concentration.top_n_cumulative_weight_delta = round6(TOP_N_proposed_raw - TOP_N_current_raw)`
    - `single_position_concentration.top_n = N`
 
-When no proposed values are available, the implemented service sets
-`TOP_N_proposed_raw = TOP_N_current_raw`; the emitted delta is therefore `0.0`.
+When no proposed values are available in stateless or stateful mode, the implemented service sets
+`TOP_N_proposed_raw = TOP_N_current_raw`; the emitted delta is therefore `0.0`. Simulation mode is
+source-owned by lotus-core: missing or invalid `positions_projected` is an upstream invalid
+response, while an explicit empty `positions_projected: []` is treated as an empty proposed book
+with `TOP_N_proposed_raw = 0.0`.
 
 ## Step-by-Step Computation
 1. Resolve request mode.
@@ -87,12 +90,12 @@ When no proposed values are available, the implemented service sets
 3. Build proposed position entries:
    - stateless: caller projected positions,
    - stateful: same baseline positions as current,
-   - simulation: lotus-core projected positions when available.
+   - simulation: required lotus-core projected positions; an explicit empty list remains empty.
 4. For each row, parse the preferred value field, fall back to the secondary value field, and keep
    only positive numeric values.
 5. Normalize current values into current position weights.
-6. Normalize proposed values into proposed position weights, or reuse current top-N cumulative
-   weight when proposed values are empty.
+6. Normalize proposed values into proposed position weights; reuse current top-N cumulative weight
+   only for modes that intentionally use current state when proposed values are empty.
 7. Sort each state's weights descending.
 8. Sum at most `N` sorted weights for each state.
 9. Compute proposed-minus-current delta.
@@ -103,8 +106,9 @@ When no proposed values are available, the implemented service sets
   calculation.
 - Empty current values produce
   `single_position_concentration.top_n_cumulative_weight_current = 0.0`.
-- Empty proposed values do not create an error; proposed top-N cumulative weight falls back to
-  current state.
+- Empty stateless/stateful proposed values fall back to current top-N cumulative weight. Empty
+  simulation projected positions produce proposed top-N cumulative weight `0.0`; missing or
+  invalid simulation projected sections return `UPSTREAM_INVALID_RESPONSE`.
 - Missing, non-numeric, zero, and negative values are excluded from the value vector.
 - A single valid position produces top-N cumulative weight `1.0` for any valid `N`.
 - If `N` exceeds the number of valid positions, the service sums all available sorted weights.

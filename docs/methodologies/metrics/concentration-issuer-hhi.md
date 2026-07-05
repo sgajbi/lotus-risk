@@ -103,8 +103,11 @@ For each state:
    - `issuer_concentration.hhi_proposed = round6(ISSUER_HHI_proposed_raw)`
    - `issuer_concentration.hhi_delta = round6(ISSUER_HHI_proposed_raw - ISSUER_HHI_current_raw)`
 
-When no proposed issuer buckets are available, the implemented service sets
-`ISSUER_HHI_proposed_raw = ISSUER_HHI_current_raw`; the emitted delta is therefore `0.0`.
+When no proposed issuer buckets are available in stateless or stateful mode, the implemented
+service sets `ISSUER_HHI_proposed_raw = ISSUER_HHI_current_raw`; the emitted delta is therefore
+`0.0`. Simulation mode is source-owned by lotus-core: missing or invalid `positions_projected` is
+an upstream invalid response, while an explicit empty `positions_projected: []` is treated as an
+empty proposed book with `ISSUER_HHI_proposed_raw = 0.0`.
 
 ## Step-by-Step Computation
 1. Resolve request mode.
@@ -115,7 +118,7 @@ When no proposed issuer buckets are available, the implemented service sets
 3. Build proposed position entries:
    - stateless: caller projected positions,
    - stateful: same baseline positions as current,
-   - simulation: lotus-core projected positions when available.
+   - simulation: required lotus-core projected positions; an explicit empty list remains empty.
 4. Resolve issuer identities from stateless row fields, caller `issuer_mappings`, and/or lotus-core
    enrichment according to grouping and enrichment policy.
 5. Parse each state's preferred value field, fall back to the secondary value field, and keep only
@@ -123,7 +126,8 @@ When no proposed issuer buckets are available, the implemented service sets
 6. Aggregate only covered position values by issuer bucket.
 7. Compute current and proposed covered-issuer weights.
 8. Compute current and proposed issuer HHI on the covered issuer buckets.
-9. If proposed issuer buckets are empty, reuse current issuer HHI for proposed issuer HHI.
+9. Reuse current issuer HHI only for modes that intentionally use current state when proposed
+   issuer buckets are empty.
 10. Compute proposed-minus-current delta.
 11. Round emitted HHI values, coverage ratios, and delta fields to six decimal places.
 12. Emit issuer coverage counts, coverage ratios, coverage status, supportability, note, and top
@@ -135,8 +139,9 @@ When no proposed issuer buckets are available, the implemented service sets
 - Positions without resolved issuer identity are excluded from issuer HHI but included in issuer
   coverage totals.
 - Empty current issuer buckets produce `issuer_concentration.hhi_current = 0.0`.
-- Empty proposed issuer buckets do not create an error; proposed issuer HHI falls back to current
-  issuer HHI.
+- Empty stateless/stateful proposed issuer buckets fall back to current issuer HHI. Empty
+  simulation projected positions produce proposed issuer HHI `0.0`; missing or invalid simulation
+  projected sections return `UPSTREAM_INVALID_RESPONSE`.
 - A single covered issuer bucket produces issuer HHI `10000.0`.
 - Equal weights across `N` covered issuer buckets produce issuer HHI `10000 / N`.
 - Partial issuer mapping yields `coverage_status = partial` when at least one current or proposed

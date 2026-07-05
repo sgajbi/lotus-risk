@@ -130,6 +130,7 @@ def _simulation_computation_input(
         covered_position_count_proposed=snapshot_state.covered_projected,
         total_position_count_current=snapshot_state.total_baseline,
         total_position_count_proposed=snapshot_state.total_projected,
+        use_current_state_when_proposed_empty=False,
         issuer_note=snapshot_state.issuer_note,
         valuation_context=snapshot_state.valuation_context,
         metadata=metadata,

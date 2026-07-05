@@ -19,8 +19,9 @@ class ConcentrationRiskProxy(BaseModel):
     hhi_proposed: float = Field(
         description=(
             "Proposed position-level Herfindahl-Hirschman Index on the conventional 0..10000 "
-            "scale after projected positions are applied; falls back to current HHI when no "
-            "proposed position values are available."
+            "scale after projected positions are applied. Stateless and stateful requests fall "
+            "back to current HHI when no proposed position values are available; simulation "
+            "requests treat an explicit empty projected book as zero proposed concentration."
         ),
         json_schema_extra={"example": 2710.0},
     )
@@ -58,8 +59,9 @@ class SinglePositionConcentration(BaseModel):
     top_position_weight_proposed: float = Field(
         description=(
             "Highest single-position weight in the proposed state as a decimal ratio in the 0..1 "
-            "range; falls back to the baseline top-position weight when no proposed position "
-            "values are available."
+            "range. Stateless and stateful requests fall back to the baseline top-position "
+            "weight when no proposed values are available; simulation requests treat an explicit "
+            "empty projected book as zero proposed concentration."
         ),
         json_schema_extra={"example": 0.142},
     )
@@ -77,8 +79,10 @@ class SinglePositionConcentration(BaseModel):
     top_n_cumulative_weight_proposed: float = Field(
         description=(
             "Cumulative proposed weight of the largest N positive extracted position values as "
-            "a decimal ratio in the 0..1 range; falls back to the baseline top-N cumulative "
-            "weight when no proposed position values are available."
+            "a decimal ratio in the 0..1 range. Stateless and stateful requests fall back to "
+            "the baseline top-N cumulative weight when no proposed values are available; "
+            "simulation requests treat an explicit empty projected book as zero proposed "
+            "concentration."
         ),
         json_schema_extra={"example": 0.4551},
     )
