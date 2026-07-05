@@ -1,0 +1,83 @@
+{
+  "contract_id": "lotus-risk-trust-telemetry-coverage",
+  "contract_version": "1.0.0",
+  "governed_by_rfcs": [
+    "RFC-0087"
+  ],
+  "producer_repository": "lotus-risk",
+  "declaration_source": "contracts/domain-data-products/lotus-risk-products.v1.json",
+  "treatments": [
+    {
+      "product_name": "RiskMetricsReport",
+      "product_version": "v1",
+      "coverage_status": "certified_static_snapshot",
+      "evidence_artifact": "contracts/trust-telemetry/risk-metrics-report.telemetry.v1.json",
+      "rationale": "First-wave RFC-0087 static trust telemetry fixture is present and platform-validates.",
+      "owner": "lotus-risk",
+      "decision_date": "2026-07-05"
+    },
+    {
+      "product_name": "DrawdownAnalyticsReport",
+      "product_version": "v1",
+      "coverage_status": "pending_static_snapshot",
+      "evidence_artifact": null,
+      "rationale": "Runtime raw seed exists through /ops/trust-telemetry, but no platform-certified static snapshot has been authored yet.",
+      "owner": "lotus-risk",
+      "decision_date": "2026-07-05"
+    },
+    {
+      "product_name": "RollingRiskMetricsReport",
+      "product_version": "v1",
+      "coverage_status": "pending_static_snapshot",
+      "evidence_artifact": null,
+      "rationale": "Runtime raw seed exists through /ops/trust-telemetry, but no platform-certified static snapshot has been authored yet.",
+      "owner": "lotus-risk",
+      "decision_date": "2026-07-05"
+    },
+    {
+      "product_name": "HistoricalRiskAttributionReport",
+      "product_version": "v1",
+      "coverage_status": "pending_static_snapshot",
+      "evidence_artifact": null,
+      "rationale": "Runtime raw seed exists through /ops/trust-telemetry, but no platform-certified static snapshot has been authored yet.",
+      "owner": "lotus-risk",
+      "decision_date": "2026-07-05"
+    },
+    {
+      "product_name": "ConcentrationRiskReport",
+      "product_version": "v1",
+      "coverage_status": "pending_static_snapshot",
+      "evidence_artifact": null,
+      "rationale": "Runtime raw seed exists through /ops/trust-telemetry, but no platform-certified static snapshot has been authored yet.",
+      "owner": "lotus-risk",
+      "decision_date": "2026-07-05"
+    },
+    {
+      "product_name": "MandateRiskHealthContext",
+      "product_version": "v1",
+      "coverage_status": "pending_static_snapshot",
+      "evidence_artifact": null,
+      "rationale": "Runtime raw seed exists through /ops/trust-telemetry, but no platform-certified static snapshot has been authored yet.",
+      "owner": "lotus-risk",
+      "decision_date": "2026-07-05"
+    },
+    {
+      "product_name": "RegimeScenarioPackEvaluation",
+      "product_version": "v1",
+      "coverage_status": "pending_static_snapshot",
+      "evidence_artifact": null,
+      "rationale": "Runtime raw seed exists through /ops/trust-telemetry, but no platform-certified static snapshot has been authored yet.",
+      "owner": "lotus-risk",
+      "decision_date": "2026-07-05"
+    },
+    {
+      "product_name": "RiskEventAffectedCohort",
+      "product_version": "v1",
+      "coverage_status": "pending_static_snapshot",
+      "evidence_artifact": null,
+      "rationale": "Runtime raw seed exists through /ops/trust-telemetry, but no platform-certified static snapshot has been authored yet.",
+      "owner": "lotus-risk",
+      "decision_date": "2026-07-05"
+    }
+  ]
+}
