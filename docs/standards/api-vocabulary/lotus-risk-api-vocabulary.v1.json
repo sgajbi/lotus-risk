@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-07-05T01:33:34.001452+00:00",
+  "generatedAt": "2026-07-05T02:06:53.629388+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.affected_portfolios",
@@ -1268,6 +1268,20 @@
       ],
       "observedTypes": [
         "number"
+      ]
+    },
+    {
+      "semanticId": "lotus.idempotency_key",
+      "canonicalTerm": "idempotency_key",
+      "preferredName": "idempotency_key",
+      "description": "Canonical idempotency key used by lotus-risk APIs.",
+      "example": null,
+      "type": "object",
+      "locations": [
+        "header"
+      ],
+      "observedTypes": [
+        "object"
       ]
     },
     {
@@ -3611,7 +3625,20 @@
       ]
     }
   ],
-  "controlsCatalog": [],
+  "controlsCatalog": [
+    {
+      "name": "idempotency_key",
+      "kind": "request_option",
+      "location": "header",
+      "required": false,
+      "type": "object",
+      "description": "Required when simulation_input.simulation_changes is non-empty. Forwarded to lotus-core with a deterministic change-set fingerprint for simulation replay/conflict enforcement.",
+      "example": "STANDARD_VALUE",
+      "allowedValues": [],
+      "semanticId": "lotus.idempotency_key",
+      "attributeRef": "#/attributeCatalog/lotus.idempotency_key"
+    }
+  ],
   "endpoints": [
     {
       "domain": "operational",
@@ -6510,6 +6537,14 @@
       "summary": "Calculate concentration risk analytics",
       "request": {
         "fields": [
+          {
+            "name": "idempotency-key",
+            "location": "header",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.idempotency_key",
+            "attributeRef": "#/attributeCatalog/lotus.idempotency_key"
+          },
           {
             "name": "input_mode",
             "location": "body",

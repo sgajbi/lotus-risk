@@ -130,7 +130,12 @@ async def test_client_supports_add_changes_and_snapshot_routes(
         session_id="SIM_1",
         changes=[{"security_id": "SEC_A", "transaction_type": "BUY"}],
         correlation_id=None,
+        idempotency_key="idem-sim-1",
+        change_set_fingerprint="sha256:change-set-1",
     )
+    assert _FakeAsyncClient.last_request is not None
+    add_changes_request = _FakeAsyncClient.last_request
+
     snapshot_response = await client.get_core_snapshot(
         portfolio_id="DEMO_DPM_EUR_001",
         request_payload={"snapshot_mode": "BASELINE"},
@@ -164,6 +169,8 @@ async def test_client_supports_add_changes_and_snapshot_routes(
     )
 
     assert add_response == {"ok": True}
+    assert add_changes_request["headers"]["Idempotency-Key"] == "idem-sim-1"
+    assert add_changes_request["headers"]["X-Lotus-Change-Set-Fingerprint"] == "sha256:change-set-1"
     assert snapshot_response == {"ok": True}
     assert enrichment_response == {"ok": True}
     assert position_timeseries_response == {"ok": True}

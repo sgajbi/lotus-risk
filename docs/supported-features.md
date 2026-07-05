@@ -21,7 +21,7 @@ runtime-facing support contract.
 | `RiskMetricsReport:v1` | `POST /analytics/risk/calculate` | full for stateless and stateful modes | simulation is intentionally unsupported |
 | `DrawdownAnalyticsReport:v1` | `POST /analytics/risk/drawdown` | full for stateless and stateful modes | simulation is intentionally unsupported |
 | `RollingRiskMetricsReport:v1` | `POST /analytics/risk/rolling-metrics` | full for stateless and stateful modes | broader portfolio-archetype proof remains limited to the live validation matrix |
-| `ConcentrationRiskReport:v1` | `POST /analytics/risk/concentration` | full for stateless, stateful, and simulation modes | simulation support must not be generalized to other risk workflows |
+| `ConcentrationRiskReport:v1` | `POST /analytics/risk/concentration` | full for stateless, stateful, and simulation modes | simulation support must not be generalized to other risk workflows; non-empty simulation changes require `Idempotency-Key` for lotus-core replay/conflict enforcement |
 | Historical attribution | `POST /analytics/risk/historical-attribution` | partial | stateful `ACTIVE_RISK` supports `POSITION`, `SECTOR`, `ASSET_CLASS`, and `ISSUER`; `CUSTOM` grouping and simulation remain unsupported |
 | `RegimeScenarioPackEvaluation:v1` | `POST /analytics/risk/regime-scenario-pack/evaluate` | full for stateless source-owned scenario-pack evaluation | does not forecast markets, perform full repricing, or accept UI-owned scenario methodology |
 | `RiskEventAffectedCohort:v1` | `POST /analytics/risk/risk-event-cohorts/evaluate` | partial stateless first-wave product | does not create rebalance waves, approvals, campaign workflows, or client communications |

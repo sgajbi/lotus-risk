@@ -49,12 +49,16 @@ class _RecordingLotusCoreClient:
         session_id: str,
         changes: list[dict[str, Any]],
         correlation_id: str | None,
+        idempotency_key: str,
+        change_set_fingerprint: str,
     ) -> dict[str, Any]:
         self.change_calls.append(
             {
                 "session_id": session_id,
                 "changes": changes,
                 "correlation_id": correlation_id,
+                "idempotency_key": idempotency_key,
+                "change_set_fingerprint": change_set_fingerprint,
             }
         )
         return {"session_id": session_id, "version": 7}
@@ -267,7 +271,11 @@ def test_simulation_api_characterizes_session_creation_and_snapshot_contract() -
 
         response = client.post(
             "/analytics/risk/concentration",
-            headers={"X-Correlation-Id": "corr-sim", "X-Actor-Id": "risk-tester"},
+            headers={
+                "X-Correlation-Id": "corr-sim",
+                "X-Actor-Id": "risk-tester",
+                "Idempotency-Key": "idem-sim-buy",
+            },
             json={
                 "input_mode": "simulation",
                 "simulation_input": {
@@ -297,6 +305,8 @@ def test_simulation_api_characterizes_session_creation_and_snapshot_contract() -
     assert len(core_client.change_calls) == 1
     assert core_client.change_calls[0]["session_id"] == "SIM_9000"
     assert core_client.change_calls[0]["correlation_id"] == "corr-sim"
+    assert core_client.change_calls[0]["idempotency_key"] == "idem-sim-buy"
+    assert core_client.change_calls[0]["change_set_fingerprint"].startswith("sha256:")
     assert core_client.change_calls[0]["changes"] == [
         {
             "security_id": "SEC_A",
@@ -349,6 +359,7 @@ def test_simulation_api_forwards_valid_sell_change() -> None:
 
         response = client.post(
             "/analytics/risk/concentration",
+            headers={"Idempotency-Key": "idem-sim-sell"},
             json={
                 "input_mode": "simulation",
                 "simulation_input": {
@@ -367,6 +378,7 @@ def test_simulation_api_forwards_valid_sell_change() -> None:
         )
 
     assert response.status_code == 200
+    assert core_client.change_calls[0]["idempotency_key"] == "idem-sim-sell"
     assert core_client.change_calls[0]["changes"] == [
         {
             "security_id": "SEC_A",
@@ -374,6 +386,38 @@ def test_simulation_api_forwards_valid_sell_change() -> None:
             "amount": 1500.0,
         }
     ]
+
+
+def test_simulation_api_requires_idempotency_key_for_changes_before_core_write() -> None:
+    core_client = _RecordingLotusCoreClient()
+    with override_app_runtime(lotus_core_client=core_client):
+        client = TestClient(app)
+
+        response = client.post(
+            "/analytics/risk/concentration",
+            json={
+                "input_mode": "simulation",
+                "simulation_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-02-27",
+                    "session_id": "SIM_EXISTING",
+                    "simulation_changes": [
+                        {
+                            "security_id": "SEC_A",
+                            "transaction_type": "BUY",
+                            "quantity": 10,
+                        }
+                    ],
+                },
+            },
+        )
+
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "INVALID_INPUT"
+    assert "Idempotency-Key header is required" in response.json()["error"]["message"]
+    assert core_client.create_calls == []
+    assert core_client.change_calls == []
+    assert core_client.snapshot_calls == []
 
 
 def test_simulation_api_rejects_unsupported_transaction_type_before_core_write() -> None:

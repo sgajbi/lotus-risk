@@ -953,6 +953,7 @@ def test_concentration_simulation_mode_reuses_or_creates_session_and_returns_met
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/concentration",
+            headers={"Idempotency-Key": "idem-health-simulation"},
             json={
                 "input_mode": "simulation",
                 "simulation_input": {

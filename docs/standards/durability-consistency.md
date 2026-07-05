@@ -23,7 +23,13 @@
 ## Idempotency for Write APIs
 
 - Future write endpoints must require `Idempotency-Key` and enforce idempotency semantics for replay protection.
-- Current analytics endpoints are read-oriented computations with no persistent side effects.
+- Most analytics endpoints are read-oriented computations with no persistent side effects.
+- Concentration simulation is the current exception: when `simulation_input.simulation_changes[]`
+  is non-empty, `POST /analytics/risk/concentration` requires `Idempotency-Key` and forwards that
+  key plus a deterministic change-set fingerprint to lotus-core for source-owned replay/conflict
+  enforcement.
+- `expected_version` remains optimistic concurrency for simulation snapshots; it is not replay
+  protection.
 
 ## Governance Change Control
 

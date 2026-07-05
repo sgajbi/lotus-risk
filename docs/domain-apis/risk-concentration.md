@@ -65,6 +65,7 @@ Caller provides:
 - `simulation_input.portfolio_id`
 - `simulation_input.as_of_date`
 - `simulation_input.simulation_changes`
+- `Idempotency-Key` header when `simulation_input.simulation_changes[]` is non-empty
 
 `lotus-risk` orchestrates lotus-core simulation session APIs, then calls lotus-core `core-snapshot` in `SIMULATION` mode to evaluate baseline vs projected concentration.
 
@@ -224,10 +225,17 @@ Business interpretation:
 2. `simulation_changes[]` are validated as lotus-risk simulation commands before any lotus-core write.
    Supported `transaction_type` values are `BUY` and `SELL`; casing is normalized to uppercase.
    Each change requires a positive `quantity` or `amount`.
-3. Validated simulation changes are forwarded to lotus-core for the resolved session.
-4. Changes are additive within the session unless a new session is started.
-5. `expected_version` can be supplied for optimistic concurrency.
-6. The response returns simulation metadata when available:
+3. When `simulation_changes[]` is non-empty, callers must provide `Idempotency-Key`. lotus-risk
+   forwards that key to lotus-core with a deterministic `X-Lotus-Change-Set-Fingerprint` derived
+   from `portfolio_id`, resolved `session_id`, and the normalized change payload.
+4. Duplicate submission behavior is source-owned by lotus-core: the same key with the same
+   fingerprint should replay the prior mutation result, while the same key with a different
+   fingerprint should be rejected by lotus-core as an idempotency conflict.
+5. Validated simulation changes are forwarded to lotus-core for the resolved session.
+6. Changes are additive within the session unless a new session is started.
+7. `expected_version` can be supplied for optimistic concurrency. It is not replay protection and
+   must not be documented or used as an idempotency substitute.
+8. The response returns simulation metadata when available:
    - `metadata.simulation_session_id`
    - `metadata.simulation_session_version`
    - `metadata.session_expires_at`

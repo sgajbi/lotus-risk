@@ -13,7 +13,7 @@ completion claim.
 ## Generation Identity
 
 - Git branch: `refactor/enterprise-risk-backend`
-- Git commit: `bde67fdbd3bd0cceecdf2a9f855621a64b49482d`
+- Git commit: `5a837832522a390bd323e2f7e451fd908eacaa09`
 
 ## Current Code Size
 
@@ -51,7 +51,7 @@ completion claim.
 
 | Path | Symbol | Kind | Lines |
 | --- | --- | --- | --- |
-| src/app/integrations/lotus_core_client.py | LotusCoreClient | ClassDef | 128 |
+| src/app/integrations/lotus_core_client.py | LotusCoreClient | ClassDef | 132 |
 | src/app/contracts/concentration_issuer_metric_outputs.py | IssuerConcentration | ClassDef | 89 |
 | src/app/trust_telemetry_product_models.py | ProductTrustTelemetrySeed | ClassDef | 79 |
 | src/app/contracts/attribution_stateless_inputs.py | HistoricalAttributionStatelessInput | ClassDef | 77 |
@@ -115,10 +115,10 @@ Success: no issues found in 358 source files
 ...
 src\app\services\rolling_stateful_source_responses.py           45      1     16      1    97%   96
 --------------------------------------------------------------------------------------------------------
-TOTAL                                                         6484     87   1082     74    98%
+TOTAL                                                         6496     87   1086     74    98%
 
 202 files skipped due to complete coverage.
-621 passed in 13.20s
+624 passed in 14.53s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -248,7 +248,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc1-503-UPSTREAM_UNAVAILABLE-transport]
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 
-621 tests collected in 1.93s
+624 tests collected in 2.67s
 ```
 - Import-linter report-only: reported exit 1
 

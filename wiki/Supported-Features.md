@@ -7,7 +7,7 @@
 | Risk metrics | `/analytics/risk/calculate` | full for stateless and stateful modes | Portfolio volatility, drawdown, Sharpe, Sortino, VaR, beta, tracking error, and information-ratio review. |
 | Drawdown analytics | `/analytics/risk/drawdown` | full for stateless and stateful modes | Realized drawdown, underwater period, and recovery analysis. |
 | Rolling risk metrics | `/analytics/risk/rolling-metrics` | full for stateless and stateful modes | Rolling historical risk diagnostics for front-office review. |
-| Concentration risk | `/analytics/risk/concentration` | full for stateless, stateful, and simulation modes | Position, issuer, and HHI concentration review, including what-if simulation support. |
+| Concentration risk | `/analytics/risk/concentration` | full for stateless, stateful, and simulation modes | Position, issuer, and HHI concentration review, including what-if simulation support; non-empty simulation changes require `Idempotency-Key` for lotus-core replay/conflict enforcement. |
 | Historical attribution | `/analytics/risk/historical-attribution` | partial | Historical total-risk and active-risk decomposition; stateful `ACTIVE_RISK + ISSUER` is supported. |
 | Regime scenario pack | `/analytics/risk/regime-scenario-pack/evaluate` | full stateless | CIO-governed scenario-pack evaluation with threshold posture and optional per-security contribution evidence. |
 | Risk-event affected cohort | `/analytics/risk/risk-event-cohorts/evaluate` | partial stateless first-wave product | Source-owned portfolio membership and impact scores for governed risk events. |
@@ -18,13 +18,14 @@
 ## Explicit Limits
 
 1. Simulation is supported only for concentration risk.
-2. `CUSTOM` stateful historical-attribution grouping remains unsupported.
-3. Mandate health context does not create mandate actions, rebalance waves, orders, execution, or
+2. Concentration simulation `expected_version` is optimistic concurrency, not replay protection.
+3. `CUSTOM` stateful historical-attribution grouping remains unsupported.
+4. Mandate health context does not create mandate actions, rebalance waves, orders, execution, or
    client communications.
-4. Risk-event affected cohorts do not create waves, approvals, campaigns, or client communications.
-5. `/ops/trust-telemetry` returns repo-owned raw telemetry seeds; platform certification is a
+5. Risk-event affected cohorts do not create waves, approvals, campaigns, or client communications.
+6. `/ops/trust-telemetry` returns repo-owned raw telemetry seeds; platform certification is a
    separate `lotus-platform` evidence flow.
-6. Broad enterprise-bank coverage requires seeded portfolio archetype evidence beyond
+7. Broad enterprise-bank coverage requires seeded portfolio archetype evidence beyond
    `PB_SG_GLOBAL_BAL_001`.
 
 ## Implementation Evidence

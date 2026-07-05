@@ -39,9 +39,13 @@ class SimulationLotusCoreClient:
         session_id: str,
         changes: list[dict[str, object]],
         correlation_id: str | None,
+        idempotency_key: str,
+        change_set_fingerprint: str,
     ) -> dict[str, object]:
         assert session_id == self._session_id
         assert len(changes) == 1
+        assert idempotency_key
+        assert change_set_fingerprint.startswith("sha256:")
         return {"session_id": session_id, "version": self._simulation_version, "changes": []}
 
     async def get_core_snapshot(
