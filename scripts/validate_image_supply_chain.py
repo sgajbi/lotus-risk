@@ -40,6 +40,15 @@ SENSITIVE_BUILD_NAME_PARTS = (
     "CREDENTIAL",
 )
 
+IGNORED_REPOSITORY_SCAN_DIRS = {
+    ".git",
+    ".lotus-platform",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".venv",
+    "lotus-platform",
+}
+
 
 def _read(path: Path) -> str:
     return path.read_text(encoding="utf-8")
@@ -139,7 +148,7 @@ def validate_ci_image_release_workflow(
 def validate_kubernetes_digest_references(root: Path = ROOT) -> list[str]:
     issues: list[str] = []
     for path in root.rglob("*"):
-        if any(part in {".git", ".venv", ".mypy_cache", ".pytest_cache"} for part in path.parts):
+        if any(part in IGNORED_REPOSITORY_SCAN_DIRS for part in path.parts):
             continue
         if path.suffix.lower() not in {".yaml", ".yml"}:
             continue
