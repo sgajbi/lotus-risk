@@ -236,7 +236,17 @@ Boundary rules:
     supportability, metric-duration, endpoint-execution recording ports and the Prometheus-backed
     implementation in `app.observability`. Preserve this boundary with `.importlinter` and unit
     architecture tests when adding new metrics.
-24. Treat `src/app/contracts` as mixed public API DTOs, shared application values, and compatibility
+24. Endpoint execution metrics must reflect final response-contract truth, not only service
+    operation completion. When adding analytics routes that use
+    `lotus_risk_endpoint_executions_total`, route through `services.endpoint_observation` with the
+    declared `response_model` so response-model validation or serialization failures emit
+    `outcome="failure"` and do not emit a misleading success.
+25. The observability domain API page is a validated projection of
+    `contracts/observability/lotus-risk-monitoring.v1.json`. Add metric names, label values,
+    dashboards, alerts, and runbook anchors through the monitoring contract plus
+    `make observability-contract-validate`; do not hand-maintain parallel operation lists in
+    docs/wiki without validator coverage.
+26. Treat `src/app/contracts` as mixed public API DTOs, shared application values, and compatibility
     facades until a fuller domain package is introduced. Pure calculation helpers must not construct
     public response DTOs directly for migrated paths. The concentration representative path maps
     internal driver values from `src/app/services/concentration/datamodels.py` to public Pydantic
