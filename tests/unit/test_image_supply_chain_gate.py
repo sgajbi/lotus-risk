@@ -66,6 +66,17 @@ def test_image_supply_chain_gate_rejects_tag_based_kubernetes_images(
     ]
 
 
+def test_image_supply_chain_gate_skips_nested_platform_checkouts(tmp_path: Path) -> None:
+    manifest_dir = tmp_path / ".lotus-platform" / "charts"
+    manifest_dir.mkdir(parents=True)
+    (manifest_dir / "deployment.yaml").write_text(
+        "containers:\n  - image: ghcr.io/sgajbi/lotus-platform:latest\n",
+        encoding="utf-8",
+    )
+
+    assert validate_kubernetes_digest_references(tmp_path) == []
+
+
 def test_image_supply_chain_gate_rejects_missing_release_workflow(tmp_path: Path) -> None:
     issues = validate_ci_image_release_workflow(tmp_path / "missing.yml")
 

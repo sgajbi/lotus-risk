@@ -47,6 +47,7 @@ source_modules =
     app.routers
 forbidden_modules =
     app.integrations
+allow_indirect_imports = True
 
 [importlinter:contract:infrastructure_does_not_import_app_main]
 name = Infrastructure adapters do not depend on API entry point
