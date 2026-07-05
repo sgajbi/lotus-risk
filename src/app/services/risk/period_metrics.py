@@ -7,11 +7,14 @@ from typing import Callable
 import pandas as pd
 
 from app.contracts.risk import RiskStatelessCalculationInput, RiskValue
-from app.services.risk import helpers as risk_helpers
 from app.services.risk.benchmark_period_metrics import (
     BenchmarkContextPayload,
     BenchmarkPeriodMetricResult,
     calculate_benchmark_period_metrics,
+)
+from app.services.risk.metric_return_series import (
+    metric_series_error_map,
+    resolve_metric_return_series,
 )
 from app.services.risk.metric_timing import MetricDurationObserver
 from app.services.risk.metric_calculators import (
@@ -28,6 +31,7 @@ from app.services.risk.metric_calculators import (
 class _PeriodNonBenchmarkMetrics:
     metric_series: pd.Series
     metric_map: dict[str, RiskValue]
+    metric_series_error: str | None = None
 
 
 @dataclass(frozen=True)
@@ -100,6 +104,21 @@ def _calculate_requested_non_benchmark_metrics(
     return metric_map
 
 
+def _drawdown_metric_map(
+    *,
+    request: RiskStatelessCalculationInput,
+    period_returns: pd.Series,
+    observe_metric_duration: MetricDurationObserver,
+) -> dict[str, RiskValue]:
+    if "DRAWDOWN" not in request.metrics:
+        return {}
+    with observe_metric_duration("DRAWDOWN"):
+        try:
+            return {"DRAWDOWN": calculate_drawdown(drawdown_series=period_returns)}
+        except ValueError as exc:
+            return {"DRAWDOWN": metric_error(str(exc))}
+
+
 def _period_non_benchmark_metrics(
     *,
     request: RiskStatelessCalculationInput,
@@ -109,13 +128,34 @@ def _period_non_benchmark_metrics(
     period_returns: pd.Series,
     observe_metric_duration: MetricDurationObserver,
 ) -> _PeriodNonBenchmarkMetrics:
-    metric_series = risk_helpers._resample_returns(period_returns, request.options.frequency)
+    metric_series_resolution = resolve_metric_return_series(
+        period_returns=period_returns,
+        frequency=request.options.frequency,
+        use_log_returns=request.options.use_log_returns,
+    )
+    if metric_series_resolution.error is not None:
+        metric_map = _drawdown_metric_map(
+            request=request,
+            period_returns=period_returns,
+            observe_metric_duration=observe_metric_duration,
+        )
+        metric_map.update(
+            metric_series_error_map(
+                metrics=request.metrics,
+                message=metric_series_resolution.error,
+            )
+        )
+        return _PeriodNonBenchmarkMetrics(
+            metric_series=metric_series_resolution.series,
+            metric_map=metric_map,
+            metric_series_error=metric_series_resolution.error,
+        )
     return _PeriodNonBenchmarkMetrics(
-        metric_series=metric_series,
+        metric_series=metric_series_resolution.series,
         metric_map=_calculate_requested_non_benchmark_metrics(
             request=request,
             non_benchmark_calculators=_build_non_benchmark_calculators(
-                period_returns=metric_series,
+                period_returns=metric_series_resolution.series,
                 drawdown_series=period_returns,
                 request=request,
                 annual_factor=annual_factor,
@@ -137,9 +177,26 @@ def _period_benchmark_metrics(
     benchmark_metrics: Sequence[str],
     annual_factor: int,
     observe_metric_duration: MetricDurationObserver,
+    metric_series_error: str | None,
 ) -> BenchmarkPeriodMetricResult | None:
     if not benchmark_metrics:
         return None
+    if metric_series_error is not None:
+        return BenchmarkPeriodMetricResult(
+            metric_map={
+                metric_name: metric_error(metric_series_error) for metric_name in benchmark_metrics
+            },
+            benchmark_context={
+                "requested": True,
+                "available": not benchmark_df.empty,
+                "aligned": False,
+                "reason": "PORTFOLIO_RETURN_SERIES_INVALID",
+                "requested_metric_count": len(benchmark_metrics),
+                "requested_metrics": list(benchmark_metrics),
+            },
+            aligned_count=0,
+            benchmark_observation_count=0,
+        )
 
     return calculate_benchmark_period_metrics(
         request=request,
@@ -201,6 +258,7 @@ def calculate_period_metrics(
         benchmark_metrics=calculation_request.benchmark_metrics,
         annual_factor=calculation_request.annual_factor,
         observe_metric_duration=calculation_request.observe_metric_duration,
+        metric_series_error=non_benchmark_result.metric_series_error,
     )
     return _period_metric_result_tuple(
         non_benchmark_result=non_benchmark_result,

@@ -139,12 +139,19 @@ def _benchmark_period_metrics(
     annual_factor: int,
     observe_metric_duration: MetricDurationObserver,
 ) -> _BenchmarkPeriodMetrics:
-    benchmark_period = _benchmark_period_series(
-        request=request,
-        benchmark_df=benchmark_df,
-        start=start,
-        end=end,
-    )
+    try:
+        benchmark_period = _benchmark_period_series(
+            request=request,
+            benchmark_df=benchmark_df,
+            start=start,
+            end=end,
+        )
+    except ValueError as exc:
+        return _insufficient_benchmark_period_metrics(
+            benchmark_metrics=benchmark_metrics,
+            benchmark_observation_count=0,
+            message=str(exc),
+        )
     benchmark_observation_count = len(benchmark_period)
     if benchmark_period.empty:
         return _insufficient_benchmark_period_metrics(

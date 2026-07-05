@@ -23,6 +23,7 @@ from app.services.risk.period_resolution import (
 )
 
 RISK_METRICS_REQUIRING_RISK_FREE = {"SHARPE"}
+LOG_RETURN_UNDEFINED_ERROR = "Log returns are undefined for returns less than or equal to -100%"
 
 
 def _resolve_period(
@@ -80,6 +81,8 @@ def _resample_returns(returns: pd.Series, frequency: str) -> pd.Series:
 def _to_log_returns(returns: pd.Series) -> pd.Series:
     if returns.empty:
         return returns
+    if (returns <= -100.0).any():
+        raise ValueError(LOG_RETURN_UNDEFINED_ERROR)
     return pd.Series(np.log1p(returns / 100) * 100, index=returns.index, name=returns.name)
 
 
@@ -140,6 +143,7 @@ __all__ = [
     "RISK_METRICS_REQUIRING_BENCHMARK",
     "RISK_METRICS_REQUIRING_RISK_FREE",
     "RiskMetricDetails",
+    "LOG_RETURN_UNDEFINED_ERROR",
     "_annual_to_periodic",
     "_as_number",
     "_beta",

@@ -116,6 +116,9 @@
 - Fewer than two aligned observations after period filtering, resampling, and optional
   transformation return `metrics.INFORMATION_RATIO.value = null` with
   `details.error = "Insufficient aligned observations"`.
+- When `options.use_log_returns=true`, any compounded portfolio or benchmark return less than or
+  equal to `-100%` returns `metrics.INFORMATION_RATIO.value = null` with
+  `details.error = "Log returns are undefined for returns less than or equal to -100%"`.
 - Zero or near-zero active-return standard deviation returns
   `metrics.INFORMATION_RATIO.value = null` with `details.error = "Tracking error is zero"`.
 - Non-numeric return values are rejected by request-contract validation before engine math.

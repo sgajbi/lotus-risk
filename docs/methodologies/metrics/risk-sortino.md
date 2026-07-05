@@ -101,8 +101,9 @@
 - Empty downside set after MAR comparison returns `metrics.SORTINO.value = null` with
   `details.error = "No downside observations"`.
 - Non-numeric return values are rejected by request validation before engine math.
-- Invalid log-return inputs that make `ln(1 + r_pp / 100)` undefined are rejected by request
-  validation or produce invalid numeric results before supportable output is claimed.
+- When `options.use_log_returns=true`, any compounded portfolio return less than or equal to
+  `-100%` returns `metrics.SORTINO.value = null` with
+  `details.error = "Log returns are undefined for returns less than or equal to -100%"`.
 - No benchmark dependency is required for `SORTINO`.
 - No risk-free dependency is required for `SORTINO`.
 - The denominator is `sigma_down_dec`; it is computed only from downside excess returns and is not

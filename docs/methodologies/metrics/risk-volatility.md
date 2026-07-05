@@ -77,6 +77,9 @@
 ## Validation and Failure Behavior
 - Fewer than two observations after period filtering, resampling, and optional transformation
   returns `metrics.VOLATILITY.value = null` with `details.error = "Insufficient data"`.
+- When `options.use_log_returns=true`, any compounded portfolio return less than or equal to
+  `-100%` returns `metrics.VOLATILITY.value = null` with
+  `details.error = "Log returns are undefined for returns less than or equal to -100%"`.
 - Constant transformed returns are valid and produce `0.0`.
 - Non-numeric return values are rejected by request-contract validation before engine math.
 - No benchmark or risk-free dependency is required for `VOLATILITY`.

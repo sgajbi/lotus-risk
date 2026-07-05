@@ -113,8 +113,9 @@
   validation.
 - `options.var.horizon_days` must be positive by request-contract validation.
 - Non-numeric return values are rejected by request validation before engine math.
-- Invalid log-return inputs that make `ln(1 + r_pp / 100)` undefined are rejected by request
-  validation or produce invalid numeric results before supportable output is claimed.
+- When `options.use_log_returns=true`, any compounded portfolio return less than or equal to
+  `-100%` returns `metrics.VAR.value = null` with
+  `details.error = "Log returns are undefined for returns less than or equal to -100%"`.
 - Expected-shortfall tail-set empty posture is deterministic: `base_expected_shortfall` falls back
   to `base_var` before horizon scaling.
 - No benchmark dependency is required for `VAR`.
