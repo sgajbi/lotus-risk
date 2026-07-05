@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 import json
+import shutil
 import sys
 from types import ModuleType
 from pathlib import Path
@@ -40,6 +41,12 @@ PLATFORM_ROOT = REPO_ROOT.parent / "lotus-platform"
 TELEMETRY_DIR = REPO_ROOT / "contracts" / "trust-telemetry"
 SNAPSHOT_PATH = TELEMETRY_DIR / "risk-metrics-report.telemetry.v1.json"
 DECLARATION_PATH = REPO_ROOT / "contracts" / "domain-data-products" / "lotus-risk-products.v1.json"
+COVERAGE_PATH = (
+    REPO_ROOT
+    / "contracts"
+    / "trust-telemetry-coverage"
+    / "lotus-risk-trust-telemetry-coverage.v1.json"
+)
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -54,6 +61,19 @@ def _load_platform_validator() -> ModuleType:
     if automation_path not in sys.path:
         sys.path.insert(0, automation_path)
     return importlib.import_module("validate_trust_telemetry")
+
+
+def _load_repo_trust_telemetry_validator() -> ModuleType:
+    validator_path = REPO_ROOT / "scripts" / "validate_trust_telemetry_contracts.py"
+    spec = importlib.util.spec_from_file_location(
+        "lotus_risk_validate_trust_telemetry_contracts",
+        validator_path,
+    )
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Unable to load {validator_path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def test_risk_metrics_report_trust_telemetry_validates_with_platform_contract() -> None:
@@ -93,6 +113,53 @@ def test_risk_metrics_report_trust_telemetry_is_tied_to_repo_declaration() -> No
         == (declared_product["lineage_policy"]["evidence_access_class_ref"])
     )
     assert snapshot["blocking"]["blocked"] is False
+
+
+def test_static_trust_telemetry_coverage_covers_every_active_declared_product() -> None:
+    validator = _load_repo_trust_telemetry_validator()
+
+    issues = validator.validate_trust_telemetry_coverage(
+        source_directory=TELEMETRY_DIR,
+        product_declaration_path=DECLARATION_PATH,
+        coverage_path=COVERAGE_PATH,
+    )
+
+    assert issues == []
+
+
+def test_static_trust_telemetry_coverage_fails_for_uncovered_active_product(
+    tmp_path: Path,
+) -> None:
+    validator = _load_repo_trust_telemetry_validator()
+
+    telemetry_dir = tmp_path / "trust-telemetry"
+    telemetry_dir.mkdir()
+    shutil.copy2(SNAPSHOT_PATH, telemetry_dir / SNAPSHOT_PATH.name)
+
+    declaration = _load_json(DECLARATION_PATH)
+    declaration["products"].append(
+        {
+            "product_name": "UncoveredRiskReport",
+            "product_version": "v1",
+            "lifecycle_status": "active",
+        }
+    )
+    declaration_path = tmp_path / "lotus-risk-products.v1.json"
+    declaration_path.write_text(json.dumps(declaration), encoding="utf-8")
+
+    coverage_path = tmp_path / "lotus-risk-trust-telemetry-coverage.v1.json"
+    coverage_path.write_text(COVERAGE_PATH.read_text(encoding="utf-8"), encoding="utf-8")
+
+    issues = validator.validate_trust_telemetry_coverage(
+        source_directory=telemetry_dir,
+        product_declaration_path=declaration_path,
+        coverage_path=coverage_path,
+    )
+
+    assert issues == [
+        "UncoveredRiskReport:v1: active product has no static trust telemetry snapshot "
+        "or governed coverage treatment"
+    ]
 
 
 def test_trust_telemetry_facade_preserves_public_imports() -> None:

@@ -13,7 +13,7 @@ completion claim.
 ## Generation Identity
 
 - Git branch: `refactor/enterprise-risk-backend`
-- Git commit: `4a27eae931ea763c8362b91879c4d524cc2f13e7`
+- Git commit: `ed02a6117ea711919c096f92125f011d58b11f12`
 
 ## Current Code Size
 
@@ -110,7 +110,7 @@ Success: no issues found in 359 source files
 ........................................................................ [ 22%]
 ........................................................................ [ 34%]
 ........................................................................ [ 45%]
-........................................................................ [ 57%]
+........................................................................ [ 56%]
 ........................................................................ [ 68%]
 ...
 src\app\services\rolling_stateful_source_responses.py           45      1     16      1    97%   96
@@ -118,7 +118,7 @@ src\app\services\rolling_stateful_source_responses.py           45      1     16
 TOTAL                                                         6572     97   1110     78    98%
 
 201 files skipped due to complete coverage.
-631 passed in 14.73s
+633 passed in 22.49s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -248,7 +248,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc1-503-UPSTREAM_UNAVAILABLE-transport]
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 
-631 tests collected in 2.37s
+633 tests collected in 3.73s
 ```
 - Import-linter report-only: reported exit 1
 
@@ -260,10 +260,10 @@ Import Linter
 
 ---------
 ...
-    app.ops_runtime -> app.integrations.lotus_core_client (l.8)
+    app.ops_runtime -> app.integrations.lotus_performance_client (l.9)
 
 -   app.routers.operational -> app.trust_telemetry (l.29)
     app.trust_telemetry -> app.trust_telemetry_builders (l.3)
     app.trust_telemetry_builders -> app.ops_runtime (l.18)
-    app.ops_runtime -> app.integrations.lotus_performance_client (l.9)
+    app.ops_runtime -> app.integrations.lotus_core_client (l.8)
 ```

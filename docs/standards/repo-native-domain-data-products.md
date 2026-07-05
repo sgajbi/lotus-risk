@@ -69,6 +69,13 @@ repo-local raw telemetry snapshot that returns repo-owned seeds for operator rev
 not be treated as a platform-certified trust artifact until RFC-0087 introduces certified trust
 artifacts.
 
+Static/certified trust evidence is tracked separately from the raw operator seam. The
+`contracts/trust-telemetry-coverage/lotus-risk-trust-telemetry-coverage.v1.json` contract lists
+every active declared product and marks it as either `certified_static_snapshot` with a matching
+`contracts/trust-telemetry/*.telemetry.v1.json` artifact or `pending_static_snapshot` with owner,
+decision date, and rationale. `scripts/validate_trust_telemetry_contracts.py` fails if an active
+product is missing both a static snapshot and a governed coverage treatment.
+
 Each raw seed now carries the declaration-derived `authoritative_domain`, `product_family`, and
 `current_routes` fields in addition to runtime and lineage evidence so operator review can connect
 the raw trust posture back to the governing repo-native declaration without cross-referencing the
