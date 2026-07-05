@@ -92,6 +92,9 @@
 - Fewer than two aligned observations after period filtering, resampling, and optional
   transformation return `metrics.BETA.value = null` with
   `details.error = "Insufficient aligned observations"`.
+- When `options.use_log_returns=true`, any compounded portfolio or benchmark return less than or
+  equal to `-100%` returns `metrics.BETA.value = null` with
+  `details.error = "Log returns are undefined for returns less than or equal to -100%"`.
 - Zero or near-zero benchmark variance returns `metrics.BETA.value = null` with
   `details.error = "Benchmark variance is zero"`.
 - Non-numeric return values are rejected by request-contract validation before engine math.

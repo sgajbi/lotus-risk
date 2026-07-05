@@ -108,6 +108,9 @@
 - Fewer than two aligned observations after period filtering, resampling, and optional
   transformation return `metrics.TRACKING_ERROR.value = null` with
   `details.error = "Insufficient aligned observations"`.
+- When `options.use_log_returns=true`, any compounded portfolio or benchmark return less than or
+  equal to `-100%` returns `metrics.TRACKING_ERROR.value = null` with
+  `details.error = "Log returns are undefined for returns less than or equal to -100%"`.
 - Constant active returns are valid and produce `0.0`.
 - Non-numeric return values are rejected by request-contract validation before engine math.
 - No risk-free dependency is required for `TRACKING_ERROR`.

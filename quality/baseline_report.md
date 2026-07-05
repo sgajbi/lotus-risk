@@ -13,11 +13,11 @@ completion claim.
 ## Generation Identity
 
 - Git branch: `refactor/enterprise-risk-backend`
-- Git commit: `5a837832522a390bd323e2f7e451fd908eacaa09`
+- Git commit: `1bec0230e4bb95b776a32f38881dbee31e529f8a`
 
 ## Current Code Size
 
-- Python source files under `src/`: 248
+- Python source files under `src/`: 249
 - Python test files under `tests/`: 110
 - Python packages under `src/`: 11
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
@@ -27,15 +27,15 @@ completion claim.
 | Path | Lines | Bytes |
 | --- | --- | --- |
 | src/app/enterprise_readiness.py | 274 | 9366 |
+| src/app/services/risk/period_metrics.py | 269 | 8941 |
 | src/app/services/benchmark_exposure_history.py | 267 | 8995 |
 | src/app/services/calculation_supportability.py | 222 | 7242 |
+| src/app/services/risk/benchmark_period_metrics.py | 218 | 6928 |
 | src/app/services/risk_mode_adapter.py | 217 | 6937 |
 | src/app/integrations/lotus_performance_transport.py | 216 | 6839 |
 | src/app/services/scenario_engine.py | 214 | 7075 |
 | src/app/services/risk_event_cohort_engine.py | 212 | 7302 |
 | src/app/services/risk/metric_calculators.py | 211 | 7168 |
-| src/app/services/risk/period_metrics.py | 211 | 6797 |
-| src/app/services/risk/benchmark_period_metrics.py | 211 | 6678 |
 | src/app/openapi_request_examples/analytics.py | 210 | 6967 |
 | src/app/services/scenario_governance.py | 208 | 7313 |
 | src/app/integrations/downstream_request_execution.py | 208 | 5311 |
@@ -96,29 +96,29 @@ All checks passed!
 - Ruff format check: passed
 
 ```text
-374 files already formatted
+375 files already formatted
 ```
 - Type checking: passed
 
 ```text
-Success: no issues found in 358 source files
+Success: no issues found in 359 source files
 ```
 - Unit coverage snapshot: passed
 
 ```text
 ........................................................................ [ 11%]
-........................................................................ [ 23%]
+........................................................................ [ 22%]
 ........................................................................ [ 34%]
-........................................................................ [ 46%]
+........................................................................ [ 45%]
 ........................................................................ [ 57%]
-........................................................................ [ 69%]
+........................................................................ [ 68%]
 ...
 src\app\services\rolling_stateful_source_responses.py           45      1     16      1    97%   96
 --------------------------------------------------------------------------------------------------------
-TOTAL                                                         6496     87   1086     74    98%
+TOTAL                                                         6540     94   1096     75    98%
 
-202 files skipped due to complete coverage.
-624 passed in 14.53s
+201 files skipped due to complete coverage.
+629 passed in 13.59s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -135,7 +135,7 @@ src\app\domain_data_products.py - A (49.24)
 src\app\enterprise_audit.py - A (60.61)
 ...
 src\app\services\risk\numeric.py - A (100.00)
-src\app\services\risk\period_metrics.py - A (49.15)
+src\app\services\risk\period_metrics.py - A (42.09)
 src\app\services\risk\period_resolution.py - A (47.21)
 src\app\services\risk\period_results.py - A (52.51)
 src\app\services\risk\period_windows.py - A (58.70)
@@ -148,7 +148,7 @@ src\app\services\risk\__init__.py - A (100.00)
 - Dependency hygiene: passed
 
 ```text
-Scanning 248 files...
+Scanning 249 files...
 
 Success! No dependency issues found.
 ```
@@ -248,7 +248,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc1-503-UPSTREAM_UNAVAILABLE-transport]
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 
-624 tests collected in 2.67s
+629 tests collected in 2.26s
 ```
 - Import-linter report-only: reported exit 1
 

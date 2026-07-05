@@ -94,6 +94,9 @@
 ## Validation and Failure Behavior
 - Fewer than two observations after period filtering, resampling, and optional transformation
   returns `metrics.SHARPE.value = null` with `details.error = "Insufficient data"`.
+- When `options.use_log_returns=true`, any compounded portfolio return less than or equal to
+  `-100%` returns `metrics.SHARPE.value = null` with
+  `details.error = "Log returns are undefined for returns less than or equal to -100%"`.
 - `options.risk_free_mode=ANNUAL_RATE` requires `options.risk_free_annual_rate` at request
   validation.
 - Zero sample volatility returns `metrics.SHARPE.value = null` with

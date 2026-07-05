@@ -117,6 +117,11 @@
       - `value: float | null`
       - `details?: object`
         - deterministic error object on metric-level failure (`details.error`)
+        - when `options.use_log_returns=true`, non-drawdown metrics return
+          `details.error = "Log returns are undefined for returns less than or equal to -100%"`
+          if a compounded portfolio return is less than or equal to `-100%`; benchmark-dependent
+          metrics use the same bounded error when either the portfolio or benchmark compounded
+          return is less than or equal to `-100%`
         - metric-specific detail payload (for example drawdown peak/trough/recovery context, Volatility/Sharpe/Sortino observation plus periodic/annualized numerator context, benchmark metric aligned-sample plus periodic/annualized active-return context, VaR method/confidence/tail depth/base expected shortfall plus explicit square-root-of-time horizon scaling context)
         - benchmark-dependent metrics return `details.error = "Insufficient aligned observations"`
           when benchmark history exists for the requested window but fewer than two aligned return

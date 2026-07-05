@@ -195,6 +195,13 @@ def test_to_log_returns_empty_series_passthrough() -> None:
     assert risk_helpers._to_log_returns(empty).empty
 
 
+def test_to_log_returns_rejects_undefined_values() -> None:
+    returns = pd.Series([-100.0, 1.0], index=pd.to_datetime(["2026-01-01", "2026-01-02"]))
+
+    with pytest.raises(ValueError, match="Log returns are undefined"):
+        risk_helpers._to_log_returns(returns)
+
+
 def test_risk_metrics_return_domain_errors_for_insufficient_data() -> None:
     payload = {
         "scope": {"as_of_date": "2025-03-31", "net_or_gross": "NET"},

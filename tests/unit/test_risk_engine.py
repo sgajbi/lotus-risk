@@ -1,3 +1,5 @@
+import math
+import statistics
 from typing import Any
 
 import pytest
@@ -180,6 +182,131 @@ def test_drawdown_matches_documented_signed_percentage_point_output_contract() -
     assert metric.details["days_to_trough"] == 1
     assert metric.details["days_to_recovery"] is None
     assert metric.details["time_under_water_days"] == 2
+
+
+def test_log_return_mode_transforms_portfolio_metric_series() -> None:
+    payload = {
+        "scope": {"as_of_date": "2026-01-03", "net_or_gross": "NET"},
+        "portfolio_open_date": "2026-01-01",
+        "periods": [{"type": "YTD", "name": "YTD"}],
+        "metrics": ["VOLATILITY", "VAR"],
+        "options": {
+            "frequency": "DAILY",
+            "use_log_returns": True,
+            "var": {
+                "method": "HISTORICAL",
+                "confidence": 0.95,
+                "horizon_days": 1,
+                "include_expected_shortfall": True,
+            },
+        },
+        "returns": [
+            {"date": "2026-01-01", "value": 50.0},
+            {"date": "2026-01-02", "value": -40.0},
+            {"date": "2026-01-03", "value": 30.0},
+        ],
+    }
+
+    response = calculate_risk(RiskCalculationRequest.model_validate(payload))
+
+    log_returns = [math.log1p(value / 100) * 100 for value in [50.0, -40.0, 30.0]]
+    volatility = response.results["YTD"].metrics["VOLATILITY"]
+    assert volatility.value == pytest.approx(
+        statistics.stdev(log_returns) / 100 * math.sqrt(252) * 100
+    )
+    assert volatility.value != pytest.approx(
+        statistics.stdev([50.0, -40.0, 30.0]) / 100 * math.sqrt(252) * 100
+    )
+    var = response.results["YTD"].metrics["VAR"]
+    assert var.details is not None
+    assert var.details["base_expected_shortfall"] == pytest.approx(min(log_returns))
+
+
+def test_log_return_mode_keeps_drawdown_on_simple_return_series() -> None:
+    payload = {
+        "scope": {"as_of_date": "2026-01-03", "net_or_gross": "NET"},
+        "portfolio_open_date": "2026-01-01",
+        "periods": [{"type": "YTD", "name": "YTD"}],
+        "metrics": ["DRAWDOWN", "VOLATILITY"],
+        "options": {"frequency": "DAILY", "use_log_returns": True},
+        "returns": [
+            {"date": "2026-01-01", "value": 10.0},
+            {"date": "2026-01-02", "value": -20.0},
+            {"date": "2026-01-03", "value": 5.0},
+        ],
+    }
+
+    response = calculate_risk(RiskCalculationRequest.model_validate(payload))
+
+    drawdown = response.results["YTD"].metrics["DRAWDOWN"]
+    assert drawdown.value == pytest.approx(-20.0)
+    volatility = response.results["YTD"].metrics["VOLATILITY"]
+    assert volatility.value is not None
+
+
+def test_log_return_mode_uses_consistent_portfolio_and_benchmark_series() -> None:
+    payload = {
+        "scope": {"as_of_date": "2026-01-04", "net_or_gross": "NET"},
+        "portfolio_open_date": "2026-01-01",
+        "periods": [{"type": "YTD", "name": "YTD"}],
+        "metrics": ["BETA", "TRACKING_ERROR"],
+        "options": {"frequency": "DAILY", "use_log_returns": True},
+        "returns": [
+            {"date": "2026-01-01", "value": 10.0},
+            {"date": "2026-01-02", "value": -5.0},
+            {"date": "2026-01-03", "value": 2.0},
+            {"date": "2026-01-04", "value": 3.0},
+        ],
+        "benchmark_returns": [
+            {"date": "2026-01-01", "value": 10.0},
+            {"date": "2026-01-02", "value": -5.0},
+            {"date": "2026-01-03", "value": 2.0},
+            {"date": "2026-01-04", "value": 3.0},
+        ],
+    }
+
+    response = calculate_risk(RiskCalculationRequest.model_validate(payload))
+
+    metrics = response.results["YTD"].metrics
+    assert metrics["BETA"].value == pytest.approx(1.0)
+    assert metrics["TRACKING_ERROR"].value == pytest.approx(0.0)
+    tracking_error_details = metrics["TRACKING_ERROR"].details
+    assert tracking_error_details is not None
+    assert tracking_error_details["active_mean_return"] == pytest.approx(0.0)
+
+
+def test_log_return_undefined_values_degrade_non_drawdown_metrics() -> None:
+    payload = {
+        "scope": {"as_of_date": "2026-01-03", "net_or_gross": "NET"},
+        "portfolio_open_date": "2026-01-01",
+        "periods": [{"type": "YTD", "name": "YTD"}],
+        "metrics": ["VOLATILITY", "VAR", "BETA"],
+        "options": {"frequency": "DAILY", "use_log_returns": True},
+        "returns": [
+            {"date": "2026-01-01", "value": -100.0},
+            {"date": "2026-01-02", "value": 1.0},
+            {"date": "2026-01-03", "value": 2.0},
+        ],
+        "benchmark_returns": [
+            {"date": "2026-01-01", "value": -1.0},
+            {"date": "2026-01-02", "value": 1.0},
+            {"date": "2026-01-03", "value": 2.0},
+        ],
+    }
+
+    response = calculate_risk(RiskCalculationRequest.model_validate(payload))
+
+    metrics = response.results["YTD"].metrics
+    for metric_name in ["VOLATILITY", "VAR", "BETA"]:
+        assert metrics[metric_name].value is None
+        details = metrics[metric_name].details
+        assert details is not None
+        assert details["error"] == (
+            "Log returns are undefined for returns less than or equal to -100%"
+        )
+    supportability = response.metadata.calculation_supportability
+    assert supportability.state == "degraded"
+    assert supportability.degraded_metric_count == 3
 
 
 def test_sharpe_matches_documented_dimensionless_output_contract() -> None:
