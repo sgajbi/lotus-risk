@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from tests.support.app_runtime import override_app_runtime
+from tests.support.lotus_core_fakes import RecordingLotusCoreReferenceClient
 from tests.support.lotus_performance_fakes import (
     RecordingLotusPerformanceClient,
     build_autowired_lotus_performance_client_class,
@@ -19,6 +20,33 @@ _AutoWiredLotusPerformanceClient = build_autowired_lotus_performance_client_clas
         portfolio_returns=RISK_STATEFUL_RETURNS[:2],
     )
 )
+
+
+def _risk_free_payload() -> dict[str, object]:
+    return {
+        "points": [
+            {
+                "series_date": "2025-01-02",
+                "value": "0.025",
+                "value_convention": "annualized_rate",
+            },
+            {
+                "series_date": "2025-01-03",
+                "value": "0.025",
+                "value_convention": "annualized_rate",
+            },
+            {
+                "series_date": "2025-01-06",
+                "value": "0.025",
+                "value_convention": "annualized_rate",
+            },
+            {
+                "series_date": "2025-01-07",
+                "value": "0.025",
+                "value_convention": "annualized_rate",
+            },
+        ]
+    }
 
 
 def _request_payload() -> dict[str, object]:
@@ -382,15 +410,13 @@ def test_risk_calculate_stateful_sharpe_uses_sourced_risk_free_returns() -> None
     performance_client = RecordingLotusPerformanceClient(
         response_payload=build_returns_series_response(
             portfolio_returns=RISK_STATEFUL_RETURNS,
-            risk_free_returns=[
-                ("2025-01-02", "0.000100"),
-                ("2025-01-03", "0.000100"),
-                ("2025-01-06", "0.000100"),
-                ("2025-01-07", "0.000100"),
-            ],
         )
     )
-    with override_app_runtime(lotus_performance_client=performance_client):
+    core_client = RecordingLotusCoreReferenceClient(risk_free_response=_risk_free_payload())
+    with override_app_runtime(
+        lotus_performance_client=performance_client,
+        lotus_core_client=core_client,
+    ):
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/calculate",
@@ -414,7 +440,16 @@ def test_risk_calculate_stateful_sharpe_uses_sourced_risk_free_returns() -> None
     assert payload["series_selection"] == {
         "include_portfolio": True,
         "include_benchmark": False,
-        "include_risk_free": True,
+        "include_risk_free": False,
+    }
+    assert core_client.risk_free_calls
+    core_payload = core_client.risk_free_calls[0]["request_payload"]
+    assert core_payload == {
+        "currency": "USD",
+        "as_of_date": "2025-01-07",
+        "series_mode": "annualized_rate_series",
+        "window": {"start_date": "2025-01-01", "end_date": "2025-01-07"},
+        "frequency": "daily",
     }
     body = response.json()
     assert body["metadata"]["source_services"] == [
@@ -422,6 +457,10 @@ def test_risk_calculate_stateful_sharpe_uses_sourced_risk_free_returns() -> None
         "lotus-performance",
         "lotus-core",
     ]
+    assert set(body["metadata"]["upstream_request_fingerprints"]) == {
+        "lotus-performance:/integration/returns/series",
+        "lotus-core:/integration/reference/risk-free-series",
+    }
     assert body["metadata"]["risk_free_context"]["reason"] == "ANNUAL_RATE_APPLIED"
     assert body["metadata"]["risk_free_context"]["periodic_rate"] > 0
     assert body["metadata"]["risk_free_annual_rate"] > 0

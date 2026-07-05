@@ -13,7 +13,7 @@ completion claim.
 ## Generation Identity
 
 - Git branch: `refactor/enterprise-risk-backend`
-- Git commit: `1bec0230e4bb95b776a32f38881dbee31e529f8a`
+- Git commit: `4a27eae931ea763c8362b91879c4d524cc2f13e7`
 
 ## Current Code Size
 
@@ -26,12 +26,12 @@ completion claim.
 
 | Path | Lines | Bytes |
 | --- | --- | --- |
+| src/app/services/risk_mode_adapter.py | 317 | 10556 |
 | src/app/enterprise_readiness.py | 274 | 9366 |
 | src/app/services/risk/period_metrics.py | 269 | 8941 |
 | src/app/services/benchmark_exposure_history.py | 267 | 8995 |
 | src/app/services/calculation_supportability.py | 222 | 7242 |
 | src/app/services/risk/benchmark_period_metrics.py | 218 | 6928 |
-| src/app/services/risk_mode_adapter.py | 217 | 6937 |
 | src/app/integrations/lotus_performance_transport.py | 216 | 6839 |
 | src/app/services/scenario_engine.py | 214 | 7075 |
 | src/app/services/risk_event_cohort_engine.py | 212 | 7302 |
@@ -115,10 +115,10 @@ Success: no issues found in 359 source files
 ...
 src\app\services\rolling_stateful_source_responses.py           45      1     16      1    97%   96
 --------------------------------------------------------------------------------------------------------
-TOTAL                                                         6540     94   1096     75    98%
+TOTAL                                                         6572     97   1110     78    98%
 
 201 files skipped due to complete coverage.
-629 passed in 13.59s
+631 passed in 14.73s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -248,7 +248,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc1-503-UPSTREAM_UNAVAILABLE-transport]
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 
-629 tests collected in 2.26s
+631 tests collected in 2.37s
 ```
 - Import-linter report-only: reported exit 1
 
@@ -260,10 +260,10 @@ Import Linter
 
 ---------
 ...
-    app.ops_runtime -> app.integrations.lotus_performance_client (l.9)
+    app.ops_runtime -> app.integrations.lotus_core_client (l.8)
 
 -   app.routers.operational -> app.trust_telemetry (l.29)
     app.trust_telemetry -> app.trust_telemetry_builders (l.3)
     app.trust_telemetry_builders -> app.ops_runtime (l.18)
-    app.ops_runtime -> app.integrations.lotus_core_client (l.8)
+    app.ops_runtime -> app.integrations.lotus_performance_client (l.9)
 ```

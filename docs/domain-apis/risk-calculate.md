@@ -26,7 +26,9 @@
     (`BETA`, `TRACKING_ERROR`, `INFORMATION_RATIO`) to use a specific governed benchmark; when
     omitted, `lotus-performance` resolves the portfolio benchmark assignment.
   - lotus-risk sources canonical return series from `lotus-performance` using `input_mode=stateful` and `stateful_input is an empty envelope; consumer identity is stamped by lotus-performance server-side`.
-  - when `SHARPE` is requested, the stateful returns-series request includes risk-free returns sourced from the `lotus-core` mastered risk-free series through `lotus-performance`.
+  - when `SHARPE` is requested, lotus-risk requests risk-free observations directly from
+    `lotus-core` using `/integration/reference/risk-free-series` and records a separate
+    `lotus-core:/integration/reference/risk-free-series` upstream request fingerprint.
   - sourced risk-free period returns are converted into the existing annual-rate risk-engine option so `metadata.risk_free_context.reason` becomes `ANNUAL_RATE_APPLIED`; missing sourced risk-free returns fail closed instead of silently using a zero-rate convention.
   - lotus-risk computes with the same risk engine used by stateless mode.
 
@@ -73,7 +75,8 @@
 - `stateful_input.periods[]`
 - `stateful_input.metrics[]`
   - benchmark metrics cause `series_selection.include_benchmark=true`
-  - `SHARPE` causes `series_selection.include_risk_free=true`
+  - `SHARPE` leaves `series_selection.include_risk_free=false` on the lotus-performance
+    returns-series request and causes a direct lotus-core risk-free series request
 - `stateful_input.options`
 
 ## Stateful/Simulation Input Source Mapping (Current + Target)
@@ -84,7 +87,7 @@
 | Raw valuation/performance input points | lotus-core (`/integration/portfolios/{id}/performance-input`) | Exists | Provides valuation points and metadata. |
 | Daily return series normalized for risk engine | lotus-performance (`/integration/returns/series` with `input_mode=stateful`) | Exists | Implemented stateful path in lotus-risk; upstream decimal returns are filtered to trading days and converted to percentage-point risk engine input. |
 | Benchmark return series | lotus-performance (`/integration/returns/series` with `include_benchmark=true` and optional `benchmark.benchmark_id`) | Exists | Used by stateful beta, tracking error, information ratio, and benchmark-relative drawdown paths; aligned by trading date inside lotus-risk. |
-| Risk-free return series | lotus-performance (`/integration/returns/series` with `include_risk_free=true`, sourced from lotus-core risk-free reference data) | Exists | Used by stateful Sharpe. Empty risk-free returns fail closed so downstream consumers do not certify zero-rate Sharpe as source-backed. |
+| Risk-free return series | lotus-core (`/integration/reference/risk-free-series`) | Exists | Used by stateful Sharpe. Empty risk-free returns fail closed so downstream consumers do not certify zero-rate Sharpe as source-backed. |
 
 ## Expected Output Structure
 
@@ -141,7 +144,7 @@
 
 ## Gaps and Decisions Required
 
-1. Benchmark/risk-free sourcing remains upstream-dependent on lotus-performance + lotus-core reference-data availability; stateful benchmark metrics degrade deterministically when benchmark series is absent, and this is now surfaced in `benchmark_context.reason`. Stateful Sharpe requires sourced risk-free returns and surfaces application separately in `metadata.risk_free_context`.
+1. Benchmark and risk-free sourcing remain upstream-dependent on lotus-performance + lotus-core availability; stateful benchmark metrics degrade deterministically when benchmark series is absent, and this is now surfaced in `benchmark_context.reason`. Stateful Sharpe directly requests lotus-core risk-free observations, records a separate core request fingerprint, and surfaces application separately in `metadata.risk_free_context`.
    Downstream gateway summary wording cleanup is tracked in `sgajbi/lotus-gateway#114` so
    supportability copy stays aligned with the domain contract.
 2. Standardize response metadata additions (for example `correlationId`, `contractVersion`, `asOfDate`) if this endpoint must fully match cross-platform response envelope conventions.

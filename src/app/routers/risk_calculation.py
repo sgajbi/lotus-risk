@@ -54,6 +54,9 @@ async def analytics_risk_calculate(
             operation=lambda: calculate_risk_stateful(
                 stateful_input,
                 performance_client=runtime_clients.lotus_performance(),
+                core_client=(
+                    runtime_clients.lotus_core() if "SHARPE" in stateful_input.metrics else None
+                ),
                 correlation_id=correlation_id,
             ),
         )
