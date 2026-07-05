@@ -22,6 +22,16 @@ def _default_stateful_active_risk_gated_groupings() -> list[GroupingDimension]:
 
 
 class HistoricalAttributionMetadata(AuditMetadataFields):
+    product_name: Literal["HistoricalRiskAttributionReport"] = Field(
+        default="HistoricalRiskAttributionReport",
+        description="Source-owned domain data product emitted by this response.",
+        json_schema_extra={"example": "HistoricalRiskAttributionReport"},
+    )
+    product_version: Literal["v1"] = Field(
+        default="v1",
+        description="Source-owned domain data product version.",
+        json_schema_extra={"example": "v1"},
+    )
     contract_version: str = Field(
         default="v1",
         description="Historical attribution contract version.",
@@ -73,6 +83,17 @@ class HistoricalAttributionMetadata(AuditMetadataFields):
         default="none",
         description="Deterministic reason for any gated stateful ACTIVE_RISK grouping dimensions.",
         json_schema_extra={"example": "none"},
+    )
+    benchmark_context: dict[str, object] = Field(
+        default_factory=dict,
+        description="Source-owned benchmark context summary for domain-data-product trust metadata.",
+        json_schema_extra={
+            "example": {
+                "requested": True,
+                "source_service": "lotus-performance",
+                "reason": "APPLIED",
+            }
+        },
     )
     calculation_supportability: RiskCalculationSupportability = Field(
         default_factory=lambda: RiskCalculationSupportability(

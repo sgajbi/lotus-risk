@@ -6,9 +6,11 @@ from typing import Any, cast
 
 import pytest
 
+from app.main import app
 from scripts.domain_data_product_contract_check import (
     _resolve_platform_root,
     platform_validation_dependencies_available,
+    validate_declared_route_response_metadata,
     validate_repo_native_contracts,
 )
 
@@ -73,3 +75,38 @@ def test_repo_native_declaration_directory_contains_expected_contract_files() ->
         "lotus-risk-consumers.v1.json",
         "lotus-risk-products.v1.json",
     ]
+
+
+def test_declared_route_responses_expose_required_trust_metadata() -> None:
+    producer_payload = _load_json(LOCAL_DECLARATIONS_DIR / "lotus-risk-products.v1.json")
+
+    assert (
+        validate_declared_route_response_metadata(
+            producer_payload=producer_payload,
+            openapi_payload=app.openapi(),
+        )
+        == []
+    )
+
+
+def test_declared_route_response_metadata_validation_rejects_missing_field() -> None:
+    producer_payload = {
+        "products": [
+            {
+                "product_name": "BrokenRiskProduct",
+                "required_trust_metadata": ["product_name", "missing_trust_field"],
+                "current_routes": ["/analytics/risk/calculate"],
+            }
+        ]
+    }
+
+    issues = validate_declared_route_response_metadata(
+        producer_payload=producer_payload,
+        openapi_payload=app.openapi(),
+    )
+
+    assert any(
+        "required trust metadata 'missing_trust_field' has no governed response-schema mapping"
+        in issue
+        for issue in issues
+    )

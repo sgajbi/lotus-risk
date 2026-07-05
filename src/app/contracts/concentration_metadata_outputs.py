@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime
+from typing import Literal
 
 from pydantic import Field
 
@@ -10,6 +11,16 @@ from app.contracts.risk import RiskCalculationSupportability
 
 
 class ConcentrationMetadata(AuditMetadataFields):
+    product_name: Literal["ConcentrationRiskReport"] = Field(
+        default="ConcentrationRiskReport",
+        description="Source-owned domain data product emitted by this response.",
+        json_schema_extra={"example": "ConcentrationRiskReport"},
+    )
+    product_version: Literal["v1"] = Field(
+        default="v1",
+        description="Source-owned domain data product version.",
+        json_schema_extra={"example": "v1"},
+    )
     as_of_date: date | None = Field(
         default=None,
         description="Business date used for baseline/proposed concentration inputs.",

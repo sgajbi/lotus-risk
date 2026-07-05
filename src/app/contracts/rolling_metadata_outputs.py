@@ -27,6 +27,16 @@ class RollingRequestDependencyContext(BaseModel):
 
 
 class RollingMetadata(AuditMetadataFields):
+    product_name: Literal["RollingRiskMetricsReport"] = Field(
+        default="RollingRiskMetricsReport",
+        description="Source-owned domain data product emitted by this response.",
+        json_schema_extra={"example": "RollingRiskMetricsReport"},
+    )
+    product_version: Literal["v1"] = Field(
+        default="v1",
+        description="Source-owned domain data product version.",
+        json_schema_extra={"example": "v1"},
+    )
     contract_version: str = Field(
         default="v1",
         description="Rolling metrics contract version.",

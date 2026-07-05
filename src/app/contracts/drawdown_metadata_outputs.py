@@ -9,6 +9,16 @@ from app.contracts.risk import RiskCalculationSupportability
 
 
 class DrawdownMetadata(AuditMetadataFields):
+    product_name: Literal["DrawdownAnalyticsReport"] = Field(
+        default="DrawdownAnalyticsReport",
+        description="Source-owned domain data product emitted by this response.",
+        json_schema_extra={"example": "DrawdownAnalyticsReport"},
+    )
+    product_version: Literal["v1"] = Field(
+        default="v1",
+        description="Source-owned domain data product version.",
+        json_schema_extra={"example": "v1"},
+    )
     contract_version: str = Field(
         default="v1",
         description="Drawdown analytics contract version.",
@@ -58,6 +68,11 @@ class DrawdownMetadata(AuditMetadataFields):
         default=None,
         description="Behavior requested when benchmark series is unavailable.",
         json_schema_extra={"example": "IGNORE"},
+    )
+    benchmark_context: dict[str, object] = Field(
+        default_factory=dict,
+        description="Source-owned benchmark context summary for domain-data-product trust metadata.",
+        json_schema_extra={"example": {"requested": True, "policy": "IGNORE", "reason": "APPLIED"}},
     )
     calculation_supportability: RiskCalculationSupportability = Field(
         default_factory=lambda: RiskCalculationSupportability(

@@ -24,6 +24,21 @@ from app.contracts.risk_response_field_examples import (
 
 
 class RiskResponseMetadata(AuditMetadataFields):
+    product_name: Literal["RiskMetricsReport"] = Field(
+        default="RiskMetricsReport",
+        description="Source-owned domain data product emitted by this response.",
+        json_schema_extra={"example": "RiskMetricsReport"},
+    )
+    product_version: Literal["v1"] = Field(
+        default="v1",
+        description="Source-owned domain data product version.",
+        json_schema_extra={"example": "v1"},
+    )
+    correlation_id: str | None = Field(
+        default=None,
+        description="Request correlation identifier when available from the request context.",
+        json_schema_extra={"example": "corr-123"},
+    )
     contract_version: str = Field(
         default="v1",
         description="Risk analytics contract version.",

@@ -10,6 +10,11 @@ from typing import Any, cast
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+SRC = REPO_ROOT / "src"
+SRC_STR = str(SRC)
+while SRC_STR in sys.path:
+    sys.path.remove(SRC_STR)
+sys.path.insert(0, SRC_STR)
 LOCAL_DECLARATIONS_DIR = REPO_ROOT / "contracts" / "domain-data-products"
 
 
@@ -48,6 +53,29 @@ SUPPLEMENTAL_PLATFORM_PRODUCERS = (
     PLATFORM_DECLARATIONS_DIR / "lotus-core-products.v1.json",
     PLATFORM_DECLARATIONS_DIR / "lotus-performance-products.v1.json",
 )
+TRUST_METADATA_RESPONSE_PATHS: dict[str, tuple[str, ...]] = {
+    "product_name": ("metadata.product_name", "product_name"),
+    "product_version": ("metadata.product_version", "product_version"),
+    "as_of_date": ("scope.as_of_date", "metadata.as_of_date", "as_of_date"),
+    "lineage_version": ("metadata.lineage_version", "lineage_version"),
+    "request_fingerprint": ("metadata.request_fingerprint", "request_fingerprint"),
+    "source_services": ("metadata.source_services", "source_services"),
+    "upstream_request_fingerprints": (
+        "metadata.upstream_request_fingerprints",
+        "upstream_request_fingerprints",
+    ),
+    "benchmark_context": ("metadata.benchmark_context", "benchmark_context"),
+    "risk_free_context": ("metadata.risk_free_context", "risk_free_context"),
+    "correlation_id": ("metadata.correlation_id", "correlation_id"),
+    "coverage_ratio": (
+        "metadata.coverage_ratio",
+        "issuer_concentration.coverage_ratio_current",
+    ),
+    "coverage_status": (
+        "metadata.coverage_status",
+        "issuer_concentration.coverage_status",
+    ),
+}
 
 
 def platform_validation_dependencies_available() -> bool:
@@ -79,6 +107,128 @@ def _load_json(path: Path) -> dict[str, Any]:
 
 def _append_issue(issues: list[str], path: Path, message: str) -> None:
     issues.append(f"{path}: {message}")
+
+
+def _response_schema_for_route(
+    openapi_payload: dict[str, Any], route: str
+) -> dict[str, Any] | None:
+    route_payload = openapi_payload.get("paths", {}).get(route)
+    if not isinstance(route_payload, dict):
+        return None
+    post_payload = route_payload.get("post")
+    if not isinstance(post_payload, dict):
+        return None
+    schema = (
+        post_payload.get("responses", {})
+        .get("200", {})
+        .get("content", {})
+        .get("application/json", {})
+        .get("schema")
+    )
+    return schema if isinstance(schema, dict) else None
+
+
+def _resolve_schema_ref(openapi_payload: dict[str, Any], schema: dict[str, Any]) -> dict[str, Any]:
+    ref = schema.get("$ref")
+    if not isinstance(ref, str) or not ref.startswith("#/"):
+        return schema
+    target: Any = openapi_payload
+    for segment in ref.removeprefix("#/").split("/"):
+        if not isinstance(target, dict):
+            return schema
+        target = target.get(segment)
+    return target if isinstance(target, dict) else schema
+
+
+def _schema_has_path(
+    openapi_payload: dict[str, Any],
+    schema: dict[str, Any],
+    path: str,
+) -> bool:
+    return _schema_has_path_tokens(openapi_payload, schema, path.split("."))
+
+
+def _schema_has_path_tokens(
+    openapi_payload: dict[str, Any],
+    schema: dict[str, Any],
+    tokens: list[str],
+) -> bool:
+    schema = _resolve_schema_ref(openapi_payload, schema)
+    for union_key in ("allOf", "anyOf", "oneOf"):
+        union_schemas = schema.get(union_key)
+        if isinstance(union_schemas, list) and any(
+            isinstance(candidate, dict)
+            and _schema_has_path_tokens(openapi_payload, candidate, tokens)
+            for candidate in union_schemas
+        ):
+            return True
+
+    if not tokens:
+        return True
+
+    token = tokens[0]
+    if token == "*":
+        additional = schema.get("additionalProperties")
+        if isinstance(additional, dict):
+            return _schema_has_path_tokens(openapi_payload, additional, tokens[1:])
+        items = schema.get("items")
+        if isinstance(items, dict):
+            return _schema_has_path_tokens(openapi_payload, items, tokens[1:])
+        return False
+
+    properties = schema.get("properties")
+    if isinstance(properties, dict):
+        child = properties.get(token)
+        if isinstance(child, dict):
+            return _schema_has_path_tokens(openapi_payload, child, tokens[1:])
+
+    return False
+
+
+def validate_declared_route_response_metadata(
+    *,
+    producer_payload: dict[str, Any],
+    openapi_payload: dict[str, Any],
+) -> list[str]:
+    issues: list[str] = []
+    products = producer_payload.get("products")
+    if not isinstance(products, list):
+        return ["domain data product declaration: products must be a list"]
+
+    for product in products:
+        if not isinstance(product, dict):
+            continue
+        product_name = str(product.get("product_name", "<unknown>"))
+        required_metadata = product.get("required_trust_metadata")
+        routes = product.get("current_routes")
+        if not isinstance(required_metadata, list) or not isinstance(routes, list):
+            continue
+        for route in routes:
+            if not isinstance(route, str):
+                continue
+            route_schema = _response_schema_for_route(openapi_payload, route)
+            if route_schema is None:
+                issues.append(f"{product_name}: route {route} has no JSON 200 response schema")
+                continue
+            for field in required_metadata:
+                if not isinstance(field, str):
+                    continue
+                candidate_paths = TRUST_METADATA_RESPONSE_PATHS.get(field)
+                if not candidate_paths:
+                    issues.append(
+                        f"{product_name}: required trust metadata {field!r} has no governed "
+                        "response-schema mapping"
+                    )
+                    continue
+                if not any(
+                    _schema_has_path(openapi_payload, route_schema, candidate_path)
+                    for candidate_path in candidate_paths
+                ):
+                    issues.append(
+                        f"{product_name}: route {route} omits required trust metadata "
+                        f"{field!r}; expected one of {list(candidate_paths)}"
+                    )
+    return issues
 
 
 def _load_registry_keys(
@@ -185,6 +335,15 @@ def validate_repo_native_contracts() -> list[str]:
                 local_path,
                 f"repo-native {mirror_kind} declaration drifted from transitional platform mirror {platform_path}",
             )
+
+    from app.main import app
+
+    issues.extend(
+        validate_declared_route_response_metadata(
+            producer_payload=local_producer_payload,
+            openapi_payload=app.openapi(),
+        )
+    )
 
     return issues
 
