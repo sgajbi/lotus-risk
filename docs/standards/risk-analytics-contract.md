@@ -76,7 +76,7 @@
 
 ## Risk Calculate Mode Support
 - `stateless`: caller supplies full return series.
-- `stateful`: caller supplies identifiers + risk metric specification; lotus-risk sources canonical portfolio/benchmark/risk-free series from lotus-performance (`/integration/returns/series`, `input_mode=stateful`, `stateful_input is an empty envelope; consumer identity is stamped by lotus-performance server-side`) and computes with the same engine.
+- `stateful`: caller supplies identifiers + risk metric specification; lotus-risk sources canonical portfolio and benchmark series from lotus-performance (`/integration/returns/series`, `input_mode=stateful`, `stateful_input is an empty envelope; consumer identity is stamped by lotus-performance server-side`), sources risk-free observations directly from lotus-core when Sharpe is requested, and computes with the same engine.
 - `simulation`: intentionally unsupported by contract for `risk/calculate`; concentration is the only simulation-enabled risk flow.
 
 ## Drawdown Details

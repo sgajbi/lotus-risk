@@ -1,11 +1,28 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 from app.domain_data_products import (
     LOCAL_PRODUCER_DECLARATION_PATH,
     get_declared_product,
     list_declared_products,
     load_local_producer_declaration,
 )
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+LOCAL_CONSUMER_DECLARATION_PATH = (
+    REPO_ROOT / "contracts" / "domain-data-products" / "lotus-risk-consumers.v1.json"
+)
+
+
+def _consumer_dependencies() -> dict[str, dict[str, object]]:
+    payload = json.loads(LOCAL_CONSUMER_DECLARATION_PATH.read_text(encoding="utf-8"))
+    return {
+        str(dependency["product_name"]): dependency
+        for dependency in payload["dependencies"]
+        if isinstance(dependency, dict)
+    }
 
 
 def test_load_local_producer_declaration_uses_repo_native_contract_path() -> None:
@@ -83,3 +100,16 @@ def test_get_declared_product_rejects_unknown_product() -> None:
         assert "Unknown lotus-risk declared product" in str(exc)
     else:
         raise AssertionError("expected unknown declared product lookup to fail")
+
+
+def test_stateful_sharpe_risk_free_dependency_is_direct_lotus_core_source() -> None:
+    dependencies = _consumer_dependencies()
+
+    returns_bundle = dependencies["ReturnsSeriesBundle"]
+    assert returns_bundle["producer_repository"] == "lotus-performance"
+    assert "portfolio and benchmark return observations" in str(returns_bundle["business_purpose"])
+
+    risk_free_window = dependencies["RiskFreeSeriesWindow"]
+    assert risk_free_window["producer_repository"] == "lotus-core"
+    assert "stateful Sharpe" in str(risk_free_window["business_purpose"])
+    assert risk_free_window["consumption_mode"] == "api_read"

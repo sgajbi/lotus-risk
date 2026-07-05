@@ -28,6 +28,11 @@ shape changed without logging full customer payloads.
 | `historical-attribution` | `lotus-risk` | `lotus-risk`, `lotus-performance`, `lotus-core` |
 | `concentration` | `lotus-risk` | `lotus-risk`, `lotus-core` |
 
+For stateful `risk/calculate`, Sharpe risk-free treatment uses a direct
+`lotus-core:/integration/reference/risk-free-series` upstream request fingerprint. The
+`lotus-performance:/integration/returns/series` fingerprint covers portfolio and benchmark returns
+only; it must not be used as implicit proof of risk-free source lineage.
+
 ## Governance Rules
 
 1. `request_fingerprint` must be deterministic for equivalent normalized inputs.
