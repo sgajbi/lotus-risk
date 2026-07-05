@@ -70,6 +70,7 @@ def test_risk_metadata_includes_reproducible_audit_lineage() -> None:
     response = calculate_risk(request)
 
     assert response.metadata.lineage_version == "risk_audit_lineage.v1"
+    assert response.metadata.generated_at.tzinfo is not None
     assert response.metadata.request_fingerprint == fingerprint_payload(request)
     assert response.metadata.source_services == ["lotus-risk"]
     assert response.metadata.upstream_request_fingerprints == {}
@@ -85,6 +86,7 @@ def test_drawdown_metadata_includes_reproducible_audit_lineage() -> None:
     )
 
     assert response.metadata.request_fingerprint == fingerprint_payload(request)
+    assert response.metadata.generated_at.tzinfo is not None
     assert response.metadata.source_services == ["lotus-risk"]
 
 
@@ -99,6 +101,7 @@ def test_rolling_metadata_includes_reproducible_audit_lineage() -> None:
     response = calculate_rolling_metrics(request, input_mode=RollingInputMode.STATELESS)
 
     assert response.metadata.request_fingerprint == fingerprint_payload(request)
+    assert response.metadata.generated_at.tzinfo is not None
     assert response.metadata.source_services == ["lotus-risk"]
 
 
@@ -116,6 +119,7 @@ def test_attribution_metadata_includes_reproducible_audit_lineage() -> None:
     )
 
     assert response.metadata.request_fingerprint == fingerprint_payload(request)
+    assert response.metadata.generated_at.tzinfo is not None
     assert response.metadata.source_services == ["lotus-risk"]
 
 
