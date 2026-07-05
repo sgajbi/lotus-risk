@@ -13,12 +13,12 @@ completion claim.
 ## Generation Identity
 
 - Git branch: `refactor/enterprise-risk-backend`
-- Git commit: `a90141f2d9e89d002e80b74acf4dfffddcb6024b`
+- Git commit: `bde67fdbd3bd0cceecdf2a9f855621a64b49482d`
 
 ## Current Code Size
 
 - Python source files under `src/`: 248
-- Python test files under `tests/`: 109
+- Python test files under `tests/`: 110
 - Python packages under `src/`: 11
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
 
@@ -96,29 +96,29 @@ All checks passed!
 - Ruff format check: passed
 
 ```text
-373 files already formatted
+374 files already formatted
 ```
 - Type checking: passed
 
 ```text
-Success: no issues found in 357 source files
+Success: no issues found in 358 source files
 ```
 - Unit coverage snapshot: passed
 
 ```text
 ........................................................................ [ 11%]
 ........................................................................ [ 23%]
-........................................................................ [ 35%]
+........................................................................ [ 34%]
 ........................................................................ [ 46%]
-........................................................................ [ 58%]
-........................................................................ [ 70%]
+........................................................................ [ 57%]
+........................................................................ [ 69%]
 ...
 src\app\services\rolling_stateful_source_responses.py           45      1     16      1    97%   96
 --------------------------------------------------------------------------------------------------------
-TOTAL                                                         6466     87   1076     75    98%
+TOTAL                                                         6484     87   1082     74    98%
 
-201 files skipped due to complete coverage.
-617 passed in 11.83s
+202 files skipped due to complete coverage.
+621 passed in 13.20s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -248,7 +248,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc1-503-UPSTREAM_UNAVAILABLE-transport]
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 
-617 tests collected in 1.92s
+621 tests collected in 1.93s
 ```
 - Import-linter report-only: reported exit 1
 

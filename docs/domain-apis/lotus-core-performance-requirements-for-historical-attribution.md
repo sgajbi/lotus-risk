@@ -308,6 +308,10 @@ Required behavior:
 
 2. Performance:
 - support at least 5,000 rows per page in `position-timeseries`.
+- lotus-risk requests `position-timeseries` with `page_size=5000` and consumes at most 25 pages
+  or 100,000 accumulated rows per stateful historical-attribution request; repeated
+  `page.next_page_token` values or budget overruns are treated as invalid lotus-core pagination
+  responses.
 - benchmark exposure context uses `page_size=1000` for deterministic paging through lotus-performance.
 - lotus-risk consumes at most 25 benchmark exposure context pages and 10,000 accumulated benchmark
   exposure rows per stateful active-risk request; repeated `page.next_page_token` values or budget
