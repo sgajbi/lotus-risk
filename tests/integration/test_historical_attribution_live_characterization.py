@@ -9,7 +9,11 @@ import pytest
 
 from app.contracts.risk import RiskRequestPeriod
 from app.services.stateful_returns_request import build_stateful_returns_series_request
-from tests.support.live_portfolio_matrix import live_as_of_date, live_portfolio_id
+from tests.support.live_portfolio_matrix import (
+    HISTORICAL_ATTRIBUTION_ACTIVE_RISK_GROUPINGS,
+    live_as_of_date,
+    live_portfolio_id,
+)
 from tests.support.live_returns_series import (
     extract_decimal_returns,
     fetch_live_benchmark_exposure_context,
@@ -134,30 +138,21 @@ def _stateful_total_risk_payload(*, grouping_dimensions: list[str]) -> dict[str,
     }
 
 
-def test_live_benchmark_exposure_context_supports_sector_but_rejects_issuer() -> None:
+@pytest.mark.parametrize("grouping_dimension", ["SECTOR", "ISSUER"])
+def test_live_benchmark_exposure_context_supports_grouping_dimension(
+    grouping_dimension: str,
+) -> None:
     supported = fetch_live_benchmark_exposure_context(
         base_url=PERFORMANCE_BASE_URL,
-        request_payload=_benchmark_exposure_request(grouping_dimensions=["SECTOR"]),
+        request_payload=_benchmark_exposure_request(grouping_dimensions=[grouping_dimension]),
     )
 
     assert supported["source_service"] == "lotus-performance"
     assert supported["contract_version"] == "v1"
     assert supported["metadata"]["source_system"] == "lotus-core"
     assert supported["metadata"]["served_by"] == "lotus-performance"
-    assert supported["rows"], "expected live sector benchmark exposure rows"
-    assert {row["grouping_dimension"] for row in supported["rows"]} == {"SECTOR"}
-
-    with httpx.Client(timeout=30.0) as client:
-        rejected = client.post(
-            f"{PERFORMANCE_BASE_URL}/integration/benchmarks/exposure-context",
-            json=_benchmark_exposure_request(grouping_dimensions=["ISSUER"]),
-        )
-
-    assert rejected.status_code == 422
-    body = rejected.json()
-    detail = body.get("detail")
-    assert isinstance(detail, list)
-    assert any("grouping_dimensions=ISSUER" in item["msg"] for item in detail)
+    assert supported["rows"], f"expected live {grouping_dimension} benchmark exposure rows"
+    assert {row["grouping_dimension"] for row in supported["rows"]} == {grouping_dimension}
 
 
 def test_live_stateful_historical_attribution_supports_sector_active_risk() -> None:
@@ -180,12 +175,9 @@ def test_live_stateful_historical_attribution_supports_sector_active_risk() -> N
     assert body["metadata"]["requested_attribution_types"] == ["ACTIVE_RISK"]
     assert body["metadata"]["requested_metrics"] == ["TRACKING_ERROR"]
     assert body["metadata"]["requested_grouping_dimensions"] == ["SECTOR"]
-    assert body["metadata"]["stateful_active_risk_supported_grouping_dimensions"] == [
-        "POSITION",
-        "SECTOR",
-        "ASSET_CLASS",
-        "ISSUER",
-    ]
+    assert body["metadata"]["stateful_active_risk_supported_grouping_dimensions"] == list(
+        HISTORICAL_ATTRIBUTION_ACTIVE_RISK_GROUPINGS
+    )
     assert body["metadata"]["stateful_active_risk_gated_grouping_dimensions"] == []
 
     period = body["results"]["YTD"]
@@ -250,7 +242,7 @@ def test_live_stateful_historical_attribution_supports_sector_total_risk() -> No
     )
 
 
-@pytest.mark.parametrize("grouping_dimension", ["POSITION", "ASSET_CLASS"])
+@pytest.mark.parametrize("grouping_dimension", ["POSITION", "ASSET_CLASS", "ISSUER"])
 def test_live_stateful_historical_attribution_supports_other_active_risk_groupings(
     grouping_dimension: str,
 ) -> None:
@@ -289,17 +281,3 @@ def test_live_stateful_historical_attribution_supports_other_active_risk_groupin
         attribution_set["total_value"] - attribution_set["reconciled_sum"],
         abs=1e-12,
     )
-
-
-def test_live_stateful_historical_attribution_rejects_issuer_at_request_boundary() -> None:
-    with httpx.Client(timeout=30.0) as client:
-        response = client.post(
-            f"{RISK_BASE_URL}/analytics/risk/historical-attribution",
-            json=_stateful_active_risk_payload(grouping_dimensions=["ISSUER"]),
-        )
-
-    assert response.status_code == 422
-    error = response.json()["error"]
-    assert error["code"] == "INVALID_REQUEST"
-    assert error["message"] == "Request validation failed"
-    assert any("grouping_dimension=ISSUER" in detail["msg"] for detail in error["details"])

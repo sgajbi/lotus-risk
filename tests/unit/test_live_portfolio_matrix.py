@@ -8,6 +8,7 @@ import pytest
 from tests.support.live_portfolio_matrix import (
     CANONICAL_LIVE_AS_OF_DATE,
     CANONICAL_LIVE_PORTFOLIO_ID,
+    HISTORICAL_ATTRIBUTION_ACTIVE_RISK_GROUPINGS,
     LIVE_AS_OF_DATE_ENV,
     LIVE_PORTFOLIO_ID_ENV,
     LIVE_PORTFOLIO_MATRIX_JSON_ENV,
@@ -37,6 +38,38 @@ def test_live_validation_matrix_doc_lists_code_required_archetypes() -> None:
     assert CANONICAL_LIVE_PORTFOLIO_ID in matrix_doc
     for archetype in REQUIRED_PORTFOLIO_ARCHETYPES:
         assert archetype in matrix_doc
+
+
+def test_issuer_active_risk_live_docs_match_characterization_suite() -> None:
+    expected_phrase = "`POSITION`, `SECTOR`, `ASSET_CLASS`, and `ISSUER`"
+    docs = [
+        Path("docs/operations/live-risk-validation-matrix.md"),
+        Path("docs/domain-apis/risk-historical-attribution.md"),
+        Path("docs/domain-apis/endpoint-matrix.md"),
+        Path("docs/supported-features.md"),
+        Path("wiki/Supported-Features.md"),
+    ]
+    live_characterization = Path(
+        "tests/integration/test_historical_attribution_live_characterization.py"
+    ).read_text(encoding="utf-8")
+
+    assert HISTORICAL_ATTRIBUTION_ACTIVE_RISK_GROUPINGS == (
+        "POSITION",
+        "SECTOR",
+        "ASSET_CLASS",
+        "ISSUER",
+    )
+    for doc in docs:
+        assert "ISSUER" in doc.read_text(encoding="utf-8")
+    assert expected_phrase in Path("docs/operations/live-risk-validation-matrix.md").read_text(
+        encoding="utf-8"
+    )
+    assert (
+        '@pytest.mark.parametrize("grouping_dimension", ["POSITION", "ASSET_CLASS", "ISSUER"])'
+        in live_characterization
+    )
+    assert "rejects_issuer" not in live_characterization
+    assert 'grouping_dimensions=["ISSUER"]' not in live_characterization
 
 
 def test_default_live_portfolio_case_honors_existing_single_portfolio_overrides() -> None:
