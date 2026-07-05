@@ -44,7 +44,9 @@ class IssuerConcentration(BaseModel):
     hhi_proposed: float = Field(
         description=(
             "Issuer-level proposed HHI concentration on the conventional 0 to 10000 scale, "
-            "falling back to baseline issuer HHI when proposed issuer buckets are unavailable."
+            "falling back to baseline issuer HHI for stateless/stateful requests when proposed "
+            "issuer buckets are unavailable. Simulation requests treat an explicit empty "
+            "projected book as zero proposed issuer concentration."
         ),
         json_schema_extra={"example": 3475.0},
     )
@@ -61,7 +63,9 @@ class IssuerConcentration(BaseModel):
     top_issuer_weight_proposed: float = Field(
         description=(
             "Highest issuer-level proposed concentration weight from covered mapped issuer buckets, "
-            "falling back to baseline top issuer weight when proposed issuer buckets are unavailable."
+            "falling back to baseline top issuer weight for stateless/stateful requests when "
+            "proposed issuer buckets are unavailable. Simulation requests treat an explicit empty "
+            "projected book as zero proposed issuer concentration."
         ),
         json_schema_extra={"example": 0.21},
     )

@@ -71,21 +71,22 @@ def position_metrics(payload: ConcentrationComputationInput) -> PositionConcentr
     current_values = _values(payload.current_positions)
     proposed_values = _values(payload.proposed_positions)
     current_hhi = _compute_hhi(current_values)
-    proposed_hhi = _compute_hhi(proposed_values) if proposed_values else current_hhi
+    fallback_to_current = payload.use_current_state_when_proposed_empty and not proposed_values
+    proposed_hhi = current_hhi if fallback_to_current else _compute_hhi(proposed_values)
 
     current_top, current_top_n = _single_position_metrics(current_values, top_n=payload.top_n)
-    if proposed_values:
+    if fallback_to_current:
+        proposed_top, proposed_top_n = current_top, current_top_n
+    else:
         proposed_top, proposed_top_n = _single_position_metrics(
             proposed_values, top_n=payload.top_n
         )
-    else:
-        proposed_top, proposed_top_n = current_top, current_top_n
 
     current_top_position = _top_position_driver(payload.current_positions)
     proposed_top_position = (
-        _top_position_driver(payload.proposed_positions)
-        if payload.proposed_positions
-        else current_top_position
+        current_top_position
+        if fallback_to_current
+        else _top_position_driver(payload.proposed_positions)
     )
     return PositionConcentrationMetrics(
         hhi_current=current_hhi,
@@ -103,21 +104,22 @@ def issuer_metrics(payload: ConcentrationComputationInput) -> IssuerConcentratio
     current_issuer_values = _values(payload.current_issuers)
     proposed_issuer_values = _values(payload.proposed_issuers)
     current_issuer_hhi = _compute_hhi(current_issuer_values)
+    fallback_to_current = (
+        payload.use_current_state_when_proposed_empty and not proposed_issuer_values
+    )
     proposed_issuer_hhi = (
-        _compute_hhi(proposed_issuer_values) if proposed_issuer_values else current_issuer_hhi
+        current_issuer_hhi if fallback_to_current else _compute_hhi(proposed_issuer_values)
     )
 
     current_issuer_top, _ = _single_position_metrics(current_issuer_values, top_n=1)
-    if proposed_issuer_values:
-        proposed_issuer_top, _ = _single_position_metrics(proposed_issuer_values, top_n=1)
-    else:
+    if fallback_to_current:
         proposed_issuer_top = current_issuer_top
+    else:
+        proposed_issuer_top, _ = _single_position_metrics(proposed_issuer_values, top_n=1)
 
     current_top_issuer = _top_issuer_driver(payload.current_issuers)
     proposed_top_issuer = (
-        _top_issuer_driver(payload.proposed_issuers)
-        if payload.proposed_issuers
-        else current_top_issuer
+        current_top_issuer if fallback_to_current else _top_issuer_driver(payload.proposed_issuers)
     )
     return IssuerConcentrationMetrics(
         hhi_current=current_issuer_hhi,

@@ -64,13 +64,14 @@
 - `w_{C,k} = abs(I_{C,k}) / V_C_issuer` when `V_C_issuer > 0`.
 - `w_{P,k} = abs(I_{P,k}) / V_P_issuer` when `V_P_issuer > 0`.
 - `TOP_ISSUER_current_raw = max_k(w_{C,k})` when current issuer buckets exist, else `0.0`.
-- `TOP_ISSUER_proposed_raw = max_k(w_{P,k})` when proposed issuer buckets exist, else the current
-  top issuer weight.
+- `TOP_ISSUER_proposed_raw = max_k(w_{P,k})` when proposed issuer buckets exist, else `0.0` unless
+  the request mode intentionally uses current state when proposed issuer buckets are empty.
 - `TOP_ISSUER_delta_raw = TOP_ISSUER_proposed_raw - TOP_ISSUER_current_raw`.
 - `top_issuer_current`: the current issuer bucket with the largest absolute aggregate issuer
   value; ties choose the lexicographically largest `issuer_id`.
 - `top_issuer_proposed`: the proposed issuer bucket with the largest absolute aggregate issuer
-  value; when proposed issuer buckets are unavailable it falls back to `top_issuer_current`.
+  value; it falls back to `top_issuer_current` only for modes that intentionally use current state
+  when proposed issuer buckets are empty.
 - `round6(z)`: Python `round(z, 6)` used by the service response.
 
 ## Methodology and Formulas
@@ -103,9 +104,11 @@ For each state:
    - `issuer_concentration.top_issuer_current.weight = round6(TOP_ISSUER_current_raw)`
    - `issuer_concentration.top_issuer_proposed.weight = round6(TOP_ISSUER_proposed_raw)`
 
-When no proposed issuer buckets are available, the implemented service sets
-`TOP_ISSUER_proposed_raw = TOP_ISSUER_current_raw` and reuses the current top issuer driver; the
-emitted delta is therefore `0.0`.
+When no proposed issuer buckets are available in stateless or stateful mode, the implemented
+service sets `TOP_ISSUER_proposed_raw = TOP_ISSUER_current_raw` and reuses the current top issuer
+driver; the emitted delta is therefore `0.0`. Simulation mode is source-owned by lotus-core:
+missing or invalid `positions_projected` is an upstream invalid response, while an explicit empty `positions_projected: []` is treated as an empty proposed book with
+`TOP_ISSUER_proposed_raw = 0.0` and an empty proposed driver.
 
 ## Step-by-Step Computation
 1. Resolve request mode.
@@ -116,7 +119,7 @@ emitted delta is therefore `0.0`.
 3. Build proposed position entries:
    - stateless: caller projected positions,
    - stateful: same baseline positions as current,
-   - simulation: lotus-core projected positions when available.
+   - simulation: required lotus-core projected positions; an explicit empty list remains empty.
 4. Resolve issuer identities from stateless row fields, caller `issuer_mappings`, and/or lotus-core
    enrichment according to grouping and enrichment policy.
 5. Parse each state's preferred value field, fall back to the secondary value field, and keep only
@@ -126,8 +129,8 @@ emitted delta is therefore `0.0`.
 8. Select current and proposed top issuer weight from the maximum covered-issuer weight.
 9. Select current and proposed top issuer driver metadata from the same issuer aggregate universe,
    using issuer id as the deterministic tie-breaker.
-10. If proposed issuer buckets are empty, reuse current top issuer weight and current top issuer
-    driver for proposed output.
+10. Reuse current top issuer weight and driver only for modes that intentionally use current state
+    when proposed issuer buckets are empty.
 11. Compute proposed-minus-current delta.
 12. Round emitted top issuer weights and delta fields to six decimal places.
 13. Emit issuer coverage counts, coverage ratios, coverage status, supportability, and note
@@ -140,8 +143,10 @@ emitted delta is therefore `0.0`.
   issuer coverage totals.
 - Empty current issuer buckets produce `issuer_concentration.top_issuer_weight_current = 0.0` and
   `issuer_concentration.top_issuer_current.issuer_id = null`.
-- Empty proposed issuer buckets do not create an error; proposed top issuer weight and proposed
-  top issuer driver fall back to current state.
+- Empty stateless/stateful proposed issuer buckets fall back to current top issuer weight and
+  driver. Empty simulation projected positions produce proposed top issuer weight `0.0` and an
+  empty proposed driver; missing or invalid simulation projected sections return
+  `UPSTREAM_INVALID_RESPONSE`.
 - A single covered issuer bucket produces top issuer weight `1.0`.
 - Equal weights across `N` covered issuer buckets produce top issuer weight `1 / N`; top issuer
   driver identity uses the lexicographically largest `issuer_id` as the tie-breaker.

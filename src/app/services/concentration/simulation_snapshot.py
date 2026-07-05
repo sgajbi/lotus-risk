@@ -20,6 +20,7 @@ from app.services.concentration.parsing import (
     _extract_values_with_issuer_from_snapshot,
     _merge_issuer_maps,
 )
+from app.services.concentration.upstream_contracts import invalid_core_snapshot_payload
 
 
 @dataclass(frozen=True)
@@ -67,22 +68,25 @@ def simulation_snapshot_state(
     issuer_by_security: dict[str, IssuerIdentity],
     issuer_note: str | None,
 ) -> SimulationSnapshotState:
+    raw_projected_positions = sections.get("positions_projected")
+    if "positions_projected" not in sections:
+        raise invalid_core_snapshot_payload(
+            snapshot_mode="SIMULATION",
+            reason="missing_positions_projected",
+        )
+    if not isinstance(raw_projected_positions, list):
+        raise invalid_core_snapshot_payload(
+            snapshot_mode="SIMULATION",
+            reason="invalid_positions_projected",
+        )
     baseline_positions, baseline_issuers, covered_baseline, total_baseline = (
         _extract_values_with_issuer_from_snapshot(
             sections.get("positions_baseline"), issuer_by_security
         )
     )
     projected_positions, projected_issuers, covered_projected, total_projected = (
-        _extract_values_with_issuer_from_snapshot(
-            sections.get("positions_projected"), issuer_by_security
-        )
+        _extract_values_with_issuer_from_snapshot(raw_projected_positions, issuer_by_security)
     )
-    if not projected_positions:
-        projected_positions = baseline_positions
-    if not projected_issuers:
-        projected_issuers = baseline_issuers
-        covered_projected = covered_baseline
-        total_projected = total_baseline
 
     return SimulationSnapshotState(
         baseline_positions=baseline_positions,

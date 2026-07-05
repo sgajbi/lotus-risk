@@ -72,8 +72,11 @@ For each state:
    - `single_position_concentration.top_position_weight_proposed = round6(TOP_proposed_raw)`
    - `single_position_concentration.top_position_weight_delta = round6(TOP_proposed_raw - TOP_current_raw)`
 
-When no proposed values are available, the implemented service sets
-`TOP_proposed_raw = TOP_current_raw`; the emitted delta is therefore `0.0`.
+When no proposed values are available in stateless or stateful mode, the implemented service sets
+`TOP_proposed_raw = TOP_current_raw`; the emitted delta is therefore `0.0`. Simulation mode is
+source-owned by lotus-core: missing or invalid `positions_projected` is an upstream invalid
+response, while an explicit empty `positions_projected: []` is treated as an empty proposed book
+with `TOP_proposed_raw = 0.0` and an empty proposed driver.
 
 Driver payloads use the same denominator and select the position row with the largest absolute
 value. If multiple rows have the same absolute value, the current implementation selects the row
@@ -88,12 +91,12 @@ with the lexicographically largest `security_id` among tied values.
 3. Build proposed position entries:
    - stateless: caller projected positions,
    - stateful: same baseline positions as current,
-   - simulation: lotus-core projected positions when available.
+   - simulation: required lotus-core projected positions; an explicit empty list remains empty.
 4. For each row, parse the preferred value field, fall back to the secondary value field, and keep
    only positive numeric values.
 5. Compute current top-position weight from current values.
-6. Compute proposed top-position weight from proposed values, or reuse current top-position weight
-   when proposed values are empty.
+6. Compute proposed top-position weight from proposed values; reuse current top-position weight
+   only for modes that intentionally use current state when proposed values are empty.
 7. Compute proposed-minus-current delta.
 8. Build `top_position_current` and `top_position_proposed` driver payloads from the selected
    current/proposed rows.
@@ -101,8 +104,10 @@ with the lexicographically largest `security_id` among tied values.
 
 ## Validation and Failure Behavior
 - Empty current values produce `single_position_concentration.top_position_weight_current = 0.0`.
-- Empty proposed values do not create an error; proposed top-position weight and driver fall back
-  to current state.
+- Empty stateless/stateful proposed values fall back to current top-position weight and driver.
+  Empty simulation projected positions produce proposed top-position weight `0.0` and an empty
+  proposed driver; missing or invalid simulation projected sections return
+  `UPSTREAM_INVALID_RESPONSE`.
 - Missing, non-numeric, zero, and negative values are excluded from the value vector.
 - A single valid position produces top-position weight `1.0`.
 - Equal weights across `N` valid positions produce top-position weight `1 / N`.

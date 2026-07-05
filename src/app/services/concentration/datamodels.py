@@ -55,6 +55,7 @@ class ConcentrationComputationInput:
     covered_position_count_proposed: int
     total_position_count_current: int
     total_position_count_proposed: int
+    use_current_state_when_proposed_empty: bool = True
     issuer_note: str | None = None
     valuation_context: ConcentrationValuationContext | None = None
     metadata: ConcentrationMetadata | None = None

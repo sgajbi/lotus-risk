@@ -73,8 +73,11 @@ For each state:
    - `risk_proxy.hhi_proposed = round6(HHI_proposed_raw)`
    - `risk_proxy.hhi_delta = round6(HHI_proposed_raw - HHI_current_raw)`
 
-When no proposed values are available, the implemented service sets
-`HHI_proposed_raw = HHI_current_raw`; the emitted delta is therefore `0.0`.
+When no proposed values are available in stateless or stateful mode, the implemented service sets
+`HHI_proposed_raw = HHI_current_raw`; the emitted delta is therefore `0.0`. Simulation mode is
+source-owned by lotus-core: missing or invalid `positions_projected` is an upstream invalid
+response, while an explicit empty `positions_projected: []` is treated as an empty proposed book
+with `HHI_proposed_raw = 0.0`.
 
 ## Step-by-Step Computation
 1. Resolve request mode.
@@ -85,17 +88,20 @@ When no proposed values are available, the implemented service sets
 3. Build proposed position entries:
    - stateless: caller projected positions,
    - stateful: same baseline positions as current,
-   - simulation: lotus-core projected positions when available.
+   - simulation: required lotus-core projected positions; an explicit empty list remains empty.
 4. For each row, parse the preferred value field, fall back to the secondary value field, and keep
    only positive numeric values.
 5. Compute current HHI from current values.
-6. Compute proposed HHI from proposed values, or reuse current HHI when proposed values are empty.
+6. Compute proposed HHI from proposed values; reuse current HHI only for modes that intentionally
+   use current state when proposed values are empty.
 7. Compute proposed-minus-current delta.
 8. Round each emitted HHI and delta to six decimal places.
 
 ## Validation and Failure Behavior
 - Empty current values produce `risk_proxy.hhi_current = 0.0`.
-- Empty proposed values do not create an error; proposed HHI falls back to current HHI.
+- Empty stateless/stateful proposed values fall back to current HHI. Empty simulation projected
+  positions produce proposed HHI `0.0`; missing or invalid simulation projected sections return
+  `UPSTREAM_INVALID_RESPONSE`.
 - Missing, non-numeric, zero, and negative values are excluded from the value vector.
 - A single valid position produces HHI `10000.0`.
 - Equal weights across `N` valid positions produce `10000 / N`.
