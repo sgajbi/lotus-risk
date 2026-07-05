@@ -36,4 +36,6 @@ The governed monitoring contract lives at
 4. runbook anchors in `docs/runbooks/service-operations.md`.
 
 `make observability-contract-validate` verifies that declared metrics match the implementation,
-that dashboards and alerts reference implemented metrics, and that alert runbook anchors exist.
+that dashboards and alerts reference implemented metrics, that alert runbook anchors exist, and
+that `docs/domain-apis/risk-observability.md` projects the current metric names and bounded label
+values from the same contract.

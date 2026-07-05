@@ -103,6 +103,7 @@ Use:
 3. container logs,
 4. `docs/operations/canonical-local-upstream-urls.md`
 5. `docs/operations/live-risk-validation-matrix.md`
+6. `docs/domain-apis/risk-observability.md`
 
 Request logs expose a structured `request_observation` event with bounded service, method, path,
 status, correlation, trace, latency, and risk fields. Query strings and request/response bodies are
@@ -119,6 +120,9 @@ The matching Prometheus counter is
 `supportability_state`, `reason`, and `freshness_bucket`.
 The same source-owned posture also increments the RFC-0108 cross-service freshness counter
 `lotus_analytics_freshness_bucket_total{service="lotus-risk",operation,freshness_bucket,supportability_state}`.
+HTTP status posture is exposed through
+`http_requests_total{handler,method,status}`; use the HTTP 5xx alert path in
+`docs/runbooks/service-operations.md#http-5xx-alert` when handlers emit `5xx` responses.
 
 The response contract publishes `metadata.calculation_supportability.metric_labels` so operators
 can verify the metric-label contract directly from the API response. Do not add portfolio, account,

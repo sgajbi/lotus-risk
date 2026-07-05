@@ -11,7 +11,7 @@ documentation/wiki/context decision are recorded.
 | --- | --- | --- | --- | --- | --- |
 | #195 | Prune or classify merged lotus-risk remote branches that still appear unmerged | Fixed locally | Remote branch hygiene | `origin/feat/sync-agent-operating-contract` was superseded because it would delete the target-repo-root rule; `origin/codex/sync-agent-operating-contract-20260704` had no diff from `origin/main`. Both remote branches were deleted. | `git branch -r --no-merged origin/main` returns no branches after prune. |
 | #193 | Make cleanup scope match generated artifact and cache policy | Fixed locally | Generated artifact cleanup | Added `scripts/clean_generated_artifacts.py`, wired `make clean`, expanded ignored cache policy, and tested that cleanup removes only allowlisted byproducts while protecting `.git`, `.venv`, `node_modules`, and source truth. | `tests/unit/scripts/test_clean_generated_artifacts.py`; `make clean` delegates to the script. |
-| #191 | Align risk observability domain API docs with monitoring contract | Open | Observability docs/API docs | Pending | Pending |
+| #191 | Align risk observability domain API docs with monitoring contract | Fixed locally | Observability docs/API docs | Made `docs/domain-apis/risk-observability.md` a validated projection of `contracts/observability/lotus-risk-monitoring.v1.json` by listing current endpoint, upstream, supportability, freshness, and HTTP metric vocabulary, including `mandate-risk-health-context`, `regime-scenario-pack`, `risk-event-cohort`, and `http_requests_total`. Extended `make observability-contract-validate` so future contract metric/label additions fail when the domain API doc is stale, and updated overview/wiki routing to the validated source. | `scripts/validate_observability_contracts.py`; `tests/unit/test_observability_operations_contract.py`; `docs/domain-apis/risk-observability.md`; `docs/observability.md`; `wiki/Operations-Runbook.md`; `docs/architecture/CODEBASE-REVIEW-LEDGER.md` |
 | #190 | Make endpoint execution metrics include response-model validation failures | Open | Endpoint metrics/error handling | Pending | Pending |
 | #189 | Prove domain-data-product trust metadata against route response schemas | Open | Domain-product contracts/tests | Pending | Pending |
 | #188 | Disambiguate API vocabulary semantic IDs for state, status, reason, and type fields | Open | API vocabulary inventory | Pending | Pending |
@@ -72,7 +72,8 @@ workflow. #172 changes API response lineage key semantics and is captured in aud
 OpenAPI schema examples, concentration unit tests, and this matrix rather than wiki operator
 workflow. #173 changes consumer-facing capability semantics and updates `wiki/Supported-Features.md`
 because downstream and product readers use that page to decide where simulation affordances are
-safe. #165 changes methodology/API calculation truth and is captured in risk methodology docs,
+safe. #191 changes operator-facing observability vocabulary and updates `wiki/Operations-Runbook.md`
+to route operators to the validated domain observability projection. #165 changes methodology/API calculation truth and is captured in risk methodology docs,
 the risk-calculate endpoint assessment, engine regression tests, the review ledger, and this issue
 matrix rather than wiki operator workflow. #169 changes source-authority and lineage semantics for
 stateful Sharpe risk-free sourcing and is captured in domain API docs, audit-lineage docs, the

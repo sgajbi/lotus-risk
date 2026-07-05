@@ -9,6 +9,7 @@ from scripts.validate_observability_contracts import validate_observability_cont
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 OBSERVABILITY_CONTRACT = REPO_ROOT / "contracts" / "observability" / "lotus-risk-monitoring.v1.json"
+DOMAIN_OBSERVABILITY_DOC = REPO_ROOT / "docs" / "domain-apis" / "risk-observability.md"
 OBSERVABILITY_DOC = REPO_ROOT / "docs" / "observability.md"
 SERVICE_RUNBOOK = REPO_ROOT / "docs" / "runbooks" / "service-operations.md"
 
@@ -51,6 +52,29 @@ def test_observability_contract_alerts_reference_runbook_anchors() -> None:
     issues = validate_observability_contract(OBSERVABILITY_CONTRACT)
 
     assert issues == []
+
+
+def test_domain_observability_doc_projects_monitoring_contract_labels() -> None:
+    issues = validate_observability_contract(OBSERVABILITY_CONTRACT)
+
+    assert issues == []
+
+
+def test_domain_observability_doc_fails_on_missing_contract_value(tmp_path: Path) -> None:
+    payload = _contract()
+    for metric in payload["metrics"]:
+        if metric["name"] == "lotus_risk_endpoint_executions_total":
+            metric["labels"]["endpoint"].append("new-risk-product")
+            break
+    contract_path = tmp_path / "monitoring.json"
+    _write_contract(contract_path, payload)
+
+    issues = validate_observability_contract(contract_path, DOMAIN_OBSERVABILITY_DOC)
+
+    assert any(
+        "lotus_risk_endpoint_executions_total.endpoint=new-risk-product" in issue
+        for issue in issues
+    )
 
 
 def test_observability_contract_requires_all_runtime_upstream_operations(

@@ -19,6 +19,7 @@ from app.integrations.upstream_operations import UPSTREAM_OPERATION_VALUES  # no
 
 LOCAL_OBSERVABILITY_DIR = ROOT / "contracts" / "observability"
 CONTRACT_PATH = LOCAL_OBSERVABILITY_DIR / "lotus-risk-monitoring.v1.json"
+DOMAIN_OBSERVABILITY_DOC_PATH = ROOT / "docs" / "domain-apis" / "risk-observability.md"
 
 _FORBIDDEN_LABEL_HINTS = {
     "account",
@@ -186,7 +187,65 @@ def _validate_upstream_operation_contract(payload: dict[str, Any]) -> list[str]:
     return issues
 
 
-def validate_observability_contract(path: Path = CONTRACT_PATH) -> list[str]:
+def _contract_metric_values(payload: dict[str, Any]) -> dict[str, dict[str, list[str]]]:
+    metric_values: dict[str, dict[str, list[str]]] = {}
+    metrics = payload.get("metrics")
+    if not isinstance(metrics, list):
+        return metric_values
+    for metric in metrics:
+        if not isinstance(metric, dict):
+            continue
+        metric_name = metric.get("name")
+        labels = metric.get("labels")
+        if not isinstance(metric_name, str) or not isinstance(labels, dict):
+            continue
+        metric_values[metric_name] = {
+            label_name: [value for value in values if isinstance(value, str)]
+            for label_name, values in labels.items()
+            if isinstance(label_name, str) and isinstance(values, list)
+        }
+    return metric_values
+
+
+def _validate_domain_observability_doc(
+    payload: dict[str, Any],
+    doc_path: Path = DOMAIN_OBSERVABILITY_DOC_PATH,
+) -> list[str]:
+    if not doc_path.exists():
+        return [f"{doc_path}: domain API observability doc does not exist"]
+
+    text = doc_path.read_text(encoding="utf-8")
+    metric_values = _contract_metric_values(payload)
+    issues: list[str] = []
+
+    for metric_name, labels in metric_values.items():
+        if metric_name not in text:
+            issues.append(f"{doc_path}: missing metric {metric_name}")
+        for label_name, allowed_values in labels.items():
+            if label_name not in text:
+                issues.append(f"{doc_path}: missing label {metric_name}.{label_name}")
+            for value in allowed_values:
+                if value not in text:
+                    issues.append(
+                        f"{doc_path}: missing allowed value {metric_name}.{label_name}={value}"
+                    )
+
+    for required_text in (
+        "lotus-risk-http-5xx",
+        "docs/runbooks/service-operations.md#http-5xx-alert",
+        "docs/runbooks/service-operations.md#endpoint-failure-rate-alert",
+        "docs/runbooks/service-operations.md#calculation-supportability-alert",
+    ):
+        if required_text not in text:
+            issues.append(f"{doc_path}: missing required operator reference {required_text!r}")
+
+    return issues
+
+
+def validate_observability_contract(
+    path: Path = CONTRACT_PATH,
+    domain_doc_path: Path = DOMAIN_OBSERVABILITY_DOC_PATH,
+) -> list[str]:
     if not path.exists():
         return [f"{path}: observability monitoring contract does not exist"]
 
@@ -210,6 +269,7 @@ def validate_observability_contract(path: Path = CONTRACT_PATH) -> list[str]:
             issues.append(f"{implemented_metric}: implemented metric is missing from contract")
 
     issues.extend(_validate_upstream_operation_contract(payload))
+    issues.extend(_validate_domain_observability_doc(payload, domain_doc_path))
 
     dashboards = payload.get("dashboards")
     if not isinstance(dashboards, list) or not dashboards:
