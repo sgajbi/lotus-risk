@@ -21,6 +21,46 @@ easier to operate, and credible for enterprise bank review.
 - [x] Baseline quality/reporting foundation created before major refactoring.
 - [x] Before/after scorecard maintained in `quality/quality_scorecard.md`.
 
+# Issue Closure
+
+Closes #159.
+Fixes #157.
+Fixes #158.
+Fixes #160.
+Fixes #161.
+Fixes #162.
+Fixes #163.
+Fixes #164.
+Fixes #165.
+Fixes #166.
+Fixes #167.
+Fixes #168.
+Fixes #169.
+Fixes #170.
+Fixes #171.
+Fixes #172.
+Fixes #173.
+Fixes #174.
+Fixes #175.
+Fixes #176.
+Fixes #177.
+Fixes #178.
+Fixes #179.
+Fixes #180.
+Fixes #181.
+Fixes #182.
+Fixes #183.
+Fixes #184.
+Fixes #185.
+Fixes #186.
+Fixes #187.
+Fixes #188.
+Fixes #189.
+Fixes #190.
+Fixes #191.
+Fixes #193.
+Fixes #195.
+
 # Refactoring Approach
 
 1. Establish baseline quality, scorecard, CI measurement, and review ledger.

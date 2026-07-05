@@ -3,7 +3,7 @@
 This matrix tracks the current `lotus-risk` issue-fix and enterprise refactor batch on branch
 `refactor/enterprise-risk-backend`.
 
-Parent ledger issue #159 remains open as the campaign ledger unless that issue itself is the target.
+Parent ledger issue #159 is closed by the final PR once every actionable issue row is fixed.
 Each actionable issue is closed only when the implementation, same-pattern scan, tests, and
 documentation/wiki/context decision are recorded.
 
