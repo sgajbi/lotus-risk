@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from typing import Literal
 
 from pydantic import Field
@@ -20,6 +20,11 @@ class ConcentrationMetadata(AuditMetadataFields):
         default="v1",
         description="Source-owned domain data product version.",
         json_schema_extra={"example": "v1"},
+    )
+    generated_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        description="Source-owned UTC timestamp when lotus-risk generated this concentration report.",
+        json_schema_extra={"example": "2026-02-27T10:15:00Z"},
     )
     as_of_date: date | None = Field(
         default=None,
