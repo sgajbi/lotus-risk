@@ -8,6 +8,9 @@ from app.contracts.concentration import SimulationConcentrationInput
 from app.service_metadata import SERVICE_NAME
 from app.services.concentration.parsing import _as_datetime, _as_int, _as_str
 from app.services.concentration.ports import LotusCoreClientProtocol
+from app.services.concentration.upstream_contracts import (
+    invalid_create_simulation_session_payload,
+)
 
 
 @dataclass(frozen=True)
@@ -53,10 +56,10 @@ async def resolve_simulation_session(
 def _created_simulation_session(session_response: dict[str, Any]) -> SimulationSession:
     session_record = session_response.get("session")
     if not isinstance(session_record, dict):
-        raise ValueError("lotus-core create simulation session returned invalid response payload")
+        raise invalid_create_simulation_session_payload(reason="missing_session_record")
     session_id = _as_str(session_record.get("session_id"))
     if not session_id:
-        raise ValueError("lotus-core create simulation session response missing session_id")
+        raise invalid_create_simulation_session_payload(reason="missing_session_id")
     return SimulationSession(
         session_id=session_id,
         version=_as_int(session_record.get("version")),

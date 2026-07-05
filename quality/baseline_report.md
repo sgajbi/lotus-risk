@@ -13,11 +13,11 @@ completion claim.
 ## Generation Identity
 
 - Git branch: `refactor/enterprise-risk-backend`
-- Git commit: `5110488832aeb9ea4f143b5660f4b5a4825ed24b`
+- Git commit: `9116e41c71526e7066e758adc4b97260a78a477d`
 
 ## Current Code Size
 
-- Python source files under `src/`: 247
+- Python source files under `src/`: 248
 - Python test files under `tests/`: 109
 - Python packages under `src/`: 11
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
@@ -96,12 +96,12 @@ All checks passed!
 - Ruff format check: passed
 
 ```text
-372 files already formatted
+373 files already formatted
 ```
 - Type checking: passed
 
 ```text
-Success: no issues found in 356 source files
+Success: no issues found in 357 source files
 ```
 - Unit coverage snapshot: passed
 
@@ -115,10 +115,10 @@ Success: no issues found in 356 source files
 ...
 src\app\services\rolling_stateful_source_responses.py           45      1     16      1    97%   96
 --------------------------------------------------------------------------------------------------------
-TOTAL                                                         6397     85   1058     73    98%
+TOTAL                                                         6410     85   1058     73    98%
 
-201 files skipped due to complete coverage.
-604 passed in 11.10s
+202 files skipped due to complete coverage.
+604 passed in 15.81s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -148,7 +148,7 @@ src\app\services\risk\__init__.py - A (100.00)
 - Dependency hygiene: passed
 
 ```text
-Scanning 247 files...
+Scanning 248 files...
 
 Success! No dependency issues found.
 ```
@@ -248,7 +248,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc1-503-UPSTREAM_UNAVAILABLE-transport]
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 
-604 tests collected in 2.07s
+604 tests collected in 2.28s
 ```
 - Import-linter report-only: reported exit 1
 
@@ -260,10 +260,10 @@ Import Linter
 
 ---------
 ...
-    app.ops_runtime -> app.integrations.lotus_core_client (l.8)
+    app.ops_runtime -> app.integrations.lotus_performance_client (l.9)
 
 -   app.routers.operational -> app.trust_telemetry (l.29)
     app.trust_telemetry -> app.trust_telemetry_builders (l.3)
     app.trust_telemetry_builders -> app.ops_runtime (l.18)
-    app.ops_runtime -> app.integrations.lotus_performance_client (l.9)
+    app.ops_runtime -> app.integrations.lotus_core_client (l.8)
 ```

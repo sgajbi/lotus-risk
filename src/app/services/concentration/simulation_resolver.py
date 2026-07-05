@@ -24,6 +24,7 @@ from app.services.concentration.simulation_session import (
     session_with_snapshot_version,
     simulation_snapshot_payload,
 )
+from app.services.concentration.upstream_contracts import invalid_core_snapshot_payload
 
 
 def _simulation_metadata(
@@ -70,7 +71,10 @@ async def _fetch_simulation_snapshot_state(
     )
     sections = snapshot.get("sections")
     if not isinstance(sections, dict):
-        raise ValueError("lotus-core simulation snapshot missing sections payload")
+        raise invalid_core_snapshot_payload(
+            snapshot_mode="SIMULATION",
+            reason="missing_sections",
+        )
 
     issuer_by_security, issuer_note = issuer_map_from_snapshot_sections(
         request=request,
