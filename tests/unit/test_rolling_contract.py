@@ -1,10 +1,16 @@
 import copy
+from datetime import date, timedelta
 
 import pytest
 from pydantic import ValidationError
 from typing import Any, cast
 
 from app.contracts.rolling import (
+    ROLLING_MAX_PERIODS,
+    ROLLING_MAX_STATELESS_OBSERVATIONS,
+    ROLLING_MAX_TIME_SERIES_POINTS,
+    ROLLING_MAX_WINDOW_COUNT,
+    ROLLING_MAX_WINDOW_LENGTH,
     RollingAnalyticsRequest,
     RollingInputMode,
     RollingMetricSummary,
@@ -80,6 +86,39 @@ BASE_STATELESS_PAYLOAD = {
         },
     },
 }
+
+
+def _return_points(count: int) -> list[dict[str, object]]:
+    start = date(2020, 1, 1)
+    return [
+        {"date": (start + timedelta(days=offset)).isoformat(), "value": 0.01}
+        for offset in range(count)
+    ]
+
+
+def _explicit_periods(count: int) -> list[dict[str, object]]:
+    return [
+        {
+            "type": "EXPLICIT",
+            "name": f"P{offset}",
+            "from_date": "2020-01-01",
+            "to_date": "2030-12-31",
+        }
+        for offset in range(count)
+    ]
+
+
+def _stateless_payload_with_volatility_only() -> dict[str, Any]:
+    payload = copy.deepcopy(BASE_STATELESS_PAYLOAD)
+    stateless_input = cast(dict[str, Any], payload["stateless_input"])
+    stateless_input["rolling_options"] = {
+        "window_lengths": [2],
+        "metrics": ["ROLLING_VOLATILITY"],
+        "include_time_series": False,
+    }
+    stateless_input["benchmark_returns"] = []
+    stateless_input["risk_free_returns"] = []
+    return payload
 
 
 def test_rolling_contract_module_preserves_public_import_surface() -> None:
@@ -205,6 +244,66 @@ def test_rolling_contract_rejects_empty_and_too_short_window_lengths() -> None:
 
         with pytest.raises(ValueError, match=expected_message):
             RollingAnalyticsRequest.model_validate(payload)
+
+
+def test_rolling_contract_rejects_too_many_periods() -> None:
+    payload = _stateless_payload_with_volatility_only()
+    stateless_input = cast(dict[str, Any], payload["stateless_input"])
+    stateless_input["periods"] = _explicit_periods(ROLLING_MAX_PERIODS + 1)
+
+    with pytest.raises(ValidationError):
+        RollingAnalyticsRequest.model_validate(payload)
+
+
+def test_rolling_contract_rejects_too_many_windows() -> None:
+    payload = _stateless_payload_with_volatility_only()
+    stateless_input = cast(dict[str, Any], payload["stateless_input"])
+    rolling_options = cast(dict[str, Any], stateless_input["rolling_options"])
+    rolling_options["window_lengths"] = list(range(2, 2 + ROLLING_MAX_WINDOW_COUNT + 1))
+
+    with pytest.raises(ValidationError):
+        RollingAnalyticsRequest.model_validate(payload)
+
+
+def test_rolling_contract_rejects_window_above_supported_maximum() -> None:
+    payload = _stateless_payload_with_volatility_only()
+    stateless_input = cast(dict[str, Any], payload["stateless_input"])
+    rolling_options = cast(dict[str, Any], stateless_input["rolling_options"])
+    rolling_options["window_lengths"] = [ROLLING_MAX_WINDOW_LENGTH + 1]
+
+    with pytest.raises(
+        ValidationError,
+        match=f"less than or equal to {ROLLING_MAX_WINDOW_LENGTH}",
+    ):
+        RollingAnalyticsRequest.model_validate(payload)
+
+
+def test_rolling_contract_rejects_too_many_stateless_observations() -> None:
+    payload = _stateless_payload_with_volatility_only()
+    stateless_input = cast(dict[str, Any], payload["stateless_input"])
+    stateless_input["returns"] = _return_points(ROLLING_MAX_STATELESS_OBSERVATIONS + 1)
+
+    with pytest.raises(ValidationError):
+        RollingAnalyticsRequest.model_validate(payload)
+
+
+def test_rolling_contract_rejects_unbounded_time_series_expansion() -> None:
+    payload = _stateless_payload_with_volatility_only()
+    stateless_input = cast(dict[str, Any], payload["stateless_input"])
+    window_count = 5
+    period_count = 2
+    observation_count = ROLLING_MAX_TIME_SERIES_POINTS // (window_count * period_count) + 1
+    stateless_input["periods"] = _explicit_periods(period_count)
+    stateless_input["returns"] = _return_points(observation_count)
+    rolling_options = cast(dict[str, Any], stateless_input["rolling_options"])
+    rolling_options["window_lengths"] = list(range(2, 2 + window_count))
+    rolling_options["include_time_series"] = True
+
+    with pytest.raises(
+        ValidationError,
+        match="include_time_series workload exceeds supported maximum",
+    ):
+        RollingAnalyticsRequest.model_validate(payload)
 
 
 def test_rolling_contract_rejects_duplicate_stateful_period_names() -> None:

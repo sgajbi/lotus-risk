@@ -52,6 +52,25 @@ Provide windowed historical risk diagnostics for PB/WM portfolios with instituti
   period, the endpoint still returns `200` and surfaces `NO_ALIGNED_OBSERVATIONS` in the period
   dependency contexts together with metric quality flags
 
+## Governed Workload Limits
+
+Rolling requests are bounded before calculation so response size and CPU fan-out remain
+predictable.
+
+- `periods[]`: maximum `12`
+- `rolling_options.window_lengths[]`: maximum `8` entries
+- each `rolling_options.window_lengths[]` value: maximum `756` observations
+- stateless `returns`, `benchmark_returns`, and `risk_free_returns`: maximum `2500` observations
+  each
+- stateful sourced portfolio, benchmark, and risk-free return histories: maximum `2500`
+  observations each before rolling calculations begin
+- `include_time_series=true`: maximum `10000` projected emitted points, calculated as
+  `period_count * window_count * portfolio_observation_count`
+
+Over-limit stateless request shapes return `422 INVALID_REQUEST`. Over-limit stateful sourced
+histories return a deterministic problem-details error before rolling windows or metric series are
+materialized.
+
 ## Upstream Data Sources (Stateful)
 
 - lotus-performance:

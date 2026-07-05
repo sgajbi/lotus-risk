@@ -6,7 +6,11 @@ from typing import Literal
 from pydantic import BaseModel, Field, model_validator
 
 from app.contracts.risk import RiskRequestPeriod
-from app.contracts.rolling_common_inputs import RollingOptions, validate_unique_period_names
+from app.contracts.rolling_common_inputs import (
+    ROLLING_MAX_PERIODS,
+    RollingOptions,
+    validate_unique_period_names,
+)
 
 
 class RollingStatefulInput(BaseModel):
@@ -35,6 +39,7 @@ class RollingStatefulInput(BaseModel):
     )
     periods: list[RiskRequestPeriod] = Field(
         description="List of periods to evaluate rolling metrics.",
+        max_length=ROLLING_MAX_PERIODS,
         json_schema_extra={"example": [{"type": "YTD", "name": "YTD"}]},
     )
     rolling_options: RollingOptions = Field(

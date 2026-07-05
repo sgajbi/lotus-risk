@@ -7,6 +7,12 @@ from pydantic import BaseModel, Field, model_validator
 
 from app.contracts.risk import RiskRequestPeriod
 
+ROLLING_MAX_PERIODS = 12
+ROLLING_MAX_STATELESS_OBSERVATIONS = 2500
+ROLLING_MAX_TIME_SERIES_POINTS = 10000
+ROLLING_MAX_WINDOW_COUNT = 8
+ROLLING_MAX_WINDOW_LENGTH = 756
+
 
 class RollingInputMode(str, Enum):
     STATELESS = "stateless"
@@ -52,10 +58,28 @@ def validate_unique_period_names(periods: list[RiskRequestPeriod]) -> None:
         )
 
 
+def validate_rolling_time_series_workload(
+    *,
+    period_count: int,
+    window_count: int,
+    observation_count: int,
+    include_time_series: bool,
+) -> None:
+    if not include_time_series:
+        return
+    projected_points = period_count * window_count * observation_count
+    if projected_points > ROLLING_MAX_TIME_SERIES_POINTS:
+        raise ValueError(
+            "include_time_series workload exceeds supported maximum "
+            f"{ROLLING_MAX_TIME_SERIES_POINTS} emitted points"
+        )
+
+
 class RollingOptions(BaseModel):
     window_lengths: list[int] = Field(
         default_factory=lambda: [21, 63, 126, 252],
         description="Rolling window lengths in observations.",
+        max_length=ROLLING_MAX_WINDOW_COUNT,
         json_schema_extra={"example": [21, 63, 126, 252]},
     )
     metrics: list[RollingMetric] = Field(
@@ -100,6 +124,10 @@ class RollingOptions(BaseModel):
             raise ValueError("window_lengths must contain at least one window")
         if any(window <= 1 for window in self.window_lengths):
             raise ValueError("window_lengths must be greater than 1")
+        if any(window > ROLLING_MAX_WINDOW_LENGTH for window in self.window_lengths):
+            raise ValueError(
+                f"window_lengths must be less than or equal to {ROLLING_MAX_WINDOW_LENGTH}"
+            )
         if len(set(self.window_lengths)) != len(self.window_lengths):
             raise ValueError("window_lengths must be unique")
         return self
@@ -107,8 +135,14 @@ class RollingOptions(BaseModel):
 
 __all__ = [
     "ROLLING_BENCHMARK_METRICS",
+    "ROLLING_MAX_PERIODS",
+    "ROLLING_MAX_STATELESS_OBSERVATIONS",
+    "ROLLING_MAX_TIME_SERIES_POINTS",
+    "ROLLING_MAX_WINDOW_COUNT",
+    "ROLLING_MAX_WINDOW_LENGTH",
     "RollingInputMode",
     "RollingMetric",
     "RollingOptions",
+    "validate_rolling_time_series_workload",
     "validate_unique_period_names",
 ]

@@ -13,7 +13,7 @@ completion claim.
 ## Generation Identity
 
 - Git branch: `refactor/enterprise-risk-backend`
-- Git commit: `47dbaf67f89dcf42c8c719e46fb3c807b6351ec8`
+- Git commit: `ff28c68bf093091aa6758233b5def7b270ba6318`
 
 ## Current Code Size
 
@@ -65,12 +65,12 @@ completion claim.
 | src/app/contracts/attribution_metadata_outputs.py | HistoricalAttributionMetadata | ClassDef | 71 |
 | src/app/contracts/drawdown_metadata_outputs.py | DrawdownMetadata | ClassDef | 69 |
 | src/app/contracts/risk_common_inputs.py | RiskRequestPeriod | ClassDef | 68 |
+| src/app/contracts/rolling_stateless_inputs.py | RollingStatelessInput | ClassDef | 68 |
 | src/app/contracts/concentration_metadata_outputs.py | ConcentrationMetadata | ClassDef | 67 |
 | src/app/contracts/risk_event_cohort_response.py | RiskEventAffectedCohortResponse | ClassDef | 66 |
 | src/app/contracts/risk_stateful_inputs.py | StatefulRiskInput | ClassDef | 64 |
 | src/app/contracts/attribution_request_inputs.py | HistoricalAttributionRequest | ClassDef | 63 |
 | src/app/contracts/concentration_simulation_inputs.py | SimulationChangeInput | ClassDef | 63 |
-| src/app/contracts/scenario_inputs.py | RegimeScenarioPackRequest | ClassDef | 63 |
 
 ## Tool Baseline
 
@@ -109,16 +109,16 @@ Success: no issues found in 357 source files
 ........................................................................ [ 11%]
 ........................................................................ [ 23%]
 ........................................................................ [ 35%]
-........................................................................ [ 47%]
-........................................................................ [ 59%]
+........................................................................ [ 46%]
+........................................................................ [ 58%]
 ........................................................................ [ 70%]
 ...
 src\app\services\rolling_stateful_source_responses.py           45      1     16      1    97%   96
 --------------------------------------------------------------------------------------------------------
-TOTAL                                                         6428     86   1062     74    98%
+TOTAL                                                         6450     87   1070     75    98%
 
 201 files skipped due to complete coverage.
-609 passed in 12.20s
+614 passed in 11.96s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -248,7 +248,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc1-503-UPSTREAM_UNAVAILABLE-transport]
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 
-609 tests collected in 2.00s
+614 tests collected in 2.01s
 ```
 - Import-linter report-only: reported exit 1
 
@@ -260,10 +260,10 @@ Import Linter
 
 ---------
 ...
-    app.ops_runtime -> app.integrations.lotus_core_client (l.8)
+    app.ops_runtime -> app.integrations.lotus_performance_client (l.9)
 
 -   app.routers.operational -> app.trust_telemetry (l.29)
     app.trust_telemetry -> app.trust_telemetry_builders (l.3)
     app.trust_telemetry_builders -> app.ops_runtime (l.18)
-    app.ops_runtime -> app.integrations.lotus_performance_client (l.9)
+    app.ops_runtime -> app.integrations.lotus_core_client (l.8)
 ```
