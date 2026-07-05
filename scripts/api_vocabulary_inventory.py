@@ -6,14 +6,14 @@ import json
 from pathlib import Path
 import re
 import sys
-from typing import Any
+from typing import Any, cast
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = str(PROJECT_ROOT / "scripts")
 if SCRIPT_PATH not in sys.path:
     sys.path.insert(0, SCRIPT_PATH)
 
-from _repo_imports import force_repo_src_first  # noqa: E402
+from _repo_imports import force_repo_src_first  # type: ignore[import-not-found]  # noqa: E402
 
 force_repo_src_first(PROJECT_ROOT)
 
@@ -38,6 +38,22 @@ LEGACY_TERM_MAP: dict[str, str] = {
     "cif_id": "client_id",
     "booking_center": "booking_center_code",
 }
+AMBIGUOUS_LEAF_TERMS = {"state", "status", "reason", "type"}
+CONTEXTUAL_TERM_BY_SCHEMA_AND_LEAF: dict[tuple[str, str], str] = {
+    ("HealthResponse", "status"): "health_status",
+    ("LivenessResponse", "status"): "liveness_status",
+    ("ReadinessResponse", "status"): "readiness_status",
+    ("DependencyStatus", "status"): "dependency_runtime_status",
+    ("OpsResponse", "status"): "ops_status",
+}
+CONTEXTUAL_TERM_BY_PATH_SUFFIX: dict[tuple[str, str], str] = {
+    ("products[].dependency_signals[].status", "status"): "trust_dependency_status",
+    ("metadata.calculation_supportability.state", "state"): "calculation_supportability_state",
+    ("metadata.calculation_supportability.reason", "reason"): "calculation_supportability_reason",
+    ("metadata.risk_free_context.reason", "reason"): "risk_free_context_reason",
+    ("period.type", "type"): "period_type",
+    ("periods[].type", "type"): "period_type",
+}
 
 
 def _to_snake_case(value: str) -> str:
@@ -56,9 +72,51 @@ def _semantic_id(name: str) -> str:
     return f"lotus.{_canonical_term(name)}"
 
 
+def _schema_ref_name(schema: dict[str, Any]) -> str | None:
+    ref = schema.get("$ref")
+    if not isinstance(ref, str):
+        return None
+    return ref.rsplit("/", 1)[-1]
+
+
+def _semantic_term(
+    *,
+    field_name: str,
+    prop_name: str,
+    schema_context: str | None,
+) -> str:
+    leaf = _canonical_term(prop_name)
+    if leaf not in AMBIGUOUS_LEAF_TERMS:
+        return leaf
+
+    for (suffix, suffix_leaf), term in CONTEXTUAL_TERM_BY_PATH_SUFFIX.items():
+        if leaf == suffix_leaf and field_name.endswith(suffix):
+            return term
+
+    if schema_context is not None:
+        mapped = CONTEXTUAL_TERM_BY_SCHEMA_AND_LEAF.get((schema_context, leaf))
+        if mapped is not None:
+            return mapped
+
+    return leaf
+
+
+def _semantic_id_for_field(
+    *,
+    field_name: str,
+    prop_name: str,
+    schema_context: str | None,
+) -> str:
+    return f"lotus.{_semantic_term(field_name=field_name, prop_name=prop_name, schema_context=schema_context)}"
+
+
+def _canonical_from_semantic_id(semantic_id: str) -> str:
+    return semantic_id.removeprefix("lotus.")
+
+
 def _schema_type(schema: dict[str, Any]) -> str:
     if "$ref" in schema:
-        return schema["$ref"].rsplit("/", 1)[-1]
+        return str(schema["$ref"]).rsplit("/", 1)[-1]
     return str(schema.get("type", "object"))
 
 
@@ -66,7 +124,8 @@ def _resolve_schema(schema: dict[str, Any], components: dict[str, Any]) -> dict[
     ref = schema.get("$ref")
     if not isinstance(ref, str):
         return schema
-    return components.get("schemas", {}).get(ref.rsplit("/", 1)[-1], {})
+    resolved = components.get("schemas", {}).get(ref.rsplit("/", 1)[-1], {})
+    return cast(dict[str, Any], resolved) if isinstance(resolved, dict) else {}
 
 
 def _fallback_description(name: str) -> str:
@@ -108,8 +167,10 @@ def _extract_fields(
     components: dict[str, Any],
     prefix: str = "",
     location: str = "body",
+    schema_context: str | None = None,
 ) -> list[dict[str, Any]]:
     resolved = _resolve_schema(schema, components)
+    schema_context = _schema_ref_name(schema) or schema_context
     properties = resolved.get("properties", {})
     required = set(resolved.get("required", []))
     if not isinstance(properties, dict):
@@ -121,13 +182,18 @@ def _extract_fields(
             continue
         prop_resolved = _resolve_schema(prop_schema, components)
         field_name = f"{prefix}.{prop_name}" if prefix else prop_name
+        semantic_id = _semantic_id_for_field(
+            field_name=field_name,
+            prop_name=prop_name,
+            schema_context=schema_context,
+        )
         field = {
             "name": field_name,
             "location": location,
             "required": prop_name in required,
             "type": _schema_type(prop_schema),
-            "semanticId": _semantic_id(prop_name),
-            "attributeRef": f"#/attributeCatalog/{_semantic_id(prop_name)}",
+            "semanticId": semantic_id,
+            "attributeRef": f"#/attributeCatalog/{semantic_id}",
             "description": prop_resolved.get("description") or _fallback_description(field_name),
             "example": (
                 prop_resolved.get("example")
@@ -145,6 +211,7 @@ def _extract_fields(
                     components=components,
                     prefix=field_name,
                     location=location,
+                    schema_context=_schema_ref_name(prop_schema) or schema_context,
                 )
             )
         elif nested_type == "array":
@@ -156,6 +223,7 @@ def _extract_fields(
                         components=components,
                         prefix=f"{field_name}[]",
                         location=location,
+                        schema_context=_schema_ref_name(item_schema) or schema_context,
                     )
                 )
     return fields
@@ -262,7 +330,7 @@ def build_inventory() -> dict[str, Any]:
 
             for field in all_fields:
                 semantic_id = field["semanticId"]
-                canonical = _canonical_term(field["name"])
+                canonical = _canonical_from_semantic_id(semantic_id)
                 if semantic_id not in attribute_catalog_map:
                     attribute_catalog_map[semantic_id] = {
                         "semanticId": semantic_id,
@@ -274,6 +342,7 @@ def build_inventory() -> dict[str, Any]:
                         "type": field.get("type", "string"),
                         "locations": [field.get("location", "body")],
                         "observedTypes": [field.get("type", "string")],
+                        "fieldPaths": [field["name"]],
                     }
                 else:
                     item = attribute_catalog_map[semantic_id]
@@ -283,6 +352,8 @@ def build_inventory() -> dict[str, Any]:
                         item["locations"].append(location)
                     if observed_type not in item["observedTypes"]:
                         item["observedTypes"].append(observed_type)
+                    if field["name"] not in item["fieldPaths"]:
+                        item["fieldPaths"].append(field["name"])
 
             endpoint_request_fields = [
                 {
@@ -370,6 +441,16 @@ def validate_inventory(inventory: dict[str, Any]) -> list[str]:
         if canonical in LEGACY_TERM_MAP:
             errors.append(
                 f"legacy term is not allowed: {canonical} (use {LEGACY_TERM_MAP[canonical]})"
+            )
+        field_paths = attr.get("fieldPaths", [])
+        if (
+            canonical in AMBIGUOUS_LEAF_TERMS
+            and isinstance(field_paths, list)
+            and len(field_paths) > 1
+        ):
+            errors.append(
+                f"ambiguous semanticId {semantic_id} spans multiple field paths {field_paths}; "
+                "use context-aware semantic IDs"
             )
         if _is_placeholder_example(attr.get("example")):
             errors.append(f"generic placeholder example is not allowed: {semantic_id}")

@@ -251,7 +251,13 @@ Boundary rules:
     success schemas through governed response paths; do not add or rename declared trust metadata,
     response metadata, or current routes without updating the validator mapping and focused tests.
     `contract_version` is not a substitute for `product_version`.
-27. Treat `src/app/contracts` as mixed public API DTOs, shared application values, and compatibility
+27. API vocabulary semantic IDs must preserve domain meaning, not just leaf property names.
+    Ambiguous fields such as `status`, `state`, `reason`, and `type` require context-aware IDs
+    such as `lotus.readiness_status`, `lotus.dependency_runtime_status`,
+    `lotus.calculation_supportability_reason`, and `lotus.period_type`. Update
+    `scripts/api_vocabulary_inventory.py`, `docs/standards/api-vocabulary.md`, and focused tests
+    when adding new ambiguous vocabulary.
+28. Treat `src/app/contracts` as mixed public API DTOs, shared application values, and compatibility
     facades until a fuller domain package is introduced. Pure calculation helpers must not construct
     public response DTOs directly for migrated paths. The concentration representative path maps
     internal driver values from `src/app/services/concentration/datamodels.py` to public Pydantic
