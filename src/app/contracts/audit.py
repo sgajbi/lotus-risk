@@ -34,13 +34,16 @@ class AuditMetadataFields(BaseModel):
         default_factory=dict,
         description=(
             "Deterministic request fingerprints for upstream calls directly orchestrated by "
-            "lotus-risk, keyed by service and operation."
+            "lotus-risk, keyed by service and stable operation route template."
         ),
         json_schema_extra={
             "example": {
                 "lotus-performance:/integration/returns/series": (
                     "sha256:8d7411c13a0a25a18d7411c13a0a25a18d7411c13a0a25a18d7411c13a0a25a1"
-                )
+                ),
+                "lotus-core:/integration/portfolios/{portfolio_id}/core-snapshot": (
+                    "sha256:1e4255c6104d30a61e4255c6104d30a61e4255c6104d30a61e4255c6104d30a6"
+                ),
             }
         },
     )
