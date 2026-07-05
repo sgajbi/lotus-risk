@@ -104,6 +104,9 @@
   - per-window summaries for rolling volatility, Sharpe, beta, tracking error, information ratio, and rolling max drawdown
   - optional rolling time-series points
   - deterministic quality flags for non-computable windows/alignments
+- Workload limits are part of the public contract: maximum 12 periods, 8 rolling windows, 756
+  observations per window, 2500 return observations per supplied or sourced series, and 10000
+  projected emitted points when `include_time_series=true`.
 
 ## Historical Attribution Endpoint
 - `POST /analytics/risk/historical-attribution` supports:

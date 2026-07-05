@@ -5,8 +5,11 @@ from pydantic import BaseModel, Field, model_validator
 from app.contracts.risk import ReturnPoint, RiskRequestPeriod, RiskRequestScope
 from app.contracts.rolling_common_inputs import (
     ROLLING_BENCHMARK_METRICS,
+    ROLLING_MAX_PERIODS,
+    ROLLING_MAX_STATELESS_OBSERVATIONS,
     RollingMetric,
     RollingOptions,
+    validate_rolling_time_series_workload,
     validate_unique_period_names,
 )
 
@@ -38,20 +41,24 @@ class RollingStatelessInput(BaseModel):
     )
     periods: list[RiskRequestPeriod] = Field(
         description="List of periods to evaluate rolling metrics.",
+        max_length=ROLLING_MAX_PERIODS,
         json_schema_extra={"example": [{"type": "YTD", "name": "YTD"}]},
     )
     returns: list[ReturnPoint] = Field(
         description="Portfolio return observations in percentage points.",
+        max_length=ROLLING_MAX_STATELESS_OBSERVATIONS,
         json_schema_extra={"example": [{"date": "2026-01-02", "value": 0.45}]},
     )
     benchmark_returns: list[ReturnPoint] = Field(
         default_factory=list,
         description="Benchmark return observations in percentage points required for benchmark metrics.",
+        max_length=ROLLING_MAX_STATELESS_OBSERVATIONS,
         json_schema_extra={"example": [{"date": "2026-01-02", "value": 0.32}]},
     )
     risk_free_returns: list[ReturnPoint] = Field(
         default_factory=list,
         description="Risk-free return observations in percentage points required for rolling Sharpe.",
+        max_length=ROLLING_MAX_STATELESS_OBSERVATIONS,
         json_schema_extra={"example": [{"date": "2026-01-02", "value": 0.01}]},
     )
     rolling_options: RollingOptions = Field(
@@ -77,6 +84,12 @@ class RollingStatelessInput(BaseModel):
     @model_validator(mode="after")
     def validate_semantics(self) -> "RollingStatelessInput":
         validate_unique_period_names(self.periods)
+        validate_rolling_time_series_workload(
+            period_count=len(self.periods),
+            window_count=len(self.rolling_options.window_lengths),
+            observation_count=len(self.returns),
+            include_time_series=self.rolling_options.include_time_series,
+        )
         validate_rolling_stateless_dependencies(
             requested_metrics=set(self.rolling_options.metrics),
             benchmark_returns=self.benchmark_returns,

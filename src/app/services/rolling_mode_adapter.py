@@ -10,6 +10,10 @@ from app.contracts.rolling import (
     RollingStatefulInput,
     RollingStatelessInput,
 )
+from app.contracts.rolling_common_inputs import (
+    ROLLING_MAX_STATELESS_OBSERVATIONS,
+    validate_rolling_time_series_workload,
+)
 from app.services.audit_lineage import (
     ordered_source_services,
     upstream_request_fingerprint,
@@ -58,6 +62,12 @@ def _build_stateless_request(
     benchmark_points: list[ReturnPoint],
     risk_free_points: list[ReturnPoint],
 ) -> RollingStatelessInput:
+    _validate_stateful_workload(
+        stateful=stateful,
+        portfolio_points=portfolio_points,
+        benchmark_points=benchmark_points,
+        risk_free_points=risk_free_points,
+    )
     return RollingStatelessInput(
         scope=RiskRequestScope(
             as_of_date=stateful.as_of_date,
@@ -69,6 +79,31 @@ def _build_stateless_request(
         benchmark_returns=benchmark_points,
         risk_free_returns=risk_free_points,
         rolling_options=stateful.rolling_options,
+    )
+
+
+def _validate_stateful_workload(
+    *,
+    stateful: RollingStatefulInput,
+    portfolio_points: list[ReturnPoint],
+    benchmark_points: list[ReturnPoint],
+    risk_free_points: list[ReturnPoint],
+) -> None:
+    max_sourced_observations = max(
+        len(portfolio_points),
+        len(benchmark_points),
+        len(risk_free_points),
+    )
+    if max_sourced_observations > ROLLING_MAX_STATELESS_OBSERVATIONS:
+        raise ValueError(
+            "stateful rolling sourced return observations exceed supported maximum "
+            f"{ROLLING_MAX_STATELESS_OBSERVATIONS}"
+        )
+    validate_rolling_time_series_workload(
+        period_count=len(stateful.periods),
+        window_count=len(stateful.rolling_options.window_lengths),
+        observation_count=len(portfolio_points),
+        include_time_series=stateful.rolling_options.include_time_series,
     )
 
 

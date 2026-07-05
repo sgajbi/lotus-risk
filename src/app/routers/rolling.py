@@ -14,6 +14,7 @@ from app.runtime.downstream_clients import RuntimeDownstreamClients, runtime_dow
 from app.services.endpoint_observation import observed_endpoint
 from app.services.rolling_engine import calculate_rolling_metrics
 from app.services.rolling_mode_adapter import calculate_rolling_metrics_stateful
+from app.services.rolling_stateful_dependency_selection import requires_risk_free
 
 router = APIRouter(tags=["risk-analytics"])
 
@@ -83,7 +84,9 @@ async def _stateful_rolling_response(
         operation=lambda: calculate_rolling_metrics_stateful(
             stateful_input,
             performance_client=runtime_clients.lotus_performance(),
-            core_client=runtime_clients.lotus_core(),
+            core_client=runtime_clients.lotus_core()
+            if requires_risk_free(stateful_input)
+            else None,
             correlation_id=correlation_id,
         ),
     )

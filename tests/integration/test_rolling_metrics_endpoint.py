@@ -1,8 +1,15 @@
+from datetime import date, timedelta
 from typing import Any, cast
 
 import pytest
 from fastapi.testclient import TestClient
 
+from app.contracts.rolling import (
+    ROLLING_MAX_PERIODS,
+    ROLLING_MAX_STATELESS_OBSERVATIONS,
+    ROLLING_MAX_TIME_SERIES_POINTS,
+    ROLLING_MAX_WINDOW_COUNT,
+)
 from app.main import app
 from app.observability_contracts import RISK_CALCULATION_SUPPORTABILITY_METRIC_LABELS
 from tests.support.app_runtime import override_app_runtime
@@ -25,6 +32,38 @@ _AutoWiredLotusPerformanceClient = build_autowired_lotus_performance_client_clas
     )
 )
 _EXPECTED_SUPPORTABILITY_METRIC_LABELS = list(RISK_CALCULATION_SUPPORTABILITY_METRIC_LABELS)
+
+
+def _business_dates(count: int) -> list[date]:
+    start = date(2020, 1, 1)
+    values: list[date] = []
+    offset = 0
+    while len(values) < count:
+        candidate = start + timedelta(days=offset)
+        if candidate.weekday() < 5:
+            values.append(candidate)
+        offset += 1
+    return values
+
+
+def _return_points(count: int) -> list[dict[str, object]]:
+    return [{"date": value.isoformat(), "value": 0.01} for value in _business_dates(count)]
+
+
+def _return_rows(count: int) -> list[tuple[str, str]]:
+    return [(value.isoformat(), "0.0100") for value in _business_dates(count)]
+
+
+def _explicit_periods(count: int) -> list[dict[str, object]]:
+    return [
+        {
+            "type": "EXPLICIT",
+            "name": f"P{offset}",
+            "from_date": "2020-01-01",
+            "to_date": "2030-12-31",
+        }
+        for offset in range(count)
+    ]
 
 
 def _stateless_payload() -> dict[str, object]:
@@ -65,6 +104,20 @@ def _stateless_payload() -> dict[str, object]:
             },
         },
     }
+
+
+def _volatility_only_payload() -> dict[str, object]:
+    payload = _stateless_payload()
+    stateless = payload["stateless_input"]
+    assert isinstance(stateless, dict)
+    stateless["benchmark_returns"] = []
+    stateless["risk_free_returns"] = []
+    stateless["rolling_options"] = {
+        "window_lengths": [2],
+        "metrics": ["ROLLING_VOLATILITY"],
+        "include_time_series": False,
+    }
+    return payload
 
 
 def test_rolling_metrics_endpoint_stateless_contract() -> None:
@@ -312,7 +365,7 @@ def test_rolling_metrics_endpoint_stateful_surfaces_missing_risk_free_after_curr
     assert response.status_code == 424
     body = response.json()["error"]
     assert body["code"] == "FAILED_DEPENDENCY"
-    assert "no usable risk-free returns" in body["message"]
+    assert body["message"] == "Required upstream dependency data is unavailable."
     assert body["correlation_id"] == "corr-rolling-missing-rf"
     assert body["details"]["service"] == "lotus-core"
     assert body["details"]["risk_free_currency"] == "USD"
@@ -423,7 +476,7 @@ def test_rolling_metrics_endpoint_stateful_rejects_missing_benchmark_returns_for
     assert response.status_code == 424
     body = response.json()["error"]
     assert body["code"] == "FAILED_DEPENDENCY"
-    assert "no benchmark returns" in body["message"]
+    assert body["message"] == "Required upstream dependency data is unavailable."
     assert body["correlation_id"] == "corr-rolling-missing-bmk"
     assert body["details"]["service"] == "lotus-performance"
     request_payload = cast(dict[str, Any], recorder.calls[0]["request_payload"])
@@ -460,6 +513,97 @@ def test_rolling_metrics_endpoint_stateless_rejects_missing_risk_free_series() -
     response = client.post("/analytics/risk/rolling-metrics", json=payload)
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "INVALID_REQUEST"
+
+
+def test_rolling_metrics_endpoint_rejects_too_many_periods() -> None:
+    client = TestClient(app)
+    payload = _volatility_only_payload()
+    stateless = payload["stateless_input"]
+    assert isinstance(stateless, dict)
+    stateless["periods"] = _explicit_periods(ROLLING_MAX_PERIODS + 1)
+
+    response = client.post("/analytics/risk/rolling-metrics", json=payload)
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "INVALID_REQUEST"
+
+
+def test_rolling_metrics_endpoint_rejects_too_many_windows() -> None:
+    client = TestClient(app)
+    payload = _volatility_only_payload()
+    stateless = payload["stateless_input"]
+    assert isinstance(stateless, dict)
+    rolling_options = cast(dict[str, Any], stateless["rolling_options"])
+    rolling_options["window_lengths"] = list(range(2, 2 + ROLLING_MAX_WINDOW_COUNT + 1))
+
+    response = client.post("/analytics/risk/rolling-metrics", json=payload)
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "INVALID_REQUEST"
+
+
+def test_rolling_metrics_endpoint_rejects_too_many_stateless_observations() -> None:
+    client = TestClient(app)
+    payload = _volatility_only_payload()
+    stateless = payload["stateless_input"]
+    assert isinstance(stateless, dict)
+    stateless["returns"] = _return_points(ROLLING_MAX_STATELESS_OBSERVATIONS + 1)
+
+    response = client.post("/analytics/risk/rolling-metrics", json=payload)
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "INVALID_REQUEST"
+
+
+def test_rolling_metrics_endpoint_rejects_unbounded_time_series_expansion() -> None:
+    client = TestClient(app)
+    payload = _volatility_only_payload()
+    stateless = payload["stateless_input"]
+    assert isinstance(stateless, dict)
+    window_count = 5
+    period_count = 2
+    observation_count = ROLLING_MAX_TIME_SERIES_POINTS // (window_count * period_count) + 1
+    stateless["periods"] = _explicit_periods(period_count)
+    stateless["returns"] = _return_points(observation_count)
+    rolling_options = cast(dict[str, Any], stateless["rolling_options"])
+    rolling_options["window_lengths"] = list(range(2, 2 + window_count))
+    rolling_options["include_time_series"] = True
+
+    response = client.post("/analytics/risk/rolling-metrics", json=payload)
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "INVALID_REQUEST"
+
+
+def test_rolling_metrics_endpoint_rejects_oversized_stateful_sourced_history() -> None:
+    recorder = RecordingLotusPerformanceClient(
+        response_payload=build_returns_series_response(
+            portfolio_returns=_return_rows(ROLLING_MAX_STATELESS_OBSERVATIONS + 1)
+        )
+    )
+    with override_app_runtime(lotus_performance_client=recorder):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/rolling-metrics",
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-06",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "rolling_options": {
+                        "window_lengths": [2],
+                        "metrics": ["ROLLING_VOLATILITY"],
+                        "include_time_series": False,
+                    },
+                },
+            },
+        )
+
+    assert response.status_code == 400
+    body = response.json()["error"]
+    assert body["code"] == "INVALID_INPUT"
+    assert "sourced return observations exceed supported maximum" in body["message"]
 
 
 def test_rolling_metrics_endpoint_stateless_marks_no_aligned_dependency_observations() -> None:
