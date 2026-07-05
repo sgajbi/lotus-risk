@@ -14,10 +14,13 @@ from app.integrations.performance_returns_series_async import (
     ensure_dict_payload,
     poll_returns_series_result,
 )
+from app.integrations.upstream_operations import (
+    LOTUS_PERFORMANCE_BENCHMARK_EXPOSURE_CONTEXT_OPERATION,
+)
 from app.observability import observation_start, record_upstream_request
 
 DEFAULT_LOTUS_PERFORMANCE_BASE_URL = "http://performance.dev.lotus"
-BENCHMARK_EXPOSURE_CONTEXT_OPERATION = "/integration/benchmarks/exposure-context"
+BENCHMARK_EXPOSURE_CONTEXT_OPERATION = LOTUS_PERFORMANCE_BENCHMARK_EXPOSURE_CONTEXT_OPERATION
 
 
 def resolve_lotus_performance_base_url(base_url: str | None) -> str:
@@ -116,6 +119,7 @@ async def _execute_initial_returns_series_request(
             response.status_code,
             ensure_dict_payload(
                 response,
+                operation=RETURNS_SERIES_OPERATION,
                 invalid_message=(
                     "lotus-performance returned invalid async accepted payload"
                     if response.status_code == 202
@@ -171,6 +175,7 @@ async def _execute_benchmark_exposure_context_request_with_client(
         request_factory=lambda: client.post(url, json=request_payload, headers=headers),
         parse_response=lambda response: ensure_dict_payload(
             response,
+            operation=BENCHMARK_EXPOSURE_CONTEXT_OPERATION,
             invalid_message="lotus-performance returned invalid benchmark exposure context payload",
         ),
     )

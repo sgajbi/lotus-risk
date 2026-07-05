@@ -60,12 +60,17 @@
           "lotus-performance"
         ],
         "operation": [
-          "/query/portfolio-state",
-          "/query/portfolio/portfolio-state",
+          "/simulation-sessions",
+          "/simulation-sessions/{session_id}/changes",
+          "/integration/portfolios/{portfolio_id}/core-snapshot",
+          "/integration/instruments/enrichment-bulk",
+          "/integration/portfolios/{portfolio_id}/analytics/position-timeseries",
+          "/integration/reference/risk-free-series",
+          "/integration/reference/risk-free-series/coverage",
           "/integration/returns/series",
-          "/integration/returns/async",
-          "/integration/returns/poll",
-          "/integration/returns/status",
+          "/integration/returns/series/status/{calculation_id}",
+          "/integration/returns/series/results/{calculation_id}",
+          "/integration/benchmarks/exposure-context",
           "unknown"
         ],
         "outcome": [

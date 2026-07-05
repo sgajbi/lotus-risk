@@ -19,6 +19,19 @@ def _contract() -> dict[str, Any]:
     return payload
 
 
+def _write_contract(path: Path, payload: dict[str, Any]) -> None:
+    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+
+def _upstream_operation_values(payload: dict[str, Any]) -> list[str]:
+    for metric in payload["metrics"]:
+        if metric["name"] == "lotus_risk_upstream_requests_total":
+            operations = metric["labels"]["operation"]
+            assert isinstance(operations, list)
+            return operations
+    raise AssertionError("missing upstream metric")
+
+
 def test_observability_contract_declares_dashboard_and_alert_evidence() -> None:
     payload = _contract()
 
@@ -38,6 +51,40 @@ def test_observability_contract_alerts_reference_runbook_anchors() -> None:
     issues = validate_observability_contract(OBSERVABILITY_CONTRACT)
 
     assert issues == []
+
+
+def test_observability_contract_requires_all_runtime_upstream_operations(
+    tmp_path: Path,
+) -> None:
+    payload = _contract()
+    operations = _upstream_operation_values(payload)
+    operations.remove("/integration/reference/risk-free-series/coverage")
+    contract_path = tmp_path / "monitoring.json"
+    _write_contract(contract_path, payload)
+
+    issues = validate_observability_contract(contract_path)
+
+    assert any(
+        "missing runtime operation values" in issue
+        and "/integration/reference/risk-free-series/coverage" in issue
+        for issue in issues
+    )
+
+
+def test_observability_contract_rejects_unbounded_upstream_operations(
+    tmp_path: Path,
+) -> None:
+    payload = _contract()
+    operations = _upstream_operation_values(payload)
+    operations.append("/integration/reference/risk-free-series/coverage?currency=USD")
+    operations.append("/integration/returns/series/results/calc-1")
+    contract_path = tmp_path / "monitoring.json"
+    _write_contract(contract_path, payload)
+
+    issues = validate_observability_contract(contract_path)
+
+    assert any("query strings or fragments" in issue for issue in issues)
+    assert any("concrete runtime data" in issue for issue in issues)
 
 
 def test_observability_docs_link_contract_and_alert_validation() -> None:

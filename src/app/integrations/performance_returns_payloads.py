@@ -4,21 +4,23 @@ from typing import Any, NoReturn
 
 import httpx
 
+from app.integrations.upstream_operations import LOTUS_PERFORMANCE_RETURNS_SERIES_OPERATION
 from app.upstream_errors import invalid_upstream_payload, missing_upstream_data
 
-RETURNS_SERIES_OPERATION = "/integration/returns/series"
+RETURNS_SERIES_OPERATION = LOTUS_PERFORMANCE_RETURNS_SERIES_OPERATION
 
 
 def ensure_dict_payload(
     response: httpx.Response,
     *,
     invalid_message: str,
+    operation: str | None = None,
 ) -> dict[str, Any]:
     payload = response.json()
     if not isinstance(payload, dict):
         raise invalid_upstream_payload(
             service="lotus-performance",
-            operation=response.request.url.path,
+            operation=operation or response.request.url.path,
             message=invalid_message,
         )
     return payload
@@ -28,6 +30,7 @@ def parse_async_result_payload(
     response: httpx.Response,
     *,
     invalid_message: str,
+    operation: str | None = None,
 ) -> dict[str, Any] | None:
     payload = response.json()
     if payload is None:
@@ -35,7 +38,7 @@ def parse_async_result_payload(
     if not isinstance(payload, dict):
         raise invalid_upstream_payload(
             service="lotus-performance",
-            operation=response.request.url.path,
+            operation=operation or response.request.url.path,
             message=invalid_message,
         )
     return payload

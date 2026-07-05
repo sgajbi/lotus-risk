@@ -30,6 +30,7 @@ async def execute_lotus_core_json_request(
     base_url: str,
     method: str,
     path: str,
+    operation: str,
     json_payload: dict[str, Any],
     correlation_id: str | None,
     extra_headers: dict[str, str] | None = None,
@@ -46,6 +47,7 @@ async def execute_lotus_core_json_request(
             method=method,
             url=url,
             path=path,
+            operation=operation,
             json_payload=json_payload,
             headers=headers,
             started_at=started_at,
@@ -56,6 +58,7 @@ async def execute_lotus_core_json_request(
             method=method,
             url=url,
             path=path,
+            operation=operation,
             json_payload=json_payload,
             headers=headers,
             started_at=started_at,
@@ -68,13 +71,14 @@ async def _execute_lotus_core_json_request(
     method: str,
     url: str,
     path: str,
+    operation: str,
     json_payload: dict[str, Any],
     headers: dict[str, str],
     started_at: float,
 ) -> dict[str, Any]:
     return await execute_downstream_request_json(
         dependency="lotus-core",
-        operation=path,
+        operation=operation,
         started_at=started_at,
         request_factory=lambda: client.request(
             method=method,
@@ -84,6 +88,7 @@ async def _execute_lotus_core_json_request(
         ),
         parse_response=lambda response: _parse_json_dict_payload(
             response=response,
+            operation=operation,
             invalid_message=f"lotus-core returned invalid JSON payload for {path}",
         ),
     )
@@ -92,13 +97,14 @@ async def _execute_lotus_core_json_request(
 def _parse_json_dict_payload(
     response: httpx.Response,
     *,
+    operation: str,
     invalid_message: str,
 ) -> dict[str, Any]:
     payload = response.json()
     if not isinstance(payload, dict):
         raise invalid_upstream_payload(
             service="lotus-core",
-            operation=response.request.url.path,
+            operation=operation,
             message=invalid_message,
         )
     return payload

@@ -15,6 +15,10 @@ from app.integrations.performance_returns_payloads import (
     raise_returns_series_poll_timeout,
     required_async_result_payload,
 )
+from app.integrations.upstream_operations import (
+    LOTUS_PERFORMANCE_RETURNS_SERIES_RESULT_OPERATION,
+    LOTUS_PERFORMANCE_RETURNS_SERIES_STATUS_OPERATION,
+)
 
 __all__ = ["RETURNS_SERIES_OPERATION", "ensure_dict_payload", "poll_returns_series_result"]
 
@@ -114,7 +118,7 @@ async def _poll_returns_series_status(
         base_url=base_url,
         path=poll_path,
         headers=headers,
-        operation=poll_path,
+        operation=LOTUS_PERFORMANCE_RETURNS_SERIES_STATUS_OPERATION,
         started_at=started_at,
         record_success=False,
     )
@@ -135,7 +139,7 @@ async def _get_returns_series_result(
 ) -> tuple[int, dict[str, Any] | None]:
     return await execute_downstream_request_json(
         dependency="lotus-performance",
-        operation=result_path,
+        operation=LOTUS_PERFORMANCE_RETURNS_SERIES_RESULT_OPERATION,
         started_at=started_at,
         request_factory=lambda: client.get(f"{base_url}{result_path}", headers=headers),
         accepted_status_codes={202, 404},
@@ -146,6 +150,7 @@ async def _get_returns_series_result(
             else parse_async_result_payload(
                 response,
                 invalid_message="lotus-performance returned invalid async result payload",
+                operation=LOTUS_PERFORMANCE_RETURNS_SERIES_RESULT_OPERATION,
             ),
         ),
         record_success=False,
@@ -170,6 +175,7 @@ async def _get_dict(
         parse_response=lambda response: ensure_dict_payload(
             response,
             invalid_message=f"lotus-performance returned invalid JSON payload for {path}",
+            operation=operation,
         ),
         record_success=record_success,
     )
