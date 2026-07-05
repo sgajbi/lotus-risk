@@ -32,8 +32,9 @@ async def execute_lotus_core_json_request(
     path: str,
     json_payload: dict[str, Any],
     correlation_id: str | None,
+    extra_headers: dict[str, str] | None = None,
 ) -> dict[str, Any]:
-    headers: dict[str, str] = {}
+    headers: dict[str, str] = dict(extra_headers or {})
     if correlation_id:
         headers["X-Correlation-Id"] = correlation_id
 

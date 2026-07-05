@@ -98,6 +98,7 @@ async def _resolve_applied_simulation_session(
     core_client: LotusCoreClientProtocol,
     correlation_id: str | None,
     actor_id: str | None,
+    idempotency_key: str | None,
 ) -> SimulationSession:
     session = await resolve_simulation_session(
         simulation,
@@ -110,6 +111,7 @@ async def _resolve_applied_simulation_session(
         session=session,
         core_client=core_client,
         correlation_id=correlation_id,
+        idempotency_key=idempotency_key,
     )
 
 
@@ -143,6 +145,7 @@ async def resolve_simulation(
     core_client: LotusCoreClientProtocol,
     correlation_id: str | None,
     actor_id: str | None,
+    idempotency_key: str | None,
 ) -> ConcentrationComputationInput:
     simulation = request.simulation_input
     if simulation is None:
@@ -153,6 +156,7 @@ async def resolve_simulation(
         core_client=core_client,
         correlation_id=correlation_id,
         actor_id=actor_id,
+        idempotency_key=idempotency_key,
     )
     snapshot_payload = simulation_snapshot_payload(simulation, session=session)
     snapshot_state, session = await _fetch_simulation_snapshot_state(

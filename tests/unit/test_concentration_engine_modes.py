@@ -18,6 +18,7 @@ class _RecordingCoreClient:
         self.changes_response: dict[str, object] = {"version": 3}
         self.snapshot_response: dict[str, object] = {}
         self.last_snapshot_payload: dict[str, object] | None = None
+        self.change_calls: list[dict[str, object]] = []
 
     async def create_simulation_session(
         self,
@@ -35,7 +36,18 @@ class _RecordingCoreClient:
         session_id: str,
         changes: list[dict[str, object]],
         correlation_id: str | None,
+        idempotency_key: str,
+        change_set_fingerprint: str,
     ) -> dict[str, object]:
+        self.change_calls.append(
+            {
+                "session_id": session_id,
+                "changes": changes,
+                "correlation_id": correlation_id,
+                "idempotency_key": idempotency_key,
+                "change_set_fingerprint": change_set_fingerprint,
+            }
+        )
         return self.changes_response
 
     async def get_core_snapshot(
@@ -246,6 +258,7 @@ async def test_simulation_mode_preserves_explicit_empty_projected_state() -> Non
         core_client=client,
         correlation_id="corr-sim-unit",
         actor_id="tester",
+        idempotency_key="idem-sim-unit",
     )
 
     assert response.metadata is not None
@@ -271,6 +284,122 @@ async def test_simulation_mode_preserves_explicit_empty_projected_state() -> Non
     assert response.issuer_concentration.total_position_count_proposed == 0
     assert client.last_snapshot_payload is not None
     assert client.last_snapshot_payload["reporting_currency"] == "USD"
+    assert client.change_calls[0]["idempotency_key"] == "idem-sim-unit"
+    assert str(client.change_calls[0]["change_set_fingerprint"]).startswith("sha256:")
+
+
+@pytest.mark.asyncio
+async def test_simulation_mode_requires_idempotency_key_for_changes() -> None:
+    client = _RecordingCoreClient()
+    request = ConcentrationRequest.model_validate(
+        {
+            "input_mode": "simulation",
+            "simulation_input": {
+                "portfolio_id": "DEMO_DPM_EUR_001",
+                "as_of_date": "2026-02-27",
+                "session_id": "SIM_EXISTING",
+                "simulation_changes": [
+                    {"security_id": "SEC_A", "transaction_type": "BUY", "quantity": 10}
+                ],
+            },
+        }
+    )
+
+    with pytest.raises(ValueError, match="Idempotency-Key header is required"):
+        await calculate_concentration(request, core_client=client)
+
+    assert client.change_calls == []
+    assert client.last_snapshot_payload is None
+
+
+@pytest.mark.asyncio
+async def test_simulation_mode_forwards_stable_idempotency_identity_for_replay() -> None:
+    client = _RecordingCoreClient()
+    client.snapshot_response = {
+        "sections": {
+            "positions_baseline": [{"security_id": "SEC_A", "market_value_base": "100"}],
+            "positions_projected": [{"security_id": "SEC_A", "market_value_base": "110"}],
+        },
+    }
+    payload = {
+        "input_mode": "simulation",
+        "simulation_input": {
+            "portfolio_id": "DEMO_DPM_EUR_001",
+            "as_of_date": "2026-02-27",
+            "session_id": "SIM_EXISTING",
+            "simulation_changes": [
+                {"security_id": "SEC_A", "transaction_type": "BUY", "quantity": 10}
+            ],
+        },
+    }
+    request = ConcentrationRequest.model_validate(payload)
+
+    await calculate_concentration(
+        request,
+        core_client=client,
+        idempotency_key="idem-replay",
+    )
+    await calculate_concentration(
+        request,
+        core_client=client,
+        idempotency_key="idem-replay",
+    )
+
+    assert [call["idempotency_key"] for call in client.change_calls] == [
+        "idem-replay",
+        "idem-replay",
+    ]
+    assert (
+        client.change_calls[0]["change_set_fingerprint"]
+        == client.change_calls[1]["change_set_fingerprint"]
+    )
+
+
+@pytest.mark.asyncio
+async def test_simulation_mode_forwards_different_fingerprint_for_changed_payload() -> None:
+    client = _RecordingCoreClient()
+    client.snapshot_response = {
+        "sections": {
+            "positions_baseline": [{"security_id": "SEC_A", "market_value_base": "100"}],
+            "positions_projected": [{"security_id": "SEC_A", "market_value_base": "110"}],
+        },
+    }
+
+    async def _calculate(quantity: int) -> None:
+        request = ConcentrationRequest.model_validate(
+            {
+                "input_mode": "simulation",
+                "simulation_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-02-27",
+                    "session_id": "SIM_EXISTING",
+                    "simulation_changes": [
+                        {
+                            "security_id": "SEC_A",
+                            "transaction_type": "BUY",
+                            "quantity": quantity,
+                        }
+                    ],
+                },
+            }
+        )
+        await calculate_concentration(
+            request,
+            core_client=client,
+            idempotency_key="idem-conflict",
+        )
+
+    await _calculate(10)
+    await _calculate(20)
+
+    assert [call["idempotency_key"] for call in client.change_calls] == [
+        "idem-conflict",
+        "idem-conflict",
+    ]
+    assert (
+        client.change_calls[0]["change_set_fingerprint"]
+        != client.change_calls[1]["change_set_fingerprint"]
+    )
 
 
 @pytest.mark.asyncio
@@ -377,6 +506,7 @@ async def test_simulation_resolver_requires_simulation_input() -> None:
             core_client=_RecordingCoreClient(),
             correlation_id=None,
             actor_id=None,
+            idempotency_key=None,
         )
 
 

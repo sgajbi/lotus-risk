@@ -20,6 +20,7 @@ async def calculate_concentration(
     core_client: LotusCoreClientProtocol | None = None,
     correlation_id: str | None = None,
     actor_id: str | None = None,
+    idempotency_key: str | None = None,
 ) -> ConcentrationResponse:
     if request.input_mode == ConcentrationInputMode.STATELESS:
         return _build_response(
@@ -45,6 +46,7 @@ async def calculate_concentration(
                 core_client=core_client,
                 correlation_id=correlation_id,
                 actor_id=actor_id,
+                idempotency_key=idempotency_key,
             )
         )
 

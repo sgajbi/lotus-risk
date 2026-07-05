@@ -65,6 +65,8 @@ class LotusCoreClient:
         session_id: str,
         changes: list[dict[str, Any]],
         correlation_id: str | None,
+        idempotency_key: str,
+        change_set_fingerprint: str,
     ) -> dict[str, Any]:
         return await execute_add_simulation_changes_request(
             profile=self._profile,
@@ -73,6 +75,8 @@ class LotusCoreClient:
             session_id=session_id,
             changes=changes,
             correlation_id=correlation_id,
+            idempotency_key=idempotency_key,
+            change_set_fingerprint=change_set_fingerprint,
         )
 
     async def get_core_snapshot(

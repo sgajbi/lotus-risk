@@ -6,11 +6,14 @@ from typing import Any
 
 from app.contracts.concentration import SimulationConcentrationInput
 from app.service_metadata import SERVICE_NAME
+from app.services.audit_lineage import fingerprint_payload
 from app.services.concentration.parsing import _as_datetime, _as_int, _as_str
 from app.services.concentration.ports import LotusCoreClientProtocol
 from app.services.concentration.upstream_contracts import (
     invalid_create_simulation_session_payload,
 )
+
+SIMULATION_IDEMPOTENCY_KEY_MAX_LENGTH = 128
 
 
 @dataclass(frozen=True)
@@ -73,6 +76,7 @@ async def apply_simulation_changes(
     session: SimulationSession,
     core_client: LotusCoreClientProtocol,
     correlation_id: str | None,
+    idempotency_key: str | None,
 ) -> SimulationSession:
     if not simulation.simulation_changes:
         return session
@@ -81,16 +85,51 @@ async def apply_simulation_changes(
         change.model_dump(mode="json", exclude_none=True)
         for change in simulation.simulation_changes
     ]
+    normalized_idempotency_key = _validated_idempotency_key(idempotency_key)
     changes_response = await core_client.add_simulation_changes(
         session_id=session.session_id,
         changes=payload,
         correlation_id=correlation_id,
+        idempotency_key=normalized_idempotency_key,
+        change_set_fingerprint=_change_set_fingerprint(
+            session=session,
+            simulation=simulation,
+            changes=payload,
+        ),
     )
     session_version = _as_int(changes_response.get("version")) or session.version
     return SimulationSession(
         session_id=session.session_id,
         version=session_version,
         expires_at=session.expires_at,
+    )
+
+
+def _validated_idempotency_key(idempotency_key: str | None) -> str:
+    normalized = idempotency_key.strip() if idempotency_key is not None else ""
+    if not normalized:
+        raise ValueError(
+            "Idempotency-Key header is required when simulation_input.simulation_changes is not empty"
+        )
+    if len(normalized) > SIMULATION_IDEMPOTENCY_KEY_MAX_LENGTH:
+        raise ValueError(
+            "Idempotency-Key header must be 128 characters or fewer for concentration simulation"
+        )
+    return normalized
+
+
+def _change_set_fingerprint(
+    *,
+    session: SimulationSession,
+    simulation: SimulationConcentrationInput,
+    changes: list[dict[str, Any]],
+) -> str:
+    return fingerprint_payload(
+        {
+            "portfolio_id": simulation.portfolio_id,
+            "session_id": session.session_id,
+            "changes": changes,
+        }
     )
 
 

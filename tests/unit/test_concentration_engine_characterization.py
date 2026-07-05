@@ -43,6 +43,8 @@ class _CoreEnrichmentRecorder:
         session_id: str,
         changes: list[dict[str, Any]],
         correlation_id: str | None,
+        idempotency_key: str,
+        change_set_fingerprint: str,
     ) -> dict[str, Any]:
         raise AssertionError("not expected in stateless characterization tests")
 

@@ -55,6 +55,8 @@ async def execute_add_simulation_changes_request(
     session_id: str,
     changes: list[dict[str, Any]],
     correlation_id: str | None,
+    idempotency_key: str,
+    change_set_fingerprint: str,
 ) -> dict[str, Any]:
     return await execute_lotus_core_json_request(
         profile=profile,
@@ -64,6 +66,10 @@ async def execute_add_simulation_changes_request(
         path=f"/simulation-sessions/{session_id}/changes",
         json_payload={"changes": changes},
         correlation_id=correlation_id,
+        extra_headers={
+            "Idempotency-Key": idempotency_key,
+            "X-Lotus-Change-Set-Fingerprint": change_set_fingerprint,
+        },
     )
 
 

@@ -38,6 +38,8 @@ class LotusCoreClientProtocol(Protocol):
         session_id: str,
         changes: list[dict[str, Any]],
         correlation_id: str | None,
+        idempotency_key: str,
+        change_set_fingerprint: str,
     ) -> dict[str, Any]: ...
 
     async def get_core_snapshot(

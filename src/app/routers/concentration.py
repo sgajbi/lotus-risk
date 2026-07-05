@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Header
 
 from app.api_errors import STANDARD_ERROR_RESPONSES
 from app.contracts.concentration import ConcentrationRequest, ConcentrationResponse
@@ -32,6 +32,16 @@ async def analytics_risk_concentration(
     runtime_clients: Annotated[RuntimeDownstreamClients, Depends(runtime_downstream_clients)],
     correlation_id: Annotated[str | None, Depends(request_correlation_id)],
     actor_id: Annotated[str | None, Depends(request_actor_id)],
+    idempotency_key: Annotated[
+        str | None,
+        Header(
+            description=(
+                "Required when simulation_input.simulation_changes is non-empty. "
+                "Forwarded to lotus-core with a deterministic change-set fingerprint for "
+                "simulation replay/conflict enforcement."
+            ),
+        ),
+    ] = None,
 ) -> ConcentrationResponse:
     return await observed_endpoint(
         endpoint="concentration",
@@ -41,5 +51,6 @@ async def analytics_risk_concentration(
             core_client=runtime_clients.lotus_core(),
             correlation_id=correlation_id,
             actor_id=actor_id,
+            idempotency_key=idempotency_key,
         ),
     )

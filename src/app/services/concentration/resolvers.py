@@ -116,10 +116,12 @@ async def resolve_simulation(
     core_client: LotusCoreClientProtocol,
     correlation_id: str | None,
     actor_id: str | None,
+    idempotency_key: str | None,
 ) -> ConcentrationComputationInput:
     return await _resolve_simulation(
         request,
         core_client=core_client,
         correlation_id=correlation_id,
         actor_id=actor_id,
+        idempotency_key=idempotency_key,
     )
