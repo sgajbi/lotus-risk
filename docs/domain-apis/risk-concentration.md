@@ -69,6 +69,18 @@ Caller provides:
 
 `lotus-risk` orchestrates lotus-core simulation session APIs, then calls lotus-core `core-snapshot` in `SIMULATION` mode to evaluate baseline vs projected concentration.
 
+## Source Evidence Metadata
+
+Every response carries source-owned metadata for downstream evidence packs:
+
+- `metadata.generated_at`: timezone-aware generation timestamp from `lotus-risk`.
+- `metadata.calculation_supportability.freshness_bucket`: `current` only when issuer coverage is
+  ready and complete enough for concentration evidence; empty, degraded, or uncovered issuer
+  evidence remains `unknown`.
+
+Consumers such as `lotus-idea` must preserve these fields and must not infer risk freshness from
+local processing time.
+
 ## Canonical Request Envelope
 
 ```json
