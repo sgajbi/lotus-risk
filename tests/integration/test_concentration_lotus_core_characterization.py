@@ -342,6 +342,101 @@ def test_simulation_api_characterizes_session_creation_and_snapshot_contract() -
     assert body["issuer_concentration"]["uncovered_position_count_proposed"] == 0
 
 
+def test_simulation_api_forwards_valid_sell_change() -> None:
+    core_client = _RecordingLotusCoreClient()
+    with override_app_runtime(lotus_core_client=core_client):
+        client = TestClient(app)
+
+        response = client.post(
+            "/analytics/risk/concentration",
+            json={
+                "input_mode": "simulation",
+                "simulation_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-02-27",
+                    "session_id": "SIM_EXISTING",
+                    "simulation_changes": [
+                        {
+                            "security_id": "SEC_A",
+                            "transaction_type": "sell",
+                            "amount": 1500,
+                        }
+                    ],
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    assert core_client.change_calls[0]["changes"] == [
+        {
+            "security_id": "SEC_A",
+            "transaction_type": "SELL",
+            "amount": 1500.0,
+        }
+    ]
+
+
+def test_simulation_api_rejects_unsupported_transaction_type_before_core_write() -> None:
+    core_client = _RecordingLotusCoreClient()
+    with override_app_runtime(lotus_core_client=core_client):
+        client = TestClient(app)
+
+        response = client.post(
+            "/analytics/risk/concentration",
+            json={
+                "input_mode": "simulation",
+                "simulation_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-02-27",
+                    "session_id": "SIM_EXISTING",
+                    "simulation_changes": [
+                        {
+                            "security_id": "SEC_A",
+                            "transaction_type": "TRANSFER",
+                            "quantity": 10,
+                        }
+                    ],
+                },
+            },
+        )
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "INVALID_REQUEST"
+    assert core_client.create_calls == []
+    assert core_client.change_calls == []
+    assert core_client.snapshot_calls == []
+
+
+def test_simulation_api_rejects_buy_without_quantity_or_amount_before_core_write() -> None:
+    core_client = _RecordingLotusCoreClient()
+    with override_app_runtime(lotus_core_client=core_client):
+        client = TestClient(app)
+
+        response = client.post(
+            "/analytics/risk/concentration",
+            json={
+                "input_mode": "simulation",
+                "simulation_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-02-27",
+                    "session_id": "SIM_EXISTING",
+                    "simulation_changes": [
+                        {
+                            "security_id": "SEC_A",
+                            "transaction_type": "BUY",
+                        }
+                    ],
+                },
+            },
+        )
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "INVALID_REQUEST"
+    assert core_client.create_calls == []
+    assert core_client.change_calls == []
+    assert core_client.snapshot_calls == []
+
+
 def test_simulation_api_preserves_explicit_empty_projected_positions() -> None:
     core_client = _RecordingLotusCoreClient(
         simulation_snapshot_response={

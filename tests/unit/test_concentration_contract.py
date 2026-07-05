@@ -5,8 +5,13 @@ from app.contracts.concentration import (
     ConcentrationRequest,
     ConcentrationResponse,
     IssuerConcentration,
+    SimulationChangeInput,
+    SimulationTransactionType,
 )
 from app.contracts.concentration_inputs import ConcentrationRequest as ConcentrationRequestSource
+from app.contracts.concentration_inputs import (
+    SimulationTransactionType as SimulationTransactionTypeSource,
+)
 from app.contracts.concentration_outputs import ConcentrationResponse as ConcentrationResponseSource
 from app.contracts.concentration_request_inputs import (
     ConcentrationRequest as ConcentrationRequestImplementation,
@@ -47,6 +52,44 @@ def test_concentration_contract_module_preserves_public_import_surface() -> None
     assert ConcentrationResponse is ConcentrationResponseEnvelope
     assert IssuerConcentration is IssuerConcentrationSource
     assert IssuerConcentration is IssuerConcentrationImplementation
+    assert SimulationTransactionType is SimulationTransactionTypeSource
+
+
+def test_simulation_change_normalizes_supported_transaction_type() -> None:
+    change = SimulationChangeInput.model_validate(
+        {"security_id": "SEC_A", "transaction_type": " buy ", "quantity": 10}
+    )
+
+    assert change.transaction_type is SimulationTransactionType.BUY
+    assert change.model_dump(mode="json", exclude_none=True) == {
+        "security_id": "SEC_A",
+        "transaction_type": "BUY",
+        "quantity": 10.0,
+    }
+
+
+def test_simulation_change_accepts_supported_sell_with_amount() -> None:
+    change = SimulationChangeInput.model_validate(
+        {"security_id": "SEC_A", "transaction_type": "SELL", "amount": 1500}
+    )
+
+    assert change.transaction_type is SimulationTransactionType.SELL
+    assert change.amount == 1500.0
+
+
+def test_simulation_change_rejects_unsupported_transaction_type() -> None:
+    with pytest.raises(ValidationError):
+        SimulationChangeInput.model_validate(
+            {"security_id": "SEC_A", "transaction_type": "TRANSFER", "quantity": 10}
+        )
+
+
+def test_simulation_change_requires_quantity_or_amount() -> None:
+    with pytest.raises(
+        ValidationError,
+        match="quantity or simulation_changes\\[\\].amount is required",
+    ):
+        SimulationChangeInput.model_validate({"security_id": "SEC_A", "transaction_type": "BUY"})
 
 
 def test_concentration_response_schema_uses_governed_field_examples() -> None:

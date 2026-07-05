@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-07-05T01:11:48.454039+00:00",
+  "generatedAt": "2026-07-05T01:21:11.189302+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.affected_portfolios",
@@ -2634,6 +2634,7 @@
         "session_id": "SIM_0001",
         "simulation_changes": [
           {
+            "quantity": 20.0,
             "security_id": "SEC_AAPL_US",
             "transaction_type": "BUY"
           }

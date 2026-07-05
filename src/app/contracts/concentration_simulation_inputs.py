@@ -1,10 +1,16 @@
 from __future__ import annotations
 
 from datetime import date
+from enum import Enum
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.contracts.concentration_stateful_inputs import StatefulConcentrationInput
+
+
+class SimulationTransactionType(str, Enum):
+    BUY = "BUY"
+    SELL = "SELL"
 
 
 class SimulationChangeInput(BaseModel):
@@ -12,23 +18,32 @@ class SimulationChangeInput(BaseModel):
         description="Canonical security identifier targeted by the simulated transaction.",
         json_schema_extra={"example": "SEC_AAPL_US"},
     )
-    transaction_type: str = Field(
-        description="Simulation transaction type (for example BUY or SELL).",
+    transaction_type: SimulationTransactionType = Field(
+        description="Supported simulation transaction type. Supported values: BUY, SELL.",
         json_schema_extra={"example": "BUY"},
     )
     quantity: float | None = Field(
         default=None,
-        description="Optional quantity magnitude for the simulation change.",
+        gt=0,
+        description=(
+            "Positive quantity magnitude for the simulation change. BUY and SELL changes require "
+            "quantity or amount."
+        ),
         json_schema_extra={"example": 20.0},
     )
     price: float | None = Field(  # monetary-float-allow: existing lotus-core simulation DTO.
         default=None,
+        gt=0,
         description="Optional transaction price used by lotus-core simulation change model.",
         json_schema_extra={"example": 195.05},
     )
     amount: float | None = Field(  # monetary-float-allow: existing lotus-core simulation DTO.
         default=None,
-        description="Optional transaction amount used by lotus-core simulation change model.",
+        gt=0,
+        description=(
+            "Positive transaction amount used by lotus-core simulation change model. BUY and SELL "
+            "changes require quantity or amount."
+        ),
         json_schema_extra={"example": 3901.0},
     )
     currency: str | None = Field(
@@ -47,11 +62,31 @@ class SimulationChangeInput(BaseModel):
         json_schema_extra={"example": {"note": "rebalance adjustment"}},
     )
 
+    @field_validator("transaction_type", mode="before")
+    @classmethod
+    def normalize_transaction_type(cls, value: object) -> object:
+        if isinstance(value, str):
+            return value.strip().upper()
+        return value
+
+    @model_validator(mode="after")
+    def validate_supported_change_semantics(self) -> "SimulationChangeInput":
+        if self.quantity is None and self.amount is None:
+            raise ValueError(
+                "simulation_changes[].quantity or simulation_changes[].amount is required for BUY/SELL"
+            )
+        return self
+
 
 class SimulationConcentrationInput(StatefulConcentrationInput):
     simulation_changes: list[SimulationChangeInput] = Field(
-        description="Simulation changes applied to lotus-core simulation session before snapshot pull.",
-        json_schema_extra={"example": [{"security_id": "SEC_AAPL_US", "transaction_type": "BUY"}]},
+        description=(
+            "BUY/SELL simulation changes applied to the lotus-core simulation session before "
+            "snapshot pull. Each change requires a positive quantity or amount."
+        ),
+        json_schema_extra={
+            "example": [{"security_id": "SEC_AAPL_US", "transaction_type": "BUY", "quantity": 20.0}]
+        },
     )
     session_id: str | None = Field(
         default=None,
@@ -92,4 +127,5 @@ class SimulationConcentrationInput(StatefulConcentrationInput):
 __all__ = [
     "SimulationChangeInput",
     "SimulationConcentrationInput",
+    "SimulationTransactionType",
 ]

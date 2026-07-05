@@ -119,7 +119,7 @@
 - Concentration endpoint supports all execution modes:
   - `stateless`: caller supplies positions
   - `stateful`: caller supplies identifiers; lotus-risk resolves baseline from lotus-core
-  - `simulation`: caller supplies identifiers and simulation changes; lotus-risk orchestrates lotus-core session and snapshot APIs
+  - `simulation`: caller supplies identifiers and BUY/SELL simulation changes; lotus-risk validates the operation vocabulary and required positive `quantity` or `amount` before orchestrating lotus-core session and snapshot APIs
 - Response includes:
   - `risk_proxy`: `hhi_current`, `hhi_proposed`, `hhi_delta`
   - `single_position_concentration`: top-position and top-N concentration metrics

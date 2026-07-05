@@ -55,7 +55,9 @@ class ConcentrationRequest(BaseModel):
                 "as_of_date": "2026-02-27",
                 "session_id": "SIM_0001",
                 "expected_version": 3,
-                "simulation_changes": [{"security_id": "SEC_AAPL_US", "transaction_type": "BUY"}],
+                "simulation_changes": [
+                    {"security_id": "SEC_AAPL_US", "transaction_type": "BUY", "quantity": 20.0}
+                ],
                 "top_n": 10,
             }
         },
