@@ -6,8 +6,8 @@
 
 | Metric | Labels | Meaning |
 | --- | --- | --- |
-| `lotus_risk_endpoint_executions_total` | `endpoint`, `input_mode`, `outcome` | Count of risk analytics endpoint executions. |
-| `lotus_risk_endpoint_execution_seconds` | `endpoint`, `input_mode`, `outcome` | Duration histogram for risk analytics endpoint executions. |
+| `lotus_risk_endpoint_executions_total` | `endpoint`, `input_mode`, `outcome` | Count of risk analytics endpoint executions after service-operation and response-contract validation. |
+| `lotus_risk_endpoint_execution_seconds` | `endpoint`, `input_mode`, `outcome` | Duration histogram for risk analytics endpoint executions after service-operation and response-contract validation. |
 
 The governed endpoint label values are:
 
@@ -23,7 +23,9 @@ The governed endpoint label values are:
 
 Tracked input modes are the request contract modes `stateless`, `stateful`, and `simulation`
 where supported by the workflow. `unknown` is reserved for defensive fallback classification.
-Outcomes are `success` and `failure`.
+Outcomes are `success` and `failure`. A failure includes exceptions raised by the analytics
+operation and invalid responses that fail the declared FastAPI response model before the service
+records endpoint success.
 
 ## Upstream Dependency Metrics
 

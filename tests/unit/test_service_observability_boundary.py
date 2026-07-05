@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from pydantic import BaseModel, ValidationError
 
 from app.contracts.risk import RiskCalculationSupportability
 from app.services import calculation_supportability, endpoint_observation
@@ -13,6 +14,10 @@ from app.services import calculation_supportability, endpoint_observation
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SERVICES_DIR = REPO_ROOT / "src" / "app" / "services"
 SANCTIONED_ADAPTER = "observability_ports.py"
+
+
+class _ObservedEndpointResponse(BaseModel):
+    status: str
 
 
 def _imported_modules(path: Path) -> set[str]:
@@ -107,14 +112,46 @@ async def test_endpoint_observation_uses_service_observability_port(
         endpoint="risk/calculate",
         input_mode="stateless",
         operation=lambda: {"status": "ok"},
+        response_model=_ObservedEndpointResponse,
     )
 
-    assert result == {"status": "ok"}
+    assert result == _ObservedEndpointResponse(status="ok")
     assert recorded == [
         {
             "endpoint": "risk/calculate",
             "input_mode": "stateless",
             "outcome": "success",
+            "started_at": 42.0,
+        }
+    ]
+
+
+@pytest.mark.asyncio
+async def test_endpoint_observation_records_response_model_validation_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    recorded: list[dict[str, Any]] = []
+
+    monkeypatch.setattr(endpoint_observation, "observation_start", lambda: 42.0)
+    monkeypatch.setattr(
+        endpoint_observation,
+        "record_endpoint_execution",
+        lambda **kwargs: recorded.append(kwargs),
+    )
+
+    with pytest.raises(ValidationError):
+        await endpoint_observation.observed_endpoint(
+            endpoint="risk/calculate",
+            input_mode="stateless",
+            operation=lambda: {"unexpected": "shape"},
+            response_model=_ObservedEndpointResponse,
+        )
+
+    assert recorded == [
+        {
+            "endpoint": "risk/calculate",
+            "input_mode": "stateless",
+            "outcome": "failure",
             "started_at": 42.0,
         }
     ]

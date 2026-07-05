@@ -92,8 +92,10 @@ Alert id: `lotus-risk-endpoint-failure-rate`
 
 1. Inspect `lotus_risk_endpoint_executions_total` grouped by `endpoint` and `input_mode`.
 2. Check whether failures are isolated to `stateful`, `stateless`, or `simulation` workflows.
-3. Use the request correlation ID from the client error response or logs for request-level tracing.
-4. If failures are stateful only, continue with the upstream dependency checks below.
+3. Treat failures as final endpoint-response failures: they include service-operation exceptions
+   and response-model validation or serialization failures before endpoint success is recorded.
+4. Use the request correlation ID from the client error response or logs for request-level tracing.
+5. If failures are stateful only, continue with the upstream dependency checks below.
 
 ## Upstream Dependency Failure Alert
 

@@ -61,6 +61,7 @@ async def _stateless_drawdown_response(
     return await observed_endpoint(
         endpoint="drawdown",
         input_mode=request_payload.input_mode.value,
+        response_model=DrawdownResponse,
         operation=lambda: calculate_drawdown(
             stateless_input,
             input_mode=DrawdownInputMode.STATELESS,
@@ -83,6 +84,7 @@ async def _stateful_drawdown_response(
     return await observed_endpoint(
         endpoint="drawdown",
         input_mode=request_payload.input_mode.value,
+        response_model=DrawdownResponse,
         operation=lambda: calculate_drawdown_stateful(
             stateful_input,
             analysis_options=request_payload.analysis_options,

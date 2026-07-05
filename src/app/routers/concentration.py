@@ -46,6 +46,7 @@ async def analytics_risk_concentration(
     return await observed_endpoint(
         endpoint="concentration",
         input_mode=payload.input_mode.value,
+        response_model=ConcentrationResponse,
         operation=lambda: calculate_concentration(
             payload,
             core_client=runtime_clients.lotus_core(),

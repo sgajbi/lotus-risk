@@ -24,7 +24,7 @@
     {
       "name": "lotus_risk_endpoint_executions_total",
       "type": "counter",
-      "description": "Counts endpoint executions by endpoint, input mode, and outcome.",
+      "description": "Counts endpoint executions by endpoint, input mode, and final response-contract outcome.",
       "labels": {
         "endpoint": [
           "risk/calculate",

@@ -62,6 +62,7 @@ async def _stateless_historical_attribution_response(
     return await observed_endpoint(
         endpoint="historical-attribution",
         input_mode=request_payload.input_mode.value,
+        response_model=HistoricalAttributionResponse,
         operation=lambda: calculate_historical_attribution(
             stateless_input,
             input_mode=AttributionInputMode.STATELESS,
@@ -81,6 +82,7 @@ async def _stateful_historical_attribution_response(
     return await observed_endpoint(
         endpoint="historical-attribution",
         input_mode=request_payload.input_mode.value,
+        response_model=HistoricalAttributionResponse,
         operation=lambda: calculate_historical_attribution_stateful(
             stateful_input,
             performance_client=runtime_clients.lotus_performance(),
