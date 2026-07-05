@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from pydantic import BaseModel
 from prometheus_client import REGISTRY, generate_latest
 
 from app.main import app
@@ -11,6 +13,7 @@ from app.observability_contracts import (
 from tests.support.app_runtime import override_app_runtime
 from tests.support.lotus_performance_fakes import RecordingLotusPerformanceClient
 from tests.support.returns_series_payloads import build_returns_series_response
+from app.services.endpoint_observation import observed_endpoint
 
 
 client = TestClient(app)
@@ -25,6 +28,29 @@ FORBIDDEN_SUPPORTABILITY_METRIC_LABELS = {
     "request_body",
     "response_body",
 }
+
+
+class _ObservedRouteResponse(BaseModel):
+    status: str
+
+
+def _endpoint_execution_metric_value(
+    *,
+    endpoint: str,
+    input_mode: str,
+    outcome: str,
+) -> float:
+    metric_text = generate_latest(REGISTRY).decode("utf-8")
+    for line in metric_text.splitlines():
+        if not line.startswith("lotus_risk_endpoint_executions_total{"):
+            continue
+        if (
+            f'endpoint="{endpoint}"' in line
+            and f'input_mode="{input_mode}"' in line
+            and f'outcome="{outcome}"' in line
+        ):
+            return float(line.rsplit(" ", maxsplit=1)[1])
+    return 0.0
 
 
 def _risk_stateless_payload() -> dict[str, object]:
@@ -132,3 +158,51 @@ def test_metrics_expose_stateful_endpoint_execution_mode() -> None:
     metrics = client.get("/metrics").text
 
     assert 'input_mode="stateful"' in metrics
+
+
+def test_endpoint_execution_metric_records_response_model_validation_failure() -> None:
+    test_app = FastAPI()
+
+    @test_app.post(
+        "/analytics/risk/invalid-response",
+        response_model=_ObservedRouteResponse,
+    )
+    async def invalid_response() -> _ObservedRouteResponse:
+        return await observed_endpoint(
+            endpoint="risk/calculate",
+            input_mode="stateless",
+            response_model=_ObservedRouteResponse,
+            operation=lambda: {"unexpected": "shape"},
+        )
+
+    response_client = TestClient(test_app, raise_server_exceptions=False)
+    success_before = _endpoint_execution_metric_value(
+        endpoint="risk/calculate",
+        input_mode="stateless",
+        outcome="success",
+    )
+    failure_before = _endpoint_execution_metric_value(
+        endpoint="risk/calculate",
+        input_mode="stateless",
+        outcome="failure",
+    )
+
+    response = response_client.post("/analytics/risk/invalid-response", json={})
+
+    assert response.status_code == 500
+    assert (
+        _endpoint_execution_metric_value(
+            endpoint="risk/calculate",
+            input_mode="stateless",
+            outcome="failure",
+        )
+        >= failure_before + 1
+    )
+    assert (
+        _endpoint_execution_metric_value(
+            endpoint="risk/calculate",
+            input_mode="stateless",
+            outcome="success",
+        )
+        == success_before
+    )

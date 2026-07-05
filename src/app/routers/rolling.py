@@ -62,6 +62,7 @@ async def _stateless_rolling_response(
     return await observed_endpoint(
         endpoint="rolling-metrics",
         input_mode=request_payload.input_mode.value,
+        response_model=RollingResponse,
         operation=lambda: calculate_rolling_metrics(
             stateless_input,
             input_mode=RollingInputMode.STATELESS,
@@ -81,6 +82,7 @@ async def _stateful_rolling_response(
     return await observed_endpoint(
         endpoint="rolling-metrics",
         input_mode=request_payload.input_mode.value,
+        response_model=RollingResponse,
         operation=lambda: calculate_rolling_metrics_stateful(
             stateful_input,
             performance_client=runtime_clients.lotus_performance(),

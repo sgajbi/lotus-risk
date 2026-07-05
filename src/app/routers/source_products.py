@@ -44,6 +44,7 @@ async def analytics_risk_mandate_health_context(
     return await observed_endpoint(
         endpoint="mandate-risk-health-context",
         input_mode="stateless",
+        response_model=MandateRiskHealthContextResponse,
         operation=lambda: evaluate_mandate_risk_health_context(request_payload),
     )
 
@@ -69,6 +70,7 @@ async def analytics_risk_regime_scenario_pack(
     return await observed_endpoint(
         endpoint="regime-scenario-pack",
         input_mode="stateless",
+        response_model=RegimeScenarioPackResponse,
         operation=lambda: evaluate_regime_scenario_pack(request_payload),
     )
 
@@ -94,5 +96,6 @@ async def analytics_risk_event_affected_cohort(
     return await observed_endpoint(
         endpoint="risk-event-cohort",
         input_mode="stateless",
+        response_model=RiskEventAffectedCohortResponse,
         operation=lambda: evaluate_risk_event_affected_cohort(request_payload),
     )

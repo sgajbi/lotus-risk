@@ -41,6 +41,7 @@ async def analytics_risk_calculate(
         return await observed_endpoint(
             endpoint="risk/calculate",
             input_mode=input_mode,
+            response_model=RiskResponse,
             operation=lambda: calculate_risk(stateless_input),
         )
 
@@ -51,6 +52,7 @@ async def analytics_risk_calculate(
         return await observed_endpoint(
             endpoint="risk/calculate",
             input_mode=input_mode,
+            response_model=RiskResponse,
             operation=lambda: calculate_risk_stateful(
                 stateful_input,
                 performance_client=runtime_clients.lotus_performance(),

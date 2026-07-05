@@ -115,6 +115,9 @@ state from individual metric values, period errors, issuer coverage, or stale re
 bounded `ready`, `stale`, `degraded`, or `empty` posture, a bounded reason, and a freshness bucket.
 Historical attribution responses are degraded when any attribution set emits quality flags such as
 missing grouping data, empty active-risk alignment, or unsupported attribution combinations.
+Endpoint execution failures in `lotus_risk_endpoint_executions_total` include service-operation
+exceptions and invalid responses that fail response-model validation before endpoint success is
+recorded.
 The matching Prometheus counter is
 `lotus_risk_calculation_supportability_total` with only bounded labels: `operation`,
 `supportability_state`, `reason`, and `freshness_bucket`.

@@ -1,22 +1,61 @@
 from collections.abc import Awaitable, Callable
-from typing import TypeVar, cast
+from typing import TypeVar, overload
+
+from pydantic import BaseModel
 
 from app.services.observability_ports import observation_start, record_endpoint_execution
 
 ResponseT = TypeVar("ResponseT")
+ResponseModelT = TypeVar("ResponseModelT", bound=BaseModel)
+
+
+def _validate_response_model(
+    result: object,
+    response_model: type[ResponseModelT] | None,
+) -> object:
+    if response_model is None:
+        return result
+
+    validated = (
+        result if isinstance(result, response_model) else response_model.model_validate(result)
+    )
+    validated.model_dump(mode="json")
+    return validated
+
+
+@overload
+async def observed_endpoint(
+    *,
+    endpoint: str,
+    input_mode: str,
+    operation: Callable[[], ResponseT | Awaitable[ResponseT]],
+    response_model: None = None,
+) -> ResponseT: ...
+
+
+@overload
+async def observed_endpoint(
+    *,
+    endpoint: str,
+    input_mode: str,
+    operation: Callable[[], object | Awaitable[object]],
+    response_model: type[ResponseModelT],
+) -> ResponseModelT: ...
 
 
 async def observed_endpoint(
     *,
     endpoint: str,
     input_mode: str,
-    operation: Callable[[], ResponseT | Awaitable[ResponseT]],
-) -> ResponseT:
+    operation: Callable[[], object | Awaitable[object]],
+    response_model: type[ResponseModelT] | None = None,
+) -> object:
     started_at = observation_start()
     try:
-        result = operation()
+        result: object = operation()
         if isinstance(result, Awaitable):
             result = await result
+        result = _validate_response_model(result, response_model)
     except Exception:
         record_endpoint_execution(
             endpoint=endpoint,
@@ -31,4 +70,4 @@ async def observed_endpoint(
         outcome="success",
         started_at=started_at,
     )
-    return cast(ResponseT, result)
+    return result
