@@ -27,7 +27,15 @@ That target runs `scripts/domain_data_product_contract_check.py`, which:
 2. loads the platform semantics and trust registries as the governed vocabulary source,
 3. cross-checks local consumer dependencies against the currently declared upstream producer files,
 4. compares the repo-native files against the transitional platform mirrors to keep additive
-   migration truthful.
+   migration truthful,
+5. validates each declared `current_routes` success response schema against
+   `required_trust_metadata` using governed response paths.
+
+The route-response proof is intentionally schema-based. Product identity must be exposed as
+`product_name` and `product_version` and must not be silently inferred from `contract_version`.
+Shared lineage fields are normally emitted under `metadata.*`, while route-specific equivalents are
+allowed only through the explicit mapping table in `scripts/domain_data_product_contract_check.py`
+for fields such as `as_of_date`, `coverage_ratio`, and `coverage_status`.
 
 ## Transitional Copy Policy
 

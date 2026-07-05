@@ -21,6 +21,16 @@ class ScenarioEvaluationMetadata(BaseModel):
         description="Authoritative source service.",
         json_schema_extra={"example": "lotus-risk"},
     )
+    source_services: list[str] = Field(
+        default_factory=lambda: ["lotus-risk"],
+        description="Services whose data or calculations contributed to this response.",
+        json_schema_extra={"example": ["lotus-risk"]},
+    )
+    correlation_id: str | None = Field(
+        default=None,
+        description="Request correlation identifier when available from the request context.",
+        json_schema_extra={"example": "corr-123"},
+    )
     lineage_version: str = Field(
         default="risk-regime-scenario-pack-evaluation.v1",
         description="Lineage policy version used for this evaluation.",

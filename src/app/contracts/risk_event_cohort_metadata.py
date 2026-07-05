@@ -21,6 +21,11 @@ class RiskEventCohortMetadata(BaseModel):
         description="Authoritative source service.",
         json_schema_extra={"example": "lotus-risk"},
     )
+    source_services: list[str] = Field(
+        default_factory=lambda: ["lotus-risk"],
+        description="Services whose data or calculations contributed to this response.",
+        json_schema_extra={"example": ["lotus-risk"]},
+    )
     lineage_version: str = Field(
         default="risk-event-affected-cohort.v1",
         description="Lineage policy version used for this cohort evaluation.",

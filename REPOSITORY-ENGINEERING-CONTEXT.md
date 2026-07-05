@@ -246,7 +246,12 @@ Boundary rules:
     dashboards, alerts, and runbook anchors through the monitoring contract plus
     `make observability-contract-validate`; do not hand-maintain parallel operation lists in
     docs/wiki without validator coverage.
-26. Treat `src/app/contracts` as mixed public API DTOs, shared application values, and compatibility
+26. Repo-native domain-data-product declarations must reconcile with route response schemas.
+    `make domain-data-product-gate` validates `required_trust_metadata` against generated OpenAPI
+    success schemas through governed response paths; do not add or rename declared trust metadata,
+    response metadata, or current routes without updating the validator mapping and focused tests.
+    `contract_version` is not a substitute for `product_version`.
+27. Treat `src/app/contracts` as mixed public API DTOs, shared application values, and compatibility
     facades until a fuller domain package is introduced. Pure calculation helpers must not construct
     public response DTOs directly for migrated paths. The concentration representative path maps
     internal driver values from `src/app/services/concentration/datamodels.py` to public Pydantic

@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-07-05T03:31:43.086788+00:00",
+  "generatedAt": "2026-07-05T03:52:29.944105+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.affected_portfolios",
@@ -261,15 +261,17 @@
       "semanticId": "lotus.benchmark_context",
       "canonicalTerm": "benchmark_context",
       "preferredName": "benchmark_context",
-      "description": "Canonical benchmark context used by lotus-risk APIs.",
+      "description": "Benchmark context used for the source-owned tracking-error evaluation.",
       "example": {
-        "key": "value"
+        "reason": "APPLIED",
+        "requested": true
       },
-      "type": "BenchmarkRequestContext",
+      "type": "object",
       "locations": [
         "body"
       ],
       "observedTypes": [
+        "object",
         "BenchmarkRequestContext",
         "RollingRequestDependencyContext"
       ]
@@ -568,6 +570,20 @@
       ],
       "observedTypes": [
         "number"
+      ]
+    },
+    {
+      "semanticId": "lotus.correlation_id",
+      "canonicalTerm": "correlation_id",
+      "preferredName": "correlation_id",
+      "description": "Request correlation identifier when available from the request context.",
+      "example": "corr-123",
+      "type": "object",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "object"
       ]
     },
     {
@@ -4932,6 +4948,46 @@
             "attributeRef": "#/attributeCatalog/lotus.product_version"
           },
           {
+            "name": "lineage_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.lineage_version",
+            "attributeRef": "#/attributeCatalog/lotus.lineage_version"
+          },
+          {
+            "name": "source_services",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_services",
+            "attributeRef": "#/attributeCatalog/lotus.source_services"
+          },
+          {
+            "name": "upstream_request_fingerprints",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.upstream_request_fingerprints",
+            "attributeRef": "#/attributeCatalog/lotus.upstream_request_fingerprints"
+          },
+          {
+            "name": "benchmark_context",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.benchmark_context",
+            "attributeRef": "#/attributeCatalog/lotus.benchmark_context"
+          },
+          {
+            "name": "correlation_id",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.correlation_id",
+            "attributeRef": "#/attributeCatalog/lotus.correlation_id"
+          },
+          {
             "name": "portfolio_id",
             "location": "body",
             "required": true,
@@ -5483,6 +5539,22 @@
             "attributeRef": "#/attributeCatalog/lotus.source_service"
           },
           {
+            "name": "metadata.source_services",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_services",
+            "attributeRef": "#/attributeCatalog/lotus.source_services"
+          },
+          {
+            "name": "metadata.correlation_id",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.correlation_id",
+            "attributeRef": "#/attributeCatalog/lotus.correlation_id"
+          },
+          {
             "name": "metadata.lineage_version",
             "location": "body",
             "required": false,
@@ -5762,6 +5834,14 @@
             "attributeRef": "#/attributeCatalog/lotus.source_service"
           },
           {
+            "name": "metadata.source_services",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_services",
+            "attributeRef": "#/attributeCatalog/lotus.source_services"
+          },
+          {
             "name": "metadata.lineage_version",
             "location": "body",
             "required": false,
@@ -5903,6 +5983,30 @@
             "type": "object",
             "semanticId": "lotus.upstream_request_fingerprints",
             "attributeRef": "#/attributeCatalog/lotus.upstream_request_fingerprints"
+          },
+          {
+            "name": "metadata.product_name",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.product_name",
+            "attributeRef": "#/attributeCatalog/lotus.product_name"
+          },
+          {
+            "name": "metadata.product_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.product_version",
+            "attributeRef": "#/attributeCatalog/lotus.product_version"
+          },
+          {
+            "name": "metadata.correlation_id",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.correlation_id",
+            "attributeRef": "#/attributeCatalog/lotus.correlation_id"
           },
           {
             "name": "metadata.contract_version",
@@ -6336,6 +6440,22 @@
             "attributeRef": "#/attributeCatalog/lotus.upstream_request_fingerprints"
           },
           {
+            "name": "metadata.product_name",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.product_name",
+            "attributeRef": "#/attributeCatalog/lotus.product_name"
+          },
+          {
+            "name": "metadata.product_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.product_version",
+            "attributeRef": "#/attributeCatalog/lotus.product_version"
+          },
+          {
             "name": "metadata.contract_version",
             "location": "body",
             "required": false,
@@ -6414,6 +6534,14 @@
             "type": "object",
             "semanticId": "lotus.missing_benchmark_policy",
             "attributeRef": "#/attributeCatalog/lotus.missing_benchmark_policy"
+          },
+          {
+            "name": "metadata.benchmark_context",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.benchmark_context",
+            "attributeRef": "#/attributeCatalog/lotus.benchmark_context"
           },
           {
             "name": "metadata.calculation_supportability",
@@ -6613,6 +6741,22 @@
             "type": "object",
             "semanticId": "lotus.upstream_request_fingerprints",
             "attributeRef": "#/attributeCatalog/lotus.upstream_request_fingerprints"
+          },
+          {
+            "name": "metadata.product_name",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.product_name",
+            "attributeRef": "#/attributeCatalog/lotus.product_name"
+          },
+          {
+            "name": "metadata.product_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.product_version",
+            "attributeRef": "#/attributeCatalog/lotus.product_version"
           },
           {
             "name": "metadata.contract_version",
@@ -7397,6 +7541,22 @@
             "attributeRef": "#/attributeCatalog/lotus.upstream_request_fingerprints"
           },
           {
+            "name": "metadata.product_name",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.product_name",
+            "attributeRef": "#/attributeCatalog/lotus.product_name"
+          },
+          {
+            "name": "metadata.product_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.product_version",
+            "attributeRef": "#/attributeCatalog/lotus.product_version"
+          },
+          {
             "name": "metadata.contract_version",
             "location": "body",
             "required": false,
@@ -7483,6 +7643,14 @@
             "type": "string",
             "semanticId": "lotus.stateful_active_risk_gate_reason",
             "attributeRef": "#/attributeCatalog/lotus.stateful_active_risk_gate_reason"
+          },
+          {
+            "name": "metadata.benchmark_context",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.benchmark_context",
+            "attributeRef": "#/attributeCatalog/lotus.benchmark_context"
           },
           {
             "name": "metadata.calculation_supportability",

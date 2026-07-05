@@ -24,6 +24,31 @@ class MandateRiskHealthContextResponse(BaseModel):
         description="Product contract version.",
         json_schema_extra={"example": "v1"},
     )
+    lineage_version: Literal["mandate-risk-health-context.v1"] = Field(
+        default="mandate-risk-health-context.v1",
+        description="Lineage policy version used for this source product.",
+        json_schema_extra={"example": "mandate-risk-health-context.v1"},
+    )
+    source_services: list[str] = Field(
+        default_factory=lambda: ["lotus-risk"],
+        description="Services whose data or calculations contributed to this response.",
+        json_schema_extra={"example": ["lotus-risk"]},
+    )
+    upstream_request_fingerprints: dict[str, str] = Field(
+        default_factory=dict,
+        description="Upstream request fingerprints directly used by this source product.",
+        json_schema_extra={"example": {}},
+    )
+    benchmark_context: dict[str, object] = Field(
+        default_factory=dict,
+        description="Benchmark context used for the source-owned tracking-error evaluation.",
+        json_schema_extra={"example": {"requested": True, "reason": "APPLIED"}},
+    )
+    correlation_id: str | None = Field(
+        default=None,
+        description="Request correlation identifier when available from the request context.",
+        json_schema_extra={"example": "corr-123"},
+    )
     portfolio_id: str = Field(
         description="Portfolio identifier evaluated by the source product.",
         json_schema_extra={"example": "PB_SG_GLOBAL_BAL_001"},
