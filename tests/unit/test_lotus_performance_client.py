@@ -410,6 +410,9 @@ async def test_client_raises_for_unexpected_async_result_status(
         )
     assert exc_info.value.code == "UPSTREAM_FAILURE"
     assert "not ready" not in exc_info.value.message
+    metrics = generate_latest().decode("utf-8")
+    assert 'operation="/integration/returns/series/results/{calculation_id}"' in metrics
+    assert "/integration/returns/series/results/calc-1" not in metrics
 
 
 @pytest.mark.asyncio

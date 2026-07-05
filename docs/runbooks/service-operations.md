@@ -107,6 +107,27 @@ Alert id: `lotus-risk-upstream-dependency-failures`
    `docs/domain-apis/risk-upstream-failure-behavior.md`.
 4. Confirm retry behavior and timeout posture before escalating to the upstream owning team.
 
+Bounded upstream operation values are:
+
+| Dependency | Operation | First diagnostic check | Escalation |
+| --- | --- | --- | --- |
+| `lotus-core` | `/simulation-sessions` | Verify concentration simulation request shape, idempotency context, and lotus-core simulation-session readiness. | `lotus-core` simulation/session owner |
+| `lotus-core` | `/simulation-sessions/{session_id}/changes` | Verify idempotency key, change-set fingerprint, and session version posture. | `lotus-core` simulation/session owner |
+| `lotus-core` | `/integration/portfolios/{portfolio_id}/core-snapshot` | Verify portfolio snapshot availability and source portfolio readiness. | `lotus-core` portfolio snapshot owner |
+| `lotus-core` | `/integration/instruments/enrichment-bulk` | Verify instrument authority/enrichment coverage for requested securities. | `lotus-core` instrument reference owner |
+| `lotus-core` | `/integration/portfolios/{portfolio_id}/analytics/position-timeseries` | Verify position analytics history coverage and grouping support. | `lotus-core` analytics input owner |
+| `lotus-core` | `/integration/reference/risk-free-series` | Verify reporting currency, date window, and risk-free source coverage. | `lotus-core` reference data owner |
+| `lotus-core` | `/integration/reference/risk-free-series/coverage` | Verify currency coverage and date-window availability; currency must not appear in the metric label. | `lotus-core` reference data owner |
+| `lotus-performance` | `/integration/returns/series` | Verify return-series request shape, benchmark/risk-free selection, and async accepted payload posture. | `lotus-performance` returns owner |
+| `lotus-performance` | `/integration/returns/series/status/{calculation_id}` | Verify async execution status and polling budget; calculation ID must not appear in the metric label. | `lotus-performance` returns async owner |
+| `lotus-performance` | `/integration/returns/series/results/{calculation_id}` | Verify async result availability and accepted `202`/`404` pending posture. | `lotus-performance` returns async owner |
+| `lotus-performance` | `/integration/benchmarks/exposure-context` | Verify benchmark exposure context coverage for the requested grouping dimension. | `lotus-performance` benchmark exposure owner |
+
+Do not add concrete portfolio IDs, simulation IDs, currency query strings, or async calculation IDs
+to `lotus_risk_upstream_requests_total.operation`. Add new runtime operations through
+`src/app/integrations/upstream_operations.py`, the monitoring contract, focused validator tests, and
+this runbook together.
+
 The service owns reusable `lotus-core` and `lotus-performance` HTTP pools for the FastAPI lifespan.
 During shutdown it reports draining posture and closes those pools. Repeated connection setup under
 normal runtime traffic indicates the service was started without ASGI lifespan support.

@@ -15,6 +15,7 @@ while SRC_STR in sys.path:
 sys.path.insert(0, SRC_STR)
 
 import app.observability as observability  # noqa: E402
+from app.integrations.upstream_operations import UPSTREAM_OPERATION_VALUES  # noqa: E402
 
 LOCAL_OBSERVABILITY_DIR = ROOT / "contracts" / "observability"
 CONTRACT_PATH = LOCAL_OBSERVABILITY_DIR / "lotus-risk-monitoring.v1.json"
@@ -28,7 +29,7 @@ _FORBIDDEN_LABEL_HINTS = {
     "raw_error",
     "request_hash",
     "run_id",
-    "instrument",
+    "instrument_id",
 }
 
 
@@ -120,6 +121,71 @@ def _validate_metric(
     return issues
 
 
+def _declared_metric(payload: dict[str, Any], metric_name: str) -> dict[str, Any] | None:
+    metrics = payload.get("metrics")
+    if not isinstance(metrics, list):
+        return None
+    for metric in metrics:
+        if isinstance(metric, dict) and metric.get("name") == metric_name:
+            return metric
+    return None
+
+
+def _validate_upstream_operation_value(value: str) -> list[str]:
+    issues: list[str] = []
+    if "?" in value or "#" in value:
+        issues.append(f"{value!r}: operation values must not include query strings or fragments")
+
+    concrete_identifier_patterns = (
+        r"/calc-[^/]+",
+        r"/SIM[_-][^/]+",
+        r"/PB[_-][^/]+",
+        r"currency=",
+    )
+    for pattern in concrete_identifier_patterns:
+        if re.search(pattern, value, flags=re.IGNORECASE):
+            issues.append(f"{value!r}: operation value appears to include concrete runtime data")
+            break
+    return issues
+
+
+def _validate_upstream_operation_contract(payload: dict[str, Any]) -> list[str]:
+    metric_name = "lotus_risk_upstream_requests_total"
+    metric = _declared_metric(payload, metric_name)
+    if metric is None:
+        return [f"{metric_name}: metric is missing from contract"]
+
+    labels = metric.get("labels")
+    if not isinstance(labels, dict):
+        return [f"{metric_name}: labels must be an object"]
+
+    operations = labels.get("operation")
+    if not isinstance(operations, list):
+        return [f"{metric_name}.operation: operation allowlist must be a list"]
+
+    declared_operations = {value for value in operations if isinstance(value, str)}
+    expected_operations = set(UPSTREAM_OPERATION_VALUES)
+    issues: list[str] = []
+
+    missing = sorted(expected_operations - declared_operations)
+    if missing:
+        issues.append(f"{metric_name}.operation: missing runtime operation values {missing}")
+
+    extra = sorted(declared_operations - expected_operations)
+    if extra:
+        issues.append(
+            f"{metric_name}.operation: contract declares values not owned by runtime "
+            f"vocabulary {extra}"
+        )
+
+    for value in sorted(declared_operations):
+        issues.extend(
+            f"{metric_name}.operation {issue}"
+            for issue in _validate_upstream_operation_value(value)
+        )
+    return issues
+
+
 def validate_observability_contract(path: Path = CONTRACT_PATH) -> list[str]:
     if not path.exists():
         return [f"{path}: observability monitoring contract does not exist"]
@@ -142,6 +208,8 @@ def validate_observability_contract(path: Path = CONTRACT_PATH) -> list[str]:
     for implemented_metric in implemented_metrics:
         if implemented_metric not in declared_metric_names:
             issues.append(f"{implemented_metric}: implemented metric is missing from contract")
+
+    issues.extend(_validate_upstream_operation_contract(payload))
 
     dashboards = payload.get("dashboards")
     if not isinstance(dashboards, list) or not dashboards:

@@ -94,6 +94,7 @@ async def test_client_builds_headers_and_payload_for_session_creation(
     assert 'lotus_risk_upstream_requests_total{category="ok"' in metrics
     assert 'dependency="lotus-core"' in metrics
     assert 'operation="/simulation-sessions"' in metrics
+    assert "DEMO_DPM_EUR_001" not in metrics
 
 
 @pytest.mark.asyncio
