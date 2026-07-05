@@ -58,8 +58,9 @@ Operational and integration surfaces also matter:
 3. `/health/live`
 4. `/health/ready`
 5. `/metadata`
-6. `/ops`
-7. `/metrics`
+6. `/version`
+7. `/ops`
+8. `/metrics`
 
 ## Upstream Dependencies
 

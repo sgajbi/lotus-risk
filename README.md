@@ -146,7 +146,7 @@ Canonical direct local upstream URLs for live characterization and operator chec
 - `make domain-data-product-gate` - repo-native domain data product validation
 - `make mesh-contract-validate` - domain product, trust telemetry, and observability contract validation
 - `make migration-apply` - governed migration contract check
-- `make docker-build` - Docker build validation
+- `make docker-build` - Docker build validation with OCI provenance labels
 
 ## Validation and CI
 
@@ -207,9 +207,17 @@ Key operator-facing endpoints:
 - `/health/live`
 - `/health/ready`
 - `/metadata`
+- `/version`
 - `/ops`
 - `/ops/trust-telemetry`
 - `/metrics`
+
+`/metadata` and `/version` expose the same service, policy, build, image, and CI provenance
+metadata. Container builds label the image with Git commit SHA, branch/ref, build timestamp, source
+repository URL, image digest field, and CI pipeline/run ID. The final registry digest is supplied by
+publish/deployment metadata through `LOTUS_IMAGE_DIGEST`; local unpublished builds use an explicit
+unavailable value because an image cannot contain its own final digest as a build-time label without
+changing that digest.
 
 Runtime dependencies that matter:
 

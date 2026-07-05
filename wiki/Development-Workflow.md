@@ -23,6 +23,10 @@ Use a small, truthful backend loop:
 - `make migration-apply`
 - `make docker-build`
 
+`make docker-build` passes Git commit SHA, branch/ref, build timestamp, repository URL, image digest
+field, and CI pipeline/run ID into OCI labels and runtime environment metadata exposed by
+`/metadata` and `/version`.
+
 ## When to Use Which Gate
 
 Use `make check` for:

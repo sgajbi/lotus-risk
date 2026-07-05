@@ -14,8 +14,9 @@
 2. `/health/live`
 3. `/health/ready`
 4. `/metadata`
-5. `/ops`
-6. `/metrics`
+5. `/version`
+6. `/ops`
+7. `/metrics`
 
 ## Refactor Operating Notes
 

@@ -2,6 +2,12 @@
 
 COVERAGE_FAIL_UNDER ?= 98
 SOURCE_FILE_MAX_LINES ?= 450
+GIT_COMMIT_SHA ?= $(if $(GITHUB_SHA),$(GITHUB_SHA),$(shell git rev-parse HEAD 2>/dev/null || echo unknown))
+GIT_BRANCH ?= $(if $(GITHUB_HEAD_REF),$(GITHUB_HEAD_REF),$(if $(GITHUB_REF_NAME),$(GITHUB_REF_NAME),$(shell git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)))
+BUILD_TIMESTAMP ?= $(shell python -c "from datetime import datetime, timezone; print(datetime.now(timezone.utc).isoformat(timespec='seconds').replace('+00:00','Z'))")
+REPO_URL ?= $(if $(GITHUB_REPOSITORY),$(GITHUB_SERVER_URL)/$(GITHUB_REPOSITORY),$(shell git config --get remote.origin.url 2>/dev/null || echo unknown))
+IMAGE_DIGEST ?= $(if $(LOTUS_IMAGE_DIGEST),$(LOTUS_IMAGE_DIGEST),unavailable-before-publish)
+CI_PIPELINE_RUN_ID ?= $(if $(GITHUB_RUN_ID),$(GITHUB_RUN_ID),local)
 
 install:
 	python -m pip install --upgrade pip
@@ -167,7 +173,14 @@ security-audit:
 	python scripts/dependency_health_check.py --skip-outdated
 
 docker-build:
-	docker build -t lotus-risk:ci .
+	docker build \
+		--build-arg LOTUS_GIT_COMMIT_SHA="$(GIT_COMMIT_SHA)" \
+		--build-arg LOTUS_GIT_BRANCH="$(GIT_BRANCH)" \
+		--build-arg LOTUS_BUILD_TIMESTAMP="$(BUILD_TIMESTAMP)" \
+		--build-arg LOTUS_REPO_URL="$(REPO_URL)" \
+		--build-arg LOTUS_IMAGE_DIGEST="$(IMAGE_DIGEST)" \
+		--build-arg LOTUS_CI_PIPELINE_RUN_ID="$(CI_PIPELINE_RUN_ID)" \
+		-t lotus-risk:ci .
 
 docker-up:
 	docker compose up -d --build

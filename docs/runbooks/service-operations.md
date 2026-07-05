@@ -15,7 +15,22 @@
 - Readiness: /health/ready
 - General health: /health
 - Metadata: /metadata
+- Version metadata: /version
 - Ops diagnostics: /ops
+
+`/metadata` and `/version` return the same build provenance block:
+
+1. Git commit SHA.
+2. Git branch or ref.
+3. Build timestamp.
+4. Repository URL.
+5. Image digest.
+6. CI pipeline/run ID.
+
+The Docker image carries the matching OCI labels for commit SHA, branch/ref, build timestamp,
+source repository URL, image digest field, and CI run ID. The final registry digest must be supplied
+by publish/deployment metadata through `LOTUS_IMAGE_DIGEST`; a local unpublished build cannot embed
+its own final digest as a build-time label because the label changes the digest.
 
 `/health/ready` and `/ops` publish configured-only dependency rows by default. A row with
 `status: "configured"` and `detail: "configured_only_no_probe"` means the dependency base URL is

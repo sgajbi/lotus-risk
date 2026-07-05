@@ -62,8 +62,9 @@ After startup, inspect:
 2. `/health/live`
 3. `/health/ready`
 4. `/metadata`
-5. `/ops`
-6. `/docs`
+5. `/version`
+6. `/ops`
+7. `/docs`
 
 ## Live Validation Default
 
