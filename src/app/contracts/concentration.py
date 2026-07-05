@@ -10,6 +10,7 @@ from app.contracts.concentration_inputs import (
     ProjectedPosition,
     SimulationChangeInput,
     SimulationConcentrationInput,
+    SimulationTransactionType,
     StatefulConcentrationInput,
     StatelessConcentrationInput,
 )
@@ -41,6 +42,7 @@ __all__ = [
     "ProjectedPosition",
     "SimulationChangeInput",
     "SimulationConcentrationInput",
+    "SimulationTransactionType",
     "SinglePositionConcentration",
     "StatefulConcentrationInput",
     "StatelessConcentrationInput",

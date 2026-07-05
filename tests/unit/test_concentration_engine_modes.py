@@ -234,7 +234,9 @@ async def test_simulation_mode_preserves_explicit_empty_projected_state() -> Non
                 "portfolio_id": "DEMO_DPM_EUR_001",
                 "as_of_date": "2026-02-27",
                 "reporting_currency": "USD",
-                "simulation_changes": [{"security_id": "SEC_A", "transaction_type": "BUY"}],
+                "simulation_changes": [
+                    {"security_id": "SEC_A", "transaction_type": "BUY", "quantity": 10}
+                ],
             },
         }
     )

@@ -13,7 +13,7 @@ completion claim.
 ## Generation Identity
 
 - Git branch: `refactor/enterprise-risk-backend`
-- Git commit: `40294d29299cbd300d16a285b7acbc3ec7f1e3da`
+- Git commit: `47dbaf67f89dcf42c8c719e46fb3c807b6351ec8`
 
 ## Current Code Size
 
@@ -55,11 +55,11 @@ completion claim.
 | src/app/contracts/concentration_issuer_metric_outputs.py | IssuerConcentration | ClassDef | 89 |
 | src/app/trust_telemetry_product_models.py | ProductTrustTelemetrySeed | ClassDef | 79 |
 | src/app/contracts/attribution_stateless_inputs.py | HistoricalAttributionStatelessInput | ClassDef | 77 |
+| src/app/contracts/concentration_request_inputs.py | ConcentrationRequest | ClassDef | 77 |
 | src/app/contracts/drawdown_response_envelope_outputs.py | DrawdownResponse | ClassDef | 77 |
 | src/app/contracts/mandate_health_response_outputs.py | MandateRiskHealthContextResponse | ClassDef | 77 |
 | src/app/contracts/rolling_metric_summary_outputs.py | RollingMetricSummary | ClassDef | 76 |
 | src/app/contracts/rolling_period_outputs.py | RollingPeriodResult | ClassDef | 76 |
-| src/app/contracts/concentration_request_inputs.py | ConcentrationRequest | ClassDef | 75 |
 | src/app/contracts/risk_response_outputs.py | RiskResponseMetadata | ClassDef | 75 |
 | src/app/middleware/correlation.py | CorrelationIdMiddleware | ClassDef | 74 |
 | src/app/contracts/attribution_metadata_outputs.py | HistoricalAttributionMetadata | ClassDef | 71 |
@@ -69,8 +69,8 @@ completion claim.
 | src/app/contracts/risk_event_cohort_response.py | RiskEventAffectedCohortResponse | ClassDef | 66 |
 | src/app/contracts/risk_stateful_inputs.py | StatefulRiskInput | ClassDef | 64 |
 | src/app/contracts/attribution_request_inputs.py | HistoricalAttributionRequest | ClassDef | 63 |
+| src/app/contracts/concentration_simulation_inputs.py | SimulationChangeInput | ClassDef | 63 |
 | src/app/contracts/scenario_inputs.py | RegimeScenarioPackRequest | ClassDef | 63 |
-| src/app/contracts/drawdown_metric_outputs.py | DrawdownSummary | ClassDef | 61 |
 
 ## Tool Baseline
 
@@ -111,14 +111,14 @@ Success: no issues found in 357 source files
 ........................................................................ [ 35%]
 ........................................................................ [ 47%]
 ........................................................................ [ 59%]
-........................................................................ [ 71%]
+........................................................................ [ 70%]
 ...
 src\app\services\rolling_stateful_source_responses.py           45      1     16      1    97%   96
 --------------------------------------------------------------------------------------------------------
-TOTAL                                                         6413     85   1058     73    98%
+TOTAL                                                         6428     86   1062     74    98%
 
-202 files skipped due to complete coverage.
-605 passed in 11.37s
+201 files skipped due to complete coverage.
+609 passed in 12.20s
 ```
 
 ## Complexity And Maintainability Snapshot
@@ -248,7 +248,7 @@ tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matri
 tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc1-503-UPSTREAM_UNAVAILABLE-transport]
 tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
 
-605 tests collected in 2.12s
+609 tests collected in 2.00s
 ```
 - Import-linter report-only: reported exit 1
 
@@ -260,10 +260,10 @@ Import Linter
 
 ---------
 ...
-    app.ops_runtime -> app.integrations.lotus_performance_client (l.9)
+    app.ops_runtime -> app.integrations.lotus_core_client (l.8)
 
 -   app.routers.operational -> app.trust_telemetry (l.29)
     app.trust_telemetry -> app.trust_telemetry_builders (l.3)
     app.trust_telemetry_builders -> app.ops_runtime (l.18)
-    app.ops_runtime -> app.integrations.lotus_core_client (l.8)
+    app.ops_runtime -> app.integrations.lotus_performance_client (l.9)
 ```

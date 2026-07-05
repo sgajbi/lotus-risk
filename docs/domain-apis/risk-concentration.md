@@ -221,10 +221,13 @@ Business interpretation:
 ## Simulation Session Semantics
 
 1. If `session_id` is absent or `start_new_session=true`, lotus-risk creates a new lotus-core simulation session.
-2. `simulation_changes[]` are forwarded to lotus-core for the resolved session.
-3. Changes are additive within the session unless a new session is started.
-4. `expected_version` can be supplied for optimistic concurrency.
-5. The response returns simulation metadata when available:
+2. `simulation_changes[]` are validated as lotus-risk simulation commands before any lotus-core write.
+   Supported `transaction_type` values are `BUY` and `SELL`; casing is normalized to uppercase.
+   Each change requires a positive `quantity` or `amount`.
+3. Validated simulation changes are forwarded to lotus-core for the resolved session.
+4. Changes are additive within the session unless a new session is started.
+5. `expected_version` can be supplied for optimistic concurrency.
+6. The response returns simulation metadata when available:
    - `metadata.simulation_session_id`
    - `metadata.simulation_session_version`
    - `metadata.session_expires_at`
