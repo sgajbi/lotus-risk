@@ -138,3 +138,4 @@ async def test_concentration_metadata_includes_reproducible_audit_lineage() -> N
     assert response.metadata is not None
     assert response.metadata.request_fingerprint == fingerprint_payload(request)
     assert response.metadata.source_services == ["lotus-risk"]
+    assert response.metadata.generated_at.tzinfo is not None

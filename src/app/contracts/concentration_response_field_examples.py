@@ -8,6 +8,7 @@ CONCENTRATION_METADATA_EXAMPLE: dict[str, Any] = {
     "simulation_session_id": "SIM_0001",
     "simulation_session_version": 3,
     "session_expires_at": "2026-02-28T10:30:00Z",
+    "generated_at": "2026-02-27T10:15:00Z",
     "issuer_grouping_level": "ultimate_parent",
     "enrichment_policy": "merge_caller_then_core",
     "include_cash_positions": True,

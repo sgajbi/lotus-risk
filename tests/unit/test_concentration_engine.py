@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from app.contracts.concentration import ConcentrationRequest
 from app.observability_contracts import RISK_CALCULATION_SUPPORTABILITY_METRIC_LABELS
 from app.services.concentration.math import _compute_hhi
@@ -88,6 +90,8 @@ async def test_calculate_concentration_stateless_uses_projected_values_when_prov
     assert response["metadata"]["lineage_version"] == "risk_audit_lineage.v1"
     assert response["metadata"]["product_name"] == "ConcentrationRiskReport"
     assert response["metadata"]["product_version"] == "v1"
+    assert isinstance(response["metadata"]["generated_at"], datetime)
+    assert response["metadata"]["generated_at"].tzinfo is not None
     assert response["metadata"]["request_fingerprint"].startswith("sha256:")
     assert response["metadata"]["source_services"] == ["lotus-risk"]
     assert response["metadata"]["upstream_request_fingerprints"] == {}
@@ -99,6 +103,7 @@ async def test_calculate_concentration_stateless_uses_projected_values_when_prov
             "lineage_version",
             "product_name",
             "product_version",
+            "generated_at",
             "request_fingerprint",
             "source_services",
             "upstream_request_fingerprints",
