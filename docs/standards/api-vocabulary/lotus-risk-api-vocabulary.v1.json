@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-07-05T03:57:41.343031+00:00",
+  "generatedAt": "2026-07-05T09:18:45.267594+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.affected_portfolios",
@@ -1562,6 +1562,23 @@
       ],
       "fieldPaths": [
         "period.from_date"
+      ]
+    },
+    {
+      "semanticId": "lotus.generated_at",
+      "canonicalTerm": "generated_at",
+      "preferredName": "generated_at",
+      "description": "Source-owned UTC timestamp when lotus-risk generated this response.",
+      "example": "2026-02-27T10:15:00Z",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ],
+      "fieldPaths": [
+        "metadata.generated_at"
       ]
     },
     {
@@ -6811,6 +6828,14 @@
             "attributeRef": "#/attributeCatalog/lotus.lineage_version"
           },
           {
+            "name": "metadata.generated_at",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.generated_at",
+            "attributeRef": "#/attributeCatalog/lotus.generated_at"
+          },
+          {
             "name": "metadata.request_fingerprint",
             "location": "body",
             "required": false,
@@ -7266,6 +7291,14 @@
             "attributeRef": "#/attributeCatalog/lotus.lineage_version"
           },
           {
+            "name": "metadata.generated_at",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.generated_at",
+            "attributeRef": "#/attributeCatalog/lotus.generated_at"
+          },
+          {
             "name": "metadata.request_fingerprint",
             "location": "body",
             "required": false,
@@ -7567,6 +7600,14 @@
             "type": "string",
             "semanticId": "lotus.lineage_version",
             "attributeRef": "#/attributeCatalog/lotus.lineage_version"
+          },
+          {
+            "name": "metadata.generated_at",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.generated_at",
+            "attributeRef": "#/attributeCatalog/lotus.generated_at"
           },
           {
             "name": "metadata.request_fingerprint",
@@ -8365,6 +8406,14 @@
             "type": "string",
             "semanticId": "lotus.lineage_version",
             "attributeRef": "#/attributeCatalog/lotus.lineage_version"
+          },
+          {
+            "name": "metadata.generated_at",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.generated_at",
+            "attributeRef": "#/attributeCatalog/lotus.generated_at"
           },
           {
             "name": "metadata.request_fingerprint",
