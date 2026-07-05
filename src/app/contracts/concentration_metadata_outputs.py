@@ -78,14 +78,14 @@ class ConcentrationMetadata(AuditMetadataFields):
         default_factory=lambda: RiskCalculationSupportability(
             state="ready",
             reason="calculation_complete",
-            freshness_bucket="unknown",
+            freshness_bucket="current",
         ),
         description="Source-backed supportability posture for UI and operator consumption.",
         json_schema_extra={
             "example": {
                 "state": "ready",
                 "reason": "calculation_complete",
-                "freshness_bucket": "unknown",
+                "freshness_bucket": "current",
                 "degraded_metric_count": 0,
                 "empty_period_count": 0,
                 "evaluated_period_count": 1,

@@ -204,3 +204,18 @@ def test_concentration_supportability_reports_uncovered_issuer_mapping() -> None
     assert supportability.reason == "calculation_quality_issue"
     assert supportability.freshness_bucket == "unknown"
     assert supportability.degraded_metric_count == 1
+
+
+def test_concentration_supportability_marks_complete_issuer_coverage_current() -> None:
+    supportability = supportability_from_concentration_response(
+        covered_position_count_current=3,
+        covered_position_count_proposed=3,
+        total_position_count_current=3,
+        total_position_count_proposed=3,
+        issuer_note=None,
+    )
+
+    assert supportability.state == "ready"
+    assert supportability.reason == "calculation_complete"
+    assert supportability.freshness_bucket == "current"
+    assert supportability.evaluated_period_count == 1
