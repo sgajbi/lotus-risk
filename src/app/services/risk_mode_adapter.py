@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 from dataclasses import dataclass
 from datetime import date
 from typing import Any, Protocol
@@ -54,6 +53,7 @@ _RISK_FREE_METRICS = risk_helpers.RISK_METRICS_REQUIRING_RISK_FREE
 class _StatefulRiskSource:
     source_payload: dict[str, Any]
     risk_free_request: dict[str, Any] | None
+    reporting_currency: str | None
     portfolio_points: list[ReturnPoint]
     benchmark_points: list[ReturnPoint]
     risk_free_points: list[ReturnPoint]
@@ -113,65 +113,94 @@ def _annualization_factor(options: RiskOptions) -> int:
     )
 
 
-def _explicit_window_bounds(source_payload: dict[str, Any]) -> tuple[date, date]:
-    window = source_payload.get("window")
-    if not isinstance(window, dict) or window.get("mode") != "EXPLICIT":
-        raise ValueError(
-            "explicit return window is required for stateful Sharpe risk-free sourcing"
-        )
-    raw_start = window.get("from_date")
-    raw_end = window.get("to_date")
-    if not isinstance(raw_start, str) or not isinstance(raw_end, str):
-        raise ValueError("explicit return window bounds are required for risk-free sourcing")
-    return date.fromisoformat(raw_start), date.fromisoformat(raw_end)
+def _as_non_empty_str(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    normalized = value.strip()
+    return normalized or None
+
+
+def _currency_from_context(raw_context: Any) -> str | None:
+    if not isinstance(raw_context, dict):
+        return None
+    return _as_non_empty_str(raw_context.get("reporting_currency")) or _as_non_empty_str(
+        raw_context.get("portfolio_currency")
+    )
+
+
+def _risk_free_currency(
+    *,
+    stateful: StatefulRiskInput,
+    source_response: dict[str, Any],
+) -> str:
+    explicit_currency = _as_non_empty_str(stateful.reporting_currency)
+    if explicit_currency:
+        return explicit_currency
+
+    for raw_context in (
+        source_response.get("valuation_context"),
+        source_response.get("metadata", {}).get("valuation_context")
+        if isinstance(source_response.get("metadata"), dict)
+        else None,
+    ):
+        resolved_currency = _currency_from_context(raw_context)
+        if resolved_currency:
+            return resolved_currency
+
+    raise ValueError(
+        "reporting_currency is required for stateful Sharpe risk-free sourcing when "
+        "lotus-performance does not return valuation currency context"
+    )
+
+
+def _risk_free_window_bounds(portfolio_points: list[ReturnPoint]) -> tuple[date, date]:
+    dates = [point.date for point in portfolio_points]
+    return min(dates), max(dates)
 
 
 def _build_stateful_risk_free_request(
     *,
     stateful: StatefulRiskInput,
-    source_payload: dict[str, Any],
+    source_response: dict[str, Any],
+    portfolio_points: list[ReturnPoint],
 ) -> dict[str, Any] | None:
     if not _requires_risk_free(stateful):
         return None
-    if stateful.reporting_currency is None:
-        raise ValueError("reporting_currency is required for stateful Sharpe risk-free sourcing")
-    start_date, end_date = _explicit_window_bounds(source_payload)
+    start_date, end_date = _risk_free_window_bounds(portfolio_points)
     return build_risk_free_series_request(
-        currency=stateful.reporting_currency,
+        currency=_risk_free_currency(stateful=stateful, source_response=source_response),
         as_of_date=stateful.as_of_date,
         start_date=start_date,
         end_date=end_date,
     )
 
 
-async def _fetch_stateful_source_payloads(
+async def _fetch_stateful_source_payload(
     *,
     source_payload: dict[str, Any],
-    risk_free_request: dict[str, Any] | None,
     performance_client: LotusPerformanceClientProtocol,
-    core_client: LotusCoreClientProtocol | None,
     correlation_id: str | None,
-) -> tuple[dict[str, Any], dict[str, Any] | None]:
-    if risk_free_request is not None:
-        if core_client is None:
-            raise ValueError("lotus-core client is required for stateful Sharpe risk-free sourcing")
-        source_response, risk_free_response = await asyncio.gather(
-            performance_client.get_returns_series(
-                request_payload=source_payload,
-                correlation_id=correlation_id,
-            ),
-            core_client.get_risk_free_series(
-                request_payload=risk_free_request,
-                correlation_id=correlation_id,
-            ),
-        )
-        return source_response, risk_free_response
-
-    source_response = await performance_client.get_returns_series(
+) -> dict[str, Any]:
+    return await performance_client.get_returns_series(
         request_payload=source_payload,
         correlation_id=correlation_id,
     )
-    return source_response, None
+
+
+async def _fetch_risk_free_payload(
+    *,
+    risk_free_request: dict[str, Any] | None,
+    core_client: LotusCoreClientProtocol | None,
+    correlation_id: str | None,
+) -> dict[str, Any] | None:
+    if risk_free_request is None:
+        return None
+    if core_client is None:
+        raise ValueError("lotus-core client is required for stateful Sharpe risk-free sourcing")
+    return await core_client.get_risk_free_series(
+        request_payload=risk_free_request,
+        correlation_id=correlation_id,
+    )
 
 
 async def _fetch_stateful_risk_source(
@@ -182,18 +211,22 @@ async def _fetch_stateful_risk_source(
     correlation_id: str | None,
 ) -> _StatefulRiskSource:
     source_payload = _build_stateful_source_request(stateful)
-    risk_free_request = _build_stateful_risk_free_request(
-        stateful=stateful,
+    source_response = await _fetch_stateful_source_payload(
         source_payload=source_payload,
-    )
-    source_response, risk_free_response = await _fetch_stateful_source_payloads(
-        source_payload=source_payload,
-        risk_free_request=risk_free_request,
         performance_client=performance_client,
-        core_client=core_client,
         correlation_id=correlation_id,
     )
     series, portfolio_points = extract_required_portfolio_returns(source_response)
+    risk_free_request = _build_stateful_risk_free_request(
+        stateful=stateful,
+        source_response=source_response,
+        portfolio_points=portfolio_points,
+    )
+    risk_free_response = await _fetch_risk_free_payload(
+        risk_free_request=risk_free_request,
+        core_client=core_client,
+        correlation_id=correlation_id,
+    )
 
     benchmark_points: list[ReturnPoint] = []
     if _requires_benchmark(stateful):
@@ -215,6 +248,11 @@ async def _fetch_stateful_risk_source(
     return _StatefulRiskSource(
         source_payload=source_payload,
         risk_free_request=risk_free_request,
+        reporting_currency=(
+            _risk_free_currency(stateful=stateful, source_response=source_response)
+            if risk_free_request is not None
+            else stateful.reporting_currency
+        ),
         portfolio_points=portfolio_points,
         benchmark_points=benchmark_points,
         risk_free_points=risk_free_points,
@@ -252,7 +290,7 @@ def _build_stateful_stateless_risk_input(
     return RiskStatelessCalculationInput(
         scope=RiskRequestScope(
             as_of_date=stateful.as_of_date,
-            reporting_currency=stateful.reporting_currency,
+            reporting_currency=source.reporting_currency,
             net_or_gross=stateful.net_or_gross,
         ),
         periods=stateful.periods,

@@ -448,7 +448,7 @@ def test_risk_calculate_stateful_sharpe_uses_sourced_risk_free_returns() -> None
         "currency": "USD",
         "as_of_date": "2025-01-07",
         "series_mode": "annualized_rate_series",
-        "window": {"start_date": "2025-01-01", "end_date": "2025-01-07"},
+        "window": {"start_date": "2025-01-02", "end_date": "2025-01-07"},
         "frequency": "daily",
     }
     body = response.json()
