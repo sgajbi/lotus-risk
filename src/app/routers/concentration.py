@@ -3,7 +3,11 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Header
 
 from app.api_errors import STANDARD_ERROR_RESPONSES
-from app.contracts.concentration import ConcentrationRequest, ConcentrationResponse
+from app.contracts.concentration import (
+    ConcentrationInputMode,
+    ConcentrationRequest,
+    ConcentrationResponse,
+)
 from app.dependencies.request_context import request_actor_id, request_correlation_id
 from app.openapi_examples import CONCENTRATION_EXAMPLES, request_body_examples
 from app.runtime.downstream_clients import RuntimeDownstreamClients, runtime_downstream_clients
@@ -49,7 +53,11 @@ async def analytics_risk_concentration(
         response_model=ConcentrationResponse,
         operation=lambda: calculate_concentration(
             payload,
-            core_client=runtime_clients.lotus_core(),
+            core_client=(
+                runtime_clients.lotus_core_optional()
+                if payload.input_mode == ConcentrationInputMode.STATELESS
+                else runtime_clients.lotus_core()
+            ),
             correlation_id=correlation_id,
             actor_id=actor_id,
             idempotency_key=idempotency_key,

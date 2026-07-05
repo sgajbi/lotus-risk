@@ -30,7 +30,7 @@ for each item. Keep it current when docs, wiki, or repo truth materially change.
 | Focused documentation and contract tests: `python -m pytest tests/unit/test_product_surface_alignment_contract.py tests/unit/test_observability_operations_contract.py tests/unit/test_configuration_docs.py tests/unit/test_final_pr_readiness_evidence.py tests/unit/test_capabilities_contract.py tests/unit/test_risk_event_cohort_api.py tests/unit/test_mandate_health_context.py -q` | Passed; 29 tests |
 | `make mesh-contract-validate` | Passed |
 | `make openapi-gate` | Passed |
-| `make check` | Passed; includes lint, no-alias, typecheck, OpenAPI artifact, API vocabulary, mesh contracts, source-size, and 657 unit tests |
+| `make check` | Passed; includes lint, no-alias, typecheck, OpenAPI artifact, API vocabulary, mesh contracts, source-size, and 658 unit tests |
 | `../lotus-platform/automation/Sync-RepoWikis.ps1 -CheckOnly -Repository lotus-risk` before merge | Ran; reported expected publication drift for repo-authored wiki source changes: `_Sidebar.md`, `Architecture.md`, `Development-Workflow.md`, `Home.md`, `Integrations.md`, `Overview.md`, `Roadmap.md`, `Supported-Features.md`, and `Validation-and-CI.md` |
 | `../lotus-platform/automation/Sync-RepoWikis.ps1 -Publish -Repository lotus-risk` after merge | Passed; published wiki commit `955d4ca` from repo source |
 | `../lotus-platform/automation/Sync-RepoWikis.ps1 -CheckOnly -Repository lotus-risk` after publish | Passed; `DiffCount 0` |

@@ -24,6 +24,13 @@ def test_runtime_downstream_clients_reuses_lifecycle_state_instances() -> None:
 
     assert runtime_clients.lotus_performance() is state.lotus_performance_client
     assert runtime_clients.lotus_core() is state.lotus_core_client
+    assert runtime_clients.lotus_core_optional() is state.lotus_core_client
+
+
+def test_runtime_downstream_clients_optional_core_allows_missing_stateless_dependency() -> None:
+    runtime_clients = RuntimeDownstreamClients(app_state=SimpleNamespace())
+
+    assert runtime_clients.lotus_core_optional() is None
 
 
 @pytest.mark.parametrize(
