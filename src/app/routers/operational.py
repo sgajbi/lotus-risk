@@ -4,12 +4,14 @@ from fastapi import APIRouter, Request, Response, status
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from app.api_errors import STANDARD_ERROR_RESPONSES
+from app.build_metadata import resolve_build_metadata
 from app.contracts.capabilities import (
     CAPABILITY_FEATURE_KEYS,
     CapabilityFeature,
     IntegrationCapabilitiesResponse,
 )
 from app.contracts.ops import (
+    BuildMetadata,
     DependencyStatus,
     HealthResponse,
     LivenessResponse,
@@ -106,7 +108,21 @@ async def metadata() -> MetadataResponse:
         service=SERVICE_NAME,
         version=SERVICE_VERSION,
         rounding_policy_version=ROUNDING_POLICY_VERSION,
+        build=BuildMetadata(**resolve_build_metadata()),
     )
+
+
+@router.get(
+    "/version",
+    response_model=MetadataResponse,
+    operation_id="getServiceVersion",
+    summary="Service version metadata",
+    description="Returns service, policy, build, image, and CI provenance metadata.",
+    tags=["operational"],
+    responses=STANDARD_ERROR_RESPONSES,
+)
+async def version() -> MetadataResponse:
+    return await metadata()
 
 
 @router.get(

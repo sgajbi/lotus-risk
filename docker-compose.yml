@@ -1,6 +1,14 @@
 services:
   lotus-risk:
-    build: .
+    build:
+      context: .
+      args:
+        LOTUS_GIT_COMMIT_SHA: ${LOTUS_GIT_COMMIT_SHA:-unknown}
+        LOTUS_GIT_BRANCH: ${LOTUS_GIT_BRANCH:-unknown}
+        LOTUS_BUILD_TIMESTAMP: ${LOTUS_BUILD_TIMESTAMP:-unknown}
+        LOTUS_REPO_URL: ${LOTUS_REPO_URL:-unknown}
+        LOTUS_IMAGE_DIGEST: ${LOTUS_IMAGE_DIGEST:-unavailable-before-publish}
+        LOTUS_CI_PIPELINE_RUN_ID: ${LOTUS_CI_PIPELINE_RUN_ID:-local}
     ports:
       - "8130:8130"
     env_file:

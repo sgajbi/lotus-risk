@@ -87,6 +87,53 @@ class MetadataResponse(BaseModel):
         description="Rounding policy revision used by risk outputs.",
         json_schema_extra={"example": "v1"},
     )
+    build: "BuildMetadata" = Field(
+        description=("Build and image provenance emitted through OCI labels and runtime metadata."),
+        json_schema_extra={
+            "example": {
+                "git_commit_sha": "0123456789abcdef0123456789abcdef01234567",
+                "git_branch": "refactor/enterprise-risk-backend",
+                "build_timestamp": "2026-07-05T02:44:17Z",
+                "repo_url": "https://github.com/sgajbi/lotus-risk",
+                "image_digest": (
+                    "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+                ),
+                "ci_pipeline_run_id": "28727286816",
+            }
+        },
+    )
+
+
+class BuildMetadata(BaseModel):
+    git_commit_sha: str = Field(
+        description="Git commit SHA used to build the image.",
+        json_schema_extra={"example": "0123456789abcdef0123456789abcdef01234567"},
+    )
+    git_branch: str = Field(
+        description="Git branch or ref name used to build the image.",
+        json_schema_extra={"example": "refactor/enterprise-risk-backend"},
+    )
+    build_timestamp: str = Field(
+        description="UTC build timestamp associated with the image.",
+        json_schema_extra={"example": "2026-07-05T02:44:17Z"},
+    )
+    repo_url: str = Field(
+        description="Repository URL for the source checkout used by the build.",
+        json_schema_extra={"example": "https://github.com/sgajbi/lotus-risk"},
+    )
+    image_digest: str = Field(
+        description=(
+            "Published image digest supplied by the registry or deployment metadata. Local "
+            "unpublished builds may report an explicit unavailable value."
+        ),
+        json_schema_extra={
+            "example": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        },
+    )
+    ci_pipeline_run_id: str = Field(
+        description="CI pipeline or workflow run identifier associated with the image build.",
+        json_schema_extra={"example": "28727286816"},
+    )
 
 
 class OpsChecks(BaseModel):

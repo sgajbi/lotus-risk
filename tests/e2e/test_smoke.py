@@ -178,6 +178,23 @@ def test_metadata_endpoint() -> None:
     response = client.get("/metadata")
     assert response.status_code == 200
     assert response.json()["service"].startswith("lotus-")
+    assert set(response.json()["build"]) == {
+        "git_commit_sha",
+        "git_branch",
+        "build_timestamp",
+        "repo_url",
+        "image_digest",
+        "ci_pipeline_run_id",
+    }
+
+
+def test_version_endpoint_matches_metadata_contract() -> None:
+    client = TestClient(app)
+    metadata = client.get("/metadata")
+    version = client.get("/version")
+
+    assert version.status_code == 200
+    assert version.json() == metadata.json()
 
 
 def test_integration_capabilities_endpoint_exposes_support_matrix() -> None:

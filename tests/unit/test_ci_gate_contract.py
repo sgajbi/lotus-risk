@@ -3,6 +3,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MAKEFILE = REPO_ROOT / "Makefile"
 WORKFLOW_DIR = REPO_ROOT / ".github" / "workflows"
+DOCKERFILE = REPO_ROOT / "Dockerfile"
 
 PR_GRADE_TARGETS = {
     "lint",
@@ -50,6 +51,45 @@ def test_make_clean_delegates_to_cleanup_script() -> None:
 
     assert "clean:" in makefile
     assert "python scripts/clean_generated_artifacts.py" in makefile
+
+
+def test_docker_build_passes_required_provenance_args() -> None:
+    makefile = MAKEFILE.read_text(encoding="utf-8")
+
+    for build_arg in (
+        "LOTUS_GIT_COMMIT_SHA",
+        "LOTUS_GIT_BRANCH",
+        "LOTUS_BUILD_TIMESTAMP",
+        "LOTUS_REPO_URL",
+        "LOTUS_IMAGE_DIGEST",
+        "LOTUS_CI_PIPELINE_RUN_ID",
+    ):
+        assert f"--build-arg {build_arg}=" in makefile
+
+
+def test_dockerfile_labels_and_exports_required_image_metadata() -> None:
+    dockerfile = DOCKERFILE.read_text(encoding="utf-8")
+
+    for label in (
+        "org.opencontainers.image.revision",
+        "org.opencontainers.image.ref.name",
+        "org.opencontainers.image.created",
+        "org.opencontainers.image.source",
+        "org.opencontainers.image.digest",
+        "com.lotus.git.branch",
+        "com.lotus.ci.pipeline-run-id",
+    ):
+        assert label in dockerfile
+
+    for env_name in (
+        "LOTUS_GIT_COMMIT_SHA",
+        "LOTUS_GIT_BRANCH",
+        "LOTUS_BUILD_TIMESTAMP",
+        "LOTUS_REPO_URL",
+        "LOTUS_IMAGE_DIGEST",
+        "LOTUS_CI_PIPELINE_RUN_ID",
+    ):
+        assert f"ENV {env_name}=" in dockerfile or f"    {env_name}=" in dockerfile
 
 
 def test_governed_workflows_run_mesh_contract_validation() -> None:

@@ -54,7 +54,8 @@
 
 ## Endpoint: `GET /metadata`
 
-- Purpose: service metadata contract.
+- Purpose: service metadata contract, including service version, policy version, build provenance,
+  image provenance, and CI provenance.
 - Execution modes supported: operational.
 - Required inputs:
   - none.
@@ -66,8 +67,32 @@
   - `service`
   - `version`
   - `rounding_policy_version`
+  - `build.git_commit_sha`
+  - `build.git_branch`
+  - `build.build_timestamp`
+  - `build.repo_url`
+  - `build.image_digest`
+  - `build.ci_pipeline_run_id`
 - Alignment:
-  - aligned with template-generated lotus-platform baseline.
+  - aligned with template-generated lotus-platform baseline and Lotus image provenance
+    requirements. Local unpublished builds may report an explicit unavailable image digest until
+    publish/deployment metadata supplies `LOTUS_IMAGE_DIGEST`.
+
+## Endpoint: `GET /version`
+
+- Purpose: service version endpoint exposing the same service, policy, build, image, and CI
+  provenance metadata as `GET /metadata`.
+- Execution modes supported: operational.
+- Required inputs:
+  - none.
+- Input source mapping:
+  - none.
+- Availability status:
+  - implemented.
+- Output:
+  - same response contract as `GET /metadata`.
+- Alignment:
+  - aligned with the OCI/runtime provenance contract used by the Docker image labels.
 
 ## Endpoint: `GET /metrics`
 
@@ -119,5 +144,5 @@
 
 ## Operational Alignment Verdict
 
-- Current state: compliant on health/metadata/metrics/ops with explicit configured-only
+- Current state: compliant on health/metadata/version/metrics/ops with explicit configured-only
   dependency readiness semantics, preserving degraded/unavailable runtime override diagnostics.

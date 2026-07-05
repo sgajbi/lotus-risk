@@ -8,6 +8,7 @@ The most important operator-facing endpoints are:
 - `/health/live`
 - `/health/ready`
 - `/metadata`
+- `/version`
 - `/ops`
 - `/metrics`
 
@@ -16,7 +17,12 @@ Use this first-pass sequence:
 1. `/health/live`
 2. `/health/ready`
 3. `/ops`
-4. `/metadata`
+4. `/metadata` or `/version`
+
+`/metadata` and `/version` expose identical service, policy, build, image, and CI provenance:
+Git commit SHA, branch/ref, build timestamp, repository URL, image digest, and CI pipeline/run ID.
+The final image digest is supplied by registry/deployment metadata through `LOTUS_IMAGE_DIGEST`;
+local unpublished builds report an explicit unavailable value.
 
 ## What `/health/ready` and `/ops` Tell You
 

@@ -24,6 +24,7 @@ class _ConfiguredOnlyDependencyClient:
         ("/ops", "dependencies", None),
         ("/ops/trust-telemetry", "declared_dependencies", None),
         ("/metadata", "rounding_policy_version", None),
+        ("/version", "build", None),
         ("/integration/capabilities", "supported_input_modes", None),
         ("/openapi.json", "paths", None),
         ("/metrics", "# HELP", None),
@@ -240,6 +241,14 @@ def test_metadata_and_ops_contract_shape() -> None:
     assert metadata_body["service"] == "lotus-risk"
     assert metadata_body["version"] == "0.1.0"
     assert "rounding_policy_version" in metadata_body
+    assert metadata_body["build"] == {
+        "git_commit_sha": "unknown",
+        "git_branch": "unknown",
+        "build_timestamp": "unknown",
+        "repo_url": "unknown",
+        "image_digest": "unknown",
+        "ci_pipeline_run_id": "unknown",
+    }
     assert ops_body["status"] == "ok"
     assert ops_body["checks"]["live"] is True
     assert ops_body["checks"]["ready"] is True
@@ -308,6 +317,31 @@ def test_metadata_and_ops_contract_shape() -> None:
     ]
     assert "request_fingerprint" in trust_telemetry_body["products"][0]["required_trust_metadata"]
     assert trust_telemetry_body["products"][0]["current_routes"] == ["/analytics/risk/calculate"]
+
+
+def test_version_endpoint_exposes_runtime_build_provenance(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LOTUS_GIT_COMMIT_SHA", "abc123def456")
+    monkeypatch.setenv("LOTUS_GIT_BRANCH", "feature/provenance")
+    monkeypatch.setenv("LOTUS_BUILD_TIMESTAMP", "2026-07-05T02:44:17Z")
+    monkeypatch.setenv("LOTUS_REPO_URL", "https://github.com/sgajbi/lotus-risk")
+    monkeypatch.setenv("LOTUS_IMAGE_DIGEST", "sha256:" + "a" * 64)
+    monkeypatch.setenv("LOTUS_CI_PIPELINE_RUN_ID", "28727286816")
+
+    client = TestClient(app)
+    metadata = client.get("/metadata")
+    version = client.get("/version")
+
+    assert metadata.status_code == 200
+    assert version.status_code == 200
+    assert version.json() == metadata.json()
+    assert version.json()["build"] == {
+        "git_commit_sha": "abc123def456",
+        "git_branch": "feature/provenance",
+        "build_timestamp": "2026-07-05T02:44:17Z",
+        "repo_url": "https://github.com/sgajbi/lotus-risk",
+        "image_digest": "sha256:" + "a" * 64,
+        "ci_pipeline_run_id": "28727286816",
+    }
 
 
 def test_health_ready_and_ops_surface_dependency_degradation() -> None:
@@ -657,15 +691,29 @@ def test_openapi_exposes_metadata_contract_schema() -> None:
     client = TestClient(app)
     spec = client.get("/openapi.json").json()
     metadata_get = spec["paths"]["/metadata"]["get"]
+    version_get = spec["paths"]["/version"]["get"]
     schema_ref = metadata_get["responses"]["200"]["content"]["application/json"]["schema"]["$ref"]
     assert schema_ref.endswith("/MetadataResponse")
+    assert version_get["responses"]["200"]["content"]["application/json"]["schema"][
+        "$ref"
+    ].endswith("/MetadataResponse")
     metadata_schema = spec["components"]["schemas"]["MetadataResponse"]
+    build_schema = spec["components"]["schemas"]["BuildMetadata"]
     assert metadata_schema["properties"]["service"]["example"] == "lotus-risk"
     assert metadata_schema["properties"]["version"]["description"] == "Service version string."
     assert metadata_schema["properties"]["rounding_policy_version"]["description"] == (
         "Rounding policy revision used by risk outputs."
     )
     assert metadata_schema["properties"]["rounding_policy_version"]["example"] == "v1"
+    assert metadata_schema["properties"]["build"]["description"] == (
+        "Build and image provenance emitted through OCI labels and runtime metadata."
+    )
+    assert build_schema["properties"]["git_commit_sha"]["description"] == (
+        "Git commit SHA used to build the image."
+    )
+    assert build_schema["properties"]["image_digest"]["description"].startswith(
+        "Published image digest supplied by the registry"
+    )
 
 
 def test_openapi_exposes_readiness_dependency_schema() -> None:

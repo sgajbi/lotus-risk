@@ -28,6 +28,7 @@ This package documents the current `lotus-risk` API surface and evaluates it aga
   - `GET /health/live`
   - `GET /health/ready`
   - `GET /metadata`
+  - `GET /version`
   - `GET /ops`
   - `GET /metrics` (Prometheus exposure)
 - Integration:
