@@ -86,6 +86,9 @@ top-issuer driver selection, top-issuer proposed-state fallback, input-universe 
 boundaries, and issuer-enrichment isolation from `risk_proxy.hhi_*`,
 `single_position_concentration.top_position_*`, and
 `single_position_concentration.top_n_cumulative_weight_*` outputs.
+The response metadata carries a timezone-aware `generated_at` plus source-owned
+`metadata.calculation_supportability.freshness_bucket`: issuer-covered ready concentration
+evidence is `current`; empty, degraded, or uncovered issuer evidence stays `unknown`.
 The governed approved consumers are `lotus-gateway` and `lotus-idea`; `lotus-idea` consumption is
 limited to source-preserving opportunity-intelligence workflows and does not transfer risk
 methodology authority or certify client publication.
