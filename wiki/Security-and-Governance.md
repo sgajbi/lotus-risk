@@ -1,5 +1,17 @@
 # Security and Governance
 
+## Governance Map
+
+Current scope: this page summarizes implementation-backed security, deployment, and governance
+posture for `lotus-risk`. It does not claim full bank production approval beyond the executable
+controls and evidence paths listed here.
+
+| Area | Current evidence | Operator action |
+| --- | --- | --- |
+| Enterprise runtime mode | `docs/security-deployment-policy.md` and startup validation tests | Configure required bank-mode environment and trusted-ingress proof |
+| Image supply chain | `make image-supply-chain-gate` and `.github/workflows/image-release.yml` | Promote the same signed digest across environments |
+| API governance | no-alias, OpenAPI, vocabulary, and test-pyramid gates | Keep downstream risk semantics aligned to source contracts |
+
 ## Governance Posture
 
 For `lotus-risk`, governance is mainly about analytical truth, contract discipline, and clear
@@ -69,6 +81,22 @@ Bank deployment mode is stricter than local development mode:
     probes.
 15. the gateway or ingress must strip caller-supplied `X-Lotus-Trusted-Ingress` and inject it only
     after token and operator-access validation.
+
+## Image Supply Chain
+
+Release images are governed by the same security posture as runtime configuration:
+
+1. CI is the only image-push path, through `.github/workflows/image-release.yml`;
+2. images are tagged with the Git SHA and labeled with commit, branch/ref, service version, build
+   timestamp, repository URL, image digest field, and CI run ID;
+3. the release workflow generates SBOM evidence, runs a HIGH/CRITICAL vulnerability scan, signs the
+   digest, generates provenance attestation, and writes `image-release-manifest.json`;
+4. Kubernetes and Helm manifests must deploy by `image@sha256:<digest>`;
+5. environment promotion must reuse the same digest instead of rebuilding per environment;
+6. Docker build arguments and environment declarations must not carry secret-like names or values.
+
+`/version` exposes the runtime service version and the same source/build/image/CI metadata expected
+on the released image. `make image-supply-chain-gate` is the local and CI guard for this contract.
 
 ## Upstream Boundary Discipline
 

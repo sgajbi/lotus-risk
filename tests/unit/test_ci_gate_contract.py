@@ -15,6 +15,7 @@ PR_GRADE_TARGETS = {
     "openapi-artifact-gate",
     "api-vocabulary-gate",
     "mesh-contract-validate",
+    "image-supply-chain-gate",
     "complexity-gate",
     "source-size-gate",
     "dependency-hygiene-gate",
@@ -59,6 +60,7 @@ def test_docker_build_passes_required_provenance_args() -> None:
     for build_arg in (
         "LOTUS_GIT_COMMIT_SHA",
         "LOTUS_GIT_BRANCH",
+        "LOTUS_SERVICE_VERSION",
         "LOTUS_BUILD_TIMESTAMP",
         "LOTUS_REPO_URL",
         "LOTUS_IMAGE_DIGEST",
@@ -73,6 +75,7 @@ def test_dockerfile_labels_and_exports_required_image_metadata() -> None:
     for label in (
         "org.opencontainers.image.revision",
         "org.opencontainers.image.ref.name",
+        "org.opencontainers.image.version",
         "org.opencontainers.image.created",
         "org.opencontainers.image.source",
         "org.opencontainers.image.digest",
@@ -84,6 +87,7 @@ def test_dockerfile_labels_and_exports_required_image_metadata() -> None:
     for env_name in (
         "LOTUS_GIT_COMMIT_SHA",
         "LOTUS_GIT_BRANCH",
+        "LOTUS_SERVICE_VERSION",
         "LOTUS_BUILD_TIMESTAMP",
         "LOTUS_REPO_URL",
         "LOTUS_IMAGE_DIGEST",
@@ -111,3 +115,13 @@ def test_governed_workflows_run_mesh_contract_validation() -> None:
         assert text.index("Checkout Lotus Platform Contracts") < text.index(
             "Mesh Contract Validation"
         ), workflow
+
+
+def test_governed_workflows_run_image_supply_chain_gate() -> None:
+    for workflow in (
+        "feature-lane.yml",
+        "pr-merge-gate.yml",
+        "main-releasability.yml",
+    ):
+        text = (WORKFLOW_DIR / workflow).read_text(encoding="utf-8")
+        assert "run: make image-supply-chain-gate" in text, workflow

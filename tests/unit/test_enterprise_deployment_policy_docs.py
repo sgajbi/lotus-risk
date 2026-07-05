@@ -69,3 +69,38 @@ def test_runbook_and_wiki_link_enterprise_deployment_policy() -> None:
     assert "ENTERPRISE_ENFORCE_RUNTIME_CONFIG=true" in wiki_security
     assert "ENTERPRISE_INGRESS_MAX_BODY_BYTES" in wiki_security
     assert "trusted-ingress proof" in wiki_security
+
+
+def test_enterprise_deployment_policy_records_image_supply_chain_requirements() -> None:
+    policy = POLICY_DOC.read_text(encoding="utf-8")
+    wiki_security = WIKI_SECURITY_DOC.read_text(encoding="utf-8")
+
+    required_policy_terms = (
+        "Image Supply Chain And Promotion",
+        "tagged with the Git commit SHA",
+        "OCI labels include commit SHA",
+        "CI pipeline/run ID",
+        "image-release-manifest.json",
+        "SPDX SBOM",
+        "Trivy HIGH/CRITICAL vulnerability scan",
+        "keyless cosign signing",
+        "provenance attestation",
+        "image@sha256:<digest>",
+        "/version",
+        "reuse the same image digest across environments",
+        "Docker `ARG` and `ENV` declarations must not expose secrets",
+        "make image-supply-chain-gate",
+    )
+
+    for term in required_policy_terms:
+        assert term in policy
+
+    for term in (
+        "Image Supply Chain",
+        "CI is the only image-push path",
+        "tagged with the Git SHA",
+        "image-release-manifest.json",
+        "make image-supply-chain-gate",
+        "/version",
+    ):
+        assert term in wiki_security

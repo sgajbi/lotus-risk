@@ -1,9 +1,10 @@
-.PHONY: architecture-gate complexity-gate source-size-gate dead-code-gate dependency-hygiene-gate install install-ci check check-all test test-unit test-integration test-e2e test-all test-coverage test-fast test-all-fast test-all-no-cov test-all-parallel ci ci-local ci-local-docker ci-local-docker-down typecheck typecheck-tests-critical lint monetary-float-guard domain-product-validate domain-data-product-gate trust-telemetry-validate observability-contract-validate mesh-contract-validate no-alias-gate openapi-gate openapi-artifact-gate api-vocabulary-gate format clean run check-deps security-audit migration-smoke migration-apply pre-commit docker-build docker-up docker-down test-pyramid-gate quality-baseline
+.PHONY: architecture-gate complexity-gate source-size-gate dead-code-gate dependency-hygiene-gate install install-ci check check-all test test-unit test-integration test-e2e test-all test-coverage test-fast test-all-fast test-all-no-cov test-all-parallel ci ci-local ci-local-docker ci-local-docker-down typecheck typecheck-tests-critical lint monetary-float-guard domain-product-validate domain-data-product-gate trust-telemetry-validate observability-contract-validate mesh-contract-validate image-supply-chain-gate no-alias-gate openapi-gate openapi-artifact-gate api-vocabulary-gate format clean run check-deps security-audit migration-smoke migration-apply pre-commit docker-build docker-up docker-down test-pyramid-gate quality-baseline
 
 COVERAGE_FAIL_UNDER ?= 98
 SOURCE_FILE_MAX_LINES ?= 450
 GIT_COMMIT_SHA ?= $(if $(GITHUB_SHA),$(GITHUB_SHA),$(shell git rev-parse HEAD 2>/dev/null || echo unknown))
 GIT_BRANCH ?= $(if $(GITHUB_HEAD_REF),$(GITHUB_HEAD_REF),$(if $(GITHUB_REF_NAME),$(GITHUB_REF_NAME),$(shell git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)))
+SERVICE_VERSION ?= 0.1.0
 BUILD_TIMESTAMP ?= $(shell python -c "from datetime import datetime, timezone; print(datetime.now(timezone.utc).isoformat(timespec='seconds').replace('+00:00','Z'))")
 REPO_URL ?= $(if $(GITHUB_REPOSITORY),$(GITHUB_SERVER_URL)/$(GITHUB_REPOSITORY),$(shell git config --get remote.origin.url 2>/dev/null || echo unknown))
 IMAGE_DIGEST ?= $(if $(LOTUS_IMAGE_DIGEST),$(LOTUS_IMAGE_DIGEST),unavailable-before-publish)
@@ -21,9 +22,9 @@ install-ci:
 pre-commit:
 	pre-commit run --all-files
 
-check: lint no-alias-gate typecheck openapi-gate openapi-artifact-gate api-vocabulary-gate mesh-contract-validate source-size-gate test
+check: lint no-alias-gate typecheck openapi-gate openapi-artifact-gate api-vocabulary-gate mesh-contract-validate image-supply-chain-gate source-size-gate test
 
-ci: lint check-deps architecture-gate no-alias-gate typecheck openapi-gate openapi-artifact-gate api-vocabulary-gate mesh-contract-validate complexity-gate source-size-gate dependency-hygiene-gate dead-code-gate migration-smoke test-pyramid-gate test-all security-audit docker-build
+ci: lint check-deps architecture-gate no-alias-gate typecheck openapi-gate openapi-artifact-gate api-vocabulary-gate mesh-contract-validate image-supply-chain-gate complexity-gate source-size-gate dependency-hygiene-gate dead-code-gate migration-smoke test-pyramid-gate test-all security-audit docker-build
 
 quality-baseline:
 	python scripts/generate_quality_baseline.py
@@ -151,6 +152,9 @@ observability-contract-validate:
 
 mesh-contract-validate: domain-product-validate trust-telemetry-validate observability-contract-validate
 
+image-supply-chain-gate:
+	python scripts/validate_image_supply_chain.py
+
 format:
 	python -m ruff format .
 
@@ -176,6 +180,7 @@ docker-build:
 	docker build \
 		--build-arg LOTUS_GIT_COMMIT_SHA="$(GIT_COMMIT_SHA)" \
 		--build-arg LOTUS_GIT_BRANCH="$(GIT_BRANCH)" \
+		--build-arg LOTUS_SERVICE_VERSION="$(SERVICE_VERSION)" \
 		--build-arg LOTUS_BUILD_TIMESTAMP="$(BUILD_TIMESTAMP)" \
 		--build-arg LOTUS_REPO_URL="$(REPO_URL)" \
 		--build-arg LOTUS_IMAGE_DIGEST="$(IMAGE_DIGEST)" \

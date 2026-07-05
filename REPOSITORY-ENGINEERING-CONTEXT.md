@@ -31,7 +31,7 @@ Current repository posture:
 
 1. `lotus-risk` is the domain authority for risk analytics in the ecosystem,
 2. the service supports the current Workbench risk workspace through gateway-backed contracts,
-3. the CI contract is explicit and strong, with no-alias, vocabulary, OpenAPI, test-pyramid, security, coverage, and Docker enforcement,
+3. the CI contract is explicit and strong, with no-alias, vocabulary, OpenAPI, test-pyramid, security, coverage, Docker, and image supply-chain enforcement,
 4. RFC-0008 establishes the current enterprise-readiness baseline: supported risk analytics are credible for the canonical private-banking portfolio, while unrestricted enterprise-bank approval still requires downstream proof and broader seeded portfolio archetype coverage,
 5. current work often involves balancing analytical correctness, contract quality, and front-office usability,
 6. upstream use of `lotus-core` and `lotus-performance` is now documented under the RFC-0082 upstream contract-family map,
@@ -286,8 +286,13 @@ Important validation expectations:
 4. risk correctness and evidence posture must remain aligned with the product and gateway contract.
 5. repo-native domain product declarations must stay aligned with RFC-0084 trust registries and any transitional platform mirrors until aggregation fully federates.
 6. `make ci` is the PR-grade local aggregate and includes architecture, mesh-contract,
-   complexity, source-size, dependency-hygiene, dead-code, migration, test-pyramid, coverage,
-   security, and Docker evidence; `ci-local` is only a split-suite coverage loop without Docker.
+   image-supply-chain, complexity, source-size, dependency-hygiene, dead-code, migration,
+   test-pyramid, coverage, security, and Docker evidence; `ci-local` is only a split-suite coverage
+   loop without Docker.
+7. Release image posture is governed by `make image-supply-chain-gate`: images are pushed only by
+   `.github/workflows/image-release.yml`, tagged by Git SHA, labeled with source/build/version/CI
+   metadata, scanned, signed, attested, accompanied by SBOM and release-manifest evidence, and
+   promoted by digest rather than environment-specific rebuilds.
 
 ## Standards And RFCs That Govern This Repository
 

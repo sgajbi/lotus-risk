@@ -1,5 +1,16 @@
 # Validation and CI
 
+## Quality Signal Map
+
+Current posture: `lotus-risk` uses repo-native Make targets in local validation and GitHub lanes so
+agents and engineers can reproduce the same evidence before opening or merging a PR.
+
+| Signal | Repo-native command | Protected evidence |
+| --- | --- | --- |
+| Fast local contract | `make check` | lint, typecheck, API, mesh, image supply-chain, source-size, and unit proof |
+| PR-grade local contract | `make ci` | architecture, dependency, migration, coverage, security, Docker, and release posture |
+| Image release contract | `make image-supply-chain-gate` | CI-only push, SBOM, vulnerability scan, signing, provenance, manifest, and digest deployment |
+
 ## Lane Model
 
 `lotus-risk` follows the Lotus CI lane model:
@@ -16,6 +27,7 @@ The repo-native commands are designed to map to those lanes directly.
 - `make ci` - PR-grade local gate
 - `make quality-baseline` - report-only enterprise refactor baseline and quality scorecard
 - `make mesh-contract-validate` - domain product, trust telemetry, and observability contract validation
+- `make image-supply-chain-gate` - image metadata, CI-only push, digest deployment, SBOM, vulnerability scan, signing, provenance, and secret-free Docker metadata validation
 - `make domain-data-product-gate` - repo-native domain product declaration validation
 - `make openapi-gate` - generated schema quality
 - `make openapi-artifact-gate` - generated artifact policy
@@ -36,8 +48,9 @@ The repo-native commands are designed to map to those lanes directly.
 4. OpenAPI quality,
 5. API vocabulary validation,
 6. mesh contract validation,
-7. source-size regression protection,
-8. unit-focused default test execution.
+7. image supply-chain validation,
+8. source-size regression protection,
+9. unit-focused default test execution.
 
 ## What `make ci` Adds
 
@@ -48,7 +61,8 @@ The repo-native commands are designed to map to those lanes directly.
 3. security audit,
 4. split unit, integration, and e2e suites,
 5. coverage enforcement,
-6. Docker build validation.
+6. image supply-chain validation,
+7. Docker build validation.
 
 ## Quality Baseline
 
@@ -75,7 +89,9 @@ They protect:
 2. no-alias API discipline,
 3. product-surface semantic correctness,
 4. evidence-backed supportability claims,
-5. configured-only dependency readiness posture plus endpoint-level upstream failure posture.
+5. configured-only dependency readiness posture plus endpoint-level upstream failure posture,
+6. release images that are tagged by Git SHA, labeled, scanned, signed, attested, accompanied by
+   SBOM and release-manifest evidence, and deployed by digest.
 
 ## Validation Sources
 

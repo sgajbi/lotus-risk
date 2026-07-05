@@ -146,6 +146,7 @@ Canonical direct local upstream URLs for live characterization and operator chec
 - `make domain-data-product-gate` - repo-native domain data product validation
 - `make mesh-contract-validate` - domain product, trust telemetry, and observability contract validation
 - `make migration-apply` - governed migration contract check
+- `make image-supply-chain-gate` - image metadata, CI-only push, SBOM/signing/provenance, digest deployment, and no-secret ARG/ENV guard
 - `make docker-build` - Docker build validation with OCI provenance labels
 
 ## Validation and CI
@@ -172,12 +173,14 @@ The enforced gates currently include:
 5. OpenAPI quality and generated artifact validation,
 6. API vocabulary validation,
 7. mesh contract validation across domain products, trust telemetry, and observability contracts,
-8. source-size, complexity, dependency-hygiene, and dead-code gates,
-9. migration smoke,
-10. test-pyramid validation,
-11. security audit,
-12. coverage-backed testing,
-13. Docker build validation.
+8. image supply-chain validation for CI-only push, SBOM, vulnerability scan, signing, provenance,
+   release manifest, digest deployment, and secret-free Docker metadata,
+9. source-size, complexity, dependency-hygiene, and dead-code gates,
+10. migration smoke,
+11. test-pyramid validation,
+12. security audit,
+13. coverage-backed testing,
+14. Docker build validation.
 
 ## Integration Contract
 
@@ -213,11 +216,13 @@ Key operator-facing endpoints:
 - `/metrics`
 
 `/metadata` and `/version` expose the same service, policy, build, image, and CI provenance
-metadata. Container builds label the image with Git commit SHA, branch/ref, build timestamp, source
-repository URL, image digest field, and CI pipeline/run ID. The final registry digest is supplied by
-publish/deployment metadata through `LOTUS_IMAGE_DIGEST`; local unpublished builds use an explicit
-unavailable value because an image cannot contain its own final digest as a build-time label without
-changing that digest.
+metadata. Container builds label the image with Git commit SHA, branch/ref, service version, build
+timestamp, source repository URL, image digest field, and CI pipeline/run ID. The final registry
+digest is supplied by publish/deployment metadata through `LOTUS_IMAGE_DIGEST`; local unpublished
+builds use an explicit unavailable value because an image cannot contain its own final digest as a
+build-time label without changing that digest. Release images are pushed only by CI, tagged by Git
+SHA, scanned, signed, attested, accompanied by SBOM and release-manifest evidence, and promoted
+across environments by digest.
 
 Runtime dependencies that matter:
 

@@ -1,5 +1,17 @@
 # Development Workflow
 
+## Start Here
+
+Current-state workflow guidance: use the smallest repo-native proof that covers the slice, then move
+to PR-grade validation when contracts, runtime posture, release evidence, or supportability truth
+changes.
+
+| Change type | First local proof | Escalate before PR |
+| --- | --- | --- |
+| Endpoint, contract, or analytics behavior | `make check` | `make ci` |
+| Runtime, Docker, or release metadata | `make image-supply-chain-gate` and `make docker-build` | `make ci` |
+| Documentation or wiki truth | focused docs tests or wiki audit | `make check` |
+
 ## Working Model
 
 Use a small, truthful backend loop:
@@ -21,11 +33,17 @@ Use a small, truthful backend loop:
 - `make mesh-contract-validate`
 - `make openapi-gate`
 - `make migration-apply`
+- `make image-supply-chain-gate`
 - `make docker-build`
 
-`make docker-build` passes Git commit SHA, branch/ref, build timestamp, repository URL, image digest
-field, and CI pipeline/run ID into OCI labels and runtime environment metadata exposed by
-`/metadata` and `/version`.
+`make docker-build` passes Git commit SHA, branch/ref, service version, build timestamp, repository
+URL, image digest field, and CI pipeline/run ID into OCI labels and runtime environment metadata
+exposed by `/metadata` and `/version`.
+
+`make image-supply-chain-gate` protects the release contract: CI-only image push, Git-SHA image
+tags, OCI labels, SBOM, vulnerability scan, image signing, provenance attestation, release-manifest
+digest capture, Kubernetes digest deployment, same-digest promotion, and no secret-like Docker
+`ARG` or `ENV` names.
 
 ## When to Use Which Gate
 
@@ -42,7 +60,8 @@ Use `make ci` when the change affects:
 2. upstream integration behavior,
 3. risk-product-surface alignment,
 4. test-pyramid distribution,
-5. Docker/runtime parity expectations.
+5. Docker/runtime parity expectations,
+6. image release evidence, metadata, or deployment manifest posture.
 
 ## Code-First Reading Order
 

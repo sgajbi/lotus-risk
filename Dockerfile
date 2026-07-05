@@ -2,6 +2,7 @@ FROM python:3.12-slim
 
 ARG LOTUS_GIT_COMMIT_SHA=unknown
 ARG LOTUS_GIT_BRANCH=unknown
+ARG LOTUS_SERVICE_VERSION=0.1.0
 ARG LOTUS_BUILD_TIMESTAMP=unknown
 ARG LOTUS_REPO_URL=unknown
 ARG LOTUS_IMAGE_DIGEST=unavailable-before-publish
@@ -9,6 +10,7 @@ ARG LOTUS_CI_PIPELINE_RUN_ID=unknown
 
 LABEL org.opencontainers.image.revision="${LOTUS_GIT_COMMIT_SHA}" \
       org.opencontainers.image.ref.name="${LOTUS_GIT_BRANCH}" \
+      org.opencontainers.image.version="${LOTUS_SERVICE_VERSION}" \
       org.opencontainers.image.created="${LOTUS_BUILD_TIMESTAMP}" \
       org.opencontainers.image.source="${LOTUS_REPO_URL}" \
       org.opencontainers.image.digest="${LOTUS_IMAGE_DIGEST}" \
@@ -17,6 +19,7 @@ LABEL org.opencontainers.image.revision="${LOTUS_GIT_COMMIT_SHA}" \
 
 ENV LOTUS_GIT_COMMIT_SHA="${LOTUS_GIT_COMMIT_SHA}" \
     LOTUS_GIT_BRANCH="${LOTUS_GIT_BRANCH}" \
+    LOTUS_SERVICE_VERSION="${LOTUS_SERVICE_VERSION}" \
     LOTUS_BUILD_TIMESTAMP="${LOTUS_BUILD_TIMESTAMP}" \
     LOTUS_REPO_URL="${LOTUS_REPO_URL}" \
     LOTUS_IMAGE_DIGEST="${LOTUS_IMAGE_DIGEST}" \
