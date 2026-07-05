@@ -1,7 +1,10 @@
 # Lotus Risk Enterprise Refactor Closure Audit
 
-This document records the post-merge closure audit for the enterprise backend refactor required by
-`docs/architecture/ENTERPRISE_BACKEND_REFACTORING_INSTRUCTIONS.md`.
+This historical audit record documents the post-merge closure of PR #149 for the enterprise backend
+refactor required by `docs/architecture/ENTERPRISE_BACKEND_REFACTORING_INSTRUCTIONS.md`.
+
+It is intentionally immutable historical evidence. Do not use it as current PR readiness proof;
+current proof must come from regenerated branch evidence, GitHub checks, and generated manifests.
 
 ## Closure Identity
 

@@ -1,11 +1,13 @@
 # Lotus Risk Enterprise Refactor PR Readiness Pack
 
 This pack is the draft evidence source for the final non-squash PR on
-`feat/enterprise-risk-refactor-continuation`. It is not a completion claim. The PR should
-only be opened after the branch is still clean, GitHub checks are healthy, and the generated
-OpenAPI artifact is attached or referenced in PR evidence.
+`refactor/enterprise-risk-backend`. It is not a completion claim. The PR should only be opened
+after all GitHub issues in the local closure matrix are fixed, the branch is clean, GitHub checks
+are healthy, and the generated OpenAPI artifact and evidence manifest are attached or referenced in
+PR evidence.
 
-Post-merge closure evidence for PR #149 is recorded in `quality/final_refactor_closure_audit.md`.
+Historical post-merge closure evidence for PR #149 is recorded in
+`quality/final_refactor_closure_audit.md`. It is an immutable audit record, not current PR evidence.
 
 ## Refactor Approach
 
@@ -29,17 +31,17 @@ Current measured highlights:
 1. `src/app/main.py` moved from `980` lines and `22` route/middleware/handler decorators to `10`
    lines and `0` decorators.
 2. The latest quality baseline reports no C-or-worse cyclomatic-complexity candidates.
-3. The latest quality baseline collects `554` tests across `103` Python test files, with `244`
-   Python source files and `347` mypy-checked source files.
+3. The latest `make check` collects `656` tests across `112` Python test files, and the current
+   scorecard records the measured source and mypy posture.
 4. OpenAPI governance now enforces operation IDs, mutation request examples, duplicate operation ID
    checks, and generated artifact policy.
 5. Security evidence now covers authorization headers, service identity, capability checks,
    redaction, dependency audit, threat-model evidence, and enterprise deployment security posture.
 6. Observability evidence now covers metrics, dashboard panels, alert definitions, and runbook
    anchors.
-7. The continuation branch carries at least `50` small, non-squash-oriented commits over
-   `origin/main`; generated baseline identity is recorded in `quality/baseline_report.md` and must
-   be regenerated immediately before final PR assembly.
+7. The continuation branch carries small, non-squash-oriented commits over `origin/main`; generated
+   baseline identity is recorded in `quality/baseline_report.md` and must be regenerated immediately
+   before final PR assembly.
 
 ## Architecture Improvements
 
@@ -67,15 +69,16 @@ Evidence:
    artifact against repository Spectral policy expectations.
 3. `tests/unit/test_openapi_quality_gate.py` and `tests/unit/test_openapi_artifact_gate.py` pin the
    gate behavior.
-4. `quality/openapi_artifact_evidence.md` records the current generated artifact path, checksum,
-   size, schema counts, and regeneration commands for PR attachment.
+4. `quality/openapi_artifact_evidence.md` records the evidence contract; the exact generated
+   branch, commit, checksum, size, path count, operation count, timestamp, repository URL, and CI
+   run identity are written under `output/openapi/` by `make openapi-artifact-gate`.
 
 PR requirement:
 
 1. Attach or reference the generated `output/openapi/lotus-risk.openapi.json` artifact in the final
-   PR evidence, using `quality/openapi_artifact_evidence.md` as the checksum manifest.
-2. Reconfirm the artifact manifest was generated from `feat/enterprise-risk-refactor-continuation`
-   immediately before PR creation.
+   PR evidence, using `output/openapi/lotus-risk.openapi.evidence.json` as the checksum manifest.
+2. Reconfirm the artifact manifest was generated from `refactor/enterprise-risk-backend`
+   immediately before PR creation, or from the final branch name if the branch changes before PR.
 
 ## Testing Improvements
 
@@ -84,7 +87,8 @@ Evidence:
 1. Focused tests protect app factory wiring, router extraction, downstream client boundaries,
    OpenAPI governance, security evidence, observability contracts, upstream error mapping,
    enterprise readiness, and risk analytics behavior.
-2. The latest generated baseline records `554` collected tests and `98%` total coverage.
+2. The latest `make check` records `656` collected unit tests; final coverage evidence must come
+   from the current generated baseline immediately before PR creation.
 3. The final PR should list exact local commands and GitHub check names that passed.
 
 ## Security Improvements
@@ -130,8 +134,8 @@ Evidence:
 2. Repo-local wiki source has been updated for security and operations posture.
 3. `quality/baseline_report.md`, `quality/refactor_health_report.md`, and
    `quality/quality_scorecard.md` provide generated measurable evidence.
-4. `quality/openapi_artifact_evidence.md` records the generated OpenAPI artifact checksum and
-   attachment metadata.
+4. `quality/openapi_artifact_evidence.md` records the generated OpenAPI evidence contract; exact
+   attachment metadata is generated under `output/openapi/`.
 
 ## Validation Evidence To Include In The PR
 
@@ -159,9 +163,10 @@ GitHub evidence to cite:
 Wiki evidence:
 
 1. `..\lotus-platform\automation\Sync-RepoWikis.ps1 -CheckOnly -Repository lotus-risk` currently
-   reports publication drift for branch-authored wiki source files:
-   `Operations-Runbook.md`, `Security-and-Governance.md`, `Troubleshooting.md`, and
-   `Validation-and-CI.md`.
+   reports publication drift for repo-authored wiki source files:
+   `Architecture.md`, `Development-Workflow.md`, `Getting-Started.md`, `Operations-Runbook.md`,
+   `Overview.md`, `Security-and-Governance.md`, `Supported-Features.md`, `Validation-and-CI.md`,
+   and `_Sidebar.md`.
 2. Do not publish the GitHub wiki from this feature branch. After merge to `main`, publish the
    repo-authored wiki source with `..\lotus-platform\automation\Sync-RepoWikis.ps1 -Publish
    -Repository lotus-risk`.
@@ -173,8 +178,8 @@ Wiki evidence:
 2. Runtime token-validation proof remains a platform/gateway integration evidence item.
 3. Production telemetry threshold tuning remains post-deployment work.
 4. Large service and contract modules remain future maintainability targets.
-5. GitHub wiki publication remains a post-merge closure step for the four branch-authored wiki
-   files listed in the validation evidence section.
+5. GitHub wiki publication remains a post-merge closure step for the repo-authored wiki files
+   listed in the validation evidence section.
 
 ## Follow-Up Backlog
 
@@ -191,7 +196,8 @@ Before opening the PR:
 
 1. Ensure `git status --short --branch` is clean and tracking the pushed feature branch.
 2. Confirm recent GitHub `Quality Baseline` and `Remote Feature Lane` checks are green.
-3. Generate and preserve `output/openapi/lotus-risk.openapi.json` as PR evidence.
+3. Generate and preserve `output/openapi/lotus-risk.openapi.json` and
+   `output/openapi/lotus-risk.openapi.evidence.json` as PR evidence.
 4. Copy the before/after summary from `quality/quality_scorecard.md`.
 5. Include the known limitations and follow-up backlog from this file.
 

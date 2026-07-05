@@ -236,28 +236,34 @@ Boundary rules:
     supportability, metric-duration, endpoint-execution recording ports and the Prometheus-backed
     implementation in `app.observability`. Preserve this boundary with `.importlinter` and unit
     architecture tests when adding new metrics.
-24. Endpoint execution metrics must reflect final response-contract truth, not only service
+24. Current proof evidence must be generated and stale-aware. Tracked docs such as
+    `quality/openapi_artifact_evidence.md` may define the evidence contract, but exact branch,
+    commit, generated timestamp, artifact size/checksum, path/operation counts, repository URL, and
+    CI run identity belong in generated artifacts under `output/openapi/` or GitHub run evidence.
+    Historical closure records such as PR #149 must be explicitly labeled historical and must not be
+    cited as current PR readiness proof.
+25. Endpoint execution metrics must reflect final response-contract truth, not only service
     operation completion. When adding analytics routes that use
     `lotus_risk_endpoint_executions_total`, route through `services.endpoint_observation` with the
     declared `response_model` so response-model validation or serialization failures emit
     `outcome="failure"` and do not emit a misleading success.
-25. The observability domain API page is a validated projection of
+26. The observability domain API page is a validated projection of
     `contracts/observability/lotus-risk-monitoring.v1.json`. Add metric names, label values,
     dashboards, alerts, and runbook anchors through the monitoring contract plus
     `make observability-contract-validate`; do not hand-maintain parallel operation lists in
     docs/wiki without validator coverage.
-26. Repo-native domain-data-product declarations must reconcile with route response schemas.
+27. Repo-native domain-data-product declarations must reconcile with route response schemas.
     `make domain-data-product-gate` validates `required_trust_metadata` against generated OpenAPI
     success schemas through governed response paths; do not add or rename declared trust metadata,
     response metadata, or current routes without updating the validator mapping and focused tests.
     `contract_version` is not a substitute for `product_version`.
-27. API vocabulary semantic IDs must preserve domain meaning, not just leaf property names.
+28. API vocabulary semantic IDs must preserve domain meaning, not just leaf property names.
     Ambiguous fields such as `status`, `state`, `reason`, and `type` require context-aware IDs
     such as `lotus.readiness_status`, `lotus.dependency_runtime_status`,
     `lotus.calculation_supportability_reason`, and `lotus.period_type`. Update
     `scripts/api_vocabulary_inventory.py`, `docs/standards/api-vocabulary.md`, and focused tests
     when adding new ambiguous vocabulary.
-28. Treat `src/app/contracts` as mixed public API DTOs, shared application values, and compatibility
+29. Treat `src/app/contracts` as mixed public API DTOs, shared application values, and compatibility
     facades until a fuller domain package is introduced. Pure calculation helpers must not construct
     public response DTOs directly for migrated paths. The concentration representative path maps
     internal driver values from `src/app/services/concentration/datamodels.py` to public Pydantic

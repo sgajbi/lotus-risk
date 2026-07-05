@@ -1,33 +1,41 @@
 # Lotus Risk OpenAPI Artifact Evidence
 
-This file records the current generated OpenAPI artifact proof for final PR assembly. The generated
-artifact itself is ignored by Git and should be attached to the PR or uploaded as CI evidence rather
-than committed.
+This file defines the current OpenAPI artifact evidence contract for final PR assembly. Exact
+branch, commit, timestamp, checksum, size, path count, and operation count evidence is generated
+under `output/openapi/` by `make openapi-artifact-gate`; it is ignored by Git and should be attached
+to the PR or uploaded as CI evidence rather than committed.
 
-## Artifact
+Do not pin current branch names, commit SHAs, artifact checksums, or test counts in this tracked
+file. Those values must come from the generated evidence manifest.
 
-| Field | Value |
-| --- | --- |
-| Artifact path | `output/openapi/lotus-risk.openapi.json` |
-| Generation command | `make openapi-artifact-gate` |
-| Validation command | `make openapi-gate` |
-| Generated from branch | `feat/enterprise-risk-refactor-continuation` |
-| OpenAPI version | `3.1.0` |
-| API title | `lotus-risk` |
-| API version | `0.1.0` |
-| Path count | `16` |
-| Operation count | `16` |
-| Artifact size bytes | `449637` |
-| SHA-256 | `9FA31D518B37B95A4F73079A7393ADDF81A041F8BDA4309CA23D5D42598055F8` |
+## Generated Files
+
+`make openapi-artifact-gate` writes and validates:
+
+1. `output/openapi/lotus-risk.openapi.json`
+2. `output/openapi/lotus-risk.openapi.evidence.json`
+3. `output/openapi/lotus-risk.openapi.evidence.md`
+
+The generated evidence includes:
+
+1. Git branch.
+2. Git commit SHA.
+3. Repository URL.
+4. CI pipeline/run ID, or `local` for local runs.
+5. UTC generation timestamp.
+6. Generation and validation commands.
+7. OpenAPI version, API title, API version, Path count, and Operation count.
+8. Artifact size bytes.
+9. Artifact SHA-256.
 
 ## Validation
-
-The current local artifact was regenerated and validated with:
 
 ```text
 make openapi-artifact-gate
 make openapi-gate
 ```
 
-Both commands passed. Final PR evidence should regenerate this file's artifact immediately before PR
-creation and attach or reference `output/openapi/lotus-risk.openapi.json` with the current checksum.
+`make openapi-artifact-gate` regenerates the artifact and evidence manifests, then validates that
+the evidence matches the just-written artifact and current source identity. Final PR evidence should
+attach or reference the generated OpenAPI JSON and generated evidence manifest from the final branch
+head.
