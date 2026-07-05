@@ -28,6 +28,7 @@ CAPABILITY_WORKFLOW_KEYS: tuple[str, ...] = (
 )
 SupportedInputMode = Literal["stateless", "stateful", "simulation"]
 WorkflowSupportStatus = Literal["full", "partial"]
+InputModeAffordanceAuthority = Literal["workflows.supported_input_modes"]
 
 
 class CapabilityFeature(BaseModel):
@@ -86,8 +87,20 @@ class IntegrationCapabilitiesResponse(BaseModel):
         json_schema_extra={"example": "risk.v1"},
     )
     supported_input_modes: list[SupportedInputMode] = Field(
-        description="Execution modes supported by lotus-risk API contracts.",
+        description=(
+            "Aggregate inventory of input modes supported by at least one lotus-risk workflow. "
+            "This is not a service-wide execution affordance; consumers must use each "
+            "workflow's supported_input_modes to decide executable modes."
+        ),
         json_schema_extra={"example": ["stateless", "stateful", "simulation"]},
+    )
+    input_mode_affordance_authority: InputModeAffordanceAuthority = Field(
+        default="workflows.supported_input_modes",
+        description=(
+            "Machine-readable reminder that executable mode affordances are authoritative only "
+            "at workflow level."
+        ),
+        json_schema_extra={"example": "workflows.supported_input_modes"},
     )
     features: list[CapabilityFeature] = Field(
         description="Feature-level capability switches.",

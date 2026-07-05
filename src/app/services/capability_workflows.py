@@ -8,6 +8,8 @@ from app.contracts.capabilities import (
     WorkflowSupportStatus,
 )
 
+SUPPORTED_INPUT_MODE_ORDER: tuple[SupportedInputMode, ...] = ("stateless", "stateful", "simulation")
+
 
 @dataclass(frozen=True)
 class _CapabilityWorkflowSpec:
@@ -117,3 +119,15 @@ def build_capability_workflows() -> list[CapabilityWorkflow]:
         )
         for spec in _CAPABILITY_WORKFLOW_SPECS
     ]
+
+
+def aggregate_supported_input_modes(
+    workflows: list[CapabilityWorkflow],
+) -> list[SupportedInputMode]:
+    observed = {
+        mode
+        for workflow in workflows
+        if workflow.enabled
+        for mode in workflow.supported_input_modes
+    }
+    return [mode for mode in SUPPORTED_INPUT_MODE_ORDER if mode in observed]
