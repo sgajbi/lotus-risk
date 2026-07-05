@@ -309,6 +309,9 @@ Required behavior:
 2. Performance:
 - support at least 5,000 rows per page in `position-timeseries`.
 - benchmark exposure context uses `page_size=1000` for deterministic paging through lotus-performance.
+- lotus-risk consumes at most 25 benchmark exposure context pages and 10,000 accumulated benchmark
+  exposure rows per stateful active-risk request; repeated `page.next_page_token` values or budget
+  overruns are treated as invalid upstream pagination responses.
 
 3. Resilience:
 - standard Lotus error envelope, clear message, correlation ID echo.

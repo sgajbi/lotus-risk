@@ -5,6 +5,9 @@ import pytest
 
 from app.contracts.attribution import GroupingDimension
 from app.services.benchmark_exposure_history import (
+    BENCHMARK_EXPOSURE_MAX_PAGES,
+    BENCHMARK_EXPOSURE_MAX_ROWS,
+    BENCHMARK_EXPOSURE_PAGE_SIZE,
     BenchmarkExposureHistoryRequest,
     _rows_to_exposure_points,
     fetch_benchmark_exposure_history,
@@ -39,6 +42,20 @@ def _benchmark_request(
         grouping_dimensions=grouping_dimensions or ["SECTOR"],
         correlation_id=correlation_id,
     )
+
+
+def _benchmark_rows(count: int) -> list[dict[str, object]]:
+    return [
+        {
+            "valuation_date": "2026-01-02",
+            "component_id": None,
+            "grouping_dimension": "SECTOR",
+            "group_key": f"SECTOR_{index}",
+            "group_label": f"Sector {index}",
+            "weight": "0.0001",
+        }
+        for index in range(count)
+    ]
 
 
 def test_rows_to_exposure_points_parses_performance_context_rows_and_skips_bad_rows() -> None:
@@ -135,9 +152,16 @@ def test_fetch_benchmark_exposure_history_follows_performance_pagination() -> No
         response_payload=build_returns_series_response(portfolio_returns=[])
     )
 
-    points = asyncio.run(fetch_benchmark_exposure_history(_benchmark_request(performance)))
+    points = asyncio.run(
+        fetch_benchmark_exposure_history(
+            _benchmark_request(performance, correlation_id="corr-paged-benchmark")
+        )
+    )
 
     assert len(performance.benchmark_exposure_context_calls) == 2
+    assert {call["correlation_id"] for call in performance.benchmark_exposure_context_calls} == {
+        "corr-paged-benchmark"
+    }
     assert (
         performance.benchmark_exposure_context_calls[1]["request_payload"]["page"]["page_token"]
         == "page-2"
@@ -161,6 +185,99 @@ def test_fetch_benchmark_exposure_history_accepts_issuer_grouping() -> None:
     assert performance.benchmark_exposure_context_calls[0]["request_payload"][
         "grouping_dimensions"
     ] == ["ISSUER"]
+
+
+def test_fetch_benchmark_exposure_history_rejects_repeated_page_token() -> None:
+    class _RepeatingTokenPerformanceClient(RecordingLotusPerformanceClient):
+        async def get_benchmark_exposure_context(
+            self,
+            *,
+            request_payload: dict[str, object],
+            correlation_id: str | None,
+        ) -> dict[str, object]:
+            self.benchmark_exposure_context_calls.append(
+                {"request_payload": request_payload, "correlation_id": correlation_id}
+            )
+            payload = build_benchmark_exposure_context_response()
+            return {**payload, "page": {"next_page_token": "same-token"}}
+
+    performance = _RepeatingTokenPerformanceClient(
+        response_payload=build_returns_series_response(portfolio_returns=[])
+    )
+
+    with pytest.raises(ValueError) as exc_info:
+        asyncio.run(
+            fetch_benchmark_exposure_history(
+                _benchmark_request(performance, correlation_id="corr-repeat")
+            )
+        )
+
+    details = getattr(exc_info.value, "details")
+    assert details["reason"] == "repeated_page_token"
+    assert len(performance.benchmark_exposure_context_calls) == 2
+    assert {call["correlation_id"] for call in performance.benchmark_exposure_context_calls} == {
+        "corr-repeat"
+    }
+
+
+def test_fetch_benchmark_exposure_history_rejects_excessive_page_count() -> None:
+    class _UnboundedPagesPerformanceClient(RecordingLotusPerformanceClient):
+        async def get_benchmark_exposure_context(
+            self,
+            *,
+            request_payload: dict[str, object],
+            correlation_id: str | None,
+        ) -> dict[str, object]:
+            self.benchmark_exposure_context_calls.append(
+                {"request_payload": request_payload, "correlation_id": correlation_id}
+            )
+            token = f"page-{len(self.benchmark_exposure_context_calls) + 1}"
+            return {
+                **build_benchmark_exposure_context_response(),
+                "rows": [],
+                "page": {"next_page_token": token},
+            }
+
+    performance = _UnboundedPagesPerformanceClient(
+        response_payload=build_returns_series_response(portfolio_returns=[])
+    )
+
+    with pytest.raises(ValueError) as exc_info:
+        asyncio.run(fetch_benchmark_exposure_history(_benchmark_request(performance)))
+
+    details = getattr(exc_info.value, "details")
+    assert details["reason"] == "max_pages_exceeded"
+    assert details["page_count"] == BENCHMARK_EXPOSURE_MAX_PAGES
+
+
+def test_fetch_benchmark_exposure_history_rejects_excessive_row_count() -> None:
+    class _OversizedRowsPerformanceClient(RecordingLotusPerformanceClient):
+        async def get_benchmark_exposure_context(
+            self,
+            *,
+            request_payload: dict[str, object],
+            correlation_id: str | None,
+        ) -> dict[str, object]:
+            self.benchmark_exposure_context_calls.append(
+                {"request_payload": request_payload, "correlation_id": correlation_id}
+            )
+            token = f"page-{len(self.benchmark_exposure_context_calls) + 1}"
+            return {
+                **build_benchmark_exposure_context_response(),
+                "rows": _benchmark_rows(BENCHMARK_EXPOSURE_PAGE_SIZE),
+                "page": {"next_page_token": token},
+            }
+
+    performance = _OversizedRowsPerformanceClient(
+        response_payload=build_returns_series_response(portfolio_returns=[])
+    )
+
+    with pytest.raises(ValueError) as exc_info:
+        asyncio.run(fetch_benchmark_exposure_history(_benchmark_request(performance)))
+
+    details = getattr(exc_info.value, "details")
+    assert details["reason"] == "max_rows_exceeded"
+    assert details["row_count"] == BENCHMARK_EXPOSURE_MAX_ROWS + BENCHMARK_EXPOSURE_PAGE_SIZE
 
 
 def test_fetch_benchmark_exposure_history_rejects_empty_performance_payload() -> None:
