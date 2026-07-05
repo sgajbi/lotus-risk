@@ -21,6 +21,12 @@ SUPPORTED_LIVE_ENDPOINTS = (
     "rolling-metrics",
     "historical-attribution",
 )
+HISTORICAL_ATTRIBUTION_ACTIVE_RISK_GROUPINGS = (
+    "POSITION",
+    "SECTOR",
+    "ASSET_CLASS",
+    "ISSUER",
+)
 
 REQUIRED_PORTFOLIO_ARCHETYPES = (
     "global_balanced",

@@ -341,7 +341,11 @@ Most relevant current governance:
 3. risk evidence and supportability posture must remain data-backed, not decorative or speculative,
 4. when risk review flows change in Workbench or Gateway, this repo’s context should be checked for alignment,
 5. live validation defaults to `PB_SG_GLOBAL_BAL_001`; do not claim broader enterprise portfolio-archetype coverage until `docs/operations/live-risk-validation-matrix.md` has real seeded portfolio IDs and evidence,
-6. stateful historical attribution `ACTIVE_RISK + ISSUER` is supported through lotus-performance benchmark exposure context issuer groups introduced in lotus-performance PR #165,
+6. stateful historical attribution `ACTIVE_RISK + ISSUER` is supported through lotus-performance
+   benchmark exposure context issuer groups introduced in lotus-performance PR #165. Keep
+   `docs/operations/live-risk-validation-matrix.md`, supported-feature docs/wiki, and
+   `tests/integration/test_historical_attribution_live_characterization.py` aligned so live
+   characterization does not preserve stale rejection expectations,
 7. transport optimization across upstream services should start with contract and retrieval-shape evidence before any gRPC proposal,
 8. `wiki/` inside the repository is the authored documentation source for the published GitHub
    wiki; use `../lotus-platform/automation/Sync-RepoWikis.ps1 -CheckOnly -Repository lotus-risk`
