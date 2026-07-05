@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+from app.integrations.upstream_operations import (
+    LOTUS_CORE_CREATE_SIMULATION_SESSION_OPERATION,
+    LOTUS_CORE_SNAPSHOT_OPERATION,
+)
 from app.upstream_errors import UpstreamServiceError, invalid_upstream_payload
 
 LOTUS_CORE_SERVICE = "lotus-core"
-CORE_SNAPSHOT_OPERATION = "/integration/portfolios/{portfolio_id}/core-snapshot"
-CREATE_SIMULATION_SESSION_OPERATION = "/simulation-sessions"
+CORE_SNAPSHOT_OPERATION = LOTUS_CORE_SNAPSHOT_OPERATION
+CREATE_SIMULATION_SESSION_OPERATION = LOTUS_CORE_CREATE_SIMULATION_SESSION_OPERATION
 
 
 def invalid_core_snapshot_payload(

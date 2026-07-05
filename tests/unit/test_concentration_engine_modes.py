@@ -6,10 +6,13 @@ from typing import Any, cast
 import pytest
 
 from app.contracts.concentration import ConcentrationRequest
+from app.integrations.upstream_operations import LOTUS_CORE_SNAPSHOT_OPERATION
 from app.services.concentration import parsing as concentration_parsing
 from app.services.concentration.resolvers import resolve_simulation, resolve_stateful
 from app.services.concentration_engine import calculate_concentration
 from app.upstream_errors import UpstreamServiceError
+
+SNAPSHOT_FINGERPRINT_KEY = f"lotus-core:{LOTUS_CORE_SNAPSHOT_OPERATION}"
 
 
 class _RecordingCoreClient:
@@ -111,6 +114,41 @@ async def test_stateful_mode_includes_reporting_currency_and_metadata() -> None:
     assert response.risk_proxy.hhi_current == 6800.0
     assert client.last_snapshot_payload is not None
     assert client.last_snapshot_payload["reporting_currency"] == "USD"
+    assert response.metadata.upstream_request_fingerprints.keys() == {SNAPSHOT_FINGERPRINT_KEY}
+    assert "DEMO_DPM_EUR_001" not in next(iter(response.metadata.upstream_request_fingerprints))
+
+
+@pytest.mark.asyncio
+async def test_stateful_lineage_key_is_stable_while_fingerprint_captures_portfolio() -> None:
+    async def _calculate(portfolio_id: str) -> dict[str, str]:
+        client = _RecordingCoreClient()
+        client.snapshot_response = {
+            "valuation_context": {"portfolio_currency": "EUR"},
+            "sections": {
+                "positions_baseline": [
+                    {"security_id": "SEC_A", "market_value_base": "100"},
+                ]
+            },
+        }
+        request = ConcentrationRequest.model_validate(
+            {
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": portfolio_id,
+                    "as_of_date": "2026-02-27",
+                },
+            }
+        )
+        response = await calculate_concentration(request, core_client=client)
+        assert response.metadata is not None
+        return response.metadata.upstream_request_fingerprints
+
+    first = await _calculate("DEMO_DPM_EUR_001")
+    second = await _calculate("DEMO_DPM_EUR_002")
+
+    assert set(first) == {SNAPSHOT_FINGERPRINT_KEY}
+    assert set(second) == {SNAPSHOT_FINGERPRINT_KEY}
+    assert first[SNAPSHOT_FINGERPRINT_KEY] != second[SNAPSHOT_FINGERPRINT_KEY]
 
 
 @pytest.mark.asyncio
@@ -286,6 +324,9 @@ async def test_simulation_mode_preserves_explicit_empty_projected_state() -> Non
     assert client.last_snapshot_payload["reporting_currency"] == "USD"
     assert client.change_calls[0]["idempotency_key"] == "idem-sim-unit"
     assert str(client.change_calls[0]["change_set_fingerprint"]).startswith("sha256:")
+    assert response.metadata.upstream_request_fingerprints.keys() == {SNAPSHOT_FINGERPRINT_KEY}
+    assert "DEMO_DPM_EUR_001" not in next(iter(response.metadata.upstream_request_fingerprints))
+    assert "SIM_0001" not in next(iter(response.metadata.upstream_request_fingerprints))
 
 
 @pytest.mark.asyncio

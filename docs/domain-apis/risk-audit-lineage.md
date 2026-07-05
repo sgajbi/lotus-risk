@@ -12,7 +12,7 @@ Every analytics response metadata object includes:
 | `lineage_version` | Version of the audit-lineage metadata schema. Current value: `risk_audit_lineage.v1`. |
 | `request_fingerprint` | Deterministic SHA-256 fingerprint of the normalized calculation request used by `lotus-risk`. |
 | `source_services` | Ordered list of services whose data or calculation path contributed to the response. |
-| `upstream_request_fingerprints` | Deterministic fingerprints for upstream calls directly orchestrated by `lotus-risk`, keyed by `service:operation`. |
+| `upstream_request_fingerprints` | Deterministic fingerprints for upstream calls directly orchestrated by `lotus-risk`, keyed by `service:operation` where `operation` is a stable semantic operation or route template. |
 
 The fingerprint is not a security token. It is a reproducibility and support handle. Operators can
 compare two responses to determine whether the normalized calculation input or upstream request
@@ -33,6 +33,18 @@ For stateful `risk/calculate`, Sharpe risk-free treatment uses a direct
 `lotus-performance:/integration/returns/series` fingerprint covers portfolio and benchmark returns
 only; it must not be used as implicit proof of risk-free source lineage.
 
+For stateful and simulation concentration, the core snapshot lineage key is stable across portfolios
+and sessions:
+
+```text
+lotus-core:/integration/portfolios/{portfolio_id}/core-snapshot
+```
+
+Concrete portfolio and session context belongs in the normalized payload used to compute the
+fingerprint value, not in the dictionary key. This keeps support, trust telemetry, and model-review
+tools able to compare upstream dependency dimensions across portfolios without parsing business
+identifiers out of lineage keys.
+
 ## Governance Rules
 
 1. `request_fingerprint` must be deterministic for equivalent normalized inputs.
@@ -42,5 +54,7 @@ only; it must not be used as implicit proof of risk-free source lineage.
 4. Do not use fingerprints as proof of authorization or consent.
 5. If a new upstream call is added to an analytics path, update `source_services` and
    `upstream_request_fingerprints` in the same slice.
-6. Keep methodology-specific metadata, observation counts, alignment context, and coverage ratios in
+6. Do not embed concrete portfolio IDs, session IDs, calculation IDs, account IDs, or query strings
+   in upstream fingerprint keys; put request-specific context in the normalized fingerprint payload.
+7. Keep methodology-specific metadata, observation counts, alignment context, and coverage ratios in
    endpoint-specific fields; common lineage is not a replacement for those details.

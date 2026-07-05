@@ -8,13 +8,11 @@ from app.contracts.concentration import (
     ConcentrationRequest,
     StatefulConcentrationInput,
 )
-from app.services.audit_lineage import (
-    ordered_source_services,
-    upstream_request_fingerprint,
-)
+from app.services.audit_lineage import ordered_source_services
 from app.services.concentration.datamodels import (
     ConcentrationComputationInput,
 )
+from app.services.concentration.lineage import core_snapshot_upstream_fingerprint
 from app.services.concentration.metadata import build_metadata
 from app.services.concentration.ports import LotusCoreClientProtocol
 from app.services.concentration.simulation_resolver import (
@@ -102,10 +100,9 @@ def _stateful_metadata(
         include_zero_quantity_positions=stateful.include_zero_quantity_positions,
     )
     metadata.source_services = ordered_source_services("lotus-core")
-    metadata.upstream_request_fingerprints = upstream_request_fingerprint(
-        service="lotus-core",
-        operation=f"/integration/portfolios/{stateful.portfolio_id}/core-snapshot",
-        payload=snapshot_payload,
+    metadata.upstream_request_fingerprints = core_snapshot_upstream_fingerprint(
+        portfolio_id=stateful.portfolio_id,
+        snapshot_payload=snapshot_payload,
     )
     return metadata
 
