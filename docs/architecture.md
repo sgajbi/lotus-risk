@@ -76,5 +76,9 @@ radius of future response-contract changes.
    `app.services -> app.observability` imports are blocked by architecture tests/import-linter.
 8. Keep public API response DTO construction out of lower-level calculation helpers; map internal
    application/domain values to public DTOs at the application response boundary.
+9. Keep malformed upstream producer payload classification at the service anti-corruption boundary.
+   Concentration lotus-core snapshot/session shape failures use
+   `app.services.concentration.upstream_contracts` to raise `UPSTREAM_INVALID_RESPONSE`, not plain
+   caller-input `ValueError` responses.
 
 The initial quality baseline is recorded in `quality/baseline_report.md`.

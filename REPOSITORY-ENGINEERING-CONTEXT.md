@@ -189,10 +189,11 @@ Boundary rules:
     boundary with explicit accepted statuses, not by bypassing common error normalization. The
     lotus-performance async returns result endpoint treats `202` and `404` as pending; unexpected
     result `4xx`/`5xx` statuses still use standard upstream classification.
-14. Shared stateful return parsing owns malformed upstream return-date classification for
-    risk/calculate, drawdown, rolling, and attribution consumers; malformed string dates are
-    dependency contract failures (`UPSTREAM_INVALID_RESPONSE`), while non-string dates remain
-    ignored as unusable rows.
+14. Malformed upstream payloads are dependency contract failures, not caller input errors. Shared
+    stateful return parsing maps malformed string dates to `UPSTREAM_INVALID_RESPONSE`, while
+    concentration stateful/simulation orchestration maps malformed lotus-core snapshot and
+    create-session response shapes to `UPSTREAM_INVALID_RESPONSE` with bounded dependency metadata.
+    Non-string return dates remain ignored as unusable rows.
 15. GitHub mesh-contract validation requires `lotus-platform` contract truth. Workflows provide it
     as `.lotus-platform`; local runs can use either a sibling `../lotus-platform` checkout or
     `LOTUS_PLATFORM_ROOT`.

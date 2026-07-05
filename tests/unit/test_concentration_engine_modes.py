@@ -9,6 +9,7 @@ from app.contracts.concentration import ConcentrationRequest
 from app.services.concentration import parsing as concentration_parsing
 from app.services.concentration.resolvers import resolve_simulation, resolve_stateful
 from app.services.concentration_engine import calculate_concentration
+from app.upstream_errors import UpstreamServiceError
 
 
 class _RecordingCoreClient:
@@ -129,8 +130,17 @@ async def test_stateful_mode_requires_sections_dict() -> None:
             "stateful_input": {"portfolio_id": "DEMO_DPM_EUR_001", "as_of_date": "2026-02-27"},
         }
     )
-    with pytest.raises(ValueError, match="stateful snapshot missing sections"):
+    with pytest.raises(UpstreamServiceError) as exc_info:
         await calculate_concentration(request, core_client=client)
+    assert exc_info.value.code == "UPSTREAM_INVALID_RESPONSE"
+    assert exc_info.value.status_code == 502
+    assert exc_info.value.details == {
+        "service": "lotus-core",
+        "operation": "/integration/portfolios/{portfolio_id}/core-snapshot",
+        "category": "invalid_response",
+        "snapshot_mode": "BASELINE",
+        "reason": "missing_sections",
+    }
 
 
 @pytest.mark.asyncio
@@ -160,8 +170,16 @@ async def test_simulation_mode_invalid_create_session_response() -> None:
             },
         }
     )
-    with pytest.raises(ValueError, match="invalid response payload"):
+    with pytest.raises(UpstreamServiceError) as exc_info:
         await calculate_concentration(request, core_client=client)
+    assert exc_info.value.code == "UPSTREAM_INVALID_RESPONSE"
+    assert exc_info.value.status_code == 502
+    assert exc_info.value.details == {
+        "service": "lotus-core",
+        "operation": "/simulation-sessions",
+        "category": "invalid_response",
+        "reason": "missing_session_record",
+    }
 
 
 @pytest.mark.asyncio
@@ -178,8 +196,16 @@ async def test_simulation_mode_requires_session_id_in_create_response() -> None:
             },
         }
     )
-    with pytest.raises(ValueError, match="missing session_id"):
+    with pytest.raises(UpstreamServiceError) as exc_info:
         await calculate_concentration(request, core_client=client)
+    assert exc_info.value.code == "UPSTREAM_INVALID_RESPONSE"
+    assert exc_info.value.status_code == 502
+    assert exc_info.value.details == {
+        "service": "lotus-core",
+        "operation": "/simulation-sessions",
+        "category": "invalid_response",
+        "reason": "missing_session_id",
+    }
 
 
 @pytest.mark.asyncio
@@ -281,8 +307,17 @@ async def test_simulation_mode_requires_sections_dict() -> None:
             },
         }
     )
-    with pytest.raises(ValueError, match="simulation snapshot missing sections"):
+    with pytest.raises(UpstreamServiceError) as exc_info:
         await calculate_concentration(request, core_client=client)
+    assert exc_info.value.code == "UPSTREAM_INVALID_RESPONSE"
+    assert exc_info.value.status_code == 502
+    assert exc_info.value.details == {
+        "service": "lotus-core",
+        "operation": "/integration/portfolios/{portfolio_id}/core-snapshot",
+        "category": "invalid_response",
+        "snapshot_mode": "SIMULATION",
+        "reason": "missing_sections",
+    }
 
 
 @pytest.mark.asyncio

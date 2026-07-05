@@ -9,7 +9,16 @@ from tests.support.app_runtime import override_app_runtime
 
 
 class _RecordingLotusCoreClient:
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        create_response: dict[str, Any] | None = None,
+        baseline_snapshot_response: dict[str, Any] | None = None,
+        simulation_snapshot_response: dict[str, Any] | None = None,
+    ) -> None:
+        self.create_response = create_response
+        self.baseline_snapshot_response = baseline_snapshot_response
+        self.simulation_snapshot_response = simulation_snapshot_response
         self.create_calls: list[dict[str, Any]] = []
         self.change_calls: list[dict[str, Any]] = []
         self.snapshot_calls: list[dict[str, Any]] = []
@@ -30,6 +39,8 @@ class _RecordingLotusCoreClient:
                 "correlation_id": correlation_id,
             }
         )
+        if self.create_response is not None:
+            return self.create_response
         return {"session": {"session_id": "SIM_9000", "version": 1}}
 
     async def add_simulation_changes(
@@ -63,6 +74,8 @@ class _RecordingLotusCoreClient:
             }
         )
         if request_payload.get("snapshot_mode") == "BASELINE":
+            if self.baseline_snapshot_response is not None:
+                return self.baseline_snapshot_response
             return {
                 "valuation_context": {"portfolio_currency": "EUR", "reporting_currency": "USD"},
                 "sections": {
@@ -92,6 +105,8 @@ class _RecordingLotusCoreClient:
                     ],
                 },
             }
+        if self.simulation_snapshot_response is not None:
+            return self.simulation_snapshot_response
         return {
             "simulation": {"session_id": "SIM_9000", "version": 7},
             "sections": {
@@ -132,6 +147,27 @@ class _RecordingLotusCoreClient:
                 for security_id in security_ids
             ]
         }
+
+
+def _assert_upstream_invalid_response(
+    body: dict[str, Any],
+    *,
+    operation: str,
+    reason: str,
+    snapshot_mode: str | None = None,
+) -> None:
+    error = body["error"]
+    assert error["code"] == "UPSTREAM_INVALID_RESPONSE"
+    assert error["message"] == "Upstream dependency returned an invalid response."
+    assert error["status"] == 502
+    assert error["detail"] == "Upstream dependency returned an invalid response."
+    assert error["details"]["service"] == "lotus-core"
+    assert error["details"]["operation"] == operation
+    assert error["details"]["category"] == "invalid_response"
+    assert error["details"]["reason"] == reason
+    assert error["details"]["retryable"] is False
+    if snapshot_mode is not None:
+        assert error["details"]["snapshot_mode"] == snapshot_mode
 
 
 def test_stateful_api_characterizes_lotus_core_snapshot_payload_contract() -> None:
@@ -196,6 +232,32 @@ def test_stateful_api_characterizes_lotus_core_snapshot_payload_contract() -> No
     assert body["issuer_concentration"]["coverage_ratio_proposed"] == 1.0
     assert body["issuer_concentration"]["uncovered_position_count_current"] == 0
     assert body["issuer_concentration"]["uncovered_position_count_proposed"] == 0
+
+
+def test_stateful_api_maps_invalid_core_snapshot_payload_to_upstream_response() -> None:
+    core_client = _RecordingLotusCoreClient(baseline_snapshot_response={})
+    with override_app_runtime(lotus_core_client=core_client):
+        client = TestClient(app)
+
+        response = client.post(
+            "/analytics/risk/concentration",
+            headers={"X-Correlation-Id": "corr-stateful-invalid"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-02-27",
+                },
+            },
+        )
+
+    assert response.status_code == 502
+    _assert_upstream_invalid_response(
+        response.json(),
+        operation="/integration/portfolios/{portfolio_id}/core-snapshot",
+        reason="missing_sections",
+        snapshot_mode="BASELINE",
+    )
 
 
 def test_simulation_api_characterizes_session_creation_and_snapshot_contract() -> None:
@@ -278,3 +340,56 @@ def test_simulation_api_characterizes_session_creation_and_snapshot_contract() -
     assert body["issuer_concentration"]["coverage_ratio_proposed"] == 1.0
     assert body["issuer_concentration"]["uncovered_position_count_current"] == 0
     assert body["issuer_concentration"]["uncovered_position_count_proposed"] == 0
+
+
+def test_simulation_api_maps_invalid_create_session_payload_to_upstream_response() -> None:
+    core_client = _RecordingLotusCoreClient(create_response={"session": "malformed"})
+    with override_app_runtime(lotus_core_client=core_client):
+        client = TestClient(app)
+
+        response = client.post(
+            "/analytics/risk/concentration",
+            json={
+                "input_mode": "simulation",
+                "simulation_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-02-27",
+                    "simulation_changes": [],
+                },
+            },
+        )
+
+    assert response.status_code == 502
+    _assert_upstream_invalid_response(
+        response.json(),
+        operation="/simulation-sessions",
+        reason="missing_session_record",
+    )
+
+
+def test_simulation_api_maps_invalid_snapshot_payload_to_upstream_response() -> None:
+    core_client = _RecordingLotusCoreClient(simulation_snapshot_response={})
+    with override_app_runtime(lotus_core_client=core_client):
+        client = TestClient(app)
+
+        response = client.post(
+            "/analytics/risk/concentration",
+            json={
+                "input_mode": "simulation",
+                "simulation_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-02-27",
+                    "session_id": "SIM_EXISTING",
+                    "start_new_session": False,
+                    "simulation_changes": [],
+                },
+            },
+        )
+
+    assert response.status_code == 502
+    _assert_upstream_invalid_response(
+        response.json(),
+        operation="/integration/portfolios/{portfolio_id}/core-snapshot",
+        reason="missing_sections",
+        snapshot_mode="SIMULATION",
+    )

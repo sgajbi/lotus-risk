@@ -24,6 +24,7 @@ from app.services.concentration.parsing import (
     _merge_issuer_maps,
 )
 from app.services.concentration.ports import LotusCoreClientProtocol
+from app.services.concentration.upstream_contracts import invalid_core_snapshot_payload
 
 
 @dataclass(frozen=True)
@@ -74,7 +75,10 @@ async def fetch_stateful_snapshot_state(
     )
     sections = snapshot.get("sections")
     if not isinstance(sections, dict):
-        raise ValueError("lotus-core stateful snapshot missing sections payload")
+        raise invalid_core_snapshot_payload(
+            snapshot_mode="BASELINE",
+            reason="missing_sections",
+        )
 
     core_issuer_map, issuer_note = _extract_issuer_map(
         sections, grouping_level=request.issuer_grouping_level

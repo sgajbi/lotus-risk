@@ -23,7 +23,7 @@ documentation/wiki/context decision are recorded.
 | #182 | Separate API DTO contracts from core calculation domain models | Fixed locally | DTO/domain boundary representative path | Documented `app.contracts` classification as public API DTO, shared application value, or compatibility facade, migrated the concentration driver calculation path so pure math returns internal `TopPositionDriverValue`/`TopIssuerDriverValue` dataclasses instead of public Pydantic response DTOs, and mapped those values to public DTOs in `response_builder.py`. Added a focused architecture test preventing `concentration/math.py` from importing public contract modules. | `docs/architecture.md`; `src/app/services/concentration/datamodels.py`; `src/app/services/concentration/math.py`; `src/app/services/concentration/response_builder.py`; `tests/unit/test_concentration_domain_boundary.py`; concentration compatibility tests |
 | #181 | Bound public upstream error messages in problem-details responses | Fixed locally | API error mapping/security | Public upstream messages now come from a bounded code-to-message policy while structured details retain service, operation, category, retryability, and upstream status. Same-pattern scan covered `UpstreamServiceError` handlers and async returns failure messages that previously flowed through `exc.message` into the public envelope. | `tests/unit/test_main_error_handlers.py`; `tests/integration/test_drawdown_endpoint.py`; `docs/domain-apis/risk-upstream-failure-behavior.md` |
 | #180 | Make downstream client resolution a typed runtime composition boundary | Fixed locally | Runtime composition/dependencies | Added `src/app/runtime/downstream_clients.py` as the typed process-local downstream composition boundary, removed the request-time concrete fallback resolver, moved routers to typed runtime/context dependencies, and tightened architecture guards so routers cannot regain concrete downstream-client imports. Missing runtime state now returns structured `RUNTIME_COMPOSITION_ERROR` instead of silently constructing per-call clients. | `src/app/runtime/downstream_clients.py`; `tests/unit/test_runtime_downstream_clients.py`; `tests/unit/test_runtime_composition_boundaries.py`; `tests/integration/test_risk_calculate.py`; `make architecture-gate` |
-| #179 | Map concentration lotus-core payload shape failures to upstream invalid responses | Open | Concentration upstream mapping | Pending | Pending |
+| #179 | Map concentration lotus-core payload shape failures to upstream invalid responses | Fixed locally | Concentration upstream mapping | Added a concentration upstream-contract helper so stateful snapshot, simulation snapshot, and create-session response-shape failures all raise shared `UPSTREAM_INVALID_RESPONSE` errors with bounded `lotus-core` service, operation, category, retryability, snapshot-mode, and reason metadata instead of plain `ValueError` client-input failures. Same-pattern scan covered concentration stateful snapshot parsing, simulation snapshot parsing, create-session parsing, existing upstream-error helpers, and route-level public envelopes. | `src/app/services/concentration/upstream_contracts.py`; `tests/unit/test_concentration_engine_modes.py`; `tests/integration/test_concentration_lotus_core_characterization.py` |
 | #178 | Preserve explicit empty projected positions in concentration simulation | Open | Concentration simulation semantics | Pending | Pending |
 | #177 | Constrain concentration simulation transaction operation vocabulary | Open | Concentration simulation validation | Pending | Pending |
 | #176 | Bound rolling metrics request fan-out and time-series response size | Open | Rolling metrics upstream pagination | Pending | Pending |
@@ -51,7 +51,7 @@ documentation/wiki/context decision are recorded.
 1. Close hygiene and baseline truth first: #195, #193, #184, #170.
 2. Close security and HTTP boundary controls: #161, #163, #164, #166, #181, #183, #185.
 3. Close upstream resilience and pagination issues: #157, #162, #175, #176, #186.
-4. Close calculation and concentration correctness issues: #158, #165, #169, #177, #178, #179.
+4. Close calculation and concentration correctness issues: #158, #165, #169, #177, #178.
 5. Close API, vocabulary, trust, evidence, observability, and documentation alignment: #168, #171,
    #172, #173, #174, #187, #188, #189, #190, #191.
 6. Close architecture/modularity issues alongside the relevant code slices: #167, #180, #182.
@@ -61,6 +61,6 @@ documentation/wiki/context decision are recorded.
 This matrix is repo-local review evidence. Wiki source changed for #160 because operator-facing
 readiness truth changed in `wiki/Operations-Runbook.md`, `wiki/Supported-Features.md`, and
 `wiki/Validation-and-CI.md`; run the repo wiki check-only command before merge and publish the wiki
-after merge. No wiki source change is required for #167 or #182 because both are internal
-service-layer architecture boundaries captured in architecture docs, the review ledger,
-`.importlinter` where applicable, and unit architecture tests.
+after merge. No wiki source change is required for #167, #179, or #182 because these are internal
+service-layer architecture/error-boundary changes captured in architecture docs, the review ledger,
+`.importlinter` where applicable, and focused unit/integration tests.
