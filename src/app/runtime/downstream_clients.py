@@ -112,6 +112,12 @@ class RuntimeDownstreamClients:
             ),
         )
 
+    def lotus_core_optional(self) -> LotusCoreClientProtocol | None:
+        return cast(
+            LotusCoreClientProtocol | None,
+            getattr(self.app_state, "lotus_core_client", None),
+        )
+
 
 def _required_client(
     app_state: Any,

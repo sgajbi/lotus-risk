@@ -588,6 +588,7 @@ def test_e2e_concentration_simulation_mode() -> None:
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/concentration",
+            headers={"Idempotency-Key": "idem-e2e-concentration-simulation"},
             json={
                 "input_mode": "simulation",
                 "simulation_input": {
