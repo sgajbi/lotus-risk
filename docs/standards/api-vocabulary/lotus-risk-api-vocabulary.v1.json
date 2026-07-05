@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-07-05T02:52:26.007663+00:00",
+  "generatedAt": "2026-07-05T03:31:43.086788+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.affected_portfolios",
@@ -1457,6 +1457,20 @@
         "RollingInputMode",
         "ConcentrationInputMode",
         "AttributionInputMode"
+      ]
+    },
+    {
+      "semanticId": "lotus.input_mode_affordance_authority",
+      "canonicalTerm": "input_mode_affordance_authority",
+      "preferredName": "input_mode_affordance_authority",
+      "description": "Machine-readable reminder that executable mode affordances are authoritative only at workflow level.",
+      "example": "workflows.supported_input_modes",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
       ]
     },
     {
@@ -3099,7 +3113,7 @@
       "semanticId": "lotus.supported_input_modes",
       "canonicalTerm": "supported_input_modes",
       "preferredName": "supported_input_modes",
-      "description": "Execution modes supported by lotus-risk API contracts.",
+      "description": "Aggregate inventory of input modes supported by at least one lotus-risk workflow. This is not a service-wide execution affordance; consumers must use each workflow's supported_input_modes to decide executable modes.",
       "example": [
         "stateless",
         "stateful",
@@ -4632,6 +4646,14 @@
             "type": "array",
             "semanticId": "lotus.supported_input_modes",
             "attributeRef": "#/attributeCatalog/lotus.supported_input_modes"
+          },
+          {
+            "name": "input_mode_affordance_authority",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.input_mode_affordance_authority",
+            "attributeRef": "#/attributeCatalog/lotus.input_mode_affordance_authority"
           },
           {
             "name": "features",

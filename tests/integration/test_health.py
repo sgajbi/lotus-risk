@@ -76,6 +76,7 @@ def test_integration_capabilities_contract() -> None:
     assert body["source_service"] == "lotus-risk"
     assert body["policy_version"] == "risk.v1"
     assert body["supported_input_modes"] == ["stateless", "stateful", "simulation"]
+    assert body["input_mode_affordance_authority"] == "workflows.supported_input_modes"
     assert isinstance(body["features"], list)
     assert isinstance(body["workflows"], list)
     feature_keys = {feature["key"] for feature in body["features"]}
@@ -112,6 +113,11 @@ def test_integration_capabilities_contract() -> None:
         "stateful",
         "simulation",
     ]
+    assert [
+        workflow["workflow_key"]
+        for workflow in body["workflows"]
+        if "simulation" in workflow["supported_input_modes"]
+    ] == ["concentration_risk"]
     assert workflow_by_key["historical_risk_attribution"]["support_status"] == "partial"
     assert workflow_by_key["mandate_risk_health_context"]["endpoint_path"] == (
         "/analytics/risk/mandate-health-context"
@@ -801,7 +807,17 @@ def test_openapi_exposes_typed_capabilities_response_contract() -> None:
         "$ref"
     ]
     assert schema_ref.endswith("/IntegrationCapabilitiesResponse")
+    response_schema = spec["components"]["schemas"]["IntegrationCapabilitiesResponse"]
     workflow_schema = spec["components"]["schemas"]["CapabilityWorkflow"]
+    assert response_schema["properties"]["supported_input_modes"]["description"] == (
+        "Aggregate inventory of input modes supported by at least one lotus-risk workflow. "
+        "This is not a service-wide execution affordance; consumers must use each workflow's "
+        "supported_input_modes to decide executable modes."
+    )
+    assert (
+        response_schema["properties"]["input_mode_affordance_authority"]["example"]
+        == "workflows.supported_input_modes"
+    )
     assert workflow_schema["properties"]["endpoint_path"]["example"] == "/analytics/risk/calculate"
     assert workflow_schema["properties"]["supported_input_modes"]["example"] == [
         "stateless",

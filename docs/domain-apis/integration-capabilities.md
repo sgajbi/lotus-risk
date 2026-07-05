@@ -28,7 +28,9 @@
 
 - `source_service: "lotus-risk"`
 - `policy_version: "risk.v1"`
-- `supported_input_modes: ["stateless", "stateful", "simulation"]`
+- `supported_input_modes: ["stateless", "stateful", "simulation"]` as an aggregate inventory of
+  modes supported by at least one workflow, not as a service-wide executable affordance.
+- `input_mode_affordance_authority: "workflows.supported_input_modes"`
 - `features`:
   - `risk.analytics.risk_analytics`
   - `risk.analytics.drawdown`
@@ -76,7 +78,7 @@ This allows consumers to discover that:
   portfolio membership, exclusions, source refs, impact scores, supportability posture, and bounded
   reason codes from risk-owned event definitions
 - downstream product surfaces must derive simulation and issuer active-risk affordances from this
-  payload, not from broad service-level support for the word `simulation`
+  payload's workflow entries, not from the top-level aggregate `supported_input_modes` inventory
 - downstream consumers must also treat
   `metadata.stateful_active_risk_supported_grouping_dimensions`,
   `metadata.stateful_active_risk_gated_grouping_dimensions`, and
@@ -99,8 +101,10 @@ This allows consumers to discover that:
 - Strengths:
   - typed contract exists and is integration-tested.
   - vocabulary is centralized in constants to reduce drift.
-  - workflow-level mode support is explicit enough for gateway and Workbench surfaces to avoid
-    unsupported simulation affordances and to expose issuer active-risk only through the governed risk contract.
+  - workflow-level mode support is explicitly marked as the authority for executable affordances,
+    while the top-level `supported_input_modes` field remains only an aggregate inventory; gateway
+    and Workbench surfaces can avoid unsupported simulation affordances and expose issuer
+    active-risk only through the governed risk contract.
   - risk calculation supportability is implementation-backed across `risk/calculate`, drawdown,
     rolling metrics, historical attribution, and concentration through
     `metadata.calculation_supportability` and `lotus_risk_calculation_supportability_total`, so

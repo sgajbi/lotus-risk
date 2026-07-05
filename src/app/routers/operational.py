@@ -27,7 +27,10 @@ from app.service_metadata import (
     SERVICE_VERSION,
     SUPPORTED_INPUT_MODES,
 )
-from app.services.capability_workflows import build_capability_workflows
+from app.services.capability_workflows import (
+    aggregate_supported_input_modes,
+    build_capability_workflows,
+)
 from app.trust_telemetry import (
     DeclaredProductTrustTelemetrySnapshot,
     build_declared_product_trust_telemetry_snapshot,
@@ -182,12 +185,13 @@ async def ops_trust_telemetry(request: Request) -> DeclaredProductTrustTelemetry
     responses=STANDARD_ERROR_RESPONSES,
 )
 async def integration_capabilities() -> IntegrationCapabilitiesResponse:
+    workflows = build_capability_workflows()
     return IntegrationCapabilitiesResponse(
         source_service=SERVICE_NAME,
         policy_version="risk.v1",
-        supported_input_modes=list(SUPPORTED_INPUT_MODES),
+        supported_input_modes=aggregate_supported_input_modes(workflows),
         features=[CapabilityFeature(key=feature_key) for feature_key in CAPABILITY_FEATURE_KEYS],
-        workflows=build_capability_workflows(),
+        workflows=workflows,
     )
 
 

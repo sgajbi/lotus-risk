@@ -5,7 +5,10 @@ from app.contracts.capabilities import (
     CapabilityWorkflow,
     IntegrationCapabilitiesResponse,
 )
-from app.services.capability_workflows import build_capability_workflows
+from app.services.capability_workflows import (
+    aggregate_supported_input_modes,
+    build_capability_workflows,
+)
 
 
 def test_capability_feature_keys_follow_risk_analytics_namespace() -> None:
@@ -40,6 +43,7 @@ def test_integration_capabilities_response_contract() -> None:
     assert payload["source_service"] == "lotus-risk"
     assert payload["policy_version"] == "risk.v1"
     assert payload["supported_input_modes"] == ["stateless", "stateful", "simulation"]
+    assert payload["input_mode_affordance_authority"] == "workflows.supported_input_modes"
     assert payload["workflows"][0]["workflow_key"] == CAPABILITY_WORKFLOW_KEYS[0]
     assert payload["workflows"][0]["endpoint_path"] == "/analytics/risk/calculate"
     assert payload["workflows"][0]["support_status"] == "full"
@@ -70,6 +74,17 @@ def test_capability_workflow_catalog_preserves_support_boundaries() -> None:
     historical = workflows["historical_risk_attribution"]
     assert historical["support_status"] == "partial"
     assert any("issuer active-risk" in note for note in historical["notes"])
+
+
+def test_capability_supported_input_modes_are_aggregate_not_affordance() -> None:
+    workflows = build_capability_workflows()
+
+    assert aggregate_supported_input_modes(workflows) == ["stateless", "stateful", "simulation"]
+    assert [
+        workflow.workflow_key
+        for workflow in workflows
+        if "simulation" in workflow.supported_input_modes
+    ] == ["concentration_risk"]
 
 
 def test_capability_workflow_catalog_returns_independent_note_lists() -> None:
