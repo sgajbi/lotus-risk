@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -14,6 +15,11 @@ class AuditMetadataFields(BaseModel):
         default="risk_audit_lineage.v1",
         description="Audit lineage metadata schema version.",
         json_schema_extra={"example": "risk_audit_lineage.v1"},
+    )
+    generated_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        description="Source-owned UTC timestamp when lotus-risk generated this response.",
+        json_schema_extra={"example": "2026-02-27T10:15:00Z"},
     )
     request_fingerprint: str | None = Field(
         default=None,
