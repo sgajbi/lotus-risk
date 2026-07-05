@@ -24,6 +24,7 @@ from app.services.concentration.simulation_session import (
     resolve_simulation_session,
     session_with_snapshot_version,
     simulation_snapshot_payload,
+    validate_simulation_idempotency_key,
 )
 from app.services.concentration.upstream_contracts import invalid_core_snapshot_payload
 
@@ -100,6 +101,8 @@ async def _resolve_applied_simulation_session(
     actor_id: str | None,
     idempotency_key: str | None,
 ) -> SimulationSession:
+    if simulation.simulation_changes:
+        validate_simulation_idempotency_key(idempotency_key)
     session = await resolve_simulation_session(
         simulation,
         core_client=core_client,

@@ -84,7 +84,7 @@ Measured highlights:
 - Largest behavior units: `calculate_risk` was `284` lines, `calculate_rolling_metrics` was `230`
   lines, and `LotusPerformanceClient` was `256` lines; largest remaining function is
   `_issuer_concentration` at `37` lines and `LotusPerformanceClient` is `52` lines.
-- Latest `make check` records `658` unit tests across `112` Python test files; the authoritative
+- Latest `make check` records `660` unit tests across `112` Python test files; the authoritative
   current scorecard is `quality/quality_scorecard.md`.
 - Current baseline reports no C-or-worse cyclomatic-complexity candidates.
 - Source-size gate enforces the current `450` line ceiling.
@@ -115,7 +115,7 @@ Measured highlights:
 - Unit coverage now protects app factory wiring, router extraction, downstream boundaries, OpenAPI
   governance, enterprise readiness, error mapping, observability contracts, and core analytics
   behavior.
-- Local `make check` passed with `658` unit tests.
+- Local `make check` passed with `660` unit tests.
 - PR merge gate runs unit, integration, and e2e suites with combined coverage enforcement.
 
 # Security Improvements
@@ -171,7 +171,7 @@ Latest local results:
 
 - `make check`: passed, including lint, format check, no-alias guard, typecheck, OpenAPI gate,
   OpenAPI artifact gate, API vocabulary gate, mesh contract validation, source-size gate, and
-  `658` unit tests.
+  `660` unit tests.
 - `make security-audit`: passed with `Known vulnerabilities: 0`.
 - Latest pushed branch checks before PR creation:
   - `Quality Baseline`: success.

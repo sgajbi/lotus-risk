@@ -85,7 +85,7 @@ async def apply_simulation_changes(
         change.model_dump(mode="json", exclude_none=True)
         for change in simulation.simulation_changes
     ]
-    normalized_idempotency_key = _validated_idempotency_key(idempotency_key)
+    normalized_idempotency_key = validate_simulation_idempotency_key(idempotency_key)
     changes_response = await core_client.add_simulation_changes(
         session_id=session.session_id,
         changes=payload,
@@ -105,7 +105,7 @@ async def apply_simulation_changes(
     )
 
 
-def _validated_idempotency_key(idempotency_key: str | None) -> str:
+def validate_simulation_idempotency_key(idempotency_key: str | None) -> str:
     normalized = idempotency_key.strip() if idempotency_key is not None else ""
     if not normalized:
         raise ValueError(

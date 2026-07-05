@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+from typing import Any, cast
 
 import pytest
 
-from app.contracts.risk import StatefulRiskInput
+from app.contracts.risk import RiskRequestPeriod, StatefulRiskInput
 from app.services.risk_mode_adapter import (
     _build_stateful_source_request,
     _portfolio_open_date,
@@ -159,7 +160,7 @@ def test_calculate_risk_stateful_applies_sourced_risk_free_for_sharpe() -> None:
         "currency": "USD",
         "as_of_date": "2025-01-07",
         "series_mode": "annualized_rate_series",
-        "window": {"start_date": "2025-01-01", "end_date": "2025-01-07"},
+        "window": {"start_date": "2025-01-02", "end_date": "2025-01-06"},
         "frequency": "daily",
     }
     assert response.metadata.risk_free_context.reason == "ANNUAL_RATE_APPLIED"
@@ -179,6 +180,72 @@ def test_calculate_risk_stateful_applies_sourced_risk_free_for_sharpe() -> None:
     periodic_risk_free_rate = sharpe.details["periodic_risk_free_rate"]
     assert isinstance(periodic_risk_free_rate, float)
     assert periodic_risk_free_rate > 0
+
+
+def test_calculate_risk_stateful_uses_source_currency_when_reporting_currency_missing() -> None:
+    stateful = _stateful_input().model_copy(
+        update={"metrics": ["SHARPE"], "reporting_currency": None}
+    )
+    source_response: dict[str, Any] = build_returns_series_response(
+        portfolio_returns=[
+            ("2025-01-02", "0.0100"),
+            ("2025-01-03", "-0.0050"),
+            ("2025-01-06", "0.0030"),
+        ],
+    )
+    source_response["valuation_context"] = {"reporting_currency": "EUR"}
+    performance_client = RecordingLotusPerformanceClient(response_payload=source_response)
+    core_client = RecordingLotusCoreReferenceClient(risk_free_response=_risk_free_payload())
+
+    response = asyncio.run(
+        calculate_risk_stateful(
+            stateful,
+            performance_client=performance_client,
+            core_client=core_client,
+            correlation_id="corr-risk-stateful-rf-currency",
+        )
+    )
+
+    risk_free_request = cast(dict[str, Any], core_client.risk_free_calls[0]["request_payload"])
+    assert risk_free_request["currency"] == "EUR"
+    assert response.scope.reporting_currency == "EUR"
+
+
+def test_calculate_risk_stateful_sources_risk_free_after_si_returns_resolve_window() -> None:
+    stateful = _stateful_input().model_copy(
+        update={
+            "metrics": ["SHARPE"],
+            "periods": [RiskRequestPeriod.model_validate({"type": "SI", "name": "SI"})],
+        }
+    )
+    performance_client = RecordingLotusPerformanceClient(
+        response_payload=build_returns_series_response(
+            portfolio_returns=[
+                ("2024-12-30", "0.0040"),
+                ("2025-01-02", "0.0100"),
+                ("2025-01-06", "0.0030"),
+            ],
+        )
+    )
+    core_client = RecordingLotusCoreReferenceClient(risk_free_response=_risk_free_payload())
+
+    response = asyncio.run(
+        calculate_risk_stateful(
+            stateful,
+            performance_client=performance_client,
+            core_client=core_client,
+            correlation_id="corr-risk-stateful-rf-si",
+        )
+    )
+
+    assert performance_client.request_payload is not None
+    assert performance_client.request_payload["window"] == {"mode": "RELATIVE", "period": "SI"}
+    risk_free_request = cast(dict[str, Any], core_client.risk_free_calls[0]["request_payload"])
+    assert risk_free_request["window"] == {
+        "start_date": "2024-12-30",
+        "end_date": "2025-01-06",
+    }
+    assert response.results["SI"].metrics["SHARPE"].value is not None
 
 
 def test_calculate_risk_stateful_rejects_missing_risk_free_for_sharpe() -> None:

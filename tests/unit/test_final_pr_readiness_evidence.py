@@ -39,7 +39,7 @@ def test_final_pr_readiness_pack_pins_evidence_commands_and_risks() -> None:
         "quality/quality_scorecard.md",
         "quality/openapi_artifact_evidence.md",
         "output/openapi/lotus-risk.openapi.evidence.json",
-        "658",
+        "660",
         "112",
         "quality/baseline_report.md",
         "regenerated immediately before final PR assembly",

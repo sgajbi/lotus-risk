@@ -420,6 +420,37 @@ def test_simulation_api_requires_idempotency_key_for_changes_before_core_write()
     assert core_client.snapshot_calls == []
 
 
+def test_simulation_api_requires_idempotency_key_before_creating_new_session() -> None:
+    core_client = _RecordingLotusCoreClient()
+    with override_app_runtime(lotus_core_client=core_client):
+        client = TestClient(app)
+
+        response = client.post(
+            "/analytics/risk/concentration",
+            json={
+                "input_mode": "simulation",
+                "simulation_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-02-27",
+                    "simulation_changes": [
+                        {
+                            "security_id": "SEC_A",
+                            "transaction_type": "BUY",
+                            "quantity": 10,
+                        }
+                    ],
+                },
+            },
+        )
+
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "INVALID_INPUT"
+    assert "Idempotency-Key header is required" in response.json()["error"]["message"]
+    assert core_client.create_calls == []
+    assert core_client.change_calls == []
+    assert core_client.snapshot_calls == []
+
+
 def test_simulation_api_rejects_unsupported_transaction_type_before_core_write() -> None:
     core_client = _RecordingLotusCoreClient()
     with override_app_runtime(lotus_core_client=core_client):
