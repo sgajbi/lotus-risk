@@ -70,6 +70,8 @@ jobs:
           path: .lotus-platform
       - name: Mesh Contract Validation
         run: make mesh-contract-validate
+      - name: Image Supply Chain Gate
+        run: make image-supply-chain-gate
       - name: Migration Contract Smoke
         run: make migration-smoke
       - name: Security Audit
