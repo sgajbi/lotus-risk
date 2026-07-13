@@ -25,6 +25,8 @@ The repo-native commands are designed to map to those lanes directly.
 
 - `make check` - fast local gate
 - `make ci` - PR-grade local gate
+- `make ci-local` - split-suite coverage loop without Docker
+- `make ci-local-docker` - isolated Docker lane for the split-suite coverage loop
 - `make quality-baseline` - report-only enterprise refactor baseline and quality scorecard
 - `make mesh-contract-validate` - domain product, trust telemetry, and observability contract validation
 - `make image-supply-chain-gate` - image metadata, CI-only push, digest deployment, SBOM, vulnerability scan, signing, provenance, and secret-free Docker metadata validation

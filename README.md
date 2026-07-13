@@ -140,6 +140,8 @@ Canonical direct local upstream URLs for live characterization and operator chec
 - `make install` - install development dependencies
 - `make check` - fast local gate
 - `make ci` - PR-grade local gate
+- `make ci-local` - split-suite local coverage loop without Docker
+- `make ci-local-docker` - isolated Docker lane for the split-suite local coverage loop
 - `make clean` - remove known generated/local artifacts; regenerate OpenAPI and quality evidence
   afterwards when PR proof needs fresh artifacts
 - `make test-unit` - unit suite
@@ -165,6 +167,7 @@ Repo-native validation mapping:
 
 - fast local gate: `make check`
 - PR-grade gate: `make ci`
+- isolated split-suite gate: `make ci-local-docker`
 - repo-native domain product gate: `make domain-data-product-gate`
 - split suites: `make test-unit`, `make test-integration`, `make test-e2e`
 

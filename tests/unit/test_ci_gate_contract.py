@@ -4,6 +4,8 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 MAKEFILE = REPO_ROOT / "Makefile"
 WORKFLOW_DIR = REPO_ROOT / ".github" / "workflows"
 DOCKERFILE = REPO_ROOT / "Dockerfile"
+CI_LOCAL_DOCKERFILE = REPO_ROOT / "Dockerfile.ci-local"
+CI_LOCAL_COMPOSE = REPO_ROOT / "docker-compose.ci-local.yml"
 
 PR_GRADE_TARGETS = {
     "lint",
@@ -62,6 +64,19 @@ def test_ci_local_is_documented_as_partial_split_suite_loop() -> None:
 
     assert "Split-suite local coverage loop without Docker" in makefile
     assert "Use `make ci` for PR-grade parity" in makefile
+
+
+def test_ci_local_docker_target_points_to_existing_compose_lane() -> None:
+    makefile = MAKEFILE.read_text(encoding="utf-8")
+    compose = CI_LOCAL_COMPOSE.read_text(encoding="utf-8")
+    dockerfile = CI_LOCAL_DOCKERFILE.read_text(encoding="utf-8")
+
+    assert "docker-compose.ci-local.yml" in makefile
+    assert "ci-local:" in compose
+    assert "dockerfile: Dockerfile.ci-local" in compose
+    assert "command: make ci-local" in compose
+    assert 'pip install -e ".[dev]"' in dockerfile
+    assert 'CMD ["make", "ci-local"]' in dockerfile
 
 
 def test_make_clean_delegates_to_cleanup_script() -> None:

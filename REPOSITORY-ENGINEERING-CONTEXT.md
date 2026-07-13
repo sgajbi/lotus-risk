@@ -289,15 +289,17 @@ Use these commands as the primary local contract:
    `make check`
 3. PR-grade local gate
    `make ci`
-4. run unit tests
+4. isolated split-suite local gate
+   `make ci-local-docker`
+5. run unit tests
    `make test-unit`
-5. run integration tests
+6. run integration tests
    `make test-integration`
-6. run e2e tests
+7. run e2e tests
    `make test-e2e`
-7. validate repo-native domain product declarations
+8. validate repo-native domain product declarations
    `make domain-data-product-gate`
-8. remove known local/generated artifacts
+9. remove known local/generated artifacts
    `make clean`
 
 ## Validation And CI Expectations
@@ -318,7 +320,8 @@ Important validation expectations:
 6. `make ci` is the PR-grade local aggregate and includes architecture, mesh-contract,
    image-supply-chain, complexity, source-size, dependency-hygiene, dead-code, migration,
    test-pyramid, coverage, security, and Docker evidence; `ci-local` is only a split-suite coverage
-   loop without Docker.
+   loop without Docker, while `ci-local-docker` runs that split-suite loop in an isolated container
+   when the developer Python environment is polluted by other editable Lotus apps.
 7. Release image posture is governed by `make image-supply-chain-gate`: images are pushed only by
    `.github/workflows/image-release.yml`, tagged by Git SHA, labeled with source/build/version/CI
    metadata, scanned, signed, attested, accompanied by SBOM and release-manifest evidence, and

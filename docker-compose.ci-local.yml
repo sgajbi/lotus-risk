@@ -1,0 +1,6 @@
+services:
+  ci-local:
+    build:
+      context: .
+      dockerfile: Dockerfile.ci-local
+    command: make ci-local
