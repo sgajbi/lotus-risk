@@ -33,7 +33,7 @@ security-level exposure components.
 | `portfolio_id` | no | Portfolio identifier retained for lineage and downstream evidence. |
 | `as_of_date` | yes | Business date for the evaluation. |
 | `exposures` | yes | Portfolio weights by scenario bucket. At least one bucket is required, at most 16 buckets are accepted, buckets must be unique after uppercase normalization, each weight must be between 0.0 and 1.0, and weights must sum to 1.0 within 0.000001. |
-| `exposure_components` | no | Optional security or instrument rows that reconcile exactly to `exposures` by bucket. At most 250 component rows are accepted and at most 250 position contribution rows can be returned. |
+| `exposure_components` | no | Optional security or instrument rows that reconcile exactly to `exposures` by bucket. Request validation accepts at most 250 component rows, and runtime evaluation applies a scenario-pack-aware cap so at most 250 position contribution rows can be returned across the full response. |
 | `maximum_allowed_loss_pct` | yes | Consumer policy threshold for breach evaluation. |
 
 When `exposure_components` is supplied:
@@ -42,7 +42,9 @@ When `exposure_components` is supplied:
 2. the sum of component weights by bucket must reconcile to the matching exposure bucket weight,
 3. component weights must also sum to 1.0 within `0.000001`,
 4. invalid or unreconciled component sets are rejected with request validation errors,
-5. downstream consumers must preserve the returned rows instead of recalculating scenario
+5. the number of components must not multiply across the selected scenario pack into more than
+   250 returned contribution rows,
+6. downstream consumers must preserve the returned rows instead of recalculating scenario
    contributions.
 
 ## Calculation Method
@@ -108,8 +110,9 @@ For the `growth_slowdown` scenario, the expected contribution rows include:
 - Unknown scenario packs raise a deterministic validation failure.
 - Underallocated, overallocated, duplicate, or over-limit exposure requests fail request
   validation before scenario calculation starts.
-- Over-limit `exposure_components` requests fail request validation before contribution rows are
-  materialized.
+- Over-limit `exposure_components` requests fail request validation; component counts that would
+  produce more than 250 returned contribution rows across the selected scenario pack fail before
+  scenario rows are materialized.
 - Unsupported exposure buckets produce a degraded supportability state and bounded reason codes.
 - Requests outside the source-owned effective period are degraded with
   `REGIME_SCENARIO_EFFECTIVE_PERIOD_EXCEPTION`.

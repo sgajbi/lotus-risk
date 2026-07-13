@@ -146,6 +146,11 @@ def test_risk_event_cohort_rejects_overallocated_exposure_weights() -> None:
         _request(portfolios=[_portfolio(1, exposure_weights={"EQUITY": 1.05})])
 
 
+def test_risk_event_cohort_rejects_duplicate_semantic_exposure_buckets() -> None:
+    with pytest.raises(ValueError, match="unique exposure buckets"):
+        _request(portfolios=[_portfolio(1, exposure_weights={"EQUITY": 0.50, "equity": 0.50})])
+
+
 def test_risk_event_cohort_accepts_near_limit_candidate_portfolio_count() -> None:
     request = _request(
         portfolios=[_portfolio(index) for index in range(RISK_EVENT_MAX_CANDIDATE_PORTFOLIOS)]

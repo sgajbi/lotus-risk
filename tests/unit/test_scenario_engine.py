@@ -13,6 +13,7 @@ from app.contracts.scenario import (
 from app.contracts.scenario_inputs import (
     SCENARIO_MAX_EXPOSURE_BUCKETS,
     SCENARIO_MAX_EXPOSURE_COMPONENTS,
+    SCENARIO_MAX_POSITION_CONTRIBUTION_ROWS,
     RegimeScenarioPackRequest as RegimeScenarioPackRequestSource,
 )
 from app.contracts.scenario_outputs import (
@@ -45,6 +46,26 @@ def _full_allocation_rows(count: int, *, prefix: str = "BUCKET") -> list[dict[st
     weight = round(1.0 / count, 6)
     rows = [{"bucket": f"{prefix}_{index}", "weight": weight} for index in range(count - 1)]
     rows.append({"bucket": f"{prefix}_{count - 1}", "weight": round(1.0 - weight * (count - 1), 6)})
+    return rows
+
+
+def _component_rows(count: int, *, bucket: str = "EQUITY") -> list[dict[str, object]]:
+    weight = round(1.0 / count, 6)
+    rows = [
+        {
+            "security_id": f"SEC_{index}",
+            "bucket": bucket,
+            "weight": weight,
+        }
+        for index in range(count - 1)
+    ]
+    rows.append(
+        {
+            "security_id": f"SEC_{count - 1}",
+            "bucket": bucket,
+            "weight": round(1.0 - weight * (count - 1), 6),
+        }
+    )
     return rows
 
 
@@ -221,6 +242,30 @@ def test_regime_scenario_pack_rejects_component_count_over_limit() -> None:
             exposures=[{"bucket": "EQUITY", "weight": 1.0}],
             exposure_components=components,
         )
+
+
+def test_regime_scenario_pack_evaluation_bounds_returned_contribution_rows() -> None:
+    request = _request(
+        exposures=[{"bucket": "EQUITY", "weight": 1.0}],
+        exposure_components=_component_rows(SCENARIO_MAX_POSITION_CONTRIBUTION_ROWS // 3),
+    )
+
+    response = evaluate_regime_scenario_pack(request)
+
+    returned_rows = sum(
+        len(scenario.position_contributions) for scenario in response.scenario_results
+    )
+    assert returned_rows <= SCENARIO_MAX_POSITION_CONTRIBUTION_ROWS
+
+
+def test_regime_scenario_pack_evaluation_rejects_contribution_rows_over_limit() -> None:
+    request = _request(
+        exposures=[{"bucket": "EQUITY", "weight": 1.0}],
+        exposure_components=_component_rows(SCENARIO_MAX_POSITION_CONTRIBUTION_ROWS // 3 + 1),
+    )
+
+    with pytest.raises(ValueError, match="maximum returned rows"):
+        evaluate_regime_scenario_pack(request)
 
 
 def test_regime_scenario_pack_evaluation_flags_threshold_breach() -> None:

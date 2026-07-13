@@ -87,7 +87,8 @@ class RegimeScenarioPackRequest(BaseModel):
         description=(
             "Optional position-level exposure components used to emit per-security scenario "
             "contribution rows. When supplied, component weights must reconcile to the bucket "
-            "weights in exposures. Returned position contribution rows are bounded by the same "
+            "weights in exposures. Runtime evaluation enforces a scenario-pack-aware component "
+            "count so returned position contribution rows remain bounded by the "
             f"{SCENARIO_MAX_POSITION_CONTRIBUTION_ROWS} row limit."
         ),
         json_schema_extra={"example": SCENARIO_EXPOSURE_COMPONENTS_EXAMPLE},

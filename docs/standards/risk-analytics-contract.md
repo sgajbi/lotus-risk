@@ -7,6 +7,9 @@
 - `POST /analytics/risk/rolling-metrics`
 - `POST /analytics/risk/historical-attribution`
 - `POST /analytics/risk/concentration`
+- `POST /analytics/risk/mandate-health-context`
+- `POST /analytics/risk/regime-scenario-pack/evaluate`
+- `POST /analytics/risk/risk-event-cohorts/evaluate`
 - `GET /integration/capabilities`
 
 ## Integration Capabilities Contract
@@ -19,6 +22,9 @@
   - `risk.analytics.rolling_metrics`
   - `risk.analytics.historical_attribution`
   - `risk.analytics.concentration`
+  - `risk.analytics.mandate_risk_health_context`
+  - `risk.analytics.regime_scenario_pack`
+  - `risk.analytics.risk_event_affected_cohort`
   - `risk.analytics.metrics`
   - `risk.observability.calculation_supportability`
 - `workflows`:
@@ -27,6 +33,9 @@
   - `rolling_risk_analytics`
   - `historical_risk_attribution`
   - `concentration_risk`
+  - `mandate_risk_health_context`
+  - `regime_scenario_pack`
+  - `risk_event_affected_cohort`
 
 ## Supported Period Types
 - `EXPLICIT`: requires `from/to` (`fromDate` and `toDate` also supported).
@@ -58,11 +67,14 @@
 - `POST /analytics/risk/calculate`, `POST /analytics/risk/drawdown`,
   `POST /analytics/risk/rolling-metrics`, `POST /analytics/risk/historical-attribution`, and
   `POST /analytics/risk/concentration` emit `metadata.calculation_supportability`.
-- Supported states: `ready`, `stale`, `degraded`, `empty`, `error`, `permission_blocked`, `unsupported`.
+- Supported states: `ready`, `stale`, `degraded`, `empty`, `error`, `permission_blocked`,
+  `unsupported`, `attention`, `unavailable`, `pending_review`, and `blocked`.
 - Supported freshness buckets: `current`, `same_day`, `stale`, `unknown`.
 - Supported reasons include `calculation_complete`, `benchmark_unavailable`, `calculation_quality_issue`,
   `insufficient_aligned_observations`, `insufficient_observations`, `no_return_observations`,
-  `permission_blocked`, `stale_source_observations`, and `unsupported_input_mode`.
+  `permission_blocked`, `stale_source_observations`, `unsupported_input_mode`,
+  `source_product_attention`, `source_product_unavailable`, `source_product_degraded`,
+  `source_product_pending_review`, and `source_product_blocked`.
 - Prometheus exports the same posture through `lotus_risk_calculation_supportability_total` with
   bounded labels only: `operation`, `supportability_state`, `reason`, and `freshness_bucket`.
 - The response contract publishes these keys as `metric_labels` so operators, Gateway, Workbench,

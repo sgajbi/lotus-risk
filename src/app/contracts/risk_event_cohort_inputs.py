@@ -38,6 +38,15 @@ class RiskEventPortfolioExposure(BaseModel):
     def validate_exposure_weights(self) -> "RiskEventPortfolioExposure":
         if not self.exposure_weights:
             raise ValueError("exposure_weights must contain at least one exposure bucket")
+        normalized_buckets = [bucket.upper() for bucket in self.exposure_weights]
+        duplicate_buckets = sorted(
+            {bucket for bucket in normalized_buckets if normalized_buckets.count(bucket) > 1}
+        )
+        if duplicate_buckets:
+            raise ValueError(
+                "exposure_weights must contain unique exposure buckets: "
+                + ", ".join(duplicate_buckets)
+            )
         if any(weight < 0 for weight in self.exposure_weights.values()):
             raise ValueError("exposure_weights must be non-negative")
         if any(weight > 1.0 for weight in self.exposure_weights.values()):
