@@ -39,8 +39,14 @@ def implemented_metric_contract() -> dict[str, tuple[str, ...]]:
         f"{observability.ENDPOINT_EXECUTIONS_TOTAL._name}_total": tuple(
             observability.ENDPOINT_EXECUTIONS_TOTAL._labelnames
         ),
+        observability.ENDPOINT_EXECUTION_SECONDS._name: tuple(
+            observability.ENDPOINT_EXECUTION_SECONDS._labelnames
+        ),
         f"{observability.UPSTREAM_REQUESTS_TOTAL._name}_total": tuple(
             observability.UPSTREAM_REQUESTS_TOTAL._labelnames
+        ),
+        observability.UPSTREAM_REQUEST_SECONDS._name: tuple(
+            observability.UPSTREAM_REQUEST_SECONDS._labelnames
         ),
         f"{observability.CALCULATION_SUPPORTABILITY_TOTAL._name}_total": tuple(
             observability.CALCULATION_SUPPORTABILITY_TOTAL._labelnames

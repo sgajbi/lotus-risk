@@ -25,7 +25,9 @@ Tracked input modes are the request contract modes `stateless`, `stateful`, and 
 where supported by the workflow. `unknown` is reserved for defensive fallback classification.
 Outcomes are `success` and `failure`. A failure includes exceptions raised by the analytics
 operation and invalid responses that fail the declared FastAPI response model before the service
-records endpoint success.
+records endpoint success. `lotus_risk_endpoint_execution_seconds` is available for latency trend
+panels, but no latency SLO alert threshold is declared until production telemetry establishes a
+baseline.
 
 ## Upstream Dependency Metrics
 
@@ -61,7 +63,9 @@ from deterministic upstream error classification:
 6. `invalid_response`,
 7. `throttled`.
 
-Outcomes are `success` and `failure`.
+Outcomes are `success` and `failure`. `lotus_risk_upstream_request_seconds` is available for
+upstream latency trend panels, but no upstream latency SLO alert threshold is declared until
+production telemetry establishes a baseline.
 
 ## Calculation Supportability Metrics
 
@@ -75,10 +79,11 @@ The governed supportability and freshness operation values are `risk/calculate`,
 `regime-scenario-pack`, `risk-event-cohort`, and `unknown`. The freshness metric uses
 `service="lotus-risk"`.
 
-The supported states are `ready`, `stale`, `degraded`, `empty`, `error`, `permission_blocked`, and
-`unsupported`. Freshness buckets are `current`, `same_day`, `stale`, and `unknown`. The labels are
-bounded and intentionally exclude portfolio, client, account, position, transaction, security,
-trace, correlation, request-body, and response-body identifiers.
+The supported states are `ready`, `stale`, `degraded`, `empty`, `error`, `permission_blocked`,
+`unsupported`, `attention`, `unavailable`, `pending_review`, and `blocked`. Freshness buckets are
+`current`, `same_day`, `stale`, and `unknown`. The labels are bounded and intentionally exclude
+portfolio, client, account, position, transaction, security, trace, correlation, request-body, and
+response-body identifiers.
 
 The analytics responses include `metadata.calculation_supportability` so Gateway and Workbench can
 consume source-backed supportability posture without inferring it from individual metric errors,
@@ -98,7 +103,12 @@ metric labels.
 7. `permission_blocked`,
 8. `stale_source_observations`,
 9. `unsupported_input_mode`,
-10. `unknown`.
+10. `source_product_attention`,
+11. `source_product_unavailable`,
+12. `source_product_degraded`,
+13. `source_product_pending_review`,
+14. `source_product_blocked`,
+15. `unknown`.
 
 ## HTTP Request Metrics
 

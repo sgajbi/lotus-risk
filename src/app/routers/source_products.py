@@ -20,6 +20,7 @@ from app.services.endpoint_observation import observed_endpoint
 from app.services.mandate_health_context import evaluate_mandate_risk_health_context
 from app.services.risk_event_cohort_engine import evaluate_risk_event_affected_cohort
 from app.services.scenario_engine import evaluate_regime_scenario_pack
+from app.services.source_product_observation import record_source_product_supportability
 
 router = APIRouter(tags=["risk-analytics"])
 
@@ -41,12 +42,17 @@ router = APIRouter(tags=["risk-analytics"])
 async def analytics_risk_mandate_health_context(
     request_payload: MandateRiskHealthContextRequest,
 ) -> MandateRiskHealthContextResponse:
-    return await observed_endpoint(
+    response = await observed_endpoint(
         endpoint="mandate-risk-health-context",
         input_mode="stateless",
         response_model=MandateRiskHealthContextResponse,
         operation=lambda: evaluate_mandate_risk_health_context(request_payload),
     )
+    record_source_product_supportability(
+        operation="mandate-risk-health-context",
+        supportability_state=response.health_state,
+    )
+    return response
 
 
 @router.post(
@@ -67,12 +73,17 @@ async def analytics_risk_mandate_health_context(
 async def analytics_risk_regime_scenario_pack(
     request_payload: RegimeScenarioPackRequest,
 ) -> RegimeScenarioPackResponse:
-    return await observed_endpoint(
+    response = await observed_endpoint(
         endpoint="regime-scenario-pack",
         input_mode="stateless",
         response_model=RegimeScenarioPackResponse,
         operation=lambda: evaluate_regime_scenario_pack(request_payload),
     )
+    record_source_product_supportability(
+        operation="regime-scenario-pack",
+        supportability_state=response.metadata.calculation_supportability.value,
+    )
+    return response
 
 
 @router.post(
@@ -93,9 +104,14 @@ async def analytics_risk_regime_scenario_pack(
 async def analytics_risk_event_affected_cohort(
     request_payload: RiskEventAffectedCohortRequest,
 ) -> RiskEventAffectedCohortResponse:
-    return await observed_endpoint(
+    response = await observed_endpoint(
         endpoint="risk-event-cohort",
         input_mode="stateless",
         response_model=RiskEventAffectedCohortResponse,
         operation=lambda: evaluate_risk_event_affected_cohort(request_payload),
     )
+    record_source_product_supportability(
+        operation="risk-event-cohort",
+        supportability_state=response.metadata.calculation_supportability.value,
+    )
+    return response

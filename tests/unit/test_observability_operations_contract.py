@@ -37,9 +37,16 @@ def test_observability_contract_declares_dashboard_and_alert_evidence() -> None:
     payload = _contract()
 
     dashboard_ids = {dashboard["dashboard_id"] for dashboard in payload["dashboards"]}
+    panel_ids = {
+        panel["panel_id"] for dashboard in payload["dashboards"] for panel in dashboard["panels"]
+    }
     alert_ids = {alert["alert_id"] for alert in payload["alerts"]}
 
     assert "lotus-risk-observability-overview" in dashboard_ids
+    assert {
+        "risk-endpoint-latency",
+        "risk-upstream-latency",
+    } <= panel_ids
     assert {
         "lotus-risk-endpoint-failure-rate",
         "lotus-risk-upstream-dependency-failures",
