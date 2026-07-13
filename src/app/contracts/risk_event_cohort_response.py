@@ -54,7 +54,15 @@ class RiskEventAffectedCohortResponse(BaseModel):
             "example": [
                 {
                     "portfolio_id": "PB_SG_LOW_RISK_002",
+                    "mandate_id": "MANDATE-PB-SG-LOW-RISK-002",
+                    "portfolio_manager_id": "pm-singapore-01",
                     "impact_score": 0.015,
+                    "dominant_bucket": "FIXED_INCOME",
+                    "bucket_impacts": {"FIXED_INCOME": -0.015, "CASH": 0.0},
+                    "source_ref": (
+                        "risk-event-cohort:RISK_EVENT_2026_Q2_RATES_UP:"
+                        "2026-05-10:PB_SG_LOW_RISK_002"
+                    ),
                     "reason_codes": ["RISK_EVENT_BELOW_THRESHOLD"],
                 }
             ]

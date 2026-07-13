@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-07-13T20:34:24.019424+00:00",
+  "generatedAt": "2026-07-13T20:37:15.759384+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.affected_portfolios",
@@ -423,7 +423,8 @@
         "object"
       ],
       "fieldPaths": [
-        "affected_portfolios[].bucket_impacts"
+        "affected_portfolios[].bucket_impacts",
+        "excluded_portfolios[].bucket_impacts"
       ]
     },
     {
@@ -1158,7 +1159,8 @@
         "string"
       ],
       "fieldPaths": [
-        "affected_portfolios[].dominant_bucket"
+        "affected_portfolios[].dominant_bucket",
+        "excluded_portfolios[].dominant_bucket"
       ]
     },
     {
@@ -1358,11 +1360,19 @@
       "description": "Candidate portfolios excluded with explicit source-owner reason codes.",
       "example": [
         {
+          "bucket_impacts": {
+            "CASH": 0.0,
+            "FIXED_INCOME": -0.015
+          },
+          "dominant_bucket": "FIXED_INCOME",
           "impact_score": 0.015,
+          "mandate_id": "MANDATE-PB-SG-LOW-RISK-002",
           "portfolio_id": "PB_SG_LOW_RISK_002",
+          "portfolio_manager_id": "pm-singapore-01",
           "reason_codes": [
             "RISK_EVENT_BELOW_THRESHOLD"
-          ]
+          ],
+          "source_ref": "risk-event-cohort:RISK_EVENT_2026_Q2_RATES_UP:2026-05-10:PB_SG_LOW_RISK_002"
         }
       ],
       "type": "array",
@@ -2098,7 +2108,8 @@
       ],
       "fieldPaths": [
         "portfolios[].mandate_id",
-        "affected_portfolios[].mandate_id"
+        "affected_portfolios[].mandate_id",
+        "excluded_portfolios[].mandate_id"
       ]
     },
     {
@@ -2587,7 +2598,8 @@
       ],
       "fieldPaths": [
         "portfolios[].portfolio_manager_id",
-        "affected_portfolios[].portfolio_manager_id"
+        "affected_portfolios[].portfolio_manager_id",
+        "excluded_portfolios[].portfolio_manager_id"
       ]
     },
     {
@@ -3599,7 +3611,8 @@
         "string"
       ],
       "fieldPaths": [
-        "affected_portfolios[].source_ref"
+        "affected_portfolios[].source_ref",
+        "excluded_portfolios[].source_ref"
       ]
     },
     {
@@ -6645,12 +6658,52 @@
             "attributeRef": "#/attributeCatalog/lotus.portfolio_id"
           },
           {
+            "name": "excluded_portfolios[].mandate_id",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.mandate_id",
+            "attributeRef": "#/attributeCatalog/lotus.mandate_id"
+          },
+          {
+            "name": "excluded_portfolios[].portfolio_manager_id",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.portfolio_manager_id",
+            "attributeRef": "#/attributeCatalog/lotus.portfolio_manager_id"
+          },
+          {
             "name": "excluded_portfolios[].impact_score",
             "location": "body",
             "required": true,
             "type": "number",
             "semanticId": "lotus.impact_score",
             "attributeRef": "#/attributeCatalog/lotus.impact_score"
+          },
+          {
+            "name": "excluded_portfolios[].dominant_bucket",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.dominant_bucket",
+            "attributeRef": "#/attributeCatalog/lotus.dominant_bucket"
+          },
+          {
+            "name": "excluded_portfolios[].bucket_impacts",
+            "location": "body",
+            "required": true,
+            "type": "object",
+            "semanticId": "lotus.bucket_impacts",
+            "attributeRef": "#/attributeCatalog/lotus.bucket_impacts"
+          },
+          {
+            "name": "excluded_portfolios[].source_ref",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.source_ref",
+            "attributeRef": "#/attributeCatalog/lotus.source_ref"
           },
           {
             "name": "excluded_portfolios[].reason_codes",

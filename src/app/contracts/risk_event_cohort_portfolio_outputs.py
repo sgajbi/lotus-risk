@@ -47,9 +47,33 @@ class RiskEventExcludedPortfolio(BaseModel):
         description="Candidate portfolio excluded from the affected cohort.",
         json_schema_extra={"example": "PB_SG_GLOBAL_INC_002"},
     )
+    mandate_id: str | None = Field(
+        default=None,
+        description="Mandate identifier when supplied by the caller.",
+        json_schema_extra={"example": "MANDATE-PB-SG-LOW-RISK-002"},
+    )
+    portfolio_manager_id: str | None = Field(
+        default=None,
+        description="Portfolio-manager identifier when supplied by the caller.",
+        json_schema_extra={"example": "pm-singapore-01"},
+    )
     impact_score: float = Field(
         description="Source-owned absolute impact score used for exclusion.",
         json_schema_extra={"example": 0.013},
+    )
+    dominant_bucket: str = Field(
+        description="Exposure bucket contributing the largest absolute event impact.",
+        json_schema_extra={"example": "FIXED_INCOME"},
+    )
+    bucket_impacts: dict[str, float] = Field(
+        description="Signed event-impact contribution by exposure bucket.",
+        json_schema_extra={"example": {"FIXED_INCOME": -0.015, "CASH": 0.0}},
+    )
+    source_ref: str = Field(
+        description="Stable source reference for downstream exclusion lineage.",
+        json_schema_extra={
+            "example": "risk-event-cohort:RISK_EVENT_2026_Q2_RATES_UP:2026-05-10:PB_SG_LOW_RISK_002"
+        },
     )
     reason_codes: list[str] = Field(
         description="Bounded source-owner reason codes explaining exclusion.",

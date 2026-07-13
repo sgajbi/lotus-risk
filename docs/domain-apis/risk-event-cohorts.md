@@ -45,7 +45,8 @@ The service evaluates those inputs against risk-owned event definitions in
 The response returns:
 
 1. affected portfolio membership,
-2. excluded portfolios and exclusion reasons,
+2. excluded portfolios, exclusion reasons, source refs, mandate and portfolio-manager routing
+   context when supplied, dominant bucket, and bucket-impact evidence,
 3. source-owned impact scores,
 4. lineage source refs,
 5. supportability posture,
@@ -61,8 +62,10 @@ This endpoint does not create:
 4. client communications,
 5. orders or execution.
 
-Downstream consumers must preserve source refs, impact scores, supportability, and lineage metadata
-when using the response as evidence.
+Downstream consumers must preserve source refs, impact scores, dominant buckets, bucket impacts,
+supportability, and lineage metadata when using the response as evidence. Excluded rows are not
+throwaway diagnostics; they carry enough source-owned context for downstream review queues and
+audit packs to explain why a candidate was not included without recalculating membership locally.
 
 ## Where To Look Next
 
