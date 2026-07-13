@@ -29,6 +29,14 @@ The caller supplies:
 3. source-owned exposure weights for each candidate,
 4. optional threshold and source-reference context as modeled by `src/app/contracts/risk_event_cohort_inputs.py`.
 
+The request is bounded before calculation starts:
+
+1. at least one and at most 250 candidate portfolios are accepted,
+2. each candidate portfolio may carry at most 16 exposure buckets,
+3. every exposure weight must be between `0.0` and `1.0`,
+4. every candidate portfolio allocation must sum to `1.0` within `0.000001`,
+5. affected plus excluded response rows are bounded by the 250 candidate-row limit.
+
 The service evaluates those inputs against risk-owned event definitions in
 `src/app/services/risk_event_cohort_engine.py`.
 

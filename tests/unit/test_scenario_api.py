@@ -3,6 +3,10 @@ from __future__ import annotations
 from fastapi.testclient import TestClient
 
 from app.contracts.scenario_inputs import RegimeScenarioPackRequest
+from app.contracts.scenario_inputs import (
+    SCENARIO_MAX_EXPOSURE_BUCKETS,
+    SCENARIO_MAX_EXPOSURE_COMPONENTS,
+)
 from app.contracts.scenario_request_field_examples import (
     SCENARIO_EXPOSURE_COMPONENTS_EXAMPLE,
     SCENARIO_EXPOSURES_EXAMPLE,
@@ -133,6 +137,11 @@ def test_openapi_documents_regime_scenario_pack_component_rows() -> None:
     request_schema = components["RegimeScenarioPackRequest"]
     result_schema = components["ScenarioResult"]
     assert "exposure_components" in request_schema["properties"]
+    assert request_schema["properties"]["exposures"]["maxItems"] == SCENARIO_MAX_EXPOSURE_BUCKETS
+    assert (
+        request_schema["properties"]["exposure_components"]["maxItems"]
+        == SCENARIO_MAX_EXPOSURE_COMPONENTS
+    )
     assert (
         "component weights must reconcile"
         in request_schema["properties"]["exposure_components"]["description"]

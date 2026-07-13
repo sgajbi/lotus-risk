@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-07-05T09:18:45.267594+00:00",
+  "generatedAt": "2026-07-13T20:34:24.019424+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.affected_portfolios",
@@ -1397,7 +1397,7 @@
       "semanticId": "lotus.exposure_components",
       "canonicalTerm": "exposure_components",
       "preferredName": "exposure_components",
-      "description": "Optional position-level exposure components used to emit per-security scenario contribution rows. When supplied, component weights must reconcile to the bucket weights in exposures.",
+      "description": "Optional position-level exposure components used to emit per-security scenario contribution rows. When supplied, component weights must reconcile to the bucket weights in exposures. Returned position contribution rows are bounded by the same 250 row limit.",
       "example": [
         {
           "bucket": "EQUITY",
@@ -1427,7 +1427,7 @@
       "semanticId": "lotus.exposure_weights",
       "canonicalTerm": "exposure_weights",
       "preferredName": "exposure_weights",
-      "description": "Portfolio exposure weights by risk-event exposure bucket.",
+      "description": "Portfolio exposure weights by risk-event exposure bucket. Weights must form a full allocation that sums to 1.0 within the governed tolerance.",
       "example": {
         "CASH": 0.1,
         "EQUITY": 0.55,
@@ -1448,7 +1448,7 @@
       "semanticId": "lotus.exposures",
       "canonicalTerm": "exposures",
       "preferredName": "exposures",
-      "description": "Caller-supplied portfolio exposure weights by scenario bucket.",
+      "description": "Caller-supplied portfolio exposure weights by scenario bucket. Weights must form a full allocation that sums to 1.0 within the governed tolerance.",
       "example": [
         {
           "bucket": "EQUITY",
@@ -2611,7 +2611,7 @@
       "semanticId": "lotus.portfolios",
       "canonicalTerm": "portfolios",
       "preferredName": "portfolios",
-      "description": "Candidate portfolios with source-supplied exposure weights.",
+      "description": "Candidate portfolios with source-supplied exposure weights. Returned affected and excluded portfolio rows are bounded by 250 candidate rows.",
       "example": [
         {
           "exposure_weights": {
