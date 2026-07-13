@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-07-13T20:37:15.759384+00:00",
+  "generatedAt": "2026-07-13T21:18:01.593030+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.affected_portfolios",
@@ -1407,7 +1407,7 @@
       "semanticId": "lotus.exposure_components",
       "canonicalTerm": "exposure_components",
       "preferredName": "exposure_components",
-      "description": "Optional position-level exposure components used to emit per-security scenario contribution rows. When supplied, component weights must reconcile to the bucket weights in exposures. Returned position contribution rows are bounded by the same 250 row limit.",
+      "description": "Optional position-level exposure components used to emit per-security scenario contribution rows. When supplied, component weights must reconcile to the bucket weights in exposures. Runtime evaluation enforces a scenario-pack-aware component count so returned position contribution rows remain bounded by the 250 row limit.",
       "example": [
         {
           "bucket": "EQUITY",
