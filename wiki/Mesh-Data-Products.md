@@ -99,9 +99,11 @@ scenario contribution rows alongside worst-case loss, threshold-breach posture, 
 bounded reason codes. It also emits bounded source-owned CIO approval, effective-period, and
 portfolio-applicability posture so downstream proof packs do not invent those checks locally. The
 request contract rejects underallocated, overallocated, duplicate, and over-limit exposure inputs
-before calculation; at most 16 scenario exposure buckets and 250 component/contribution rows are
-accepted. The rows are contribution evidence for governed CIO shocks, not full instrument repricing, and
-downstream proof packs must preserve them instead of rebuilding scenario logic outside
+before calculation; at most 16 scenario exposure buckets are accepted, request validation accepts at
+most 250 component rows, and runtime evaluation keeps returned contribution rows bounded to 250
+across the selected scenario pack. The rows are contribution evidence for governed CIO shocks, not
+full instrument repricing, and downstream proof packs must preserve them instead of rebuilding
+scenario logic outside
 `lotus-risk`. The auditable methodology is pinned in
 `docs/methodologies/metrics/regime-scenario-pack-evaluation.md`, including formulas, validation and
 failure behavior, deterministic ordering, governance posture, and a worked contribution example.

@@ -366,8 +366,8 @@
       "alert_id": "lotus-risk-calculation-supportability-degraded",
       "severity": "warning",
       "metric": "lotus_risk_calculation_supportability_total",
-      "query": "sum by (operation, supportability_state, reason) (rate(lotus_risk_calculation_supportability_total{supportability_state=~\"degraded|error|permission_blocked\"}[5m])) > 0",
-      "condition": "Risk calculation supportability is degraded, errored, or permission-blocked.",
+      "query": "sum by (operation, supportability_state, reason) (rate(lotus_risk_calculation_supportability_total{supportability_state=~\"degraded|error|permission_blocked|unavailable|blocked\"}[5m])) > 0",
+      "condition": "Risk calculation supportability is degraded, errored, permission-blocked, unavailable, or blocked.",
       "runbook": "docs/runbooks/service-operations.md#calculation-supportability-alert"
     },
     {

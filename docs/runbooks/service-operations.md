@@ -144,6 +144,9 @@ Alert id: `lotus-risk-calculation-supportability-degraded`
    exposing portfolio or client identifiers in metrics.
 3. For `stale_source_observations`, validate source freshness from upstream dependency diagnostics.
 4. For `permission_blocked`, verify caller capability and deployment authorization policy.
+5. For `unavailable` or `blocked`, verify the relevant source-product supportability reason and
+   whether the endpoint response is intentionally fail-closed, outside applicability, or missing a
+   required upstream source.
 
 ## Escalation Paths
 

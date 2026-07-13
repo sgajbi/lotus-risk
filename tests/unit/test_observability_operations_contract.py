@@ -55,6 +55,24 @@ def test_observability_contract_declares_dashboard_and_alert_evidence() -> None:
     } <= alert_ids
 
 
+def test_supportability_alert_covers_operationally_bad_states() -> None:
+    payload = _contract()
+    alert = next(
+        alert
+        for alert in payload["alerts"]
+        if alert["alert_id"] == "lotus-risk-calculation-supportability-degraded"
+    )
+
+    for state in (
+        "degraded",
+        "error",
+        "permission_blocked",
+        "unavailable",
+        "blocked",
+    ):
+        assert state in alert["query"]
+
+
 def test_observability_contract_alerts_reference_runbook_anchors() -> None:
     issues = validate_observability_contract(OBSERVABILITY_CONTRACT)
 

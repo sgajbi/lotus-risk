@@ -5,6 +5,7 @@ import json
 from dataclasses import dataclass
 
 from app.contracts.scenario import (
+    SCENARIO_MAX_POSITION_CONTRIBUTION_ROWS,
     RegimeScenarioPackRequest,
     RegimeScenarioPackResponse,
     ScenarioEvaluationMetadata,
@@ -137,6 +138,7 @@ def evaluate_regime_scenario_pack(
     if request.scenario_pack_id not in SCENARIO_PACKS:
         raise ValueError(f"Unsupported scenario_pack_id: {request.scenario_pack_id}")
 
+    _validate_position_contribution_row_bound(request)
     evaluation = _evaluate_scenario_pack_context(request)
     return RegimeScenarioPackResponse(
         scenario_pack_id=request.scenario_pack_id,
@@ -153,6 +155,20 @@ def evaluate_regime_scenario_pack(
             calculation_supportability=evaluation.supportability,
         ),
     )
+
+
+def _validate_position_contribution_row_bound(request: RegimeScenarioPackRequest) -> None:
+    scenario_count = len(SCENARIO_PACKS[request.scenario_pack_id])
+    if scenario_count == 0:
+        return
+    max_components = SCENARIO_MAX_POSITION_CONTRIBUTION_ROWS // scenario_count
+    if len(request.exposure_components) > max_components:
+        returned_rows = len(request.exposure_components) * scenario_count
+        raise ValueError(
+            "exposure_components would emit "
+            f"{returned_rows} position contribution rows across {scenario_count} scenarios; "
+            f"maximum returned rows is {SCENARIO_MAX_POSITION_CONTRIBUTION_ROWS}"
+        )
 
 
 def _evaluate_scenario(
