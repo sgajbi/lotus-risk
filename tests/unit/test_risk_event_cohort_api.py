@@ -2,6 +2,10 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
+from app.contracts.risk_event_cohort_inputs import (
+    RISK_EVENT_MAX_CANDIDATE_PORTFOLIOS,
+    RISK_EVENT_MAX_EXPOSURE_BUCKETS_PER_PORTFOLIO,
+)
 from app.main import app
 
 
@@ -50,3 +54,20 @@ def test_capabilities_include_risk_event_cohort_workflow() -> None:
         "/analytics/risk/risk-event-cohorts/evaluate"
     )
     assert workflows["risk_event_affected_cohort"]["support_status"] == "partial"
+
+
+def test_openapi_documents_risk_event_cohort_workload_bounds() -> None:
+    client = TestClient(app)
+
+    response = client.get("/openapi.json")
+
+    assert response.status_code == 200
+    components = response.json()["components"]["schemas"]
+    request_schema = components["RiskEventAffectedCohortRequest"]
+    portfolio_schema = components["RiskEventPortfolioExposure"]
+    assert request_schema["properties"]["portfolios"]["maxItems"] == (
+        RISK_EVENT_MAX_CANDIDATE_PORTFOLIOS
+    )
+    assert portfolio_schema["properties"]["exposure_weights"]["maxProperties"] == (
+        RISK_EVENT_MAX_EXPOSURE_BUCKETS_PER_PORTFOLIO
+    )

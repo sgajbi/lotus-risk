@@ -9,6 +9,20 @@ from app.contracts.scenario_request_field_examples import (
     SCENARIO_EXPOSURES_EXAMPLE,
 )
 
+SCENARIO_ALLOCATION_TOLERANCE = 0.000001
+SCENARIO_MAX_EXPOSURE_BUCKETS = 16
+SCENARIO_MAX_EXPOSURE_COMPONENTS = 250
+SCENARIO_MAX_POSITION_CONTRIBUTION_ROWS = SCENARIO_MAX_EXPOSURE_COMPONENTS
+
+
+def _validate_full_allocation(*, weights: list[float], field_name: str) -> None:
+    total = sum(weights)
+    if abs(total - 1.0) > SCENARIO_ALLOCATION_TOLERANCE:
+        raise ValueError(
+            f"{field_name} weights must sum to 1.0 within "
+            f"{SCENARIO_ALLOCATION_TOLERANCE}; received {total:.6f}"
+        )
+
 
 class ScenarioExposure(BaseModel):
     bucket: str = Field(
@@ -17,6 +31,7 @@ class ScenarioExposure(BaseModel):
     )
     weight: float = Field(
         ge=0.0,
+        le=1.0,
         description="Portfolio weight for this exposure bucket.",
         json_schema_extra={"example": 0.55},
     )
@@ -38,6 +53,7 @@ class ScenarioExposureComponent(BaseModel):
     )
     weight: float = Field(
         ge=0.0,
+        le=1.0,
         description="Portfolio weight represented by this security contribution.",
         json_schema_extra={"example": 0.18},
     )
@@ -58,15 +74,21 @@ class RegimeScenarioPackRequest(BaseModel):
         json_schema_extra={"example": "2026-05-03"},
     )
     exposures: list[ScenarioExposure] = Field(
-        description="Caller-supplied portfolio exposure weights by scenario bucket.",
+        max_length=SCENARIO_MAX_EXPOSURE_BUCKETS,
+        description=(
+            "Caller-supplied portfolio exposure weights by scenario bucket. Weights must form a "
+            "full allocation that sums to 1.0 within the governed tolerance."
+        ),
         json_schema_extra={"example": SCENARIO_EXPOSURES_EXAMPLE},
     )
     exposure_components: list[ScenarioExposureComponent] = Field(
         default_factory=list,
+        max_length=SCENARIO_MAX_EXPOSURE_COMPONENTS,
         description=(
             "Optional position-level exposure components used to emit per-security scenario "
             "contribution rows. When supplied, component weights must reconcile to the bucket "
-            "weights in exposures."
+            "weights in exposures. Returned position contribution rows are bounded by the same "
+            f"{SCENARIO_MAX_POSITION_CONTRIBUTION_ROWS} row limit."
         ),
         json_schema_extra={"example": SCENARIO_EXPOSURE_COMPONENTS_EXAMPLE},
     )
@@ -81,6 +103,18 @@ class RegimeScenarioPackRequest(BaseModel):
     def validate_exposures(self) -> "RegimeScenarioPackRequest":
         if not self.exposures:
             raise ValueError("exposures must contain at least one scenario exposure bucket")
+        normalized_buckets = [exposure.bucket.upper() for exposure in self.exposures]
+        duplicate_buckets = sorted(
+            {bucket for bucket in normalized_buckets if normalized_buckets.count(bucket) > 1}
+        )
+        if duplicate_buckets:
+            raise ValueError(
+                "exposures must contain unique scenario buckets: " + ", ".join(duplicate_buckets)
+            )
+        _validate_full_allocation(
+            weights=[exposure.weight for exposure in self.exposures],
+            field_name="exposures",
+        )
         if self.exposure_components:
             exposure_by_bucket = {
                 exposure.bucket.upper(): exposure.weight for exposure in self.exposures
@@ -105,4 +139,19 @@ class RegimeScenarioPackRequest(BaseModel):
                     "exposure_components must reconcile to exposures for buckets: "
                     + ", ".join(mismatched_buckets)
                 )
+            _validate_full_allocation(
+                weights=[component.weight for component in self.exposure_components],
+                field_name="exposure_components",
+            )
         return self
+
+
+__all__ = [
+    "SCENARIO_ALLOCATION_TOLERANCE",
+    "SCENARIO_MAX_EXPOSURE_BUCKETS",
+    "SCENARIO_MAX_EXPOSURE_COMPONENTS",
+    "SCENARIO_MAX_POSITION_CONTRIBUTION_ROWS",
+    "RegimeScenarioPackRequest",
+    "ScenarioExposure",
+    "ScenarioExposureComponent",
+]

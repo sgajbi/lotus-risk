@@ -98,7 +98,9 @@ loss. When callers provide reconciled `exposure_components`, the product emits p
 scenario contribution rows alongside worst-case loss, threshold-breach posture, lineage, and
 bounded reason codes. It also emits bounded source-owned CIO approval, effective-period, and
 portfolio-applicability posture so downstream proof packs do not invent those checks locally. The
-rows are contribution evidence for governed CIO shocks, not full instrument repricing, and
+request contract rejects underallocated, overallocated, duplicate, and over-limit exposure inputs
+before calculation; at most 16 scenario exposure buckets and 250 component/contribution rows are
+accepted. The rows are contribution evidence for governed CIO shocks, not full instrument repricing, and
 downstream proof packs must preserve them instead of rebuilding scenario logic outside
 `lotus-risk`. The auditable methodology is pinned in
 `docs/methodologies/metrics/regime-scenario-pack-evaluation.md`, including formulas, validation and
@@ -175,7 +177,9 @@ Audience notes:
   promotion separately gated.
 - Developers and downstream services must preserve `RiskEventAffectedCohort:v1` membership,
   exclusions, source refs, and impact scores rather than reconstructing risk-event cohort
-  membership locally.
+  membership locally. Candidate cohorts are bounded to 250 portfolios, each candidate allocation is
+  bounded to 16 exposure buckets, and every candidate allocation must sum to 1.0 before cohort
+  scoring starts.
 - Developers and downstream services must preserve `MandateRiskHealthContext:v1` threshold posture,
   source metric evidence, methodology posture, fingerprints, and reason codes rather than
   recomputing mandate risk health locally.

@@ -35,8 +35,8 @@ the bounded scenario-pack governance fields owned by this source product.
 | `scenario_pack_id` | yes | Governed scenario-pack identifier. |
 | `portfolio_id` | no | Optional portfolio identifier retained for lineage. |
 | `as_of_date` | yes | Business date for the source-owned evaluation. |
-| `exposures[]` | yes | Caller-supplied portfolio weights by scenario bucket. |
-| `exposure_components[]` | no | Optional position-level rows that reconcile exactly to `exposures[]` by bucket. |
+| `exposures[]` | yes | Caller-supplied portfolio weights by scenario bucket. At most 16 buckets are accepted. |
+| `exposure_components[]` | no | Optional position-level rows that reconcile exactly to `exposures[]` by bucket. At most 250 component rows are accepted. |
 | `maximum_allowed_loss_pct` | yes | Consumer policy threshold for worst-case loss breach posture. |
 
 ## Upstream Data Sources
@@ -52,6 +52,8 @@ the bounded scenario-pack governance fields owned by this source product.
 ## Unit Conventions
 
 - `weight` is a decimal portfolio weight. `0.55` means 55% of portfolio value.
+- Exposure and component weights are full allocations: each weight must be between `0.0` and `1.0`,
+  and each allocation must sum to `1.0` within `0.000001`.
 - `shock_pct` is a decimal shock ratio. `-0.12` means a 12% loss shock.
 - `expected_loss_pct`, `worst_case_loss_pct`, and `contribution_loss_pct` are decimal loss ratios.
   `0.106` means 10.6% expected loss.
@@ -122,29 +124,36 @@ The current pack is approved by `CIO Risk Committee`, effective from `2026-04-01
 ## Step-by-Step Computation
 
 1. Look up `scenario_pack_id` in the risk-owned `SCENARIO_PACKS` registry.
-2. Normalize `exposures[].bucket` to uppercase and build `exposure_by_bucket`.
-3. Compare requested buckets with `SUPPORTED_BUCKETS`.
-4. Look up source-owned scenario-pack governance in `SCENARIO_PACK_GOVERNANCE`.
-5. Validate optional `exposure_components[]` at request-model level:
+2. Validate that `exposures[]` is non-empty, unique after uppercase normalization, no larger than
+   16 buckets, and a full allocation that sums to `1.0` within `0.000001`.
+3. Normalize `exposures[].bucket` to uppercase and build `exposure_by_bucket`.
+4. Compare requested buckets with `SUPPORTED_BUCKETS`.
+5. Look up source-owned scenario-pack governance in `SCENARIO_PACK_GOVERNANCE`.
+6. Validate optional `exposure_components[]` at request-model level:
+   - at most 250 component rows are accepted,
    - every component bucket must be present in `exposures[]`,
    - component weights must reconcile to the matching exposure bucket within `0.000001`.
-6. For each scenario in the pack:
+   - component weights must also sum to `1.0` within `0.000001`.
+7. For each scenario in the pack:
    - get `shock_by_bucket[b]`, defaulting to `0.0` for unsupported requested buckets,
    - compute bucket losses,
    - sum bucket losses into `expected_loss_pct`,
    - compute optional position contribution rows from component weights and bucket shocks.
-7. Emit `governance_evidence` from source-owned approval, effective-period, and applicability
+8. Emit `governance_evidence` from source-owned approval, effective-period, and applicability
    posture.
-8. Set `worst_case_loss_pct` to the maximum scenario `expected_loss_pct`.
-9. Set `breach` when `worst_case_loss_pct > maximum_allowed_loss_pct`.
-10. Emit sorted bounded `reason_codes`.
-11. Emit `metadata.request_fingerprint` as a deterministic SHA-256 hash of the canonical request.
+9. Set `worst_case_loss_pct` to the maximum scenario `expected_loss_pct`.
+10. Set `breach` when `worst_case_loss_pct > maximum_allowed_loss_pct`.
+11. Emit sorted bounded `reason_codes`.
+12. Emit `metadata.request_fingerprint` as a deterministic SHA-256 hash of the canonical request.
 
 ## Validation and Failure Behavior
 
 - Unknown `scenario_pack_id` raises `Unsupported scenario_pack_id`.
 - Empty `exposures[]` is rejected by request validation.
-- Negative exposure or component weights are rejected by request validation.
+- Duplicate exposure buckets are rejected after uppercase normalization.
+- More than 16 exposure buckets or more than 250 component rows are rejected by request validation.
+- Negative exposure or component weights, individual weights above `1.0`, and allocations that do
+  not sum to `1.0` within `0.000001` are rejected by request validation.
 - `maximum_allowed_loss_pct` must be between `0.0` and `1.0`.
 - Component buckets absent from `exposures[]` are rejected.
 - Component weights that do not reconcile to exposure bucket weights within `0.000001` are rejected.

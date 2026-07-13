@@ -51,10 +51,12 @@ Important posture limits:
 2. regime scenario-pack evaluation is stateless and consumes caller-supplied exposure weights
    against risk-owned CIO scenario definitions; optional `exposure_components` produce
    source-owned per-security scenario contribution rows that reconcile to the bucket exposures,
-   but the workflow does not forecast markets or accept UI-owned scenario methodology,
+   and both bucket allocations and contribution rows are bounded before calculation, but the
+   workflow does not forecast markets or accept UI-owned scenario methodology,
 3. risk-event affected-cohort evaluation is stateless and consumes caller-supplied candidate
    portfolios and source-supplied exposure weights against risk-owned event definitions; it does
-   not create rebalance waves or own campaign approval workflow,
+   not create rebalance waves or own campaign approval workflow, and candidate portfolios plus
+   exposure buckets are bounded before cohort materialization,
 4. mandate risk health context is stateless and returns source-owned tracking-error posture for
    downstream manage consumption; it does not create actions, rebalance waves, orders, execution,
    or client communications,

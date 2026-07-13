@@ -11,6 +11,8 @@ from app.contracts.scenario import (
     ScenarioSupportabilityState,
 )
 from app.contracts.scenario_inputs import (
+    SCENARIO_MAX_EXPOSURE_BUCKETS,
+    SCENARIO_MAX_EXPOSURE_COMPONENTS,
     RegimeScenarioPackRequest as RegimeScenarioPackRequestSource,
 )
 from app.contracts.scenario_outputs import (
@@ -37,6 +39,13 @@ def _request(**overrides: object) -> RegimeScenarioPackRequest:
     }
     payload.update(overrides)
     return RegimeScenarioPackRequest.model_validate(payload)
+
+
+def _full_allocation_rows(count: int, *, prefix: str = "BUCKET") -> list[dict[str, object]]:
+    weight = round(1.0 / count, 6)
+    rows = [{"bucket": f"{prefix}_{index}", "weight": weight} for index in range(count - 1)]
+    rows.append({"bucket": f"{prefix}_{count - 1}", "weight": round(1.0 - weight * (count - 1), 6)})
+    return rows
 
 
 def test_scenario_contract_module_preserves_public_import_surface() -> None:
@@ -129,6 +138,88 @@ def test_regime_scenario_pack_evaluation_rejects_unreconciled_security_component
                     "weight": 0.10,
                 }
             ]
+        )
+
+
+def test_regime_scenario_pack_rejects_underallocated_exposure_weights() -> None:
+    with pytest.raises(ValueError, match="exposures weights must sum to 1.0"):
+        _request(exposures=[{"bucket": "EQUITY", "weight": 0.55}])
+
+
+def test_regime_scenario_pack_rejects_overallocated_exposure_weights() -> None:
+    with pytest.raises(ValueError, match="less than or equal to 1"):
+        _request(
+            exposures=[
+                {"bucket": "EQUITY", "weight": 1.05},
+                {"bucket": "CASH", "weight": 0.05},
+            ]
+        )
+
+
+def test_regime_scenario_pack_rejects_duplicate_exposure_buckets() -> None:
+    with pytest.raises(ValueError, match="unique scenario buckets"):
+        _request(
+            exposures=[
+                {"bucket": "EQUITY", "weight": 0.60},
+                {"bucket": "equity", "weight": 0.40},
+            ]
+        )
+
+
+def test_regime_scenario_pack_accepts_near_limit_exposure_bucket_count() -> None:
+    request = _request(exposures=_full_allocation_rows(SCENARIO_MAX_EXPOSURE_BUCKETS))
+
+    assert len(request.exposures) == SCENARIO_MAX_EXPOSURE_BUCKETS
+
+
+def test_regime_scenario_pack_rejects_exposure_bucket_count_over_limit() -> None:
+    with pytest.raises(ValueError, match=f"at most {SCENARIO_MAX_EXPOSURE_BUCKETS}"):
+        _request(exposures=_full_allocation_rows(SCENARIO_MAX_EXPOSURE_BUCKETS + 1))
+
+
+def test_regime_scenario_pack_accepts_near_limit_component_count() -> None:
+    component_weight = round(1.0 / SCENARIO_MAX_EXPOSURE_COMPONENTS, 6)
+    components = [
+        {
+            "security_id": f"SEC_{index}",
+            "bucket": "EQUITY",
+            "weight": component_weight,
+        }
+        for index in range(SCENARIO_MAX_EXPOSURE_COMPONENTS - 1)
+    ]
+    components.append(
+        {
+            "security_id": f"SEC_{SCENARIO_MAX_EXPOSURE_COMPONENTS - 1}",
+            "bucket": "EQUITY",
+            "weight": round(
+                1.0 - component_weight * (SCENARIO_MAX_EXPOSURE_COMPONENTS - 1),
+                6,
+            ),
+        }
+    )
+
+    request = _request(
+        exposures=[{"bucket": "EQUITY", "weight": 1.0}],
+        exposure_components=components,
+    )
+
+    assert len(request.exposure_components) == SCENARIO_MAX_EXPOSURE_COMPONENTS
+
+
+def test_regime_scenario_pack_rejects_component_count_over_limit() -> None:
+    components = [
+        {
+            "security_id": f"SEC_{index}",
+            "bucket": "EQUITY",
+            "weight": 0.0,
+        }
+        for index in range(SCENARIO_MAX_EXPOSURE_COMPONENTS + 1)
+    ]
+
+    with pytest.raises(ValueError, match=f"at most {SCENARIO_MAX_EXPOSURE_COMPONENTS}"):
+        _request(
+            exposures=[{"bucket": "EQUITY", "weight": 1.0}],
+            exposure_components=components,
         )
 
 

@@ -8,6 +8,8 @@ from app.contracts.risk_event_cohort import (
     RiskEventCohortSupportabilityState,
 )
 from app.contracts.risk_event_cohort_inputs import (
+    RISK_EVENT_MAX_CANDIDATE_PORTFOLIOS,
+    RISK_EVENT_MAX_EXPOSURE_BUCKETS_PER_PORTFOLIO,
     RiskEventAffectedCohortRequest as RiskEventAffectedCohortRequestImplementation,
 )
 from app.contracts.risk_event_cohort_response import (
@@ -45,6 +47,25 @@ def _request(**overrides: object) -> RiskEventAffectedCohortRequest:
     }
     payload.update(overrides)
     return RiskEventAffectedCohortRequest.model_validate(payload)
+
+
+def _portfolio(
+    index: int, *, exposure_weights: dict[str, float] | None = None
+) -> dict[str, object]:
+    return {
+        "portfolio_id": f"PB_SG_TEST_{index:03d}",
+        "mandate_id": f"MANDATE-PB-SG-TEST-{index:03d}",
+        "portfolio_manager_id": "pm-singapore-01",
+        "exposure_weights": exposure_weights
+        or {"EQUITY": 0.55, "FIXED_INCOME": 0.35, "CASH": 0.10},
+    }
+
+
+def _full_allocation_weights(count: int) -> dict[str, float]:
+    weight = round(1.0 / count, 6)
+    weights = {f"BUCKET_{index}": weight for index in range(count - 1)}
+    weights[f"BUCKET_{count - 1}"] = round(1.0 - weight * (count - 1), 6)
+    return weights
 
 
 def test_risk_event_cohort_contract_module_preserves_public_import_surface() -> None:
@@ -100,6 +121,67 @@ def test_risk_event_affected_cohort_degrades_unsupported_exposure_bucket() -> No
     ]
     assert "RISK_EVENT_NO_AFFECTED_PORTFOLIOS" in response.reason_codes
     assert "RISK_EVENT_PARTIAL_UNSUPPORTED_EXPOSURE_BUCKETS" in response.reason_codes
+
+
+def test_risk_event_cohort_rejects_underallocated_exposure_weights() -> None:
+    with pytest.raises(ValueError, match="exposure_weights must sum to 1.0"):
+        _request(portfolios=[_portfolio(1, exposure_weights={"EQUITY": 0.55})])
+
+
+def test_risk_event_cohort_rejects_overallocated_exposure_weights() -> None:
+    with pytest.raises(ValueError, match="less than or equal to 1.0"):
+        _request(portfolios=[_portfolio(1, exposure_weights={"EQUITY": 1.05})])
+
+
+def test_risk_event_cohort_accepts_near_limit_candidate_portfolio_count() -> None:
+    request = _request(
+        portfolios=[_portfolio(index) for index in range(RISK_EVENT_MAX_CANDIDATE_PORTFOLIOS)]
+    )
+
+    assert len(request.portfolios) == RISK_EVENT_MAX_CANDIDATE_PORTFOLIOS
+
+
+def test_risk_event_cohort_rejects_candidate_portfolio_count_over_limit() -> None:
+    with pytest.raises(ValueError, match=f"at most {RISK_EVENT_MAX_CANDIDATE_PORTFOLIOS}"):
+        _request(
+            portfolios=[
+                _portfolio(index) for index in range(RISK_EVENT_MAX_CANDIDATE_PORTFOLIOS + 1)
+            ]
+        )
+
+
+def test_risk_event_cohort_accepts_near_limit_bucket_count_per_portfolio() -> None:
+    request = _request(
+        portfolios=[
+            _portfolio(
+                1,
+                exposure_weights=_full_allocation_weights(
+                    RISK_EVENT_MAX_EXPOSURE_BUCKETS_PER_PORTFOLIO
+                ),
+            )
+        ]
+    )
+
+    assert (
+        len(request.portfolios[0].exposure_weights) == RISK_EVENT_MAX_EXPOSURE_BUCKETS_PER_PORTFOLIO
+    )
+
+
+def test_risk_event_cohort_rejects_bucket_count_over_limit_per_portfolio() -> None:
+    with pytest.raises(
+        ValueError,
+        match=f"at most {RISK_EVENT_MAX_EXPOSURE_BUCKETS_PER_PORTFOLIO}",
+    ):
+        _request(
+            portfolios=[
+                _portfolio(
+                    1,
+                    exposure_weights=_full_allocation_weights(
+                        RISK_EVENT_MAX_EXPOSURE_BUCKETS_PER_PORTFOLIO + 1
+                    ),
+                )
+            ]
+        )
 
 
 def test_risk_event_affected_cohort_rejects_unknown_event() -> None:
