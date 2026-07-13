@@ -78,7 +78,7 @@ ci-local: lint check-deps
 	$(MAKE) typecheck
 
 ci-local-docker:
-	docker compose -f docker-compose.ci-local.yml up --build --abort-on-container-exit --exit-code-from ci-local ci-local
+	docker compose -f docker-compose.ci-local.yml up --build --force-recreate --remove-orphans --abort-on-container-exit --exit-code-from ci-local ci-local
 
 ci-local-docker-down:
 	docker compose -f docker-compose.ci-local.yml down -v --remove-orphans

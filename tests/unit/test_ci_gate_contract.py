@@ -72,6 +72,7 @@ def test_ci_local_docker_target_points_to_existing_compose_lane() -> None:
     dockerfile = CI_LOCAL_DOCKERFILE.read_text(encoding="utf-8")
 
     assert "docker-compose.ci-local.yml" in makefile
+    assert "--force-recreate --remove-orphans" in makefile
     assert "ci-local:" in compose
     assert "dockerfile: Dockerfile.ci-local" in compose
     assert "command: make ci-local" in compose
