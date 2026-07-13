@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from scripts.validate_image_supply_chain import (
+    FORBIDDEN_RUNTIME_DEV_DEPENDENCIES,
     validate_ci_image_release_workflow,
     validate_dockerfile,
     validate_image_supply_chain,
@@ -47,6 +48,88 @@ def test_image_supply_chain_gate_rejects_secret_build_args(tmp_path: Path) -> No
     issues = validate_dockerfile(dockerfile)
 
     assert any("DEPLOY_TOKEN" in issue for issue in issues)
+
+
+def test_dockerfile_uses_runtime_dependencies_without_dev_extra() -> None:
+    dockerfile = Path("Dockerfile").read_text(encoding="utf-8")
+
+    assert 'pip install --no-cache-dir -e "."' in dockerfile
+    assert ".[dev]" not in dockerfile
+    assert "importlib.util.find_spec" in dockerfile
+    for package in FORBIDDEN_RUNTIME_DEV_DEPENDENCIES:
+        assert package in dockerfile
+
+
+def test_image_supply_chain_gate_rejects_runtime_dev_extra_install(tmp_path: Path) -> None:
+    dockerfile = tmp_path / "Dockerfile"
+    dockerfile.write_text(
+        "\n".join(
+            [
+                "FROM python:3.12-slim",
+                "ARG LOTUS_GIT_COMMIT_SHA=unknown",
+                "ARG LOTUS_GIT_BRANCH=unknown",
+                "ARG LOTUS_SERVICE_VERSION=0.1.0",
+                "ARG LOTUS_BUILD_TIMESTAMP=unknown",
+                "ARG LOTUS_REPO_URL=unknown",
+                "ARG LOTUS_IMAGE_DIGEST=unknown",
+                "ARG LOTUS_CI_PIPELINE_RUN_ID=unknown",
+                "LABEL org.opencontainers.image.revision=x",
+                "LABEL org.opencontainers.image.ref.name=x",
+                "LABEL org.opencontainers.image.version=x",
+                "LABEL org.opencontainers.image.created=x",
+                "LABEL org.opencontainers.image.source=x",
+                "LABEL org.opencontainers.image.digest=x",
+                "LABEL com.lotus.git.branch=x",
+                "LABEL com.lotus.ci.pipeline-run-id=x",
+                "ENV LOTUS_GIT_COMMIT_SHA=x LOTUS_GIT_BRANCH=x LOTUS_SERVICE_VERSION=x",
+                "ENV LOTUS_BUILD_TIMESTAMP=x LOTUS_REPO_URL=x LOTUS_IMAGE_DIGEST=x",
+                "ENV LOTUS_CI_PIPELINE_RUN_ID=x",
+                'RUN pip install --no-cache-dir -e ".[dev]"',
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    issues = validate_dockerfile(dockerfile)
+
+    assert "Dockerfile runtime image must not install the project dev extra" in issues
+
+
+def test_image_supply_chain_gate_rejects_missing_runtime_dev_tool_guard(
+    tmp_path: Path,
+) -> None:
+    dockerfile = tmp_path / "Dockerfile"
+    dockerfile.write_text(
+        "\n".join(
+            [
+                "FROM python:3.12-slim",
+                "ARG LOTUS_GIT_COMMIT_SHA=unknown",
+                "ARG LOTUS_GIT_BRANCH=unknown",
+                "ARG LOTUS_SERVICE_VERSION=0.1.0",
+                "ARG LOTUS_BUILD_TIMESTAMP=unknown",
+                "ARG LOTUS_REPO_URL=unknown",
+                "ARG LOTUS_IMAGE_DIGEST=unknown",
+                "ARG LOTUS_CI_PIPELINE_RUN_ID=unknown",
+                "LABEL org.opencontainers.image.revision=x",
+                "LABEL org.opencontainers.image.ref.name=x",
+                "LABEL org.opencontainers.image.version=x",
+                "LABEL org.opencontainers.image.created=x",
+                "LABEL org.opencontainers.image.source=x",
+                "LABEL org.opencontainers.image.digest=x",
+                "LABEL com.lotus.git.branch=x",
+                "LABEL com.lotus.ci.pipeline-run-id=x",
+                "ENV LOTUS_GIT_COMMIT_SHA=x LOTUS_GIT_BRANCH=x LOTUS_SERVICE_VERSION=x",
+                "ENV LOTUS_BUILD_TIMESTAMP=x LOTUS_REPO_URL=x LOTUS_IMAGE_DIGEST=x",
+                "ENV LOTUS_CI_PIPELINE_RUN_ID=x",
+                'RUN pip install --no-cache-dir -e "."',
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    issues = validate_dockerfile(dockerfile)
+
+    assert "Dockerfile missing runtime dev-tool dependency guard" in issues
 
 
 def test_image_supply_chain_gate_rejects_tag_based_kubernetes_images(

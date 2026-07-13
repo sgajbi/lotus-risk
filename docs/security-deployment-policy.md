@@ -162,7 +162,9 @@ The governed release image policy is:
 
 `make image-supply-chain-gate` is the repository-native guard for these requirements. It validates
 required Docker metadata, blocks image push outside the image-release workflow, rejects mutable
-Kubernetes image references, and rejects secret-like Docker build argument or environment names.
+Kubernetes image references, rejects secret-like Docker build argument or environment names, rejects
+runtime installation of the project `dev` extra, and verifies that pytest, ruff, mypy, bandit,
+deptry, radon, vulture, and pre-commit are absent from the deployable runtime image.
 
 ## Evidence Commands
 

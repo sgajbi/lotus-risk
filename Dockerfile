@@ -29,7 +29,8 @@ WORKDIR /app
 COPY pyproject.toml README.md ./
 COPY src ./src
 COPY scripts ./scripts
-RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -e ".[dev]"
+RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -e "."
+RUN python -c "import importlib.util, sys; forbidden=('pytest','ruff','mypy','bandit','deptry','radon','vulture','pre_commit'); present=[name for name in forbidden if importlib.util.find_spec(name) is not None]; sys.exit('Runtime image contains dev tooling: '+', '.join(present)) if present else print('runtime dependency guard passed')"
 
 EXPOSE 8130
 CMD ["uvicorn", "src.app.main:app", "--host", "0.0.0.0", "--port", "8130"]
