@@ -40,6 +40,17 @@ SENSITIVE_BUILD_NAME_PARTS = (
     "CREDENTIAL",
 )
 
+FORBIDDEN_RUNTIME_DEV_DEPENDENCIES = (
+    "pytest",
+    "ruff",
+    "mypy",
+    "bandit",
+    "deptry",
+    "radon",
+    "vulture",
+    "pre_commit",
+)
+
 IGNORED_REPOSITORY_SCAN_DIRS = {
     ".git",
     ".lotus-platform",
@@ -93,6 +104,15 @@ def validate_dockerfile(dockerfile_path: Path = DOCKERFILE) -> list[str]:
     for name in _declared_docker_args_and_envs(text):
         if any(part in name.upper() for part in SENSITIVE_BUILD_NAME_PARTS):
             issues.append(f"Dockerfile ARG/ENV must not expose build secret name {name}")
+
+    if '".[dev]"' in text or "'.[dev]'" in text or ".[dev]" in text:
+        issues.append("Dockerfile runtime image must not install the project dev extra")
+
+    if "importlib.util.find_spec" not in text:
+        issues.append("Dockerfile missing runtime dev-tool dependency guard")
+    for package in FORBIDDEN_RUNTIME_DEV_DEPENDENCIES:
+        if package not in text:
+            issues.append(f"Dockerfile runtime dev-tool guard missing {package}")
 
     return issues
 
