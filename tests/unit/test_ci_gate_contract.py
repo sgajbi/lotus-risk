@@ -40,6 +40,17 @@ def test_make_ci_is_pr_grade_local_gate() -> None:
     assert PR_GRADE_TARGETS <= _make_target_dependencies("ci")
 
 
+def test_migration_targets_enforce_active_no_schema_contract() -> None:
+    makefile = MAKEFILE.read_text(encoding="utf-8")
+
+    assert "migration-smoke:\n\tpython scripts/migration_contract_check.py --mode no-schema" in makefile
+    assert "migration-apply:\n\tpython scripts/migration_contract_check.py --mode no-schema" in makefile
+    assert "MIGRATION_SMOKE_TESTS" not in makefile
+    assert "Skipping migration smoke tests" not in makefile
+    assert "postgres_migrate.py" not in makefile
+    assert "--target dpm" not in makefile
+
+
 def test_ci_local_is_documented_as_partial_split_suite_loop() -> None:
     makefile = MAKEFILE.read_text(encoding="utf-8")
 

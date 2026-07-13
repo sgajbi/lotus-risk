@@ -145,7 +145,9 @@ Canonical direct local upstream URLs for live characterization and operator chec
 - `make test-e2e` - e2e suite
 - `make domain-data-product-gate` - repo-native domain data product validation
 - `make mesh-contract-validate` - domain product, trust telemetry, and observability contract validation
-- `make migration-apply` - governed migration contract check
+- `make migration-smoke` - CI migration smoke proof for the active no-schema contract
+- `make migration-apply` - governed no-schema migration contract validation; this service has no
+  persistent DPM schema to apply
 - `make image-supply-chain-gate` - image metadata, CI-only push, SBOM/signing/provenance, digest deployment, and no-secret ARG/ENV guard
 - `make docker-build` - Docker build validation with OCI provenance labels
 
