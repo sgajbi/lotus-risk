@@ -27,6 +27,8 @@ Use a small, truthful backend loop:
 - `make install`
 - `make check`
 - `make ci`
+- `make ci-local`
+- `make ci-local-docker`
 - `make test-unit`
 - `make test-integration`
 - `make test-e2e`
@@ -39,6 +41,10 @@ Use a small, truthful backend loop:
 
 `make migration-smoke` and `make migration-apply` both validate the governed no-schema migration
 contract. `lotus-risk` currently has no persistent DPM schema or Postgres migration to apply.
+
+`make ci-local-docker` runs the split-suite `ci-local` coverage loop in an isolated container. Use
+it when a shared developer Python environment is polluted by other editable Lotus applications; use
+`make ci` for PR-grade local evidence.
 
 `make docker-build` passes Git commit SHA, branch/ref, service version, build timestamp, repository
 URL, image digest field, and CI pipeline/run ID into OCI labels and runtime environment metadata
