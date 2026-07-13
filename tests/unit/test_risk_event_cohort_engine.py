@@ -97,6 +97,15 @@ def test_risk_event_affected_cohort_returns_source_owned_membership() -> None:
     assert [excluded.portfolio_id for excluded in response.excluded_portfolios] == [
         "PB_SG_LOW_RISK_002"
     ]
+    excluded = response.excluded_portfolios[0]
+    assert excluded.mandate_id == "MANDATE-PB-SG-LOW-RISK-002"
+    assert excluded.portfolio_manager_id == "pm-singapore-01"
+    assert excluded.dominant_bucket == "FIXED_INCOME"
+    assert excluded.bucket_impacts == {"FIXED_INCOME": -0.015, "CASH": 0.0}
+    assert excluded.source_ref == (
+        "risk-event-cohort:RISK_EVENT_2026_Q2_RATES_UP:2026-05-10:PB_SG_LOW_RISK_002"
+    )
+    assert excluded.reason_codes == ["RISK_EVENT_BELOW_THRESHOLD"]
 
 
 def test_risk_event_affected_cohort_degrades_unsupported_exposure_bucket() -> None:
@@ -116,9 +125,13 @@ def test_risk_event_affected_cohort_degrades_unsupported_exposure_bucket() -> No
         == RiskEventCohortSupportabilityState.PENDING_REVIEW
     )
     assert response.affected_portfolios == []
-    assert response.excluded_portfolios[0].reason_codes == [
-        "RISK_EVENT_UNSUPPORTED_EXPOSURE_BUCKET"
-    ]
+    excluded = response.excluded_portfolios[0]
+    assert excluded.reason_codes == ["RISK_EVENT_UNSUPPORTED_EXPOSURE_BUCKET"]
+    assert excluded.source_ref == (
+        "risk-event-cohort:RISK_EVENT_2026_Q2_RATES_UP:2026-05-10:PB_SG_PRIVATE_MARKETS_003"
+    )
+    assert excluded.dominant_bucket == "PRIVATE_CREDIT"
+    assert excluded.bucket_impacts == {"PRIVATE_CREDIT": 0.0}
     assert "RISK_EVENT_NO_AFFECTED_PORTFOLIOS" in response.reason_codes
     assert "RISK_EVENT_PARTIAL_UNSUPPORTED_EXPOSURE_BUCKETS" in response.reason_codes
 

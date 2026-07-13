@@ -113,6 +113,22 @@ Downstream consumers must preserve these response metadata fields for audit and 
 Product panels may choose not to display every field by default, but gateway and product models must
 not drop them if the response is persisted, summarized, or passed to another service.
 
+### 6. Preserve Risk-Event Cohort Evidence
+
+`RiskEventAffectedCohort:v1` returns source-owned affected and excluded candidate rows. Downstream
+surfaces must preserve these fields for both row types when present:
+
+- `source_ref`
+- `impact_score`
+- `dominant_bucket`
+- `bucket_impacts`
+- `mandate_id`
+- `portfolio_manager_id`
+- `reason_codes`
+
+Excluded rows are part of the source-owned cohort evidence. Consumers must not discard exclusion
+lineage or reconstruct risk-event membership locally.
+
 ## Gateway Mapping Requirements
 
 Gateway mappings must:

@@ -107,7 +107,7 @@ def _risk_event_cohort_membership(
         if _is_affected(evaluation, minimum_impact_score=request.minimum_impact_score):
             affected.append(_affected_portfolio(request=request, evaluation=evaluation))
             continue
-        excluded.append(_excluded_portfolio(evaluation))
+        excluded.append(_excluded_portfolio(request=request, evaluation=evaluation))
     return _RiskEventCohortMembership(affected=affected, excluded=excluded)
 
 
@@ -171,14 +171,26 @@ def _affected_portfolio(
 
 
 def _excluded_portfolio(
+    *,
+    request: RiskEventAffectedCohortRequest,
     evaluation: _PortfolioRiskEventEvaluation,
 ) -> RiskEventExcludedPortfolio:
+    portfolio = evaluation.portfolio
     reason_codes = ["RISK_EVENT_BELOW_THRESHOLD"]
     if evaluation.unsupported_buckets:
         reason_codes = ["RISK_EVENT_UNSUPPORTED_EXPOSURE_BUCKET"]
     return RiskEventExcludedPortfolio(
-        portfolio_id=evaluation.portfolio.portfolio_id,
+        portfolio_id=portfolio.portfolio_id,
+        mandate_id=portfolio.mandate_id,
+        portfolio_manager_id=portfolio.portfolio_manager_id,
         impact_score=evaluation.impact_score,
+        dominant_bucket=evaluation.dominant_bucket,
+        bucket_impacts=evaluation.bucket_impacts,
+        source_ref=(
+            "risk-event-cohort:"
+            f"{request.risk_event_id}:{request.as_of_date.isoformat()}:"
+            f"{portfolio.portfolio_id}"
+        ),
         reason_codes=reason_codes,
     )
 

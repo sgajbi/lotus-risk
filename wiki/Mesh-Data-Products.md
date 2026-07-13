@@ -176,7 +176,8 @@ Audience notes:
   review, but it must keep live risk-source proof, data-mesh certification, and supported-feature
   promotion separately gated.
 - Developers and downstream services must preserve `RiskEventAffectedCohort:v1` membership,
-  exclusions, source refs, and impact scores rather than reconstructing risk-event cohort
+  exclusions, source refs, mandate and portfolio-manager routing context when supplied, dominant
+  buckets, bucket impacts, and impact scores rather than reconstructing risk-event cohort
   membership locally. Candidate cohorts are bounded to 250 portfolios, each candidate allocation is
   bounded to 16 exposure buckets, and every candidate allocation must sum to 1.0 before cohort
   scoring starts.
