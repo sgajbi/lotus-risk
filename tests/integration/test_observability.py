@@ -34,6 +34,64 @@ class _ObservedRouteResponse(BaseModel):
     status: str
 
 
+def _mandate_health_payload() -> dict[str, object]:
+    return {
+        "portfolio_id": "PB_SG_GLOBAL_BAL_001",
+        "scope": {
+            "as_of_date": "2026-02-27",
+            "reporting_currency": "USD",
+            "net_or_gross": "NET",
+        },
+        "period": {"type": "YTD", "name": "YTD"},
+        "portfolio_open_date": "2024-01-01",
+        "returns": [
+            {"date": "2026-01-02", "value": 0.25},
+            {"date": "2026-01-03", "value": -0.10},
+            {"date": "2026-01-04", "value": 0.40},
+        ],
+        "benchmark_returns": [
+            {"date": "2026-01-02", "value": 0.10},
+            {"date": "2026-01-03", "value": 0.05},
+            {"date": "2026-01-04", "value": 0.12},
+        ],
+        "tracking_error_attention_threshold": "0.01",
+    }
+
+
+def _regime_scenario_payload() -> dict[str, object]:
+    return {
+        "scenario_pack_id": "CIO_REGIME_2026_Q2",
+        "portfolio_id": "PB_SG_GLOBAL_BAL_001",
+        "as_of_date": "2026-05-03",
+        "maximum_allowed_loss_pct": 0.12,
+        "exposures": [
+            {"bucket": "EQUITY", "weight": 0.55},
+            {"bucket": "FIXED_INCOME", "weight": 0.35},
+            {"bucket": "CASH", "weight": 0.10},
+        ],
+    }
+
+
+def _risk_event_cohort_payload() -> dict[str, object]:
+    return {
+        "risk_event_id": "RISK_EVENT_2026_Q2_RATES_UP",
+        "as_of_date": "2026-05-10",
+        "minimum_impact_score": 0.05,
+        "portfolios": [
+            {
+                "portfolio_id": "PB_SG_GLOBAL_BAL_001",
+                "mandate_id": "MANDATE-PB-SG-GLOBAL-BAL-001",
+                "portfolio_manager_id": "pm-singapore-01",
+                "exposure_weights": {
+                    "EQUITY": 0.55,
+                    "FIXED_INCOME": 0.35,
+                    "CASH": 0.10,
+                },
+            }
+        ],
+    }
+
+
 def _endpoint_execution_metric_value(
     *,
     endpoint: str,
@@ -135,6 +193,61 @@ def test_supportability_metrics_use_only_bounded_labels() -> None:
     for forbidden_label in FORBIDDEN_SUPPORTABILITY_METRIC_LABELS:
         assert f"{forbidden_label}=" not in supportability_line
         assert f"{forbidden_label}=" not in freshness_line
+
+
+def test_source_product_endpoints_emit_supportability_metrics_without_sensitive_labels() -> None:
+    calls = [
+        (
+            "/analytics/risk/mandate-health-context",
+            _mandate_health_payload(),
+            "mandate-risk-health-context",
+            "attention",
+            "source_product_attention",
+        ),
+        (
+            "/analytics/risk/regime-scenario-pack/evaluate",
+            _regime_scenario_payload(),
+            "regime-scenario-pack",
+            "ready",
+            "calculation_complete",
+        ),
+        (
+            "/analytics/risk/risk-event-cohorts/evaluate",
+            _risk_event_cohort_payload(),
+            "risk-event-cohort",
+            "ready",
+            "calculation_complete",
+        ),
+    ]
+
+    for path, payload, _, _, _ in calls:
+        response = client.post(path, json=payload)
+        assert response.status_code == 200
+
+    metrics = generate_latest(REGISTRY).decode("utf-8")
+    for _, _, operation, state, reason in calls:
+        supportability_lines = [
+            line
+            for line in metrics.splitlines()
+            if line.startswith("lotus_risk_calculation_supportability_total{")
+            and f'operation="{operation}"' in line
+            and f'supportability_state="{state}"' in line
+            and f'reason="{reason}"' in line
+            and 'freshness_bucket="unknown"' in line
+        ]
+        freshness_lines = [
+            line
+            for line in metrics.splitlines()
+            if line.startswith("lotus_analytics_freshness_bucket_total{")
+            and f'operation="{operation}"' in line
+            and f'supportability_state="{state}"' in line
+            and 'freshness_bucket="unknown"' in line
+        ]
+        assert supportability_lines
+        assert freshness_lines
+        for forbidden_label in FORBIDDEN_SUPPORTABILITY_METRIC_LABELS:
+            assert f"{forbidden_label}=" not in supportability_lines[-1]
+            assert f"{forbidden_label}=" not in freshness_lines[-1]
 
 
 def test_metrics_expose_stateful_endpoint_execution_mode() -> None:

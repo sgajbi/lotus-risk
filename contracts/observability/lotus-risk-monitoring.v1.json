@@ -51,9 +51,78 @@
       "source": "app.observability.record_endpoint_execution"
     },
     {
+      "name": "lotus_risk_endpoint_execution_seconds",
+      "type": "histogram",
+      "description": "Measures endpoint execution duration by endpoint, input mode, and final response-contract outcome.",
+      "labels": {
+        "endpoint": [
+          "risk/calculate",
+          "drawdown",
+          "rolling-metrics",
+          "historical-attribution",
+          "concentration",
+          "mandate-risk-health-context",
+          "regime-scenario-pack",
+          "risk-event-cohort",
+          "unknown"
+        ],
+        "input_mode": [
+          "stateless",
+          "stateful",
+          "simulation",
+          "unknown"
+        ],
+        "outcome": [
+          "success",
+          "failure"
+        ]
+      },
+      "source": "app.observability.record_endpoint_execution"
+    },
+    {
       "name": "lotus_risk_upstream_requests_total",
       "type": "counter",
       "description": "Counts upstream dependency request outcomes by dependency, operation, outcome, and category.",
+      "labels": {
+        "dependency": [
+          "lotus-core",
+          "lotus-performance"
+        ],
+        "operation": [
+          "/simulation-sessions",
+          "/simulation-sessions/{session_id}/changes",
+          "/integration/portfolios/{portfolio_id}/core-snapshot",
+          "/integration/instruments/enrichment-bulk",
+          "/integration/portfolios/{portfolio_id}/analytics/position-timeseries",
+          "/integration/reference/risk-free-series",
+          "/integration/reference/risk-free-series/coverage",
+          "/integration/returns/series",
+          "/integration/returns/series/status/{calculation_id}",
+          "/integration/returns/series/results/{calculation_id}",
+          "/integration/benchmarks/exposure-context",
+          "unknown"
+        ],
+        "outcome": [
+          "success",
+          "failure"
+        ],
+        "category": [
+          "ok",
+          "invalid_response",
+          "data_gap",
+          "throttled",
+          "upstream_failure",
+          "rejected_request",
+          "timeout",
+          "transport"
+        ]
+      },
+      "source": "app.observability.record_upstream_request"
+    },
+    {
+      "name": "lotus_risk_upstream_request_seconds",
+      "type": "histogram",
+      "description": "Measures upstream dependency request duration by dependency, operation, outcome, and category.",
       "labels": {
         "dependency": [
           "lotus-core",
@@ -113,7 +182,11 @@
           "empty",
           "error",
           "permission_blocked",
-          "unsupported"
+          "unsupported",
+          "attention",
+          "unavailable",
+          "pending_review",
+          "blocked"
         ],
         "reason": [
           "calculation_complete",
@@ -125,6 +198,11 @@
           "permission_blocked",
           "stale_source_observations",
           "unsupported_input_mode",
+          "source_product_attention",
+          "source_product_unavailable",
+          "source_product_degraded",
+          "source_product_pending_review",
+          "source_product_blocked",
           "unknown"
         ],
         "freshness_bucket": [
@@ -168,7 +246,11 @@
           "empty",
           "error",
           "permission_blocked",
-          "unsupported"
+          "unsupported",
+          "attention",
+          "unavailable",
+          "pending_review",
+          "blocked"
         ]
       },
       "source": "app.observability.record_analytics_freshness_bucket"
@@ -231,6 +313,20 @@
           "metric": "lotus_risk_upstream_requests_total",
           "query": "sum by (dependency, outcome, category) (rate(lotus_risk_upstream_requests_total[5m]))",
           "use_when": "Detect upstream dependency instability before it flows into degraded risk supportability."
+        },
+        {
+          "panel_id": "risk-endpoint-latency",
+          "title": "Risk Endpoint Latency",
+          "metric": "lotus_risk_endpoint_execution_seconds",
+          "query": "histogram_quantile(0.95, sum by (endpoint, input_mode, le) (rate(lotus_risk_endpoint_execution_seconds_bucket[5m])))",
+          "use_when": "Monitor endpoint latency trends by bounded endpoint and input mode; no alert threshold is declared until production telemetry establishes an SLO baseline."
+        },
+        {
+          "panel_id": "risk-upstream-latency",
+          "title": "Upstream Dependency Latency",
+          "metric": "lotus_risk_upstream_request_seconds",
+          "query": "histogram_quantile(0.95, sum by (dependency, operation, le) (rate(lotus_risk_upstream_request_seconds_bucket[5m])))",
+          "use_when": "Monitor upstream latency trends by bounded dependency and operation; no alert threshold is declared until production telemetry establishes an SLO baseline."
         },
         {
           "panel_id": "risk-calculation-supportability",
