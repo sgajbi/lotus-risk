@@ -32,9 +32,13 @@ Use a small, truthful backend loop:
 - `make test-e2e`
 - `make mesh-contract-validate`
 - `make openapi-gate`
+- `make migration-smoke`
 - `make migration-apply`
 - `make image-supply-chain-gate`
 - `make docker-build`
+
+`make migration-smoke` and `make migration-apply` both validate the governed no-schema migration
+contract. `lotus-risk` currently has no persistent DPM schema or Postgres migration to apply.
 
 `make docker-build` passes Git commit SHA, branch/ref, service version, build timestamp, repository
 URL, image digest field, and CI pipeline/run ID into OCI labels and runtime environment metadata

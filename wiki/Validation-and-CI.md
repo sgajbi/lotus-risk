@@ -35,7 +35,9 @@ The repo-native commands are designed to map to those lanes directly.
 - `make test-unit` - unit suite
 - `make test-integration` - integration suite
 - `make test-e2e` - e2e suite
-- `make migration-apply` - migration contract check
+- `make migration-smoke` - CI migration smoke proof for the active no-schema contract
+- `make migration-apply` - governed no-schema migration contract validation; this service has no
+  persistent DPM schema to apply
 - `make docker-build` - Docker build validation
 
 ## What `make check` Protects
@@ -56,7 +58,7 @@ The repo-native commands are designed to map to those lanes directly.
 
 `make ci` is the local PR-grade gate. It adds:
 
-1. migration smoke,
+1. no-schema migration contract smoke,
 2. test-pyramid validation,
 3. security audit,
 4. split unit, integration, and e2e suites,

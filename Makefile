@@ -103,17 +103,11 @@ no-alias-gate:
 api-vocabulary-gate:
 	python scripts/api_vocabulary_inventory.py --validate-only
 
-MIGRATION_SMOKE_TESTS := $(wildcard tests/unit/shared/dependencies/test_postgres_migrations.py tests/unit/shared/dependencies/test_production_cutover_contract.py)
-
 migration-smoke:
-	@if [ -n "$(MIGRATION_SMOKE_TESTS)" ]; then \
-		python -m pytest $(MIGRATION_SMOKE_TESTS) -q; \
-	else \
-		echo "Skipping migration smoke tests: legacy migration smoke test files are not present."; \
-	fi
+	python scripts/migration_contract_check.py --mode no-schema
 
 migration-apply:
-	python scripts/postgres_migrate.py --target dpm
+	python scripts/migration_contract_check.py --mode no-schema
 
 lint:
 	python -m ruff check .
