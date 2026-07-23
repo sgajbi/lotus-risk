@@ -51,6 +51,7 @@ def _build_stateful_source_request(
         metric_basis=stateful.net_or_gross,
         reporting_currency=stateful.reporting_currency,
         include_benchmark=stateful.benchmark_policy.include_benchmark,
+        benchmark_id=stateful.benchmark_id,
         include_risk_free=False,
         missing_data_policy=(
             "FAIL_FAST"

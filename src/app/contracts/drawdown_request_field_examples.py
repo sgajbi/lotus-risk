@@ -24,6 +24,7 @@ DRAWDOWN_STATELESS_INPUT_EXAMPLE: dict[str, Any] = {
 DRAWDOWN_STATEFUL_INPUT_EXAMPLE: dict[str, Any] = {
     "portfolio_id": "PB_SG_GLOBAL_BAL_001",
     "as_of_date": "2026-03-31",
+    "benchmark_id": "BMK_PB_GLOBAL_BALANCED_60_40",
     "reporting_currency": "USD",
     "periods": [{"type": "YTD", "name": "YTD"}],
     "benchmark_policy": {

@@ -17,6 +17,7 @@ def _stateful() -> DrawdownStatefulInput:
         {
             "portfolio_id": "DEMO_DPM_EUR_001",
             "as_of_date": "2026-01-08",
+            "benchmark_id": "BMK_PB_GLOBAL_BALANCED_60_40",
             "periods": [{"type": "YTD", "name": "YTD"}],
             "benchmark_policy": {"include_benchmark": True, "missing_benchmark_policy": "REQUIRE"},
         }
@@ -49,6 +50,10 @@ def test_drawdown_stateful_adapter_happy_path() -> None:
     assert client.request_payload is not None
     assert client.request_payload["input_mode"] == "stateful"
     assert client.request_payload["stateful_input"] == {}
+    assert client.request_payload["benchmark"] == {
+        "benchmark_id": "BMK_PB_GLOBAL_BALANCED_60_40",
+        "return_source": "calculated",
+    }
     assert client.request_payload["window"] == {
         "mode": "EXPLICIT",
         "from_date": "2026-01-01",

@@ -218,6 +218,7 @@ def _drawdown_payload(as_of_date: date) -> dict[str, Any]:
         "stateful_input": {
             "portfolio_id": CANONICAL_PORTFOLIO_ID,
             "as_of_date": as_of_date.isoformat(),
+            "benchmark_id": CANONICAL_BENCHMARK_ID,
             "periods": [{"type": "YTD", "name": "YTD"}],
             "benchmark_policy": {
                 "include_benchmark": True,

@@ -29,6 +29,9 @@
 - Status: implemented
 - Behavior:
   - caller provides identifiers and period config
+  - caller provides `stateful_input.benchmark_id` when
+    `stateful_input.benchmark_policy.include_benchmark=true`; relying on an upstream default
+    benchmark is not a governed proof for benchmark-relative drawdown
   - lotus-risk sources canonical return series from lotus-performance (`/integration/returns/series`, `input_mode=stateful`, `stateful_input is an empty envelope; consumer identity is stamped by lotus-performance server-side`)
   - lotus-risk computes drawdown analytics on sourced series
 
@@ -45,6 +48,9 @@
 - `benchmark_policy`
   - top-level for stateless requests
   - nested under `stateful_input.benchmark_policy` for stateful requests
+- `stateful_input.benchmark_id`
+  - explicit benchmark identifier for benchmark-relative stateful drawdown; use
+    `BMK_PB_GLOBAL_BALANCED_60_40` for the governed RFC-0076 canonical front-office proof
 - `analysis_options`
   - `include_underwater_series`
   - `include_episode_list`
