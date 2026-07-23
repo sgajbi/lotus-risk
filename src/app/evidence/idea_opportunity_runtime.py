@@ -41,6 +41,16 @@ REMAINING_CERTIFICATION_BLOCKERS: Final = (
     "deployment_certification_missing",
     "production_certification_missing",
 )
+EXPECTED_NON_PROOF_CLAIMS: Final = {
+    "officialRiskCalculationOwned": "lotus-risk",
+    "ideaCandidatePersistenceObserved": False,
+    "dataMeshRuntimeCertified": False,
+    "gatewayWorkbenchRuntimeObserved": False,
+    "clientPublicationApproved": False,
+    "deploymentCertified": False,
+    "productionCertified": False,
+    "supportedFeaturePromoted": False,
+}
 
 ExecutionCallable = Callable[[str, Mapping[str, Any]], tuple[int, Mapping[str, Any]]]
 
@@ -67,6 +77,8 @@ def build_idea_opportunity_runtime_evidence(
     portfolio_id: str = CANONICAL_PORTFOLIO_ID,
     as_of_date: date = CANONICAL_AS_OF_DATE,
 ) -> dict[str, Any]:
+    if portfolio_id != CANONICAL_PORTFOLIO_ID:
+        raise ValueError("Idea opportunity runtime evidence is only valid for PB_SG_GLOBAL_BAL_001")
     generated_at = format_utc(generated_at_utc)
     portfolio_digest = identity_hash(portfolio_id)
     executions = [
@@ -117,16 +129,7 @@ def build_idea_opportunity_runtime_evidence(
         "executions": executions,
         "consumerBlockersSatisfied": list(CONSUMER_BLOCKERS_SATISFIED),
         "remainingCertificationBlockers": list(REMAINING_CERTIFICATION_BLOCKERS),
-        "nonProofClaims": {
-            "officialRiskCalculationOwned": "lotus-risk",
-            "ideaCandidatePersistenceObserved": False,
-            "dataMeshRuntimeCertified": False,
-            "gatewayWorkbenchRuntimeObserved": False,
-            "clientPublicationApproved": False,
-            "deploymentCertified": False,
-            "productionCertified": False,
-            "supportedFeaturePromoted": False,
-        },
+        "nonProofClaims": dict(EXPECTED_NON_PROOF_CLAIMS),
     }
     payload["evidenceDigest"] = sha256_json(
         {k: v for k, v in payload.items() if k != "evidenceDigest"}
@@ -369,7 +372,7 @@ def _portfolio_binding_is_valid(value: Any) -> bool:
     return (
         isinstance(value, Mapping)
         and value.get("canonicalPortfolioRef") == CANONICAL_PORTFOLIO_REF
-        and _is_sha256(value.get("portfolioIdentityDigest"))
+        and value.get("portfolioIdentityDigest") == identity_hash(CANONICAL_PORTFOLIO_ID)
         and value.get("rawPortfolioIdIncluded") is False
     )
 
@@ -377,10 +380,7 @@ def _portfolio_binding_is_valid(value: Any) -> bool:
 def _claims_are_valid(value: Any) -> bool:
     if not isinstance(value, Mapping):
         return False
-    owner = value.get("officialRiskCalculationOwned")
-    return owner == "lotus-risk" and all(
-        claim is False for key, claim in value.items() if key != "officialRiskCalculationOwned"
-    )
+    return dict(value) == EXPECTED_NON_PROOF_CLAIMS
 
 
 def _execution_is_valid(value: Any) -> bool:
