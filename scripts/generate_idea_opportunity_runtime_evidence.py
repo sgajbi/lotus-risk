@@ -9,7 +9,15 @@ from typing import Any
 
 import httpx
 
-from app.evidence.idea_opportunity_runtime import (
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+try:
+    from scripts._repo_imports import force_repo_src_first  # noqa: E402
+except ModuleNotFoundError:  # pragma: no cover - direct script execution path
+    from _repo_imports import force_repo_src_first  # type: ignore[import-not-found,no-redef]  # noqa: E402
+
+force_repo_src_first(PROJECT_ROOT)
+
+from app.evidence.idea_opportunity_runtime import (  # noqa: E402
     build_idea_opportunity_runtime_evidence,
     idea_opportunity_runtime_evidence_is_valid,
 )

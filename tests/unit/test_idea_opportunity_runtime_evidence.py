@@ -167,6 +167,21 @@ def test_idea_opportunity_runtime_evidence_rejects_request_payload_digest_drift(
     assert idea_opportunity_runtime_evidence_is_valid(forged) is False
 
 
+def test_idea_opportunity_runtime_evidence_rejects_empty_runtime_summaries() -> None:
+    payload = _payload()
+
+    for index in range(3):
+        forged = deepcopy(payload)
+        forged["executions"][index]["receipt"]["summary"] = {}
+        forged["executions"][index]["receipt"]["normalizedResponseDigest"] = _summary_digest(
+            forged, index
+        )
+        forged["executions"][index]["receiptDigest"] = _receipt_digest(forged, index)
+        forged["evidenceDigest"] = _recompute_digest(forged)
+
+        assert idea_opportunity_runtime_evidence_is_valid(forged) is False
+
+
 def test_idea_opportunity_runtime_evidence_rejects_failed_runtime_execution() -> None:
     def failing_execute(route: str, payload: Mapping[str, Any]) -> tuple[int, Mapping[str, Any]]:
         return 503, {"metadata": {"calculation_supportability": {"state": "unavailable"}}}
@@ -289,10 +304,24 @@ def test_idea_opportunity_runtime_evidence_cli_rejects_noncanonical_as_of_date(
         )
 
 
+def test_idea_opportunity_runtime_evidence_script_bootstraps_repo_src_before_app_import() -> None:
+    source = Path(generate_idea_opportunity_runtime_evidence.__file__).read_text(encoding="utf-8")
+
+    assert source.index("force_repo_src_first(PROJECT_ROOT)") < source.index(
+        "from app.evidence.idea_opportunity_runtime import"
+    )
+
+
 def _receipt_digest(payload: dict[str, Any], index: int) -> str:
     from app.evidence.idea_opportunity_runtime import sha256_json
 
     return sha256_json(payload["executions"][index]["receipt"])
+
+
+def _summary_digest(payload: dict[str, Any], index: int) -> str:
+    from app.evidence.idea_opportunity_runtime import sha256_json
+
+    return sha256_json(payload["executions"][index]["receipt"]["summary"])
 
 
 def _recompute_digest(payload: dict[str, Any]) -> str:

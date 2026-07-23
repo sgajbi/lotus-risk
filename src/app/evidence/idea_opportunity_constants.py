@@ -29,6 +29,31 @@ EXPECTED_EXECUTIONS: Final = {
         "/analytics/risk/drawdown",
     ),
 }
+EXPECTED_SUMMARY_KEYS: Final = {
+    "concentration_risk": (
+        "positionHhiCurrent",
+        "positionHhiProposed",
+        "issuerHhiCurrent",
+        "issuerHhiProposed",
+        "topIssuerWeightCurrent",
+        "coverageStatus",
+        "coverageRatioCurrent",
+    ),
+    "high_volatility": (
+        "periodName",
+        "volatilityPercent",
+        "maxDrawdownPercent",
+        "varPercent",
+        "trackingErrorPercent",
+    ),
+    "drawdown_review": (
+        "periodName",
+        "maxDrawdown",
+        "timeUnderWaterDays",
+        "ulcerIndex",
+        "episodeCount",
+    ),
+}
 REMAINING_CERTIFICATION_BLOCKERS: Final = (
     "opportunity_archetype_data_mesh_not_certified",
     "opportunity_archetype_workbench_product_proof_missing",
