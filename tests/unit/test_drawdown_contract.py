@@ -125,6 +125,7 @@ def test_drawdown_contract_accepts_stateful_payload() -> None:
     )
     assert request.input_mode == DrawdownInputMode.STATEFUL
     assert request.stateful_input is not None
+    assert request.stateful_input.benchmark_id is None
     assert request.analysis_options.top_n_episodes == 3
 
 

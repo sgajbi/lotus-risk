@@ -79,6 +79,7 @@ def test_drawdown_endpoint_stateful_uses_lotus_performance() -> None:
                 "stateful_input": {
                     "portfolio_id": "DEMO_DPM_EUR_001",
                     "as_of_date": "2026-01-06",
+                    "benchmark_id": "BMK_PB_GLOBAL_BALANCED_60_40",
                     "periods": [{"type": "YTD", "name": "YTD"}],
                     "benchmark_policy": {
                         "include_benchmark": True,
@@ -95,6 +96,10 @@ def test_drawdown_endpoint_stateful_uses_lotus_performance() -> None:
     assert isinstance(payload, dict)
     assert payload["input_mode"] == "stateful"
     assert payload["stateful_input"] == {}
+    assert payload["benchmark"] == {
+        "benchmark_id": "BMK_PB_GLOBAL_BALANCED_60_40",
+        "return_source": "calculated",
+    }
     assert payload["series_selection"]["include_benchmark"] is True
     body = response.json()
     assert body["input_mode"] == "stateful"

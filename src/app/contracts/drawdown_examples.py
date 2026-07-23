@@ -39,6 +39,7 @@ DRAWDOWN_REQUEST_EXAMPLES: list[dict[str, object]] = [
         "stateful_input": {
             "portfolio_id": "PB_SG_GLOBAL_BAL_001",
             "as_of_date": "2026-03-31",
+            "benchmark_id": "BMK_PB_GLOBAL_BALANCED_60_40",
             "reporting_currency": "USD",
             "periods": [{"type": "YTD", "name": "YTD"}],
             "benchmark_policy": {

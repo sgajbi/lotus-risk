@@ -26,6 +26,14 @@ class DrawdownStatefulInput(BaseModel):
         description="Optional client identifier used for upstream data access controls.",
         json_schema_extra={"example": "CLIENT_1000123"},
     )
+    benchmark_id: str | None = Field(
+        default=None,
+        description=(
+            "Optional benchmark identifier used when benchmark-relative drawdown is requested. "
+            "Set this with benchmark_policy.include_benchmark=true to avoid default benchmark drift."
+        ),
+        json_schema_extra={"example": "BMK_PB_GLOBAL_BALANCED_60_40"},
+    )
     reporting_currency: str | None = Field(
         default=None,
         description="Optional reporting currency override.",

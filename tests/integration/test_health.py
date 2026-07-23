@@ -840,6 +840,10 @@ def test_drawdown_openapi_examples_are_present_and_canonical() -> None:
         ]
         is True
     )
+    assert (
+        drawdown_schema["properties"]["stateful_input"]["example"]["benchmark_id"]
+        == "BMK_PB_GLOBAL_BALANCED_60_40"
+    )
     assert drawdown_schema["examples"][0]["benchmark_policy"]["missing_benchmark_policy"] == (
         "REQUIRE"
     )

@@ -146,6 +146,7 @@ def test_idea_opportunity_runtime_evidence_uses_stateful_canonical_requests() ->
     drawdown_request = dict(seen[2][1])
     drawdown_stateful_input = drawdown_request["stateful_input"]
     assert "benchmark_policy" not in drawdown_request
+    assert drawdown_stateful_input["benchmark_id"] == "BMK_PB_GLOBAL_BALANCED_60_40"
     assert drawdown_stateful_input["benchmark_policy"] == {
         "include_benchmark": True,
         "missing_benchmark_policy": "REQUIRE",
