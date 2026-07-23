@@ -142,6 +142,14 @@ def test_idea_opportunity_runtime_evidence_uses_stateful_canonical_requests() ->
         assert stateful_input["portfolio_id"] == "PB_SG_GLOBAL_BAL_001"
         assert stateful_input["as_of_date"] == CANONICAL_AS_OF_DATE.isoformat()
 
+    drawdown_request = dict(seen[2][1])
+    drawdown_stateful_input = drawdown_request["stateful_input"]
+    assert "benchmark_policy" not in drawdown_request
+    assert drawdown_stateful_input["benchmark_policy"] == {
+        "include_benchmark": True,
+        "missing_benchmark_policy": "REQUIRE",
+    }
+
 
 def test_idea_opportunity_runtime_evidence_is_source_safe() -> None:
     serialized = json.dumps(_payload(), sort_keys=True)
