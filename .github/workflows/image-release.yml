@@ -138,7 +138,7 @@ jobs:
           PY
 
       - name: Upload image release evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: lotus-risk-image-release-${{ github.sha }}
           path: output/image-release/
