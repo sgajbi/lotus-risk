@@ -35,7 +35,7 @@ jobs:
       - name: Generate quality baseline
         run: make quality-baseline
       - name: Upload quality reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: lotus-risk-quality-baseline
           path: quality/

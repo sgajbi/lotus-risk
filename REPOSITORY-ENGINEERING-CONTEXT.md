@@ -339,11 +339,15 @@ Important validation expectations:
    test-pyramid, coverage, security, and Docker evidence; `ci-local` is only a split-suite coverage
    loop without Docker, while `ci-local-docker` runs that split-suite loop in an isolated container
    when the developer Python environment is polluted by other editable Lotus apps.
-7. Release image posture is governed by `make image-supply-chain-gate`: images are pushed only by
+7. GitHub Actions artifact dependencies are governed by `make github-actions-runtime-gate`, which
+   fails if artifact upload/download actions drift below the Node 24 runtime majors required for
+   current CI dependency posture (`actions/upload-artifact@v6`, `actions/download-artifact@v7`).
+   Do not downgrade these to Node 20-era majors to clear a transient workflow issue.
+8. Release image posture is governed by `make image-supply-chain-gate`: images are pushed only by
    `.github/workflows/image-release.yml`, tagged by Git SHA, labeled with source/build/version/CI
    metadata, scanned, signed, attested, accompanied by SBOM and release-manifest evidence, and
    promoted by digest rather than environment-specific rebuilds.
-8. When a PR branch is refreshed, verify both the remote branch SHA and the PR-reported head SHA
+9. When a PR branch is refreshed, verify both the remote branch SHA and the PR-reported head SHA
    before trusting branch protection state. RFC-0002 PR #212 exposed stale `pull_request` check
    contexts after branch pushes and close/reopen refreshes; if `git ls-remote --heads origin
    <branch>` and `gh pr view --json headRefOid,statusCheckRollup` disagree, file or update the
