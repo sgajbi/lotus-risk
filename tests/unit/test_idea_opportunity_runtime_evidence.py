@@ -311,6 +311,15 @@ def test_idea_opportunity_runtime_evidence_rejects_forged_bounded_summary_values
     assert idea_opportunity_runtime_evidence_is_valid(forged_drawdown) is False
 
 
+def test_idea_opportunity_runtime_evidence_rejects_non_finite_summary_values() -> None:
+    payload = _payload()
+    forged = deepcopy(payload)
+    forged["executions"][1]["receipt"]["summary"]["volatilityPercent"] = float("nan")
+    _recompute_execution_and_evidence_digests(forged, 1)
+
+    assert idea_opportunity_runtime_evidence_is_valid(forged) is False
+
+
 def test_idea_opportunity_runtime_evidence_rejects_failed_runtime_execution() -> None:
     def failing_execute(route: str, payload: Mapping[str, Any]) -> tuple[int, Mapping[str, Any]]:
         return 503, {"metadata": {"calculation_supportability": {"state": "unavailable"}}}
