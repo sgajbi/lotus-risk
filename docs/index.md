@@ -10,7 +10,7 @@ to implementation-backed `lotus-risk` documentation.
 | Agents | `README.md`, `REPOSITORY-ENGINEERING-CONTEXT.md`, this index | `docs/documentation-gap-ledger.md`, `docs/domain-apis/endpoint-matrix.md`, `docs/rfcs/README.md` |
 | Developers | `docs/architecture.md`, `docs/operations/development-workflow-and-ci-strategy.md` | `Makefile`, `tests/`, `scripts/`, `docs/configuration.md` |
 | BAs and product | `docs/supported-features.md`, `docs/domain-apis/endpoint-matrix.md` | `docs/domain-apis/integration-capabilities.md`, `wiki/Overview.md`, `wiki/Roadmap.md` |
-| Ops and support | `docs/runbooks/service-operations.md`, `wiki/Operations-Runbook.md` | `docs/observability.md`, `docs/security-deployment-policy.md`, `docs/operations/live-risk-validation-matrix.md` |
+| Ops and support | `docs/runbooks/service-operations.md`, `wiki/Operations-Runbook.md` | `docs/observability.md`, `docs/security-deployment-policy.md`, `docs/operations/live-risk-validation-matrix.md`, `docs/operations/idea-opportunity-runtime-evidence.md` |
 | Sales and marketing | `wiki/Overview.md`, `docs/supported-features.md` | `wiki/Roadmap.md`, `docs/rfcs/RFC-0008-enterprise-bank-readiness-and-live-risk-validation-baseline.md` |
 | Business users | `wiki/Overview.md`, `wiki/Supported-Features.md` | `docs/domain-apis/risk-product-surface-alignment.md`, `wiki/Integrations.md` |
 
@@ -46,7 +46,7 @@ Use code and executable checks when documentation is uncertain:
 | Runtime configuration | `docs/configuration.md`, `.env.example`, `src/app/integrations/downstream_profile_env.py`, configuration tests |
 | Observability or supportability | `src/app/observability.py`, `contracts/observability/`, `docs/observability.md`, `docs/runbooks/service-operations.md` |
 | Security posture | `src/app/enterprise_readiness.py`, `docs/security-deployment-policy.md`, `docs/security.md`, security tests |
-| Business/product support claims | `docs/supported-features.md`, `docs/domain-apis/endpoint-matrix.md`, `wiki/Supported-Features.md`, capability tests |
+| Business/product support claims | `docs/supported-features.md`, `docs/domain-apis/endpoint-matrix.md`, `wiki/Supported-Features.md`, `docs/operations/idea-opportunity-runtime-evidence.md`, capability tests |
 | Wiki truth | `wiki/`, then `../lotus-platform/automation/Sync-RepoWikis.ps1 -CheckOnly -Repository lotus-risk` |
 
 ## Validation Entry Points
