@@ -14,6 +14,7 @@ from app.evidence.idea_opportunity_constants import (
     EXPECTED_EXECUTIONS,
     EXPECTED_NON_PROOF_CLAIMS,
     EXPECTED_RECEIPT_KEYS,
+    EXPECTED_SUMMARY_KEYS,
     PROOF_FAMILY,
     REMAINING_CERTIFICATION_BLOCKERS,
     RUNTIME_BOUNDARY,
@@ -361,6 +362,7 @@ def _execution_is_valid(value: Any) -> bool:
     receipt = value.get("receipt")
     if not isinstance(receipt, Mapping):
         return False
+    summary = receipt.get("summary")
     return (
         set(receipt) == EXPECTED_RECEIPT_KEYS
         and receipt.get("statusCode") == 200
@@ -371,8 +373,20 @@ def _execution_is_valid(value: Any) -> bool:
         and receipt.get("portfolioIdentityDigest") == identity_hash(CANONICAL_PORTFOLIO_ID)
         and receipt.get("requestPayloadDigest") == _expected_request_payload_digest(value)
         and _is_sha256(receipt.get("normalizedResponseDigest"))
-        and receipt.get("normalizedResponseDigest") == sha256_json(receipt.get("summary"))
+        and _summary_is_valid(str(value.get("proofName")), summary)
+        and receipt.get("normalizedResponseDigest") == sha256_json(summary)
         and value.get("receiptDigest") == sha256_json(receipt)
+    )
+
+
+def _summary_is_valid(proof_name: str, summary: Any) -> bool:
+    if not isinstance(summary, Mapping):
+        return False
+    required_keys = EXPECTED_SUMMARY_KEYS.get(proof_name)
+    if required_keys is None:
+        return False
+    return set(summary) == set(required_keys) and all(
+        summary.get(key) is not None for key in required_keys
     )
 
 
