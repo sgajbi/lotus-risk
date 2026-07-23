@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
+from copy import deepcopy
 from datetime import UTC, date, datetime
 import hashlib
 import json
@@ -9,6 +10,7 @@ from typing import Any
 from app.evidence.idea_opportunity_constants import (
     CANONICAL_AS_OF_DATE,
     CANONICAL_BENCHMARK_ID,
+    CANONICAL_CONTRACT_PROVENANCE,
     CANONICAL_PORTFOLIO_ID,
     CANONICAL_PORTFOLIO_REF,
     CONSUMER_BLOCKERS_SATISFIED,
@@ -100,6 +102,7 @@ def build_idea_opportunity_runtime_evidence(
             "portfolioIdentityDigest": portfolio_digest,
             "rawPortfolioIdIncluded": False,
         },
+        "contractProvenance": deepcopy(CANONICAL_CONTRACT_PROVENANCE),
         "executions": executions,
         "consumerBlockersSatisfied": list(CONSUMER_BLOCKERS_SATISFIED),
         "remainingCertificationBlockers": list(REMAINING_CERTIFICATION_BLOCKERS),
@@ -121,6 +124,7 @@ def idea_opportunity_runtime_evidence_is_valid(payload: Mapping[str, Any]) -> bo
         "sourceAuthority",
         "generatedAtUtc",
         "portfolioBinding",
+        "contractProvenance",
         "executions",
         "consumerBlockersSatisfied",
         "remainingCertificationBlockers",
@@ -143,6 +147,8 @@ def idea_opportunity_runtime_evidence_is_valid(payload: Mapping[str, Any]) -> bo
     if _parse_utc(payload.get("generatedAtUtc")) is None:
         return False
     if not _portfolio_binding_is_valid(payload.get("portfolioBinding")):
+        return False
+    if payload.get("contractProvenance") != CANONICAL_CONTRACT_PROVENANCE:
         return False
     if tuple(payload.get("consumerBlockersSatisfied") or ()) != CONSUMER_BLOCKERS_SATISFIED:
         return False
