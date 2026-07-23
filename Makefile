@@ -1,4 +1,4 @@
-.PHONY: architecture-gate complexity-gate source-size-gate dead-code-gate dependency-hygiene-gate install install-ci check check-all test test-unit test-integration test-e2e test-all test-coverage test-fast test-all-fast test-all-no-cov test-all-parallel ci ci-local ci-local-docker ci-local-docker-down typecheck typecheck-tests-critical lint monetary-float-guard domain-product-validate domain-data-product-gate trust-telemetry-validate observability-contract-validate mesh-contract-validate image-supply-chain-gate no-alias-gate openapi-gate openapi-artifact-gate api-vocabulary-gate format clean run check-deps security-audit migration-smoke migration-apply pre-commit docker-build docker-up docker-down test-pyramid-gate quality-baseline
+.PHONY: architecture-gate complexity-gate source-size-gate dead-code-gate dependency-hygiene-gate install install-ci check check-all test test-unit test-integration test-e2e test-all test-coverage test-fast test-all-fast test-all-no-cov test-all-parallel ci ci-local ci-local-docker ci-local-docker-down typecheck typecheck-tests-critical lint monetary-float-guard domain-product-validate domain-data-product-gate trust-telemetry-validate observability-contract-validate mesh-contract-validate idea-opportunity-evidence-gate idea-opportunity-runtime-evidence image-supply-chain-gate no-alias-gate openapi-gate openapi-artifact-gate api-vocabulary-gate format clean run check-deps security-audit migration-smoke migration-apply pre-commit docker-build docker-up docker-down test-pyramid-gate quality-baseline
 
 COVERAGE_FAIL_UNDER ?= 98
 SOURCE_FILE_MAX_LINES ?= 450
@@ -9,6 +9,9 @@ BUILD_TIMESTAMP ?= $(shell python -c "from datetime import datetime, timezone; p
 REPO_URL ?= $(if $(GITHUB_REPOSITORY),$(GITHUB_SERVER_URL)/$(GITHUB_REPOSITORY),$(shell git config --get remote.origin.url 2>/dev/null || echo unknown))
 IMAGE_DIGEST ?= $(if $(LOTUS_IMAGE_DIGEST),$(LOTUS_IMAGE_DIGEST),unavailable-before-publish)
 CI_PIPELINE_RUN_ID ?= $(if $(GITHUB_RUN_ID),$(GITHUB_RUN_ID),local)
+IDEA_OPPORTUNITY_RISK_BASE_URL ?= http://localhost:8130
+IDEA_OPPORTUNITY_GENERATED_AT_UTC ?= $(BUILD_TIMESTAMP)
+IDEA_OPPORTUNITY_EVIDENCE_OUTPUT ?= output/idea-opportunity-runtime-evidence/idea-risk-runtime-evidence.json
 
 install:
 	python -m pip install --upgrade pip
@@ -145,6 +148,15 @@ observability-contract-validate:
 	python scripts/validate_observability_contracts.py
 
 mesh-contract-validate: domain-product-validate trust-telemetry-validate observability-contract-validate
+
+idea-opportunity-evidence-gate:
+	python -m pytest tests/unit/test_idea_opportunity_runtime_evidence.py -q
+
+idea-opportunity-runtime-evidence:
+	python scripts/generate_idea_opportunity_runtime_evidence.py \
+		--risk-base-url "$(IDEA_OPPORTUNITY_RISK_BASE_URL)" \
+		--generated-at-utc "$(IDEA_OPPORTUNITY_GENERATED_AT_UTC)" \
+		--output "$(IDEA_OPPORTUNITY_EVIDENCE_OUTPUT)"
 
 image-supply-chain-gate:
 	python scripts/validate_image_supply_chain.py
