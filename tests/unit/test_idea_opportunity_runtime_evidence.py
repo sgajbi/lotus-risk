@@ -16,6 +16,7 @@ from app.evidence.idea_opportunity_runtime import (
     SCHEMA_VERSION,
     build_idea_opportunity_runtime_evidence,
     idea_opportunity_runtime_evidence_is_valid,
+    identity_hash,
 )
 from app.main import app
 from scripts import generate_idea_opportunity_runtime_evidence
@@ -73,6 +74,22 @@ def test_idea_opportunity_runtime_evidence_keeps_non_proof_boundaries() -> None:
     assert claims["supportedFeaturePromoted"] is False
 
 
+def test_idea_opportunity_runtime_evidence_rejects_noncanonical_portfolio_proof() -> None:
+    with pytest.raises(ValueError, match="PB_SG_GLOBAL_BAL_001"):
+        build_idea_opportunity_runtime_evidence(
+            execute=_execute,
+            generated_at_utc=GENERATED_AT,
+            portfolio_id="PB_SG_OTHER_001",
+        )
+
+    payload = _payload()
+    forged = deepcopy(payload)
+    forged["portfolioBinding"]["portfolioIdentityDigest"] = identity_hash("PB_SG_OTHER_001")
+    forged["evidenceDigest"] = _recompute_digest(forged)
+
+    assert idea_opportunity_runtime_evidence_is_valid(forged) is False
+
+
 def test_idea_opportunity_runtime_evidence_rejects_inflated_unknown_or_static_claims() -> None:
     payload = _payload()
     inflated = deepcopy(payload)
@@ -88,6 +105,11 @@ def test_idea_opportunity_runtime_evidence_rejects_inflated_unknown_or_static_cl
     supported_feature_claim["nonProofClaims"]["supportedFeaturePromoted"] = True
     supported_feature_claim["evidenceDigest"] = _recompute_digest(supported_feature_claim)
     assert idea_opportunity_runtime_evidence_is_valid(supported_feature_claim) is False
+
+    missing_non_proof_claim = deepcopy(payload)
+    del missing_non_proof_claim["nonProofClaims"]["gatewayWorkbenchRuntimeObserved"]
+    missing_non_proof_claim["evidenceDigest"] = _recompute_digest(missing_non_proof_claim)
+    assert idea_opportunity_runtime_evidence_is_valid(missing_non_proof_claim) is False
 
 
 def test_idea_opportunity_runtime_evidence_rejects_product_route_and_digest_drift() -> None:
@@ -162,6 +184,38 @@ def test_idea_opportunity_runtime_evidence_cli_writes_valid_artifact(
     payload = json.loads(output.read_text(encoding="utf-8"))
     assert result == 0
     assert idea_opportunity_runtime_evidence_is_valid(payload) is True
+
+
+def test_idea_opportunity_runtime_evidence_cli_rejects_noncanonical_portfolio(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class _Client:
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            pass
+
+        def __enter__(self) -> "_Client":
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            return None
+
+    output = tmp_path / "idea-risk-runtime-evidence.json"
+    monkeypatch.setattr("scripts.generate_idea_opportunity_runtime_evidence.httpx.Client", _Client)
+
+    with pytest.raises(ValueError, match="PB_SG_GLOBAL_BAL_001"):
+        generate_idea_opportunity_runtime_evidence.main(
+            [
+                "--risk-base-url",
+                "http://risk.test",
+                "--portfolio-id",
+                "PB_SG_OTHER_001",
+                "--generated-at-utc",
+                "2026-07-23T06:30:00Z",
+                "--output",
+                str(output),
+            ]
+        )
 
 
 def _receipt_digest(payload: dict[str, Any], index: int) -> str:
