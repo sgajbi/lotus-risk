@@ -126,6 +126,14 @@ Current repository posture:
     risk-owned concentration evidence in opportunity-intelligence workflows without taking over
     concentration methodology, mesh certification, client publication, or supported-feature
     authority.
+16. `lotus-risk.idea-opportunity-runtime-evidence.v1` is a source-safe producer evidence pack for
+    `lotus-idea` RFC-0002 Slice 16/17. It executes the Risk HTTP API for
+    `ConcentrationRiskReport:v1`, `RiskMetricsReport:v1`, and `DrawdownAnalyticsReport:v1`,
+    stores only digests and bounded supportability summaries, and clears only the corresponding
+    Idea Risk source-proof blockers. It does not certify Idea persistence, data mesh,
+    Gateway/Workbench runtime, client publication, deployment, production, or supported-feature
+    promotion. Use `make idea-opportunity-evidence-gate` for the focused contract gate and
+    `make idea-opportunity-runtime-evidence` against a running Risk API to generate the artifact.
 
 ## Architecture And Module Map
 
@@ -299,7 +307,11 @@ Use these commands as the primary local contract:
    `make test-e2e`
 8. validate repo-native domain product declarations
    `make domain-data-product-gate`
-9. remove known local/generated artifacts
+9. validate Idea opportunity producer evidence contract
+   `make idea-opportunity-evidence-gate`
+10. generate Idea opportunity producer runtime evidence against a running API
+    `make idea-opportunity-runtime-evidence`
+11. remove known local/generated artifacts
    `make clean`
 
 ## Validation And CI Expectations
