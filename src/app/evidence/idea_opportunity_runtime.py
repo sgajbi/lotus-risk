@@ -8,18 +8,19 @@ from typing import Any
 
 from app.evidence.idea_opportunity_constants import (
     CANONICAL_AS_OF_DATE,
+    CANONICAL_BENCHMARK_ID,
     CANONICAL_PORTFOLIO_ID,
     CANONICAL_PORTFOLIO_REF,
     CONSUMER_BLOCKERS_SATISFIED,
     EXPECTED_EXECUTIONS,
     EXPECTED_NON_PROOF_CLAIMS,
     EXPECTED_RECEIPT_KEYS,
-    EXPECTED_SUMMARY_KEYS,
     PROOF_FAMILY,
     REMAINING_CERTIFICATION_BLOCKERS,
     RUNTIME_BOUNDARY,
     SCHEMA_VERSION,
 )
+from app.evidence.idea_opportunity_summary_contract import summary_is_valid
 
 ExecutionCallable = Callable[[str, Mapping[str, Any]], tuple[int, Mapping[str, Any]]]
 
@@ -50,7 +51,7 @@ def build_idea_opportunity_runtime_evidence(
         raise ValueError("Idea opportunity runtime evidence is only valid for PB_SG_GLOBAL_BAL_001")
     if as_of_date != CANONICAL_AS_OF_DATE:
         raise ValueError(
-            "Idea opportunity runtime evidence is only valid for as-of date 2026-06-21"
+            "Idea opportunity runtime evidence is only valid for as-of date 2026-04-10"
         )
     generated_at = format_utc(generated_at_utc)
     portfolio_digest = identity_hash(portfolio_id)
@@ -60,7 +61,7 @@ def build_idea_opportunity_runtime_evidence(
             route="/analytics/risk/concentration",
             product_id="lotus-risk:ConcentrationRiskReport:v1",
             proof_name="concentration_risk",
-            request_payload=_concentration_payload(),
+            request_payload=_concentration_payload(as_of_date),
             as_of_date=as_of_date,
             portfolio_digest=portfolio_digest,
             summary_builder=_concentration_summary,
@@ -193,79 +194,55 @@ def _build_execution(
 
 def _risk_metrics_payload(as_of_date: date) -> dict[str, Any]:
     return {
-        "input_mode": "stateless",
-        "stateless_input": {
-            "scope": {"as_of_date": as_of_date.isoformat(), "net_or_gross": "NET"},
-            "portfolio_open_date": "2026-01-01",
+        "input_mode": "stateful",
+        "stateful_input": {
+            "portfolio_id": CANONICAL_PORTFOLIO_ID,
+            "as_of_date": as_of_date.isoformat(),
+            "benchmark_id": CANONICAL_BENCHMARK_ID,
             "periods": [{"type": "YTD", "name": "YTD"}],
             "metrics": ["VOLATILITY", "DRAWDOWN", "VAR", "TRACKING_ERROR"],
             "options": {"frequency": "DAILY", "use_log_returns": False},
-            "returns": _return_points((1.5, -2.8, 1.1, -1.6, 0.4)),
-            "benchmark_returns": _return_points((0.4, -0.5, 0.3, -0.4, 0.1)),
         },
     }
 
 
 def _drawdown_payload(as_of_date: date) -> dict[str, Any]:
     return {
-        "input_mode": "stateless",
-        "stateless_input": {
-            "scope": {"as_of_date": as_of_date.isoformat(), "net_or_gross": "NET"},
+        "input_mode": "stateful",
+        "stateful_input": {
+            "portfolio_id": CANONICAL_PORTFOLIO_ID,
+            "as_of_date": as_of_date.isoformat(),
             "periods": [{"type": "YTD", "name": "YTD"}],
-            "returns": _return_points((1.0, -8.0, -4.0, 2.0, 1.0)),
-            "benchmark_returns": _return_points((0.2, -1.0, -0.5, 0.5, 0.3)),
+            "benchmark_policy": {
+                "include_benchmark": True,
+                "missing_benchmark_policy": "REQUIRE",
+            },
         },
         "analysis_options": {"include_underwater_series": False, "include_episode_list": True},
     }
 
 
-def _concentration_payload() -> dict[str, Any]:
+def _concentration_payload(as_of_date: date) -> dict[str, Any]:
     return {
-        "input_mode": "stateless",
-        "stateless_input": {
-            "current_positions": [
-                {
-                    "security_id": "SOURCE_SAFE_POSITION_1",
-                    "market_value_base": 55,
-                    "issuer_id": "SOURCE_SAFE_ISSUER_A",
-                },
-                {
-                    "security_id": "SOURCE_SAFE_POSITION_2",
-                    "market_value_base": 25,
-                    "issuer_id": "SOURCE_SAFE_ISSUER_A",
-                },
-                {
-                    "security_id": "SOURCE_SAFE_POSITION_3",
-                    "market_value_base": 20,
-                    "issuer_id": "SOURCE_SAFE_ISSUER_B",
-                },
-            ],
-            "projected_positions": [
-                {
-                    "security_id": "SOURCE_SAFE_POSITION_1",
-                    "projected_market_value_base": 45,
-                    "issuer_id": "SOURCE_SAFE_ISSUER_A",
-                },
-                {
-                    "security_id": "SOURCE_SAFE_POSITION_2",
-                    "projected_market_value_base": 20,
-                    "issuer_id": "SOURCE_SAFE_ISSUER_A",
-                },
-                {
-                    "security_id": "SOURCE_SAFE_POSITION_3",
-                    "projected_market_value_base": 35,
-                    "issuer_id": "SOURCE_SAFE_ISSUER_B",
-                },
-            ],
+        "input_mode": "stateful",
+        "stateful_input": {
+            "portfolio_id": CANONICAL_PORTFOLIO_ID,
+            "as_of_date": as_of_date.isoformat(),
             "top_n": 2,
+            "issuer_mappings": [
+                {
+                    "security_id": "SEC_A",
+                    "issuer_id": "SOURCE_SAFE_ISSUER_A",
+                    "ultimate_parent_issuer_id": "SOURCE_SAFE_PARENT_ISSUER_A",
+                },
+                {
+                    "security_id": "SEC_B",
+                    "issuer_id": "SOURCE_SAFE_ISSUER_A",
+                    "ultimate_parent_issuer_id": "SOURCE_SAFE_PARENT_ISSUER_A",
+                },
+            ],
         },
     }
-
-
-def _return_points(values: tuple[float, ...]) -> list[dict[str, Any]]:
-    return [
-        {"date": f"2026-06-{17 + index:02d}", "value": value} for index, value in enumerate(values)
-    ]
 
 
 def _risk_metrics_summary(response: Mapping[str, Any]) -> dict[str, Any]:
@@ -373,27 +350,16 @@ def _execution_is_valid(value: Any) -> bool:
         and receipt.get("portfolioIdentityDigest") == identity_hash(CANONICAL_PORTFOLIO_ID)
         and receipt.get("requestPayloadDigest") == _expected_request_payload_digest(value)
         and _is_sha256(receipt.get("normalizedResponseDigest"))
-        and _summary_is_valid(str(value.get("proofName")), summary)
+        and summary_is_valid(str(value.get("proofName")), summary)
         and receipt.get("normalizedResponseDigest") == sha256_json(summary)
         and value.get("receiptDigest") == sha256_json(receipt)
-    )
-
-
-def _summary_is_valid(proof_name: str, summary: Any) -> bool:
-    if not isinstance(summary, Mapping):
-        return False
-    required_keys = EXPECTED_SUMMARY_KEYS.get(proof_name)
-    if required_keys is None:
-        return False
-    return set(summary) == set(required_keys) and all(
-        summary.get(key) is not None for key in required_keys
     )
 
 
 def _expected_request_payload_digest(value: Mapping[str, Any]) -> str | None:
     proof_name = str(value.get("proofName"))
     if proof_name == "concentration_risk":
-        return sha256_json(_concentration_payload())
+        return sha256_json(_concentration_payload(CANONICAL_AS_OF_DATE))
     if proof_name == "high_volatility":
         return sha256_json(_risk_metrics_payload(CANONICAL_AS_OF_DATE))
     if proof_name == "drawdown_review":

@@ -17,6 +17,7 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution path
 
 force_repo_src_first(PROJECT_ROOT)
 
+from app.evidence.idea_opportunity_constants import CANONICAL_AS_OF_DATE  # noqa: E402
 from app.evidence.idea_opportunity_runtime import (  # noqa: E402
     build_idea_opportunity_runtime_evidence,
     idea_opportunity_runtime_evidence_is_valid,
@@ -29,7 +30,7 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     )
     parser.add_argument("--risk-base-url", default="http://localhost:8130")
     parser.add_argument("--portfolio-id", default="PB_SG_GLOBAL_BAL_001")
-    parser.add_argument("--as-of-date", default="2026-06-21")
+    parser.add_argument("--as-of-date", default=CANONICAL_AS_OF_DATE.isoformat())
     parser.add_argument("--generated-at-utc", required=True)
     parser.add_argument(
         "--output",
