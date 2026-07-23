@@ -12,6 +12,7 @@ import pytest
 
 from app.evidence.idea_opportunity_constants import (
     CANONICAL_AS_OF_DATE,
+    CANONICAL_CONTRACT_PROVENANCE,
     CONSUMER_BLOCKERS_SATISFIED,
     REMAINING_CERTIFICATION_BLOCKERS,
     SCHEMA_VERSION,
@@ -168,6 +169,21 @@ def test_idea_opportunity_runtime_evidence_keeps_non_proof_boundaries() -> None:
     assert claims["ideaCandidatePersistenceObserved"] is False
     assert claims["gatewayWorkbenchRuntimeObserved"] is False
     assert claims["supportedFeaturePromoted"] is False
+
+
+def test_idea_opportunity_runtime_evidence_binds_canonical_contract_provenance() -> None:
+    payload = _payload()
+
+    assert payload["contractProvenance"] == CANONICAL_CONTRACT_PROVENANCE
+
+    forged = deepcopy(payload)
+    forged["contractProvenance"]["canonicalDemoDataContract"]["contentDigest"] = "sha256:forged"
+    forged["evidenceDigest"] = _recompute_digest(forged)
+
+    assert idea_opportunity_runtime_evidence_is_valid(forged) is False
+    assert CANONICAL_CONTRACT_PROVENANCE["canonicalDemoDataContract"]["contentDigest"] != (
+        "sha256:forged"
+    )
 
 
 def test_idea_opportunity_runtime_evidence_rejects_noncanonical_portfolio_proof() -> None:

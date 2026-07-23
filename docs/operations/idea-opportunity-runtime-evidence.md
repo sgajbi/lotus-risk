@@ -8,7 +8,9 @@ opportunity archetype consumption.
 The evidence pack proves three Risk-owned stateful HTTP API executions for the canonical
 opportunity archetype. The governed source identity is portfolio `PB_SG_GLOBAL_BAL_001`, benchmark
 `BMK_PB_GLOBAL_BALANCED_60_40`, and as-of date `2026-04-10`, matching the platform canonical
-front-office demo data contract.
+front-office demo data contract. The artifact also records exact RFC-0076 platform contract
+provenance for the canonical demo-data contract and invariants, including contract id, version,
+source path, governing RFC, and content digest.
 
 1. `ConcentrationRiskReport:v1` through `POST /analytics/risk/concentration`,
 2. `RiskMetricsReport:v1` through `POST /analytics/risk/calculate`,
@@ -21,7 +23,7 @@ does not store the raw canonical portfolio ID, raw holdings, client identity, po
 issuer identifiers, correlation IDs, trace IDs, or raw response payloads. Validation fails closed
 when receipts are not `ready/current`, when request digests do not match the canonical stateful
 payloads, or when summaries are semantically out of bounds even if receipt and evidence digests are
-recomputed.
+recomputed. Validation also fails if the canonical contract provenance is missing or forged.
 
 ## Generate The Artifact
 
