@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from collections.abc import Mapping
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 import json
 from pathlib import Path
 from typing import Any
@@ -85,6 +85,33 @@ def test_idea_opportunity_runtime_evidence_rejects_noncanonical_portfolio_proof(
     payload = _payload()
     forged = deepcopy(payload)
     forged["portfolioBinding"]["portfolioIdentityDigest"] = identity_hash("PB_SG_OTHER_001")
+    forged["evidenceDigest"] = _recompute_digest(forged)
+
+    assert idea_opportunity_runtime_evidence_is_valid(forged) is False
+
+
+def test_idea_opportunity_runtime_evidence_rejects_noncanonical_as_of_date() -> None:
+    with pytest.raises(ValueError, match="2026-06-21"):
+        build_idea_opportunity_runtime_evidence(
+            execute=_execute,
+            generated_at_utc=GENERATED_AT,
+            as_of_date=date(2026, 6, 22),
+        )
+
+    payload = _payload()
+    forged = deepcopy(payload)
+    forged["executions"][0]["receipt"]["asOfDate"] = "2026-06-22"
+    forged["executions"][0]["receiptDigest"] = _receipt_digest(forged, 0)
+    forged["evidenceDigest"] = _recompute_digest(forged)
+
+    assert idea_opportunity_runtime_evidence_is_valid(forged) is False
+
+
+def test_idea_opportunity_runtime_evidence_rejects_receipt_portfolio_digest_drift() -> None:
+    payload = _payload()
+    forged = deepcopy(payload)
+    forged["executions"][0]["receipt"]["portfolioIdentityDigest"] = identity_hash("PB_SG_OTHER_001")
+    forged["executions"][0]["receiptDigest"] = _receipt_digest(forged, 0)
     forged["evidenceDigest"] = _recompute_digest(forged)
 
     assert idea_opportunity_runtime_evidence_is_valid(forged) is False
@@ -210,6 +237,38 @@ def test_idea_opportunity_runtime_evidence_cli_rejects_noncanonical_portfolio(
                 "http://risk.test",
                 "--portfolio-id",
                 "PB_SG_OTHER_001",
+                "--generated-at-utc",
+                "2026-07-23T06:30:00Z",
+                "--output",
+                str(output),
+            ]
+        )
+
+
+def test_idea_opportunity_runtime_evidence_cli_rejects_noncanonical_as_of_date(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class _Client:
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            pass
+
+        def __enter__(self) -> "_Client":
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            return None
+
+    output = tmp_path / "idea-risk-runtime-evidence.json"
+    monkeypatch.setattr("scripts.generate_idea_opportunity_runtime_evidence.httpx.Client", _Client)
+
+    with pytest.raises(ValueError, match="2026-06-21"):
+        generate_idea_opportunity_runtime_evidence.main(
+            [
+                "--risk-base-url",
+                "http://risk.test",
+                "--as-of-date",
+                "2026-06-22",
                 "--generated-at-utc",
                 "2026-07-23T06:30:00Z",
                 "--output",
