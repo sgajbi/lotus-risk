@@ -10,10 +10,12 @@ from typing import Any
 from fastapi.testclient import TestClient
 import pytest
 
-from app.evidence.idea_opportunity_runtime import (
+from app.evidence.idea_opportunity_constants import (
     CONSUMER_BLOCKERS_SATISFIED,
     REMAINING_CERTIFICATION_BLOCKERS,
     SCHEMA_VERSION,
+)
+from app.evidence.idea_opportunity_runtime import (
     build_idea_opportunity_runtime_evidence,
     idea_opportunity_runtime_evidence_is_valid,
     identity_hash,
@@ -153,6 +155,16 @@ def test_idea_opportunity_runtime_evidence_rejects_product_route_and_digest_drif
     forged_summary["executions"][1]["receiptDigest"] = _receipt_digest(forged_summary, 1)
     forged_summary["evidenceDigest"] = _recompute_digest(forged_summary)
     assert idea_opportunity_runtime_evidence_is_valid(forged_summary) is False
+
+
+def test_idea_opportunity_runtime_evidence_rejects_request_payload_digest_drift() -> None:
+    payload = _payload()
+    forged = deepcopy(payload)
+    forged["executions"][1]["receipt"]["requestPayloadDigest"] = identity_hash("forged-request")
+    forged["executions"][1]["receiptDigest"] = _receipt_digest(forged, 1)
+    forged["evidenceDigest"] = _recompute_digest(forged)
+
+    assert idea_opportunity_runtime_evidence_is_valid(forged) is False
 
 
 def test_idea_opportunity_runtime_evidence_rejects_failed_runtime_execution() -> None:
