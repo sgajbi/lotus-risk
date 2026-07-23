@@ -343,6 +343,11 @@ Important validation expectations:
    `.github/workflows/image-release.yml`, tagged by Git SHA, labeled with source/build/version/CI
    metadata, scanned, signed, attested, accompanied by SBOM and release-manifest evidence, and
    promoted by digest rather than environment-specific rebuilds.
+8. When a PR branch is refreshed, verify both the remote branch SHA and the PR-reported head SHA
+   before trusting branch protection state. RFC-0002 PR #212 exposed stale `pull_request` check
+   contexts after branch pushes and close/reopen refreshes; if `git ls-remote --heads origin
+   <branch>` and `gh pr view --json headRefOid,statusCheckRollup` disagree, file or update the
+   durable CI issue and force a clean synchronize event before claiming merge readiness.
 
 ## Standards And RFCs That Govern This Repository
 
