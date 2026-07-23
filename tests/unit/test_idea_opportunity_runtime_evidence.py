@@ -132,13 +132,13 @@ def test_idea_opportunity_runtime_evidence_cli_writes_valid_artifact(
             return self._payload
 
     class _Client:
-        def __init__(self, *args: object, **kwargs: object) -> None:
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
             pass
 
         def __enter__(self) -> "_Client":
             return self
 
-        def __exit__(self, *args: object) -> None:
+        def __exit__(self, *_args: object) -> None:
             return None
 
         def post(self, route: str, json: Mapping[str, Any]) -> _Response:
