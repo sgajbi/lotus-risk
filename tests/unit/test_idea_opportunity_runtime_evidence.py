@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 import pytest
 
 from app.evidence.idea_opportunity_constants import (
+    CANONICAL_AS_OF_DATE,
     CONSUMER_BLOCKERS_SATISFIED,
     REMAINING_CERTIFICATION_BLOCKERS,
     SCHEMA_VERSION,
@@ -22,13 +23,76 @@ from app.evidence.idea_opportunity_runtime import (
 )
 from app.main import app
 from scripts import generate_idea_opportunity_runtime_evidence
+from tests.support.app_runtime import override_app_runtime
+from tests.support.lotus_core_fakes import SimulationLotusCoreClient
+from tests.support.lotus_performance_fakes import RecordingLotusPerformanceClient
+from tests.support.returns_series_payloads import build_returns_series_response
 
 
 GENERATED_AT = datetime(2026, 7, 23, 6, 30, tzinfo=UTC)
+_CANONICAL_RETURN_ROWS = (
+    ("2026-04-06", "0.015"),
+    ("2026-04-07", "-0.028"),
+    ("2026-04-08", "0.011"),
+    ("2026-04-09", "-0.016"),
+    ("2026-04-10", "0.004"),
+)
+_CANONICAL_BENCHMARK_ROWS = (
+    ("2026-04-06", "0.004"),
+    ("2026-04-07", "-0.005"),
+    ("2026-04-08", "0.003"),
+    ("2026-04-09", "-0.004"),
+    ("2026-04-10", "0.001"),
+)
+
+
+class _CanonicalCoreClient(SimulationLotusCoreClient):
+    async def get_core_snapshot(
+        self,
+        *,
+        portfolio_id: str,
+        request_payload: dict[str, object],
+        correlation_id: str | None,
+    ) -> dict[str, object]:
+        snapshot = await super().get_core_snapshot(
+            portfolio_id=portfolio_id,
+            request_payload=request_payload,
+            correlation_id=correlation_id,
+        )
+        sections = snapshot.setdefault("sections", {})
+        assert isinstance(sections, dict)
+        sections["instrument_enrichment"] = [
+            {
+                "security_id": "SEC_A",
+                "issuer_id": "SOURCE_SAFE_ISSUER_A",
+                "ultimate_parent_issuer_id": "SOURCE_SAFE_PARENT_ISSUER_A",
+            },
+            {
+                "security_id": "SEC_B",
+                "issuer_id": "SOURCE_SAFE_ISSUER_A",
+                "ultimate_parent_issuer_id": "SOURCE_SAFE_PARENT_ISSUER_A",
+            },
+        ]
+        return snapshot
 
 
 def _execute(route: str, payload: Mapping[str, Any]) -> tuple[int, Mapping[str, Any]]:
-    response = TestClient(app).post(route, json=payload)
+    performance_client = RecordingLotusPerformanceClient(
+        response_payload=build_returns_series_response(
+            portfolio_returns=_CANONICAL_RETURN_ROWS,
+            benchmark_returns=_CANONICAL_BENCHMARK_ROWS,
+        )
+    )
+    core_client = _CanonicalCoreClient(
+        session_id="SIM_IDEA_EVIDENCE",
+        simulation_version=1,
+        include_ultimate_parent_issuer_id=True,
+    )
+    with override_app_runtime(
+        lotus_performance_client=performance_client,
+        lotus_core_client=core_client,
+    ):
+        response = TestClient(app).post(route, json=payload)
     return response.status_code, response.json()
 
 
@@ -54,7 +118,29 @@ def test_idea_opportunity_runtime_evidence_executes_three_source_products() -> N
     ]
     assert all(item["receipt"]["statusCode"] == 200 for item in payload["executions"])
     assert all(item["receipt"]["supportabilityState"] == "ready" for item in payload["executions"])
+    assert all(item["receipt"]["freshnessBucket"] == "current" for item in payload["executions"])
     assert idea_opportunity_runtime_evidence_is_valid(payload) is True
+
+
+def test_idea_opportunity_runtime_evidence_uses_stateful_canonical_requests() -> None:
+    seen: list[tuple[str, Mapping[str, Any]]] = []
+
+    def recording_execute(route: str, payload: Mapping[str, Any]) -> tuple[int, Mapping[str, Any]]:
+        seen.append((route, payload))
+        return _execute(route, payload)
+
+    payload = build_idea_opportunity_runtime_evidence(
+        execute=recording_execute,
+        generated_at_utc=GENERATED_AT,
+    )
+
+    assert idea_opportunity_runtime_evidence_is_valid(payload) is True
+    assert [request["input_mode"] for _, request in seen] == ["stateful", "stateful", "stateful"]
+    for _, request in seen:
+        stateful_input = request["stateful_input"]
+        assert isinstance(stateful_input, Mapping)
+        assert stateful_input["portfolio_id"] == "PB_SG_GLOBAL_BAL_001"
+        assert stateful_input["as_of_date"] == CANONICAL_AS_OF_DATE.isoformat()
 
 
 def test_idea_opportunity_runtime_evidence_is_source_safe() -> None:
@@ -93,16 +179,16 @@ def test_idea_opportunity_runtime_evidence_rejects_noncanonical_portfolio_proof(
 
 
 def test_idea_opportunity_runtime_evidence_rejects_noncanonical_as_of_date() -> None:
-    with pytest.raises(ValueError, match="2026-06-21"):
+    with pytest.raises(ValueError, match=CANONICAL_AS_OF_DATE.isoformat()):
         build_idea_opportunity_runtime_evidence(
             execute=_execute,
             generated_at_utc=GENERATED_AT,
-            as_of_date=date(2026, 6, 22),
+            as_of_date=date(2026, 4, 11),
         )
 
     payload = _payload()
     forged = deepcopy(payload)
-    forged["executions"][0]["receipt"]["asOfDate"] = "2026-06-22"
+    forged["executions"][0]["receipt"]["asOfDate"] = "2026-04-11"
     forged["executions"][0]["receiptDigest"] = _receipt_digest(forged, 0)
     forged["evidenceDigest"] = _recompute_digest(forged)
 
@@ -180,6 +266,25 @@ def test_idea_opportunity_runtime_evidence_rejects_empty_runtime_summaries() -> 
         forged["evidenceDigest"] = _recompute_digest(forged)
 
         assert idea_opportunity_runtime_evidence_is_valid(forged) is False
+
+
+def test_idea_opportunity_runtime_evidence_rejects_forged_bounded_summary_values() -> None:
+    payload = _payload()
+
+    forged_concentration = deepcopy(payload)
+    forged_concentration["executions"][0]["receipt"]["summary"]["coverageStatus"] = "forged"
+    _recompute_execution_and_evidence_digests(forged_concentration, 0)
+    assert idea_opportunity_runtime_evidence_is_valid(forged_concentration) is False
+
+    forged_risk = deepcopy(payload)
+    forged_risk["executions"][1]["receipt"]["summary"]["volatilityPercent"] = 10_000
+    _recompute_execution_and_evidence_digests(forged_risk, 1)
+    assert idea_opportunity_runtime_evidence_is_valid(forged_risk) is False
+
+    forged_drawdown = deepcopy(payload)
+    forged_drawdown["executions"][2]["receipt"]["summary"]["episodeCount"] = 0
+    _recompute_execution_and_evidence_digests(forged_drawdown, 2)
+    assert idea_opportunity_runtime_evidence_is_valid(forged_drawdown) is False
 
 
 def test_idea_opportunity_runtime_evidence_rejects_failed_runtime_execution() -> None:
@@ -289,13 +394,13 @@ def test_idea_opportunity_runtime_evidence_cli_rejects_noncanonical_as_of_date(
     output = tmp_path / "idea-risk-runtime-evidence.json"
     monkeypatch.setattr("scripts.generate_idea_opportunity_runtime_evidence.httpx.Client", _Client)
 
-    with pytest.raises(ValueError, match="2026-06-21"):
+    with pytest.raises(ValueError, match=CANONICAL_AS_OF_DATE.isoformat()):
         generate_idea_opportunity_runtime_evidence.main(
             [
                 "--risk-base-url",
                 "http://risk.test",
                 "--as-of-date",
-                "2026-06-22",
+                "2026-04-11",
                 "--generated-at-utc",
                 "2026-07-23T06:30:00Z",
                 "--output",
@@ -328,3 +433,11 @@ def _recompute_digest(payload: dict[str, Any]) -> str:
     from app.evidence.idea_opportunity_runtime import sha256_json
 
     return sha256_json({key: value for key, value in payload.items() if key != "evidenceDigest"})
+
+
+def _recompute_execution_and_evidence_digests(payload: dict[str, Any], index: int) -> None:
+    payload["executions"][index]["receipt"]["normalizedResponseDigest"] = _summary_digest(
+        payload, index
+    )
+    payload["executions"][index]["receiptDigest"] = _receipt_digest(payload, index)
+    payload["evidenceDigest"] = _recompute_digest(payload)

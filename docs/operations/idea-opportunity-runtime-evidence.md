@@ -5,17 +5,23 @@ opportunity archetype consumption.
 
 ## Scope
 
-The evidence pack proves three Risk-owned HTTP API executions for the canonical opportunity
-archetype:
+The evidence pack proves three Risk-owned stateful HTTP API executions for the canonical
+opportunity archetype. The governed source identity is portfolio `PB_SG_GLOBAL_BAL_001`, benchmark
+`BMK_PB_GLOBAL_BALANCED_60_40`, and as-of date `2026-04-10`, matching the platform canonical
+front-office demo data contract.
 
 1. `ConcentrationRiskReport:v1` through `POST /analytics/risk/concentration`,
 2. `RiskMetricsReport:v1` through `POST /analytics/risk/calculate`,
 3. `DrawdownAnalyticsReport:v1` through `POST /analytics/risk/drawdown`.
 
 The artifact is source-safe. It stores request digests, normalized response digests, bounded metric
-summaries, supportability state, freshness bucket, and a portfolio identity digest. It does not store
-the raw canonical portfolio ID, raw holdings, client identity, position identifiers, issuer
-identifiers, correlation IDs, trace IDs, or raw response payloads.
+summaries, supportability state, freshness bucket, and a portfolio identity digest. The HTTP
+requests sent to Risk are stateful and include the canonical portfolio identity, but the artifact
+does not store the raw canonical portfolio ID, raw holdings, client identity, position identifiers,
+issuer identifiers, correlation IDs, trace IDs, or raw response payloads. Validation fails closed
+when receipts are not `ready/current`, when request digests do not match the canonical stateful
+payloads, or when summaries are semantically out of bounds even if receipt and evidence digests are
+recomputed.
 
 ## Generate The Artifact
 
@@ -53,4 +59,3 @@ promotion.
 `lotus-risk` remains the official risk methodology and calculation authority. `lotus-idea` may
 consume the receipt and source refs, but must not recalculate concentration, volatility, VaR,
 tracking error, drawdown, or risk supportability.
-

@@ -129,10 +129,13 @@ Current repository posture:
 16. `lotus-risk.idea-opportunity-runtime-evidence.v1` is a source-safe producer evidence pack for
     `lotus-idea` RFC-0002 Slice 16/17. It executes the Risk HTTP API for
     `ConcentrationRiskReport:v1`, `RiskMetricsReport:v1`, and `DrawdownAnalyticsReport:v1`,
-    stores only digests and bounded supportability summaries, and clears only the corresponding
-    Idea Risk source-proof blockers. It does not certify Idea persistence, data mesh,
-    Gateway/Workbench runtime, client publication, deployment, production, or supported-feature
-    promotion. Use `make idea-opportunity-evidence-gate` for the focused contract gate and
+    using stateful canonical requests bound to `PB_SG_GLOBAL_BAL_001`,
+    `BMK_PB_GLOBAL_BALANCED_60_40`, and `2026-04-10`. The artifact stores only digests and bounded
+    supportability summaries, rejects non-ready/non-current receipts, validates canonical request
+    digests and bounded summary values, and clears only the corresponding Idea Risk source-proof
+    blockers. It does not certify Idea persistence, data mesh, Gateway/Workbench runtime, client
+    publication, deployment, production, or supported-feature promotion. Use
+    `make idea-opportunity-evidence-gate` for the focused contract gate and
     `make idea-opportunity-runtime-evidence` against a running Risk API to generate the artifact.
 
 ## Architecture And Module Map

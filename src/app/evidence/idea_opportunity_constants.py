@@ -8,7 +8,8 @@ PROOF_FAMILY: Final = "idea_opportunity_archetype_source_evidence"
 RUNTIME_BOUNDARY: Final = "lotus-risk:http-api"
 CANONICAL_PORTFOLIO_REF: Final = "canonical-front-office:global_balanced"
 CANONICAL_PORTFOLIO_ID: Final = "PB_SG_GLOBAL_BAL_001"
-CANONICAL_AS_OF_DATE: Final = date(2026, 6, 21)
+CANONICAL_BENCHMARK_ID: Final = "BMK_PB_GLOBAL_BALANCED_60_40"
+CANONICAL_AS_OF_DATE: Final = date(2026, 4, 10)
 
 CONSUMER_BLOCKERS_SATISFIED: Final = (
     "opportunity_archetype_live_risk_source_proof_missing",
