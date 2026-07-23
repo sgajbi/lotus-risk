@@ -58,6 +58,8 @@ def _number_in_range(value: Any, *, minimum: int, maximum: int) -> bool:
         decimal_value = Decimal(str(value))
     except InvalidOperation:
         return False
+    if not decimal_value.is_finite():
+        return False
     return Decimal(minimum) <= decimal_value <= Decimal(maximum)
 
 
