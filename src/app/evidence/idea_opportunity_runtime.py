@@ -4,53 +4,21 @@ from collections.abc import Callable, Mapping
 from datetime import UTC, date, datetime
 import hashlib
 import json
-from typing import Any, Final
+from typing import Any
 
-
-SCHEMA_VERSION: Final = "lotus-risk.idea-opportunity-runtime-evidence.v1"
-PROOF_FAMILY: Final = "idea_opportunity_archetype_source_evidence"
-RUNTIME_BOUNDARY: Final = "lotus-risk:http-api"
-CANONICAL_PORTFOLIO_REF: Final = "canonical-front-office:global_balanced"
-CANONICAL_PORTFOLIO_ID: Final = "PB_SG_GLOBAL_BAL_001"
-CANONICAL_AS_OF_DATE: Final = date(2026, 6, 21)
-
-CONSUMER_BLOCKERS_SATISFIED: Final = (
-    "opportunity_archetype_live_risk_source_proof_missing",
-    "opportunity_archetype_live_risk_volatility_source_proof_missing",
-    "opportunity_archetype_drawdown_source_proof_missing",
+from app.evidence.idea_opportunity_constants import (
+    CANONICAL_AS_OF_DATE,
+    CANONICAL_PORTFOLIO_ID,
+    CANONICAL_PORTFOLIO_REF,
+    CONSUMER_BLOCKERS_SATISFIED,
+    EXPECTED_EXECUTIONS,
+    EXPECTED_NON_PROOF_CLAIMS,
+    EXPECTED_RECEIPT_KEYS,
+    PROOF_FAMILY,
+    REMAINING_CERTIFICATION_BLOCKERS,
+    RUNTIME_BOUNDARY,
+    SCHEMA_VERSION,
 )
-EXPECTED_EXECUTIONS: Final = {
-    "concentration_risk": (
-        "lotus-risk:ConcentrationRiskReport:v1",
-        "/analytics/risk/concentration",
-    ),
-    "high_volatility": (
-        "lotus-risk:RiskMetricsReport:v1",
-        "/analytics/risk/calculate",
-    ),
-    "drawdown_review": (
-        "lotus-risk:DrawdownAnalyticsReport:v1",
-        "/analytics/risk/drawdown",
-    ),
-}
-REMAINING_CERTIFICATION_BLOCKERS: Final = (
-    "opportunity_archetype_data_mesh_not_certified",
-    "opportunity_archetype_workbench_product_proof_missing",
-    "opportunity_archetype_supported_feature_promotion_missing",
-    "opportunity_archetype_client_publication_not_approved",
-    "deployment_certification_missing",
-    "production_certification_missing",
-)
-EXPECTED_NON_PROOF_CLAIMS: Final = {
-    "officialRiskCalculationOwned": "lotus-risk",
-    "ideaCandidatePersistenceObserved": False,
-    "dataMeshRuntimeCertified": False,
-    "gatewayWorkbenchRuntimeObserved": False,
-    "clientPublicationApproved": False,
-    "deploymentCertified": False,
-    "productionCertified": False,
-    "supportedFeaturePromoted": False,
-}
 
 ExecutionCallable = Callable[[str, Mapping[str, Any]], tuple[int, Mapping[str, Any]]]
 
@@ -393,31 +361,30 @@ def _execution_is_valid(value: Any) -> bool:
     receipt = value.get("receipt")
     if not isinstance(receipt, Mapping):
         return False
-    expected_receipt_keys = {
-        "productId",
-        "route",
-        "statusCode",
-        "asOfDate",
-        "portfolioIdentityDigest",
-        "requestPayloadDigest",
-        "normalizedResponseDigest",
-        "supportabilityState",
-        "freshnessBucket",
-        "summary",
-    }
     return (
-        set(receipt) == expected_receipt_keys
+        set(receipt) == EXPECTED_RECEIPT_KEYS
         and receipt.get("statusCode") == 200
         and _execution_product_route_is_valid(value)
         and receipt.get("supportabilityState") == "ready"
         and receipt.get("freshnessBucket") == "current"
         and receipt.get("asOfDate") == CANONICAL_AS_OF_DATE.isoformat()
         and receipt.get("portfolioIdentityDigest") == identity_hash(CANONICAL_PORTFOLIO_ID)
-        and _is_sha256(receipt.get("requestPayloadDigest"))
+        and receipt.get("requestPayloadDigest") == _expected_request_payload_digest(value)
         and _is_sha256(receipt.get("normalizedResponseDigest"))
         and receipt.get("normalizedResponseDigest") == sha256_json(receipt.get("summary"))
         and value.get("receiptDigest") == sha256_json(receipt)
     )
+
+
+def _expected_request_payload_digest(value: Mapping[str, Any]) -> str | None:
+    proof_name = str(value.get("proofName"))
+    if proof_name == "concentration_risk":
+        return sha256_json(_concentration_payload())
+    if proof_name == "high_volatility":
+        return sha256_json(_risk_metrics_payload(CANONICAL_AS_OF_DATE))
+    if proof_name == "drawdown_review":
+        return sha256_json(_drawdown_payload(CANONICAL_AS_OF_DATE))
+    return None
 
 
 def _execution_product_route_is_valid(value: Mapping[str, Any]) -> bool:
