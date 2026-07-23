@@ -79,6 +79,10 @@ def build_idea_opportunity_runtime_evidence(
 ) -> dict[str, Any]:
     if portfolio_id != CANONICAL_PORTFOLIO_ID:
         raise ValueError("Idea opportunity runtime evidence is only valid for PB_SG_GLOBAL_BAL_001")
+    if as_of_date != CANONICAL_AS_OF_DATE:
+        raise ValueError(
+            "Idea opportunity runtime evidence is only valid for as-of date 2026-06-21"
+        )
     generated_at = format_utc(generated_at_utc)
     portfolio_digest = identity_hash(portfolio_id)
     executions = [
@@ -407,7 +411,8 @@ def _execution_is_valid(value: Any) -> bool:
         and _execution_product_route_is_valid(value)
         and receipt.get("supportabilityState") == "ready"
         and receipt.get("freshnessBucket") == "current"
-        and _is_sha256(receipt.get("portfolioIdentityDigest"))
+        and receipt.get("asOfDate") == CANONICAL_AS_OF_DATE.isoformat()
+        and receipt.get("portfolioIdentityDigest") == identity_hash(CANONICAL_PORTFOLIO_ID)
         and _is_sha256(receipt.get("requestPayloadDigest"))
         and _is_sha256(receipt.get("normalizedResponseDigest"))
         and receipt.get("normalizedResponseDigest") == sha256_json(receipt.get("summary"))
