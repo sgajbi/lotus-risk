@@ -523,6 +523,57 @@ def test_image_release_contract_rejects_unscoped_os_exception(tmp_path: Path) ->
     assert f"{workflow_path}: unfixed exception must be scoped to OS findings" in issues
 
 
+def test_image_release_contract_rejects_os_exception_covering_libraries(tmp_path: Path) -> None:
+    workflow_path = tmp_path / "image-release.yml"
+    current = Path(".github/workflows/image-release.yml").read_text(encoding="utf-8")
+    workflow_path.write_text(
+        current.replace("          vuln-type: os\n", "          vuln-type: os,library\n"),
+        encoding="utf-8",
+    )
+
+    issues = validate_ci_image_release_workflow(workflow_path)
+
+    assert f"{workflow_path}: unfixed exception must be scoped to OS findings" in issues
+
+
+@pytest.mark.parametrize(
+    ("step_name", "expected_issue"),
+    [
+        (
+            "Generate complete vulnerability inventory",
+            "complete HIGH/CRITICAL vulnerability inventory must remain visible",
+        ),
+        (
+            "Block application-library vulnerabilities",
+            "application-library HIGH/CRITICAL findings must be blocking",
+        ),
+        ("Vulnerability scan", "OS vulnerability gate must scan the release image"),
+    ],
+)
+def test_image_release_contract_rejects_scan_of_nonrelease_image(
+    tmp_path: Path,
+    step_name: str,
+    expected_issue: str,
+) -> None:
+    workflow_path = tmp_path / "image-release.yml"
+    current = Path(".github/workflows/image-release.yml").read_text(encoding="utf-8")
+    start = current.index(f"- name: {step_name}")
+    next_step = current.find("\n      - name:", start + 1)
+    end = len(current) if next_step < 0 else next_step
+    corrupted_step = current[start:end].replace(
+        "image-ref: ${{ env.IMAGE_NAME }}:${{ github.sha }}",
+        "image-ref: debian:stable",
+    )
+    workflow_path.write_text(
+        current[:start] + corrupted_step + current[end:],
+        encoding="utf-8",
+    )
+
+    issues = validate_ci_image_release_workflow(workflow_path)
+
+    assert f"{workflow_path}: {expected_issue}" in issues
+
+
 def test_image_release_contract_rejects_expired_unfixed_exception(tmp_path: Path) -> None:
     workflow_path = tmp_path / "image-release.yml"
     workflow_path.write_text(

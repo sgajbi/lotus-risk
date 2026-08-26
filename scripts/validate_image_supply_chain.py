@@ -215,6 +215,17 @@ def _workflow_step_block(text: str, step_name: str) -> str:
     return text[start:] if next_step < 0 else text[start:next_step]
 
 
+def _workflow_field_value(block: str, field: str) -> str | None:
+    match = re.search(
+        rf"^\s*{re.escape(field)}:\s*(?P<value>.*?)\s*$",
+        block,
+        flags=re.MULTILINE,
+    )
+    if match is None:
+        return None
+    return match.group("value").strip().strip("\"'")
+
+
 def validate_ci_image_release_workflow(
     workflow_path: Path = IMAGE_RELEASE_WORKFLOW,
     *,
@@ -261,13 +272,15 @@ def validate_ci_image_release_workflow(
         )
     inventory = _workflow_step_block(text, "Generate complete vulnerability inventory")
     if (
-        "uses: aquasecurity/trivy-action@v0.36.0" not in inventory
-        or "format: sarif" not in inventory
-        or "output: output/image-release/trivy-results.sarif" not in inventory
-        or "vuln-type: os,library" not in inventory
-        or "severity: HIGH,CRITICAL" not in inventory
-        or 'exit-code: "0"' not in inventory
-        or "ignore-unfixed: true" in inventory
+        _workflow_field_value(inventory, "uses") != "aquasecurity/trivy-action@v0.36.0"
+        or _workflow_field_value(inventory, "image-ref")
+        != "${{ env.IMAGE_NAME }}:${{ github.sha }}"
+        or _workflow_field_value(inventory, "format") != "sarif"
+        or _workflow_field_value(inventory, "output") != "output/image-release/trivy-results.sarif"
+        or _workflow_field_value(inventory, "vuln-type") != "os,library"
+        or _workflow_field_value(inventory, "severity") != "HIGH,CRITICAL"
+        or _workflow_field_value(inventory, "exit-code") != "0"
+        or _workflow_field_value(inventory, "ignore-unfixed") is not None
     ):
         issues.append(
             f"{workflow_path}: complete HIGH/CRITICAL vulnerability inventory must remain visible"
@@ -275,44 +288,49 @@ def validate_ci_image_release_workflow(
 
     inventory_upload = _workflow_step_block(text, "Upload vulnerability scan results")
     if (
-        "github/codeql-action/upload-sarif@v4" not in inventory_upload
-        or "sarif_file: output/image-release/trivy-results.sarif" not in inventory_upload
+        _workflow_field_value(inventory_upload, "uses") != "github/codeql-action/upload-sarif@v4"
+        or _workflow_field_value(inventory_upload, "sarif_file")
+        != "output/image-release/trivy-results.sarif"
     ):
         issues.append(f"{workflow_path}: complete vulnerability inventory SARIF must be uploaded")
 
     library_gate = _workflow_step_block(text, "Block application-library vulnerabilities")
     if (
-        "uses: aquasecurity/trivy-action@v0.36.0" not in library_gate
-        or "vuln-type: library" not in library_gate
-        or "severity: HIGH,CRITICAL" not in library_gate
-        or 'exit-code: "1"' not in library_gate
+        _workflow_field_value(library_gate, "uses") != "aquasecurity/trivy-action@v0.36.0"
+        or _workflow_field_value(library_gate, "image-ref")
+        != "${{ env.IMAGE_NAME }}:${{ github.sha }}"
+        or _workflow_field_value(library_gate, "vuln-type") != "library"
+        or _workflow_field_value(library_gate, "severity") != "HIGH,CRITICAL"
+        or _workflow_field_value(library_gate, "exit-code") != "1"
     ):
         issues.append(
             f"{workflow_path}: application-library HIGH/CRITICAL findings must be blocking"
         )
-    if "ignore-unfixed: true" in library_gate:
+    if _workflow_field_value(library_gate, "ignore-unfixed") is not None:
         issues.append(f"{workflow_path}: unfixed exception must not apply to application libraries")
-    if "continue-on-error: true" in library_gate:
+    if _workflow_field_value(library_gate, "continue-on-error") is not None:
         issues.append(f"{workflow_path}: application-library scan failure must block publication")
-    if re.search(r"^\s+if:", library_gate, flags=re.MULTILINE):
+    if _workflow_field_value(library_gate, "if") is not None:
         issues.append(f"{workflow_path}: application-library scan must run unconditionally")
 
     os_gate = _workflow_step_block(text, "Vulnerability scan")
-    if "uses: aquasecurity/trivy-action@v0.36.0" not in os_gate:
+    if _workflow_field_value(os_gate, "uses") != "aquasecurity/trivy-action@v0.36.0":
         issues.append(f"{workflow_path}: OS vulnerability gate must use the governed Trivy action")
-    if "vuln-type: os" not in os_gate:
+    if _workflow_field_value(os_gate, "image-ref") != "${{ env.IMAGE_NAME }}:${{ github.sha }}":
+        issues.append(f"{workflow_path}: OS vulnerability gate must scan the release image")
+    if _workflow_field_value(os_gate, "vuln-type") != "os":
         issues.append(f"{workflow_path}: unfixed exception must be scoped to OS findings")
-    if "ignore-unfixed: true" not in os_gate:
+    if _workflow_field_value(os_gate, "ignore-unfixed") != "true":
         issues.append(
             f"{workflow_path}: OS blocking scan must ignore only vulnerabilities without a fix"
         )
-    if 'exit-code: "1"' not in os_gate:
+    if _workflow_field_value(os_gate, "exit-code") != "1":
         issues.append(f"{workflow_path}: fixable OS HIGH/CRITICAL findings must be blocking")
-    if "severity: HIGH,CRITICAL" not in os_gate:
+    if _workflow_field_value(os_gate, "severity") != "HIGH,CRITICAL":
         issues.append(f"{workflow_path}: OS blocking scan must cover HIGH/CRITICAL findings")
-    if "continue-on-error: true" in os_gate:
+    if _workflow_field_value(os_gate, "continue-on-error") is not None:
         issues.append(f"{workflow_path}: OS vulnerability scan failure must block publication")
-    if re.search(r"^\s+if:", os_gate, flags=re.MULTILINE):
+    if _workflow_field_value(os_gate, "if") is not None:
         issues.append(f"{workflow_path}: OS vulnerability scan must run unconditionally")
 
     expiry_match = UNFIXED_EXCEPTION_EXPIRY_PATTERN.search(text)
