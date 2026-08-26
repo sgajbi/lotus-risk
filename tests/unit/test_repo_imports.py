@@ -23,7 +23,7 @@ ABSOLUTE_USER_HOME = re.compile(
     r"oot(?=/[^/\s\"']+))"
 )
 EXACT_POSIX_USER_HOME = re.compile(
-    r"(?:/ho" r"me/[^/\s\"']+|/Us" r"ers/[^/\s\"']+|/r" r"oot)(?=$|[\s\"'])"
+    r"(?:/ho" r"me/[^/\s\"']+|/Us" r"ers/[^/\s\"']+|/r" r"oot)/?(?=$|[\s\"'])"
 )
 FILESYSTEM_LITERAL_PREFIX = re.compile(
     r"(?:\b(?:Path|PurePath|PurePosixPath)\s*\(\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"']"
@@ -71,6 +71,10 @@ ROUTE_CONSTRUCTOR_PREFIX = re.compile(
     r"\b(?:Route|WebSocketRoute)\s*\(\s*(?:path\s*=\s*)?"
     r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
 )
+ROUTER_PREFIX_ROUTE_PREFIX = re.compile(
+    r"\b(?:APIRouter|\w+(?:\.\w+)*\.include_router)\s*\("
+    r"(?:[^()]|\([^()]*\))*\bprefix\s*=\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
+)
 REQUEST_SCOPE_ROUTE_PREFIX = re.compile(
     r"\bRequest\s*\((?:[^()]|\([^()]*\))*[\"']path[\"']\s*:\s*"
     r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
@@ -112,6 +116,7 @@ def _absolute_user_home_references(text: str) -> list[str]:
             or HTTP_ROUTE_PREFIX.search(preceding_text)
             or ROUTE_LITERAL_PREFIX.search(preceding_text)
             or ROUTE_CONSTRUCTOR_PREFIX.search(preceding_text)
+            or ROUTER_PREFIX_ROUTE_PREFIX.search(preceding_text)
             or request_scope_route
             or ASGI_SCOPE_ROUTE_PREFIX.search(preceding_text)
         ):
@@ -178,6 +183,7 @@ def test_absolute_user_home_guard_detects_exact_posix_home_in_path_context() -> 
     assert _absolute_user_home_references(f'Path("{exact_home}")') == [exact_home]
     assert _absolute_user_home_references(f'open("{exact_home}")') == [exact_home]
     assert _absolute_user_home_references(f'os.chdir("{exact_home}")') == [exact_home]
+    assert _absolute_user_home_references(f'Path("{exact_home}/")') == [f"{exact_home}/"]
 
 
 def test_absolute_user_home_guard_ignores_web_routes() -> None:
@@ -219,6 +225,8 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             'app.add_api_route(endpoint=handler, path="/home/dashboard/stats")',
             'app.add_route("/home/dashboard/stats", handler)',
             'router.add_websocket_route("/home/dashboard/stats", handler)',
+            'APIRouter(prefix="/home/dashboard/stats")',
+            'app.include_router(router, prefix="/home/dashboard/stats")',
         ]
     )
 
