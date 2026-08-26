@@ -28,14 +28,15 @@ HTTP_ROUTE_PREFIX = re.compile(
 )
 ROUTE_LITERAL_PREFIX = re.compile(
     r"(?:\b(?:route|endpoint)(?:_path)?\s*=\s*"
-    r"|@\w+(?:\.\w+)*\.(?:get|head|post|put|patch|delete|options|route|websocket)"
+    r"|@\w+(?:\.\w+)*\.(?:get|head|post|put|patch|delete|options|route|api_route|websocket)"
     r"\s*\(\s*"
     r"|\b(?:client|http_client|async_client|requests?|httpx)(?:\.\w+)*"
-    r"\.(?:get|head|post|put|patch|delete|options)\s*\(\s*)[\"']$"
+    r"\.(?:get|head|post|put|patch|delete|options|websocket_connect)\s*\(\s*)[\"']$"
     r"|\b(?:httpx\.)?Request\s*\(\s*[\"']"
     r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)[\"']\s*,\s*[\"']$",
     re.IGNORECASE,
 )
+REQUEST_SCOPE_ROUTE_PREFIX = re.compile(r"\bRequest\s*\([^)]*[\"']path[\"']\s*:\s*[\"']$")
 WEB_URL = re.compile(
     r"(?i:https?://(?:[a-z0-9]|\[[0-9a-f:.]+\])[^\s\"';,)\]}]*"
     r"|(?<![:/])//(?:[a-z0-9]|\[[0-9a-f:.]+\])[^\s\"';,)\]}]*)"
@@ -48,10 +49,12 @@ def _absolute_user_home_references(text: str) -> list[str]:
     for match in ABSOLUTE_USER_HOME.finditer(text):
         preceding_text = text[: match.start()]
         inside_url = any(start <= match.start() < end for start, end in url_spans)
+        request_scope_route = REQUEST_SCOPE_ROUTE_PREFIX.search(preceding_text)
         if (
             inside_url
             or HTTP_ROUTE_PREFIX.search(preceding_text)
             or ROUTE_LITERAL_PREFIX.search(preceding_text)
+            or request_scope_route
         ):
             continue
         references.append(match.group(0))
@@ -122,8 +125,11 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             "//example.test/home/dashboard/stats",
             'route = "/home/dashboard/stats"',
             '@router.get("/home/dashboard/stats")',
+            '@app.api_route("/home/dashboard/stats", methods=["GET"])',
             'client.get("/home/dashboard/stats")',
+            'client.websocket_connect("/home/dashboard/stats")',
             'httpx.Request("GET", "/home/dashboard/stats")',
+            'Request({"type": "http", "path": "/home/dashboard/stats"})',
         ]
     )
 
