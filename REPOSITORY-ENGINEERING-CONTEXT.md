@@ -333,9 +333,16 @@ local virtualenv held 0.15.21, so `make lint` passed locally and reported 237 er
 same commit. `tests/unit/test_static_analysis_pins.py` fails if any of them is floored, and if a
 pinned version is not the one installed — a pin nobody runs has not been tested.
 
+Type stubs count as static analysis. `pandas-stubs` floating from `3.0.3.260530` to
+`3.0.5.260730` produced five mypy errors in `src/app/services/risk/helpers.py:73` on unchanged
+code — the same defect as a new lint rule, because stubs are the analyser's rule set for
+third-party APIs. `pandas` and `numpy` are pinned alongside their stubs: a pinned stub against a
+floating runtime is worse than either, since mypy would check against an API the installed package
+does not have. A test asserts the `pandas-stubs` version tracks the pinned `pandas`.
+
 Test runners are deliberately left floored. A `pytest` upgrade does not invent new assertions about
-this codebase; a linter upgrade invents new findings about code nobody touched. Upgrading a pinned
-tool is its own reviewed commit with a visible diff.
+this codebase; a linter or stub upgrade invents new findings about code nobody touched. Upgrading a
+pinned tool is its own reviewed commit with a visible diff.
 
 Important validation expectations:
 
