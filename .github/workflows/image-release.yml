@@ -76,6 +76,8 @@ jobs:
       - name: Generate complete vulnerability inventory
         uses: aquasecurity/trivy-action@v0.36.0
         with:
+          scan-type: image
+          scanners: vuln
           image-ref: ${{ env.IMAGE_NAME }}:${{ github.sha }}
           format: sarif
           output: output/image-release/trivy-results.sarif
@@ -92,6 +94,8 @@ jobs:
       - name: Block application-library vulnerabilities
         uses: aquasecurity/trivy-action@v0.36.0
         with:
+          scan-type: image
+          scanners: vuln
           image-ref: ${{ env.IMAGE_NAME }}:${{ github.sha }}
           format: table
           vuln-type: library
@@ -101,6 +105,8 @@ jobs:
       - name: Vulnerability scan
         uses: aquasecurity/trivy-action@v0.36.0
         with:
+          scan-type: image
+          scanners: vuln
           image-ref: ${{ env.IMAGE_NAME }}:${{ github.sha }}
           format: table
           vuln-type: os
