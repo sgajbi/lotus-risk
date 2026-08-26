@@ -7,12 +7,11 @@ from typing import Final
 
 import httpx
 
+from app.integrations.downstream_profile_env import env_float_with_default, env_int_with_default
 from app.integrations.downstream_request_execution import (
     execute_downstream_request,
     execute_downstream_request_json,
 )
-from app.integrations.downstream_profile_env import env_float_with_default, env_int_with_default
-
 
 DEFAULT_TIMEOUT_SECONDS: Final = 10.0
 DEFAULT_MAX_CONNECTIONS: Final = 100

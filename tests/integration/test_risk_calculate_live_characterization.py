@@ -80,7 +80,7 @@ def _sortino(
     downside_deviation = float(np.sqrt(np.mean(downside**2)))
     excess_return = float(np.mean(returns) - periodic_mar)
     sortino = float((excess_return / downside_deviation) * np.sqrt(ANNUALIZATION_FACTOR))
-    return sortino, int(len(downside)), downside_deviation, excess_return
+    return sortino, len(downside), downside_deviation, excess_return
 
 
 def _historical_var(
@@ -90,7 +90,7 @@ def _historical_var(
     base_var = float(np.percentile(percentage_point_returns, (1.0 - confidence) * 100.0))
     tail = percentage_point_returns[percentage_point_returns <= base_var]
     expected_shortfall = float(np.mean(tail)) if len(tail) > 0 else base_var
-    return base_var, expected_shortfall, int(len(tail))
+    return base_var, expected_shortfall, len(tail)
 
 
 def _gaussian_var(

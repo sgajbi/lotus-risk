@@ -4,12 +4,12 @@ from typing import Literal
 
 from pydantic import Field
 
-from app.contracts.audit import AuditMetadataFields
 from app.contracts.attribution_inputs import (
     AttributionMetric,
     AttributionType,
     GroupingDimension,
 )
+from app.contracts.audit import AuditMetadataFields
 from app.contracts.risk import RiskCalculationSupportability
 
 

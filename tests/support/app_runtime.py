@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
-from typing import Any, Iterator, cast
+from typing import Any, cast
 
 from app.main import app
 from app.runtime.downstream_clients import RuntimeDownstreamClients, runtime_downstream_clients
-
 
 _UNSET = object()
 

@@ -1,9 +1,9 @@
 import copy
 from datetime import date, timedelta
+from typing import Any, cast
 
 import pytest
 from pydantic import ValidationError
-from typing import Any, cast
 
 from app.contracts.rolling import (
     ROLLING_MAX_PERIODS,
@@ -18,13 +18,14 @@ from app.contracts.rolling import (
     RollingResponse,
 )
 from app.contracts.rolling_inputs import RollingAnalyticsRequest as RollingAnalyticsRequestSource
-from app.contracts.rolling_outputs import RollingResponse as RollingResponseSource
+from app.contracts.rolling_metadata_outputs import RollingMetadata
 from app.contracts.rolling_metric_outputs import (
     RollingMetricSummary as RollingMetricSummarySource,
 )
 from app.contracts.rolling_metric_summary_outputs import (
     RollingMetricSummary as RollingMetricSummaryImplementation,
 )
+from app.contracts.rolling_outputs import RollingResponse as RollingResponseSource
 from app.contracts.rolling_period_field_examples import (
     ROLLING_PERIOD_BENCHMARK_CONTEXT_EXAMPLE,
     ROLLING_PERIOD_QUALITY_FLAGS_EXAMPLE,
@@ -34,6 +35,9 @@ from app.contracts.rolling_period_field_examples import (
 from app.contracts.rolling_period_outputs import RollingPeriodResult
 from app.contracts.rolling_request_inputs import (
     RollingAnalyticsRequest as RollingAnalyticsRequestImplementation,
+)
+from app.contracts.rolling_response_envelope_outputs import (
+    RollingResponse as RollingResponseEnvelope,
 )
 from app.contracts.rolling_response_field_examples import (
     ROLLING_BENCHMARK_CONTEXT_EXAMPLE,
@@ -47,11 +51,6 @@ from app.contracts.rolling_response_field_examples import (
 from app.contracts.rolling_response_outputs import (
     RollingResponse as RollingResponseImplementation,
 )
-from app.contracts.rolling_response_envelope_outputs import (
-    RollingResponse as RollingResponseEnvelope,
-)
-from app.contracts.rolling_metadata_outputs import RollingMetadata
-
 
 BASE_STATELESS_PAYLOAD = {
     "input_mode": "stateless",

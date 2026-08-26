@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any, cast
+from typing import Any, Self, cast
 
 import httpx
 import pytest
@@ -23,7 +23,7 @@ class _FakeAsyncClient:
     def __init__(self, *, timeout: httpx.Timeout) -> None:
         self.timeout = timeout
 
-    async def __aenter__(self) -> "_FakeAsyncClient":
+    async def __aenter__(self) -> Self:
         return self
 
     async def __aexit__(self, *_args: object) -> None:

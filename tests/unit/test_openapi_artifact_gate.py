@@ -3,17 +3,17 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from scripts.export_openapi_artifact import (
     REQUIRED_SPECTRAL_RULES,
     build_openapi_evidence,
     validate_openapi_artifact,
     validate_openapi_evidence,
     validate_spectral_policy_config,
-    write_openapi_evidence,
     write_openapi_artifact,
+    write_openapi_evidence,
 )
-
-import pytest
 
 pytestmark = pytest.mark.governance
 

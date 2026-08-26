@@ -1,11 +1,12 @@
 from datetime import datetime
 
+import pytest
+from pydantic import ValidationError
+
 from app.contracts.concentration import ConcentrationRequest
 from app.observability_contracts import RISK_CALCULATION_SUPPORTABILITY_METRIC_LABELS
 from app.services.concentration.math import _compute_hhi
 from app.services.concentration_engine import calculate_concentration
-import pytest
-from pydantic import ValidationError
 
 
 def test_compute_hhi_handles_empty_and_zero_total() -> None:

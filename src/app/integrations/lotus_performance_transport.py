@@ -59,9 +59,9 @@ async def execute_returns_series_request(
             async_max_polls=async_max_polls,
             async_poll_interval_seconds=async_poll_interval_seconds,
         )
-    async with profile.make_client() as client:
+    async with profile.make_client() as owned_client:
         return await _execute_returns_series_request_with_client(
-            client=client,
+            client=owned_client,
             base_url=base_url,
             url=url,
             request_payload=request_payload,
@@ -150,9 +150,9 @@ async def execute_benchmark_exposure_context_request(
             headers=headers,
             started_at=started_at,
         )
-    async with profile.make_client() as client:
+    async with profile.make_client() as owned_client:
         return await _execute_benchmark_exposure_context_request_with_client(
-            client=client,
+            client=owned_client,
             url=url,
             request_payload=request_payload,
             headers=headers,

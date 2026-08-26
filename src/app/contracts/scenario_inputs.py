@@ -101,7 +101,7 @@ class RegimeScenarioPackRequest(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_exposures(self) -> "RegimeScenarioPackRequest":
+    def validate_exposures(self) -> RegimeScenarioPackRequest:
         if not self.exposures:
             raise ValueError("exposures must contain at least one scenario exposure bucket")
         normalized_buckets = [exposure.bucket.upper() for exposure in self.exposures]

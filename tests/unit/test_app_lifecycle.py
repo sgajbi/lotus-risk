@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from typing import Any, NoReturn, cast
+from typing import Any, ClassVar, NoReturn, cast
 
 import httpx
-from fastapi import FastAPI
 import pytest
+from fastapi import FastAPI
 
 from app.app_lifecycle import application_lifespan
 from app.integrations.lotus_core_client import LotusCoreClient
@@ -23,7 +23,7 @@ class _FakeHttpClient:
 
 
 class _FakeProfile:
-    created_clients: list[_FakeHttpClient] = []
+    created_clients: ClassVar[list[_FakeHttpClient]] = []
 
     def make_client(self) -> _FakeHttpClient:
         client = _FakeHttpClient()

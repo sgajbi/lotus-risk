@@ -1,5 +1,11 @@
 from typing import Any
 
+from app.enterprise_authorization import (
+    ENTERPRISE_AUTHORIZATION_REQUIRED_HEADERS,
+    ENTERPRISE_CAPABILITIES_HEADER,
+    ENTERPRISE_SERVICE_IDENTITY_HEADERS,
+)
+from app.enterprise_trusted_ingress import TRUSTED_INGRESS_HEADER
 from app.openapi_request_examples import (
     CONCENTRATION_EXAMPLES,
     DRAWDOWN_EXAMPLES,
@@ -10,12 +16,6 @@ from app.openapi_request_examples import (
     RISK_EVENT_COHORT_EXAMPLES,
     ROLLING_METRICS_EXAMPLES,
 )
-from app.enterprise_authorization import (
-    ENTERPRISE_AUTHORIZATION_REQUIRED_HEADERS,
-    ENTERPRISE_CAPABILITIES_HEADER,
-    ENTERPRISE_SERVICE_IDENTITY_HEADERS,
-)
-from app.enterprise_trusted_ingress import TRUSTED_INGRESS_HEADER
 
 JsonObject = dict[str, Any]
 
@@ -54,11 +54,11 @@ __all__ = [
     "CONCENTRATION_EXAMPLES",
     "DRAWDOWN_EXAMPLES",
     "HISTORICAL_ATTRIBUTION_EXAMPLES",
-    "JsonObject",
     "MANDATE_HEALTH_EXAMPLES",
     "REGIME_SCENARIO_EXAMPLES",
     "RISK_CALCULATE_EXAMPLES",
     "RISK_EVENT_COHORT_EXAMPLES",
     "ROLLING_METRICS_EXAMPLES",
+    "JsonObject",
     "request_body_examples",
 ]

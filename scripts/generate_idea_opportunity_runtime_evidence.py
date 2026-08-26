@@ -1,24 +1,24 @@
 from __future__ import annotations
 
 import argparse
-from datetime import date, datetime
 import json
-from pathlib import Path
 import sys
+from datetime import date, datetime
+from pathlib import Path
 from typing import Any
 
 import httpx
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-try:
-    from scripts._repo_imports import force_repo_src_first  # noqa: E402
-except ModuleNotFoundError:  # pragma: no cover - direct script execution path
-    from _repo_imports import force_repo_src_first  # type: ignore[import-not-found,no-redef]  # noqa: E402
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from scripts._repo_imports import force_repo_src_first
 
 force_repo_src_first(PROJECT_ROOT)
 
-from app.evidence.idea_opportunity_constants import CANONICAL_AS_OF_DATE  # noqa: E402
-from app.evidence.idea_opportunity_runtime import (  # noqa: E402
+from app.evidence.idea_opportunity_constants import CANONICAL_AS_OF_DATE
+from app.evidence.idea_opportunity_runtime import (
     build_idea_opportunity_runtime_evidence,
     idea_opportunity_runtime_evidence_is_valid,
 )
@@ -40,7 +40,7 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
 
 
 def _parse_datetime(value: str) -> datetime:
-    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    return datetime.fromisoformat(value)
 
 
 def _execute(

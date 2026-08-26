@@ -184,21 +184,21 @@ def test_attribution_engine_returns_reconciled_sets() -> None:
     assert period.error is None
     assert len(period.attribution_sets) == 4
 
-    total_risk = [
+    total_risk = next(
         s
         for s in period.attribution_sets
         if s.attribution_type == "TOTAL_RISK" and s.metric == "VOLATILITY"
-    ][0]
+    )
     assert total_risk.total_value is not None
     assert total_risk.reconciled_sum is not None
     assert total_risk.residual is not None
     assert len(total_risk.contributors) == 2
 
-    active_risk = [
+    active_risk = next(
         s
         for s in period.attribution_sets
         if s.attribution_type == "ACTIVE_RISK" and s.metric == "TRACKING_ERROR"
-    ][0]
+    )
     assert active_risk.total_value is not None
     assert len(active_risk.contributors) == 2
 

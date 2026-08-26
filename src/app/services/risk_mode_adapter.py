@@ -17,8 +17,8 @@ from app.services.core_risk_free_series import (
     build_risk_free_series_request,
     to_risk_free_return_points,
 )
-from app.services.risk_engine import calculate_risk
 from app.services.risk import helpers as risk_helpers
+from app.services.risk_engine import calculate_risk
 from app.services.stateful_returns_request import build_stateful_returns_series_request
 from app.services.stateful_returns_series_parser import (
     extract_required_portfolio_returns,

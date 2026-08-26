@@ -67,7 +67,7 @@ class HistoricalAttributionRequest(BaseModel):
     )
 
     @model_validator(mode="after")
-    def normalize_and_validate(self) -> "HistoricalAttributionRequest":
+    def normalize_and_validate(self) -> HistoricalAttributionRequest:
         if self.input_mode == AttributionInputMode.STATELESS and self.stateless_input is None:
             raise ValueError("stateless_input is required when input_mode=stateless")
         if self.input_mode == AttributionInputMode.STATEFUL and self.stateful_input is None:

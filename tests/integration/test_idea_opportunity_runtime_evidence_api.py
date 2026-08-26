@@ -17,7 +17,6 @@ from tests.support.lotus_core_fakes import SimulationLotusCoreClient
 from tests.support.lotus_performance_fakes import RecordingLotusPerformanceClient
 from tests.support.returns_series_payloads import build_returns_series_response
 
-
 _CANONICAL_RETURN_ROWS = (
     ("2026-04-06", "0.015"),
     ("2026-04-07", "-0.028"),

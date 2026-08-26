@@ -6,7 +6,6 @@ from dataclasses import dataclass
 import pandas as pd
 
 from app.contracts.risk import RiskStatelessCalculationInput, RiskValue
-from app.services.risk.metric_timing import MetricDurationObserver
 from app.services.risk.metric_calculators import (
     align_and_resample_benchmark,
     metric_error,
@@ -14,6 +13,7 @@ from app.services.risk.metric_calculators import (
     resolve_aligned_benchmark_series,
     resolve_benchmark_metric_value,
 )
+from app.services.risk.metric_timing import MetricDurationObserver
 
 BenchmarkContextPayload = dict[str, str | bool | int | list[str]]
 
@@ -59,7 +59,7 @@ def _calculate_aligned_benchmark_metrics(
         metric_series=metric_series,
         benchmark_series=benchmark_period,
     )
-    aligned_count = int(len(aligned))
+    aligned_count = len(aligned)
     if aligned_count < 2:
         return _AlignedBenchmarkMetricResult(
             metric_map=_benchmark_metric_errors(

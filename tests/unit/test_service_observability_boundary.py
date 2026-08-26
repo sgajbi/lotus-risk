@@ -10,7 +10,6 @@ from pydantic import BaseModel, ValidationError
 from app.contracts.risk import RiskCalculationSupportability
 from app.services import calculation_supportability, endpoint_observation
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SERVICES_DIR = REPO_ROOT / "src" / "app" / "services"
 SANCTIONED_ADAPTER = "observability_ports.py"

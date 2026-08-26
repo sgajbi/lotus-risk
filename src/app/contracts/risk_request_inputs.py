@@ -59,7 +59,7 @@ class RiskAnalyticsRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     @model_validator(mode="after")
-    def normalize_and_validate(self) -> "RiskAnalyticsRequest":
+    def normalize_and_validate(self) -> RiskAnalyticsRequest:
         if self.input_mode == RiskInputMode.STATELESS and self.stateless_input is None:
             raise ValueError("stateless_input is required when input_mode=stateless")
 

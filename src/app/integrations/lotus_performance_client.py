@@ -8,6 +8,8 @@ from app.integrations._downstream_client_profile import resolve_downstream_clien
 from app.integrations.downstream_profile_env import env_float_with_default, env_int_with_default
 from app.integrations.lotus_performance_transport import (
     DEFAULT_LOTUS_PERFORMANCE_BASE_URL as _DEFAULT_LOTUS_PERFORMANCE_BASE_URL,
+)
+from app.integrations.lotus_performance_transport import (
     execute_benchmark_exposure_context_request,
     execute_returns_series_request,
     resolve_lotus_performance_base_url,

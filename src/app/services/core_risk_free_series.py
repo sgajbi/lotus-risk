@@ -7,7 +7,6 @@ from typing import Any
 from app.contracts.risk import ReturnPoint
 from app.upstream_errors import invalid_upstream_payload
 
-
 _PERIODIC_VALUE_CONVENTIONS = {
     "period_return",
     "periodic_return",
@@ -73,7 +72,7 @@ def _parse_periodic_return(row: dict[str, Any], *, annualization_basis: int) -> 
             ),
         )
 
-    return float(periodic_decimal * Decimal("100"))
+    return float(periodic_decimal * Decimal(100))
 
 
 def to_risk_free_return_points(

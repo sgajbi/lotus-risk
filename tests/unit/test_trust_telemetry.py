@@ -4,8 +4,8 @@ import importlib
 import json
 import shutil
 import sys
-from types import ModuleType
 from pathlib import Path
+from types import ModuleType
 from typing import Any, cast
 
 import pytest
@@ -34,7 +34,6 @@ from app.trust_telemetry_snapshot_examples import (
     PRODUCT_TRUST_TELEMETRY_SEED_EXAMPLES,
     TRUST_TELEMETRY_SUMMARY_EXAMPLE,
 )
-
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PLATFORM_ROOT = REPO_ROOT.parent / "lotus-platform"
@@ -157,8 +156,10 @@ def test_static_trust_telemetry_coverage_fails_for_uncovered_active_product(
     )
 
     assert issues == [
-        "UncoveredRiskReport:v1: active product has no static trust telemetry snapshot "
-        "or governed coverage treatment"
+        (
+            "UncoveredRiskReport:v1: active product has no static trust telemetry snapshot "
+            "or governed coverage treatment"
+        )
     ]
 
 

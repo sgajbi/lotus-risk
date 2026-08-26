@@ -10,7 +10,6 @@ from app.contracts.attribution import (
     HistoricalAttributionStatefulInput,
     HistoricalAttributionStatelessInput,
 )
-from app.services.audit_lineage import ordered_source_services, upstream_request_fingerprint
 from app.services.attribution_engine import calculate_historical_attribution
 from app.services.attribution_exposure_history import (
     as_decimal,
@@ -26,6 +25,7 @@ from app.services.attribution_stateful_inputs import (
     build_stateful_stateless_input,
     resolve_stateful_attribution_inputs,
 )
+from app.services.audit_lineage import ordered_source_services, upstream_request_fingerprint
 
 
 def _build_stateful_returns_request(stateful: HistoricalAttributionStatefulInput) -> dict[str, Any]:

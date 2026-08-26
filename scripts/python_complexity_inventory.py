@@ -61,7 +61,8 @@ def parse_complexity_payload(payload: dict[str, object]) -> list[ComplexityFindi
         if not isinstance(entries, list):
             # radon reports a per-file syntax error as a mapping with an "error" key. Skipping it
             # silently would let an unparseable file reduce the measured maximum.
-            raise RuntimeError(f"radon could not analyse {raw_path}: {entries}")
+            # A radon tool failure is an execution failure, not a caller type error.
+            raise RuntimeError(f"radon could not analyse {raw_path}: {entries}")  # noqa: TRY004
         path = raw_path.replace("\\", "/")
         for entry in entries:
             findings.append(
@@ -140,8 +141,10 @@ def render_report(findings: Sequence[ComplexityFinding], *, limit: int) -> str:
     ranks = sorted({finding.rank for finding in findings})
     counts = ", ".join(f"{rank}={rank_count(findings, frozenset({rank}))}" for rank in ranks)
     lines = [
-        f"Inspected {len(findings)} blocks; ranks {counts}; max cyclomatic complexity "
-        f"{findings[0].complexity}.",
+        (
+            f"Inspected {len(findings)} blocks; ranks {counts}; max cyclomatic complexity "
+            f"{findings[0].complexity}."
+        ),
         "",
     ]
     lines.extend(

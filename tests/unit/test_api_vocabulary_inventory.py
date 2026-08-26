@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from scripts.api_vocabulary_inventory import build_inventory, validate_inventory
-
 import pytest
+
+from scripts.api_vocabulary_inventory import build_inventory, validate_inventory
 
 pytestmark = pytest.mark.governance
 

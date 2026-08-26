@@ -8,7 +8,6 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any, cast
 
-
 ROOT = Path(__file__).resolve().parents[1]
 LOCAL_TELEMETRY_DIR = ROOT / "contracts" / "trust-telemetry"
 LOCAL_PRODUCT_DECLARATION_PATH = (

@@ -10,6 +10,7 @@ from app.contracts.concentration import (
     IssuerMappingInput,
 )
 from app.services.concentration.datamodels import IssuerEntry, IssuerIdentity, PositionEntry
+from app.services.concentration.math import _coverage_ratio, _uncovered_count
 from app.services.concentration.parsing import (
     _apply_snapshot_display_names,
     _caller_issuer_map,
@@ -19,7 +20,6 @@ from app.services.concentration.parsing import (
     _issuer_key_from_mapping,
     _issuer_key_from_position,
 )
-from app.services.concentration.math import _coverage_ratio, _uncovered_count
 from app.services.concentration_engine import (
     calculate_concentration,
 )

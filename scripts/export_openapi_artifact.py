@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import argparse
-from datetime import UTC, datetime
 import hashlib
 import json
 import os
-from pathlib import Path
 import subprocess
 import sys
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -18,8 +18,8 @@ SCRIPT_PATH = str(PROJECT_ROOT / "scripts")
 if SCRIPT_PATH not in sys.path:
     sys.path.insert(0, SCRIPT_PATH)
 
-from scripts._repo_imports import force_repo_src_first  # noqa: E402
-from scripts.openapi_quality_gate import evaluate_schema  # noqa: E402
+from scripts._repo_imports import force_repo_src_first
+from scripts.openapi_quality_gate import evaluate_schema
 
 DEFAULT_OUTPUT_PATH = PROJECT_ROOT / "output" / "openapi" / "lotus-risk.openapi.json"
 DEFAULT_EVIDENCE_JSON_PATH = (
@@ -41,7 +41,7 @@ REQUIRED_SPECTRAL_RULES = {
 
 def load_generated_schema() -> dict[str, Any]:
     force_repo_src_first(PROJECT_ROOT)
-    from app.main import app  # noqa: PLC0415
+    from app.main import app
 
     schema = app.openapi()
     if not isinstance(schema, dict):
@@ -185,7 +185,9 @@ This generated evidence describes the current OpenAPI artifact produced by
 def load_openapi_artifact(path: Path) -> dict[str, Any]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
-        raise ValueError(f"{path}: OpenAPI artifact root must be a JSON object.")
+        # This is a syntactically valid JSON value with the wrong contract shape, not a bad
+        # Python argument type.
+        raise ValueError(f"{path}: OpenAPI artifact root must be a JSON object.")  # noqa: TRY004
     return payload
 
 

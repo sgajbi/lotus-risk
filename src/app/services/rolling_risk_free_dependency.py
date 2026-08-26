@@ -8,12 +8,12 @@ from app.services.core_risk_free_series import (
     build_risk_free_series_request,
     to_risk_free_return_points,
 )
+from app.services.rolling_risk_free_coverage import get_risk_free_coverage_details
 from app.services.rolling_stateful_models import (
     LotusCoreClientProtocol,
     ResolvedRiskFreeDependency,
     StatefulSourceResponses,
 )
-from app.services.rolling_risk_free_coverage import get_risk_free_coverage_details
 from app.upstream_errors import missing_upstream_data
 
 

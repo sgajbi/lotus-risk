@@ -4,9 +4,9 @@ import json
 from pathlib import Path
 from typing import Any
 
-from scripts.validate_observability_contracts import validate_observability_contract
-
 import pytest
+
+from scripts.validate_observability_contracts import validate_observability_contract
 
 pytestmark = pytest.mark.governance
 

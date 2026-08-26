@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
-from app.contracts.scenario_inputs import RegimeScenarioPackRequest
 from app.contracts.scenario_inputs import (
     SCENARIO_MAX_EXPOSURE_BUCKETS,
     SCENARIO_MAX_EXPOSURE_COMPONENTS,
+    RegimeScenarioPackRequest,
 )
 from app.contracts.scenario_request_field_examples import (
     SCENARIO_EXPOSURE_COMPONENTS_EXAMPLE,

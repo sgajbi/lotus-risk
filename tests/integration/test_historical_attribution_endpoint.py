@@ -498,7 +498,7 @@ def test_historical_attribution_stateful_active_risk_issuer_uses_benchmark_conte
             self,
             *,
             security_ids: list[str],
-            correlation_id: str | None,  # noqa: ARG002
+            correlation_id: str | None,
         ) -> dict[str, object]:
             return {
                 "records": [

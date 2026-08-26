@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any, ClassVar
 
 
 class RecordingLotusPerformanceClient:
@@ -66,8 +67,8 @@ def build_autowired_lotus_performance_client_class(
     benchmark_exposure_context_response_factory: Callable[[], dict[str, Any]] | None = None,
 ) -> type[Any]:
     class _AutoWiredLotusPerformanceClient:
-        calls: list[dict[str, Any]] = []
-        benchmark_exposure_context_calls: list[dict[str, Any]] = []
+        calls: ClassVar[list[dict[str, Any]]] = []
+        benchmark_exposure_context_calls: ClassVar[list[dict[str, Any]]] = []
 
         async def get_returns_series(
             self,

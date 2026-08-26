@@ -5,6 +5,10 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from app.enterprise_authorization import (
+    SUPPORTED_WRITE_ROUTES,
+    missing_supported_write_route_capability_rules,
+)
 from app.enterprise_readiness import (
     authorize_write_request,
     build_enterprise_audit_middleware,
@@ -13,10 +17,6 @@ from app.enterprise_readiness import (
     load_feature_flags,
     redact_sensitive,
     validate_enterprise_runtime_config,
-)
-from app.enterprise_authorization import (
-    SUPPORTED_WRITE_ROUTES,
-    missing_supported_write_route_capability_rules,
 )
 from app.enterprise_trusted_ingress import TRUSTED_INGRESS_HEADER
 
@@ -339,7 +339,8 @@ def test_emit_audit_event_redacts_metadata(caplog: pytest.LogCaptureFixture) -> 
         correlation_id=None,
         metadata={"token": "top-secret", "safe": {"ssn": "123-45-6789"}},
     )
-    audit = cast(dict[str, Any], getattr(caplog.records[-1], "audit"))
+    # LogRecord extensions are attached dynamically by the enterprise audit adapter.
+    audit = cast(dict[str, Any], getattr(caplog.records[-1], "audit"))  # noqa: B009
     assert audit["correlation_id"] == ""
     assert audit["metadata"]["token"] == "***REDACTED***"
     assert audit["metadata"]["safe"]["ssn"] == "***REDACTED***"

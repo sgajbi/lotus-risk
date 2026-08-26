@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import sys
 from collections import Counter
 from pathlib import Path
-import sys
 from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -11,14 +11,14 @@ if SCRIPT_PATH not in sys.path:
     sys.path.insert(0, SCRIPT_PATH)
 
 try:
-    from scripts._repo_imports import force_repo_src_first  # noqa: E402
+    from scripts._repo_imports import force_repo_src_first
 except ModuleNotFoundError:  # pragma: no cover - direct script execution path
     from _repo_imports import force_repo_src_first  # type: ignore[import-not-found,no-redef]
 
 force_repo_src_first(PROJECT_ROOT)
 
-from app.main import app  # noqa: E402
-from app.enterprise_authorization import SUPPORTED_WRITE_ROUTES  # noqa: E402
+from app.enterprise_authorization import SUPPORTED_WRITE_ROUTES
+from app.main import app
 
 ALLOWED_METHODS = {"get", "post", "put", "patch", "delete"}
 JSON_MUTATION_METHODS = {"post", "put", "patch"}
@@ -101,9 +101,12 @@ def evaluate_schema(schema: dict[str, Any], *, service_name: str) -> list[str]:
                     missing_docs.append((method_upper, path, "2xx response"))
                 if not _has_error_response(operation):
                     missing_docs.append((method_upper, path, "error response (4xx/5xx/default)"))
-            if method.lower() in JSON_MUTATION_METHODS and operation.get("requestBody"):
-                if not _has_json_request_examples(operation):
-                    missing_docs.append((method_upper, path, "JSON request example"))
+            if (
+                method.lower() in JSON_MUTATION_METHODS
+                and operation.get("requestBody")
+                and not _has_json_request_examples(operation)
+            ):
+                missing_docs.append((method_upper, path, "JSON request example"))
             if (method.lower(), path) in SUPPORTED_WRITE_ROUTE_KEYS:
                 if not _has_enterprise_authorization_extension(operation):
                     missing_docs.append(

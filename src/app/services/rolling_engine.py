@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+from app.contracts.risk import RiskCalculationSupportability
 from app.contracts.rolling import (
     ROLLING_BENCHMARK_METRICS,
     RollingInputMode,
@@ -10,7 +11,6 @@ from app.contracts.rolling import (
     RollingResponse,
     RollingStatelessInput,
 )
-from app.contracts.risk import RiskCalculationSupportability
 from app.services.audit_lineage import fingerprint_model
 from app.services.calculation_supportability import (
     record_operation_supportability,

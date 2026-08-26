@@ -2,13 +2,13 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.upstream_errors import UpstreamServiceError
 from tests.support.app_runtime import override_app_runtime
 from tests.support.lotus_core_fakes import RecordingLotusCoreReferenceClient
 from tests.support.lotus_performance_fakes import (
     RecordingLotusPerformanceClient,
     build_autowired_lotus_performance_client_class,
 )
-from app.upstream_errors import UpstreamServiceError
 from tests.support.returns_series_payloads import (
     RISK_STATEFUL_BENCHMARK_RETURNS,
     RISK_STATEFUL_RETURNS,

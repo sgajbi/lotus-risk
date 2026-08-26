@@ -15,8 +15,12 @@ from app.contracts.scenario import (
     ScenarioResult,
     ScenarioSupportabilityState,
 )
+
+# Deliberate public compatibility re-export from the historical scenario-engine facade.
 from app.services.scenario_governance import (
-    SCENARIO_PACK_GOVERNANCE as SCENARIO_PACK_GOVERNANCE,  # noqa: F401
+    SCENARIO_PACK_GOVERNANCE as SCENARIO_PACK_GOVERNANCE,  # noqa: PLC0414
+)
+from app.services.scenario_governance import (
     evaluate_governance_evidence,
     most_severe_supportability,
 )

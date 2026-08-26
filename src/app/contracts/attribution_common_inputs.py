@@ -76,7 +76,7 @@ class AttributionOptions(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_lists(self) -> "AttributionOptions":
+    def validate_lists(self) -> AttributionOptions:
         if not self.attribution_types:
             raise ValueError("attribution_types must include at least one value")
         if not self.metrics:

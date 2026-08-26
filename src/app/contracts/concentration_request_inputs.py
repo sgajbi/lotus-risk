@@ -81,7 +81,7 @@ class ConcentrationRequest(BaseModel):
     )
 
     @model_validator(mode="after")
-    def normalize_and_validate(self) -> "ConcentrationRequest":
+    def normalize_and_validate(self) -> ConcentrationRequest:
         if self.input_mode == ConcentrationInputMode.STATELESS and self.stateless_input is None:
             self.stateless_input = StatelessConcentrationInput()
 

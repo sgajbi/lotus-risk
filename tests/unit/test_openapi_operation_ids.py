@@ -2,7 +2,6 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 
-
 EXPECTED_OPERATION_IDS = {
     ("get", "/health"): "getHealthStatus",
     ("get", "/health/live"): "getLivenessStatus",

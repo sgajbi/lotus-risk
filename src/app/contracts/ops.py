@@ -87,7 +87,7 @@ class MetadataResponse(BaseModel):
         description="Rounding policy revision used by risk outputs.",
         json_schema_extra={"example": "v1"},
     )
-    build: "BuildMetadata" = Field(
+    build: BuildMetadata = Field(
         description=("Build and image provenance emitted through OCI labels and runtime metadata."),
         json_schema_extra={
             "example": {

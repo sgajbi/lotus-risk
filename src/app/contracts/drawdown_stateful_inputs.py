@@ -57,7 +57,7 @@ class DrawdownStatefulInput(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_unique_period_names(self) -> "DrawdownStatefulInput":
+    def validate_unique_period_names(self) -> DrawdownStatefulInput:
         validate_unique_period_names(self.periods)
         return self
 

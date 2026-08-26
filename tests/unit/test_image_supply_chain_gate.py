@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import date
 from pathlib import Path
 
+import pytest
+
 from scripts.validate_image_supply_chain import (
     FORBIDDEN_RUNTIME_DEV_DEPENDENCIES,
     FORBIDDEN_TRIVY_OVERRIDE_FIELDS,
@@ -14,8 +16,6 @@ from scripts.validate_image_supply_chain import (
     validate_runtime_container_contract,
 )
 
-import pytest
-
 pytestmark = pytest.mark.governance
 
 
@@ -26,7 +26,7 @@ def test_image_supply_chain_gate_passes_current_repo() -> None:
 def test_image_supply_chain_gate_rejects_secret_build_args(tmp_path: Path) -> None:
     dockerfile = tmp_path / "Dockerfile"
     dockerfile.write_text(
-        "\n".join(
+        "\n".join(  # noqa: FLY002 - line lists keep Docker contract fixtures auditable.
             [
                 "FROM python:3.12-slim",
                 "ARG LOTUS_GIT_COMMIT_SHA=unknown",
@@ -83,15 +83,7 @@ def test_runtime_container_contract_rejects_single_stage_root_runtime(
 ) -> None:
     dockerfile = tmp_path / "Dockerfile"
     dockerfile.write_text(
-        "\n".join(
-            [
-                "FROM python:3.12-slim",
-                "WORKDIR /app",
-                "COPY scripts ./scripts",
-                'RUN pip install -e "."',
-                'CMD ["uvicorn", "src.app.main:app"]',
-            ]
-        ),
+        'FROM python:3.12-slim\nWORKDIR /app\nCOPY scripts ./scripts\nRUN pip install -e "."\nCMD ["uvicorn", "src.app.main:app"]',
         encoding="utf-8",
     )
     makefile = tmp_path / "Makefile"
@@ -113,7 +105,7 @@ def test_runtime_container_contract_rejects_single_stage_root_runtime(
 def test_image_supply_chain_gate_rejects_runtime_dev_extra_install(tmp_path: Path) -> None:
     dockerfile = tmp_path / "Dockerfile"
     dockerfile.write_text(
-        "\n".join(
+        "\n".join(  # noqa: FLY002 - line lists keep Docker contract fixtures auditable.
             [
                 "FROM python:3.12-slim",
                 "ARG LOTUS_GIT_COMMIT_SHA=unknown",
@@ -150,7 +142,7 @@ def test_image_supply_chain_gate_rejects_missing_runtime_dev_tool_guard(
 ) -> None:
     dockerfile = tmp_path / "Dockerfile"
     dockerfile.write_text(
-        "\n".join(
+        "\n".join(  # noqa: FLY002 - line lists keep Docker contract fixtures auditable.
             [
                 "FROM python:3.12-slim",
                 "ARG LOTUS_GIT_COMMIT_SHA=unknown",
@@ -257,9 +249,11 @@ def test_image_release_order_guard_rejects_publication_before_scan(tmp_path: Pat
     issues = validate_release_publication_order(workflow, workflow_path)
 
     assert issues == [
-        f"{workflow_path}: release order must be build, SBOM, vulnerability inventory and "
-        "upload, blocking scans, registry authentication, push, signing, then provenance "
-        "attestation"
+        (
+            f"{workflow_path}: release order must be build, SBOM, vulnerability inventory and "
+            "upload, blocking scans, registry authentication, push, signing, then provenance "
+            "attestation"
+        )
     ]
 
 
@@ -283,9 +277,11 @@ def test_image_release_order_guard_rejects_inventory_after_publication(tmp_path:
     )
 
     assert issues == [
-        f"{workflow_path}: release order must be build, SBOM, vulnerability inventory and "
-        "upload, blocking scans, registry authentication, push, signing, then provenance "
-        "attestation"
+        (
+            f"{workflow_path}: release order must be build, SBOM, vulnerability inventory and "
+            "upload, blocking scans, registry authentication, push, signing, then provenance "
+            "attestation"
+        )
     ]
 
 
@@ -793,33 +789,43 @@ def test_image_release_contract_requires_sarif_upload_to_execute(
     [
         (
             '  UNFIXED_VULNERABILITY_EXCEPTION_EXPIRES_ON: "2026-09-30"\n',
-            '  UNFIXED_VULNERABILITY_EXCEPTION_EXPIRES_ON: "2026-09-30"\n'
-            '  TRIVY_SKIP_DIRS: "/usr/local/lib/python3.12/site-packages"\n',
+            (
+                '  UNFIXED_VULNERABILITY_EXCEPTION_EXPIRES_ON: "2026-09-30"\n'
+                '  TRIVY_SKIP_DIRS: "/usr/local/lib/python3.12/site-packages"\n'
+            ),
         ),
         (
             "      - name: Generate complete vulnerability inventory\n",
-            "      - name: Generate complete vulnerability inventory\n"
-            "        env:\n"
-            '          TRIVY_SKIP_DIRS: "/usr/local/lib/python3.12/site-packages"\n',
+            (
+                "      - name: Generate complete vulnerability inventory\n"
+                "        env:\n"
+                '          TRIVY_SKIP_DIRS: "/usr/local/lib/python3.12/site-packages"\n'
+            ),
         ),
         (
             "      - name: Generate complete vulnerability inventory\n",
-            "      - name: Generate complete vulnerability inventory\n"
-            "        env:\n"
-            '          "TRIVY_SKIP_DIRS": "/usr/local/lib/python3.12/site-packages"\n',
+            (
+                "      - name: Generate complete vulnerability inventory\n"
+                "        env:\n"
+                '          "TRIVY_SKIP_DIRS": "/usr/local/lib/python3.12/site-packages"\n'
+            ),
         ),
         (
             "      - name: Generate complete vulnerability inventory\n",
-            "      - name: Generate complete vulnerability inventory\n"
-            "        env:\n"
-            "          'TRIVY_SKIP_DIRS': '/usr/local/lib/python3.12/site-packages'\n",
+            (
+                "      - name: Generate complete vulnerability inventory\n"
+                "        env:\n"
+                "          'TRIVY_SKIP_DIRS': '/usr/local/lib/python3.12/site-packages'\n"
+            ),
         ),
         (
             "      - name: Validate image supply-chain contract\n",
-            "      - name: Set forbidden Trivy environment\n"
-            '        run: echo "TRIVY_SKIP_DIRS=/usr/local/lib/python3.12/site-packages" '
-            '>> "$GITHUB_ENV"\n\n'
-            "      - name: Validate image supply-chain contract\n",
+            (
+                "      - name: Set forbidden Trivy environment\n"
+                '        run: echo "TRIVY_SKIP_DIRS=/usr/local/lib/python3.12/site-packages" '
+                '>> "$GITHUB_ENV"\n\n'
+                "      - name: Validate image supply-chain contract\n"
+            ),
         ),
     ],
 )

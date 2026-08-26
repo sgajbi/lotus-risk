@@ -119,7 +119,7 @@ class RollingOptions(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_window_lengths(self) -> "RollingOptions":
+    def validate_window_lengths(self) -> RollingOptions:
         if not self.window_lengths:
             raise ValueError("window_lengths must contain at least one window")
         if any(window <= 1 for window in self.window_lengths):

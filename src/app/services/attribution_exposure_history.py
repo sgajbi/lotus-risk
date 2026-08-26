@@ -4,10 +4,10 @@ from datetime import date
 from typing import Any, Protocol
 
 from app.contracts.attribution import (
+    ExposurePoint,
     GroupingDimension,
     HistoricalAttributionStatefulInput,
 )
-from app.contracts.attribution import ExposurePoint
 from app.services.attribution_exposure_points import (
     as_decimal,
     build_exposure_points,
@@ -18,7 +18,6 @@ from app.services.attribution_position_timeseries import (
     fetch_position_timeseries_rows,
 )
 from app.upstream_errors import invalid_upstream_payload, missing_upstream_data
-
 
 __all__ = [
     "LotusCoreClientProtocol",

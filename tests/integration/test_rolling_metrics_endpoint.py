@@ -18,12 +18,12 @@ from tests.support.lotus_performance_fakes import (
     RecordingLotusPerformanceClient,
     build_autowired_lotus_performance_client_class,
 )
-from tests.support.risk_free_series_payloads import build_risk_free_series_response
 from tests.support.returns_series_payloads import (
     JAN_2026_PORTFOLIO_RETURNS,
     JAN_2026_ROLLING_BENCHMARK_RETURNS,
     build_returns_series_response,
 )
+from tests.support.risk_free_series_payloads import build_risk_free_series_response
 
 _AutoWiredLotusPerformanceClient = build_autowired_lotus_performance_client_class(
     response_factory=lambda: build_returns_series_response(

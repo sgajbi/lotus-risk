@@ -3,8 +3,8 @@ from pydantic import ValidationError
 
 from app.contracts.risk import RiskAnalyticsRequest, RiskInputMode, RiskResponse
 from app.contracts.risk_inputs import RiskAnalyticsRequest as RiskAnalyticsRequestSource
-from app.contracts.risk_request_inputs import RiskAnalyticsRequest as RiskAnalyticsRequestModule
 from app.contracts.risk_outputs import RiskResponse as RiskResponseSource
+from app.contracts.risk_request_inputs import RiskAnalyticsRequest as RiskAnalyticsRequestModule
 from app.contracts.risk_response_field_examples import (
     RISK_BENCHMARK_CONTEXT_EXAMPLE,
     RISK_CALCULATION_SUPPORTABILITY_EXAMPLE,
@@ -15,6 +15,8 @@ from app.contracts.risk_response_field_examples import (
 )
 from app.contracts.risk_response_outputs import (
     RiskResponse as RiskResponseModule,
+)
+from app.contracts.risk_response_outputs import (
     RiskResponseMetadata,
 )
 

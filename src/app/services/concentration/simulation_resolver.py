@@ -13,11 +13,6 @@ from app.services.concentration.datamodels import ConcentrationComputationInput
 from app.services.concentration.lineage import core_snapshot_upstream_fingerprint
 from app.services.concentration.metadata import build_metadata
 from app.services.concentration.ports import LotusCoreClientProtocol
-from app.services.concentration.simulation_snapshot import (
-    SimulationSnapshotState,
-    issuer_map_from_snapshot_sections,
-    simulation_snapshot_state,
-)
 from app.services.concentration.simulation_session import (
     SimulationSession,
     apply_simulation_changes,
@@ -25,6 +20,11 @@ from app.services.concentration.simulation_session import (
     session_with_snapshot_version,
     simulation_snapshot_payload,
     validate_simulation_idempotency_key,
+)
+from app.services.concentration.simulation_snapshot import (
+    SimulationSnapshotState,
+    issuer_map_from_snapshot_sections,
+    simulation_snapshot_state,
 )
 from app.services.concentration.upstream_contracts import invalid_core_snapshot_payload
 

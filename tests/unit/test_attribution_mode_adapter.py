@@ -361,8 +361,8 @@ def test_stateful_attribution_rejects_benchmark_exposure_date_misalignment() -> 
         async def get_benchmark_exposure_context(
             self,
             *,
-            request_payload: dict[str, object],  # noqa: ARG002
-            correlation_id: str | None,  # noqa: ARG002
+            request_payload: dict[str, object],
+            correlation_id: str | None,
         ) -> dict[str, object]:
             payload = build_benchmark_exposure_context_response()
             rows = payload["rows"]
@@ -392,8 +392,8 @@ def test_stateful_attribution_rejects_bad_benchmark_exposure_context_shape() -> 
         async def get_benchmark_exposure_context(
             self,
             *,
-            request_payload: dict[str, object],  # noqa: ARG002
-            correlation_id: str | None,  # noqa: ARG002
+            request_payload: dict[str, object],
+            correlation_id: str | None,
         ) -> dict[str, object]:
             return {**build_benchmark_exposure_context_response(), "rows": "bad"}
 
@@ -417,8 +417,8 @@ def test_stateful_attribution_rejects_missing_benchmark_exposure_lineage() -> No
         async def get_benchmark_exposure_context(
             self,
             *,
-            request_payload: dict[str, object],  # noqa: ARG002
-            correlation_id: str | None,  # noqa: ARG002
+            request_payload: dict[str, object],
+            correlation_id: str | None,
         ) -> dict[str, object]:
             return {**build_benchmark_exposure_context_response(), "metadata": {}}
 

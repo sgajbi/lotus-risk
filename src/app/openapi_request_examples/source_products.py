@@ -65,8 +65,8 @@ RISK_EVENT_COHORT_EXAMPLES: dict[str, JsonObject] = {
 
 
 __all__ = [
-    "JsonObject",
     "MANDATE_HEALTH_EXAMPLES",
     "REGIME_SCENARIO_EXAMPLES",
     "RISK_EVENT_COHORT_EXAMPLES",
+    "JsonObject",
 ]

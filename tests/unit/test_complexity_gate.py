@@ -40,7 +40,7 @@ def _finding(complexity: int, rank: str) -> ComplexityFinding:
 
 def _declared_thresholds() -> dict[str, int]:
     target = re.search(
-        r"^complexity-gate:\n(?:\t.*\n)+", MAKEFILE.read_text(encoding="utf-8"), re.M
+        r"^complexity-gate:\n(?:\t.*\n)+", MAKEFILE.read_text(encoding="utf-8"), re.MULTILINE
     )
     assert target is not None, "complexity-gate is no longer defined in the Makefile"
     return {
@@ -55,7 +55,7 @@ def test_the_gate_target_no_longer_runs_a_command_that_cannot_fail() -> None:
     """`radon cc` and `radon mi` exit 0 whatever they print; `-n C` filters output, not status."""
 
     target = re.search(
-        r"^complexity-gate:\n(?:\t.*\n)+", MAKEFILE.read_text(encoding="utf-8"), re.M
+        r"^complexity-gate:\n(?:\t.*\n)+", MAKEFILE.read_text(encoding="utf-8"), re.MULTILINE
     )
     assert target is not None
     recipe = target.group(0)

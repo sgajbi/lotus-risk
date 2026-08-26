@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from argparse import ArgumentParser
-from datetime import UTC, datetime
 import json
-from pathlib import Path
 import re
 import sys
+from argparse import ArgumentParser
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any, cast
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -13,11 +13,11 @@ SCRIPT_PATH = str(PROJECT_ROOT / "scripts")
 if SCRIPT_PATH not in sys.path:
     sys.path.insert(0, SCRIPT_PATH)
 
-from _repo_imports import force_repo_src_first  # type: ignore[import-not-found]  # noqa: E402
+from _repo_imports import force_repo_src_first  # type: ignore[import-not-found]
 
 force_repo_src_first(PROJECT_ROOT)
 
-from app.main import app  # noqa: E402
+from app.main import app
 
 ALLOWED_METHODS = {"get", "post", "put", "patch", "delete"}
 DEFAULT_OUTPUT = (

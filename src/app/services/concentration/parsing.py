@@ -8,7 +8,7 @@ from app.contracts.concentration import (
     ConcentrationValuationContext,
     StatelessConcentrationInput,
 )
-from app.services.concentration.datamodels import IssuerIdentity, PositionEntry, IssuerEntry
+from app.services.concentration.datamodels import IssuerEntry, IssuerIdentity, PositionEntry
 from app.services.concentration.issuer_mapping import (
     _caller_issuer_map,
     _extract_issuer_map,
@@ -183,6 +183,6 @@ __all__ = [
     "_issuer_key_from_mapping",
     "_issuer_key_from_position",
     "_merge_issuer_maps",
-    "_to_weighted_values",
     "_to_exposure_value",
+    "_to_weighted_values",
 ]

@@ -6,7 +6,6 @@ from pathlib import Path
 from app.services.concentration.datamodels import PositionEntry, TopPositionDriverValue
 from app.services.concentration.math import _top_position_driver
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CONCENTRATION_MATH = REPO_ROOT / "src" / "app" / "services" / "concentration" / "math.py"
 

@@ -49,7 +49,10 @@ async def _resolve_reporting_currency(
     )
     valuation_context = snapshot.get("valuation_context")
     if not isinstance(valuation_context, dict):
-        raise ValueError("lotus-core core-snapshot payload missing valuation_context")
+        # The upstream JSON value violates its domain contract; this is not a caller type error.
+        raise ValueError(  # noqa: TRY004
+            "lotus-core core-snapshot payload missing valuation_context"
+        )
     resolved_reporting_currency = valuation_context.get("reporting_currency")
     if not isinstance(resolved_reporting_currency, str) or not resolved_reporting_currency:
         resolved_reporting_currency = valuation_context.get("portfolio_currency")

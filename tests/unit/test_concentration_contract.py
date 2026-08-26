@@ -12,15 +12,27 @@ from app.contracts.concentration_inputs import ConcentrationRequest as Concentra
 from app.contracts.concentration_inputs import (
     SimulationTransactionType as SimulationTransactionTypeSource,
 )
-from app.contracts.concentration_outputs import ConcentrationResponse as ConcentrationResponseSource
-from app.contracts.concentration_request_inputs import (
-    ConcentrationRequest as ConcentrationRequestImplementation,
+from app.contracts.concentration_issuer_metric_outputs import (
+    IssuerConcentration as IssuerConcentrationImplementation,
 )
 from app.contracts.concentration_metric_field_examples import (
     TOP_ISSUER_CURRENT_EXAMPLE,
     TOP_ISSUER_PROPOSED_EXAMPLE,
     TOP_POSITION_CURRENT_EXAMPLE,
     TOP_POSITION_PROPOSED_EXAMPLE,
+)
+from app.contracts.concentration_metric_outputs import (
+    IssuerConcentration as IssuerConcentrationSource,
+)
+from app.contracts.concentration_metric_outputs import (
+    SinglePositionConcentration,
+)
+from app.contracts.concentration_outputs import ConcentrationResponse as ConcentrationResponseSource
+from app.contracts.concentration_request_inputs import (
+    ConcentrationRequest as ConcentrationRequestImplementation,
+)
+from app.contracts.concentration_response_envelope_outputs import (
+    ConcentrationResponse as ConcentrationResponseEnvelope,
 )
 from app.contracts.concentration_response_field_examples import (
     CONCENTRATION_ISSUER_EXAMPLE,
@@ -29,18 +41,8 @@ from app.contracts.concentration_response_field_examples import (
     CONCENTRATION_SINGLE_POSITION_EXAMPLE,
     CONCENTRATION_VALUATION_CONTEXT_EXAMPLE,
 )
-from app.contracts.concentration_metric_outputs import (
-    SinglePositionConcentration,
-    IssuerConcentration as IssuerConcentrationSource,
-)
-from app.contracts.concentration_issuer_metric_outputs import (
-    IssuerConcentration as IssuerConcentrationImplementation,
-)
 from app.contracts.concentration_response_outputs import (
     ConcentrationResponse as ConcentrationResponseImplementation,
-)
-from app.contracts.concentration_response_envelope_outputs import (
-    ConcentrationResponse as ConcentrationResponseEnvelope,
 )
 
 

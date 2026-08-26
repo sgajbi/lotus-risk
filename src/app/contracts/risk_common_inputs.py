@@ -124,7 +124,7 @@ class RiskRequestPeriod(BaseModel):
         return data
 
     @model_validator(mode="after")
-    def validate_semantics(self) -> "RiskRequestPeriod":
+    def validate_semantics(self) -> RiskRequestPeriod:
         if self.type == "EXPLICIT" and (self.from_date is None or self.to_date is None):
             raise ValueError("EXPLICIT period requires from/to dates")
         if self.type == "YEAR" and self.year is None:

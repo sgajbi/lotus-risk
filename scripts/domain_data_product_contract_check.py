@@ -8,7 +8,6 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any, cast
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SRC = REPO_ROOT / "src"
 SRC_STR = str(SRC)

@@ -1,6 +1,8 @@
 from app.app_factory import create_app
 from app.service_metadata import (
     SERVICE_NAME as _SERVICE_NAME,
+)
+from app.service_metadata import (
     SERVICE_VERSION as _SERVICE_VERSION,
 )
 

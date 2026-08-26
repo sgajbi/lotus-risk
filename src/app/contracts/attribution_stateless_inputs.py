@@ -98,7 +98,7 @@ class HistoricalAttributionStatelessInput(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_semantics(self) -> "HistoricalAttributionStatelessInput":
+    def validate_semantics(self) -> HistoricalAttributionStatelessInput:
         validate_unique_period_names(self.periods)
         validate_active_attribution_inputs(
             attribution_options=self.attribution_options,
