@@ -35,6 +35,13 @@ run, because the dispatch ref is a tag rather than `main`.
 
 The repo-native commands are designed to map to those lanes directly.
 
+`Action Reference Resolution` is a separate daily and manually dispatchable network check. It
+enumerates every external `uses:` reference and asks the GitHub API whether its repository and
+pinned tag or commit still exist. A missing repository/reference or an empty inventory fails; an
+API outage or rate limit cancels the run so it is visibly inconclusive rather than falsely green.
+This complements the offline form check in `make github-actions-runtime-gate`, which remains fast
+and deterministic for local and protected lanes.
+
 ## Primary Commands
 
 - `make check` - fast local gate
@@ -56,9 +63,10 @@ The repo-native commands are designed to map to those lanes directly.
 - `make architecture-gate` - import-linter contracts from `.importlinter`, including that the domain
   and service layers stay framework independent and never import FastAPI
 - `make github-actions-runtime-gate` - workflow action runtime posture, and reference forms that
-  cannot resolve. This runs *first* in both `check` and `ci`. It was added after
+  cannot resolve syntactically. This runs *first* in both `check` and `ci`. It was added after
   `aquasecurity/trivy-action@0.32.0` - a tag that does not exist - sat in `image-release.yml` and
-  broke the release supply chain before any step ran; see issue #227
+  broke the release supply chain before any step ran; see issue #227. The daily online resolver
+  catches a well-formed tag such as `v9.99.0` that does not actually exist; see issue #231
 - `make source-size-gate` - fails when any module grows past the governed line count or when the
   source scan inspects zero files; successful output names the inspected file count
 - `make complexity-gate` - **blocking** cyclomatic complexity ratchet. Fails when the maximum rises
