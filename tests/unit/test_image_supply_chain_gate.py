@@ -8,6 +8,7 @@ from scripts.validate_image_supply_chain import (
     validate_dockerfile,
     validate_image_supply_chain,
     validate_kubernetes_digest_references,
+    validate_release_publication_order,
 )
 
 import pytest
@@ -168,3 +169,49 @@ def test_image_supply_chain_gate_rejects_missing_release_workflow(tmp_path: Path
     issues = validate_ci_image_release_workflow(tmp_path / "missing.yml")
 
     assert issues == [f"{tmp_path / 'missing.yml'}: image release workflow is missing"]
+
+
+def test_image_release_scans_before_registry_authentication_and_publication() -> None:
+    workflow_path = Path(".github/workflows/image-release.yml")
+    workflow = workflow_path.read_text(encoding="utf-8")
+
+    assert validate_release_publication_order(workflow, workflow_path) == []
+    assert "push: false" in workflow
+    assert "load: true" in workflow
+    assert 'exit-code: "1"' in workflow
+    assert workflow.index("- name: Vulnerability scan") < workflow.index(
+        "- name: Push immutable image after scan"
+    )
+
+
+def test_image_release_order_guard_rejects_publication_before_scan(tmp_path: Path) -> None:
+    workflow_path = tmp_path / "image-release.yml"
+    workflow = "\n".join(
+        f"- name: {step}"
+        for step in (
+            "Build image for validation",
+            "Generate SBOM",
+            "Authenticate to release registry",
+            "Push immutable image after scan",
+            "Vulnerability scan",
+            "Sign image by digest",
+            "Generate provenance attestation",
+        )
+    )
+
+    issues = validate_release_publication_order(workflow, workflow_path)
+
+    assert issues == [
+        f"{workflow_path}: release order must be build, SBOM, vulnerability scan, registry "
+        "authentication, push, signing, then provenance attestation"
+    ]
+
+
+def test_image_release_contract_rejects_build_time_publication(tmp_path: Path) -> None:
+    workflow_path = tmp_path / "image-release.yml"
+    current = Path(".github/workflows/image-release.yml").read_text(encoding="utf-8")
+    workflow_path.write_text(current.replace("push: false", "push: true"), encoding="utf-8")
+
+    issues = validate_ci_image_release_workflow(workflow_path)
+
+    assert f"{workflow_path}: build must not publish before the vulnerability scan" in issues

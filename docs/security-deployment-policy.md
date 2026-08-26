@@ -145,9 +145,11 @@ The governed release image policy is:
 2. OCI labels include commit SHA, Git branch/ref, service version, UTC build timestamp, repository
    URL, image digest field, and CI pipeline/run ID,
 3. image push is permitted only through `.github/workflows/image-release.yml`,
-4. the registry digest is captured in `output/image-release/image-release-manifest.json`,
-5. an SPDX SBOM is generated for the built image,
-6. the Trivy HIGH/CRITICAL vulnerability scan must pass before release evidence is accepted,
+4. the image is built and loaded locally so an SPDX SBOM and the blocking Trivy HIGH/CRITICAL
+   vulnerability scan complete before registry authentication or publication,
+5. a failed vulnerability scan prevents the image from being pushed to the registry,
+6. after the scan passes, the immutable image is pushed and its registry digest is captured in
+   `output/image-release/image-release-manifest.json`,
 7. the image is signed by digest with keyless cosign signing,
 8. provenance attestation is generated and pushed for the image digest,
 9. Kubernetes and Helm deployment manifests must reference images by `image@sha256:<digest>`, not
@@ -161,7 +163,8 @@ The governed release image policy is:
     than baking secret names or values into the image.
 
 `make image-supply-chain-gate` is the repository-native guard for these requirements. It validates
-required Docker metadata, blocks image push outside the image-release workflow, rejects mutable
+the build, SBOM, blocking scan, registry authentication, publication, signing, and attestation order,
+validates required Docker metadata, blocks image push outside the image-release workflow, rejects mutable
 Kubernetes image references, rejects secret-like Docker build argument or environment names, rejects
 runtime installation of the project `dev` extra, and verifies that pytest, ruff, mypy, bandit,
 deptry, radon, vulture, and pre-commit are absent from the deployable runtime image.
