@@ -57,6 +57,21 @@ def _reachable_targets(makefile: str) -> set[str]:
     return reachable
 
 
+def _targets_with_recipes(makefile: str) -> set[str]:
+    targets: set[str] = set()
+    current_target: str | None = None
+    for line in makefile.splitlines():
+        target_match = re.match(r"^([a-zA-Z0-9_-]+):\s*(.*)$", line)
+        if target_match:
+            current_target = target_match.group(1)
+            if ";" in target_match.group(2):
+                targets.add(current_target)
+            continue
+        if line.startswith("\t") and line.strip() and current_target is not None:
+            targets.add(current_target)
+    return targets
+
+
 def _gate_targets() -> set[str]:
     """Every `*-gate` target reachable from the blocking lanes, including aggregate members."""
 
@@ -86,10 +101,14 @@ DOCUMENTED_ALIASES: frozenset[str] = frozenset()
 def _invalid_documented_aliases(aliases: frozenset[str], makefile: str) -> list[str]:
     dependencies = _target_dependencies(makefile)
     reachable = _reachable_targets(makefile)
+    targets_with_recipes = _targets_with_recipes(makefile)
     invalid: list[str] = []
     for alias in sorted(aliases):
         if alias not in dependencies:
             invalid.append(f"{alias} (not a Makefile target)")
+            continue
+        if alias in targets_with_recipes:
+            invalid.append(f"{alias} (contains recipe commands)")
             continue
         unreachable = sorted(set(dependencies[alias]) - reachable)
         if not dependencies[alias] or unreachable:
@@ -112,18 +131,30 @@ def test_documented_alias_guard_rejects_fabricated_and_unreachable_names() -> No
             "check: live-gate",
             "ci: live-gate",
             "live-gate: live-validation",
+            "inline-recipe-alias: live-validation ; python inline_check.py",
             "orphan-gate: orphan-validation",
+            "recipe-alias: live-validation",
+            "\tpython recipe_check.py",
         ]
     )
 
     invalid = _invalid_documented_aliases(
-        frozenset({"fabricated-gate", "orphan-gate"}),
+        frozenset(
+            {
+                "fabricated-gate",
+                "inline-recipe-alias",
+                "orphan-gate",
+                "recipe-alias",
+            }
+        ),
         makefile,
     )
 
     assert invalid == [
         "fabricated-gate (not a Makefile target)",
+        "inline-recipe-alias (contains recipe commands)",
         "orphan-gate (unreachable prerequisites: ['orphan-validation'])",
+        "recipe-alias (contains recipe commands)",
     ]
 
 
