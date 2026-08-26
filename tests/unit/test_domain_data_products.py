@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from pytest import MonkeyPatch
+
 from app.domain_data_products import (
     LOCAL_PRODUCER_DECLARATION_PATH,
     _resolve_repo_root,
@@ -34,7 +36,7 @@ def test_load_local_producer_declaration_uses_repo_native_contract_path() -> Non
 
 
 def test_resolve_repo_root_honors_packaged_runtime_location(
-    monkeypatch,
+    monkeypatch: MonkeyPatch,
     tmp_path: Path,
 ) -> None:
     monkeypatch.setenv("LOTUS_REPO_ROOT", str(tmp_path / "runtime-root"))
