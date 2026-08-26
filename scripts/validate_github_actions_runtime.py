@@ -35,6 +35,28 @@ ACTION_USE_PATTERN = re.compile(
 )
 
 
+# Every `uses: owner/repo@ref` in a workflow. Unlike ACTION_USE_PATTERN above, which governs the
+# Node runtime major of two specific artifact actions, this one exists to answer a cruder question:
+# does the reference resolve at all.
+ANY_ACTION_USE_PATTERN = re.compile(
+    r"""
+    \buses\s*:\s*
+    (?P<quote>["']?)
+    (?P<slug>[A-Za-z0-9][A-Za-z0-9_.-]*/[A-Za-z0-9][A-Za-z0-9_.-]*)
+    @
+    (?P<ref>[A-Za-z0-9_./-]+)
+    (?P=quote)
+    """,
+    re.VERBOSE,
+)
+
+# A resolvable reference is a `v`-prefixed tag or a full commit SHA. Every action publisher this
+# repository consumes tags with a `v`; `aquasecurity/trivy-action@0.32.0` did not exist and never
+# had, and the release lane failed at `Set up job` before a single step ran - for seven weeks,
+# invisibly, because the workflow had never been triggered. See issue #227.
+RESOLVABLE_REF_PATTERN = re.compile(r"^(?:v\d+(?:[._-].*)?|[0-9a-f]{40})$")
+
+
 @dataclass(frozen=True)
 class WorkflowActionViolation:
     path: Path
@@ -49,6 +71,8 @@ class WorkflowActionViolation:
             display_path = self.path.relative_to(root)
         except ValueError:
             display_path = self.path
+        if self.minimum_major == 0:
+            return f"{display_path}:{self.line_number}: {self.slug}@{self.ref} {self.rationale}"
         return (
             f"{display_path}:{self.line_number}: {self.slug}@{self.ref} is below "
             f"the governed minimum major v{self.minimum_major}. {self.rationale}"
@@ -62,8 +86,41 @@ def _extract_major(ref: str) -> int | None:
     return int(match.group("major"))
 
 
-def validate_workflow_file(path: Path) -> list[WorkflowActionViolation]:
+def _validate_reference_forms(path: Path) -> list[WorkflowActionViolation]:
+    """Fail on an action reference that cannot resolve.
+
+    This is deliberately an offline, syntactic check rather than a registry lookup: a gate that
+    needs the network fails for reasons unrelated to the repository, and would not run at all in
+    the pre-push validation where this belongs.
+    """
+
     violations: list[WorkflowActionViolation] = []
+    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        match = ANY_ACTION_USE_PATTERN.search(line)
+        if match is None:
+            continue
+        ref = match.group("ref")
+        if RESOLVABLE_REF_PATTERN.fullmatch(ref):
+            continue
+        violations.append(
+            WorkflowActionViolation(
+                path=path,
+                line_number=line_number,
+                slug=match.group("slug"),
+                ref=ref,
+                minimum_major=0,
+                rationale=(
+                    "An action reference must be a `v`-prefixed tag or a 40-character commit SHA. "
+                    "A bare version like `0.32.0` does not resolve, and the job fails at `Set up "
+                    "job` before any step runs."
+                ),
+            )
+        )
+    return violations
+
+
+def validate_workflow_file(path: Path) -> list[WorkflowActionViolation]:
+    violations = _validate_reference_forms(path)
     for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
         match = ACTION_USE_PATTERN.search(line)
         if match is None:
