@@ -28,7 +28,8 @@ HTTP_ROUTE_PREFIX = re.compile(
 )
 ROUTE_LITERAL_PREFIX = re.compile(
     r"(?:\b(?:route|endpoint)(?:_path)?\s*=\s*"
-    r"|@\w+(?:\.\w+)*\s*\(\s*"
+    r"|@\w+(?:\.\w+)*\.(?:get|head|post|put|patch|delete|options|route|websocket)"
+    r"\s*\(\s*"
     r"|\b(?:client|http_client|async_client|requests?|httpx)(?:\.\w+)*"
     r"\.(?:get|head|post|put|patch|delete|options)\s*\(\s*)[\"']$"
     r"|\b(?:httpx\.)?Request\s*\(\s*[\"']"
@@ -136,6 +137,9 @@ def test_absolute_user_home_guard_does_not_let_an_adjacent_url_hide_a_path() -> 
 
     path_assignment = f'path = "{linux}"'
     assert _absolute_user_home_references(path_assignment) == ["/" + "/".join(["home", "alice"])]
+
+    data_decorator = f'@data_file("{linux}/input.json")'
+    assert _absolute_user_home_references(data_decorator) == ["/" + "/".join(["home", "alice"])]
 
 
 def test_absolute_user_home_guard_detects_file_uris() -> None:
