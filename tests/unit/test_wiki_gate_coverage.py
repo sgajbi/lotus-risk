@@ -42,11 +42,25 @@ def _logical_make_lines(makefile: str) -> list[str]:
     return logical_lines
 
 
+def _strip_unescaped_make_comment(line: str) -> str:
+    for index, character in enumerate(line):
+        if character != "#":
+            continue
+        preceding_backslashes = 0
+        cursor = index - 1
+        while cursor >= 0 and line[cursor] == "\\":
+            preceding_backslashes += 1
+            cursor -= 1
+        if preceding_backslashes % 2 == 0:
+            return line[:index]
+    return line
+
+
 def _targets_in(lane: str, makefile: str) -> list[str]:
     logical_makefile = "\n".join(_logical_make_lines(makefile))
     match = re.search(rf"^{lane}:[ \t]*(.*)$", logical_makefile, re.M)
     assert match is not None, f"The {lane} lane is missing from the Makefile."
-    return match.group(1).split()
+    return _strip_unescaped_make_comment(match.group(1)).split()
 
 
 def _is_gate(target: str) -> bool:
@@ -57,7 +71,8 @@ def _target_dependencies(makefile: str) -> dict[str, list[str]]:
     dependencies: dict[str, list[str]] = {}
     logical_makefile = "\n".join(_logical_make_lines(makefile))
     for match in re.finditer(r"^([a-zA-Z0-9_-]+):[ \t]*(.*)$", logical_makefile, re.M):
-        prerequisites = match.group(2).partition(";")[0].split()
+        declaration = _strip_unescaped_make_comment(match.group(2))
+        prerequisites = declaration.partition(";")[0].split()
         dependencies.setdefault(match.group(1), []).extend(prerequisites)
     return dependencies
 
@@ -106,7 +121,7 @@ def test_reachability_parses_continuations_without_reading_recipe_text() -> None
     makefile = "\n".join(
         [
             "check: aggregate-gate \\",
-            " continued-gate",
+            " continued-gate # disabled-gate",
             "ci: aggregate-gate",
             "aggregate-gate:",
             "\t@echo disabled-gate",
