@@ -1,4 +1,4 @@
-"""Static-analysis tools, and the stubs they read, must be pinned, not floored.
+"""Tools whose OUTPUT is the gate must be pinned, not floored.
 
 A floored linter changes the gate's verdict without anybody changing the repository. `ruff>=0.15.0`
 resolved to 0.16.4 in CI while the local virtualenv held 0.15.21, so `make lint` passed locally and
@@ -12,9 +12,19 @@ Because a stub release tracks its runtime, `pandas` and `numpy` are pinned along
 against a floating runtime is worse than either, since mypy would then check against an API the
 installed package does not have.
 
-Test runners are deliberately *not* covered. A pytest upgrade does not invent new assertions about
-our code; a linter or stub upgrade invents new findings about code nobody touched. That is the
-distinction this check encodes.
+Coverage tooling counts, and its failure mode is the more dangerous one. `--cov-fail-under` compares
+a produced number against a fixed threshold (`COVERAGE_FAIL_UNDER ?= 98`). Which branches count,
+which files are included and how partial branches are treated have all changed across coverage
+majors — so an upgrade can move what `98` means with no commit, and it can move it in the
+*permissive* direction: measure fewer branches, the percentage rises, the gate passes more easily,
+and nothing reports that the bar moved. A floored linter fails loudly; a floored coverage tool can
+fail silently and in our favour.
+
+Test runners are deliberately *not* covered. A `pytest` upgrade does not invent new assertions about
+this codebase. The nearest counter-example is `pytest-asyncio`, whose `asyncio_mode` default could
+silently skip unmarked async tests — but all 61 async tests here carry an explicit
+`@pytest.mark.asyncio`, so they are marker-protected rather than mode-dependent. The line is
+therefore *output of the gate* versus *runner of the code*, not linters versus everything else.
 """
 
 from __future__ import annotations
@@ -26,8 +36,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PYPROJECT = ROOT / "pyproject.toml"
 
-# Tools whose rule set is the gate: a release can turn `main` red with no commit.
-STATIC_ANALYSIS_TOOLS = frozenset(
+# Tools whose output is the gate: a release can change the verdict with no commit.
+GATE_OUTPUT_TOOLS = frozenset(
     {
         "ruff",
         "mypy",
@@ -38,6 +48,9 @@ STATIC_ANALYSIS_TOOLS = frozenset(
         "vulture",
         # A stub release changes what mypy concludes about unchanged code.
         "pandas-stubs",
+        # These produce the number --cov-fail-under compares against a fixed threshold.
+        "coverage",
+        "pytest-cov",
     }
 )
 
@@ -71,19 +84,19 @@ def _requirements(raw_requirements: list[str]) -> dict[str, str]:
     return requirements
 
 
-def test_every_static_analysis_tool_is_pinned_to_an_exact_version() -> None:
+def test_every_gate_output_tool_is_pinned_to_an_exact_version() -> None:
     requirements = _dev_requirements()
 
-    missing = sorted(STATIC_ANALYSIS_TOOLS - set(requirements))
-    assert missing == [], f"Declared static-analysis tools not found in dev extras: {missing}"
+    missing = sorted(GATE_OUTPUT_TOOLS - set(requirements))
+    assert missing == [], f"Declared gate-output tools not found in dev extras: {missing}"
 
     floored = sorted(
         f"{name}{requirements[name]}"
-        for name in STATIC_ANALYSIS_TOOLS
+        for name in GATE_OUTPUT_TOOLS
         if not requirements[name].startswith("==")
     )
     assert floored == [], (
-        "These static-analysis tools are floored rather than pinned, so a new release changes the "
+        "These gate-output tools are floored rather than pinned, so a new release changes the "
         f"gate's verdict with no commit: {floored}. See issue #218."
     )
 
@@ -95,7 +108,7 @@ def test_the_pinned_versions_are_the_ones_actually_installed() -> None:
 
     requirements = _dev_requirements()
     mismatched = []
-    for name in sorted(STATIC_ANALYSIS_TOOLS):
+    for name in sorted(GATE_OUTPUT_TOOLS):
         pinned = requirements[name].removeprefix("==").strip()
         try:
             installed = metadata.version(name)
