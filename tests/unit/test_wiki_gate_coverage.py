@@ -63,6 +63,9 @@ def _is_gate(target: str) -> bool:
 def _target_dependencies(makefile: str) -> dict[str, list[str]]:
     dependencies: dict[str, list[str]] = {}
     for logical_line in _logical_make_lines(makefile):
+        assert not re.match(
+            r"^(?:ifeq|ifneq|ifdef|ifndef|else|endif)(?:\s|$)", logical_line.strip()
+        ), "Conditional Make syntax is unsupported by the wiki reachability guard."
         if re.match(r"^[A-Za-z_][A-Za-z0-9_]*[ \t]*[?+:!]?=", logical_line):
             continue
         rule_match = re.match(r"^(?P<targets>[^:]+):(?P<declaration>.*)$", logical_line)
@@ -73,11 +76,11 @@ def _target_dependencies(makefile: str) -> dict[str, list[str]]:
             continue  # A := variable assignment, not a target rule.
         targets = rule_match.group("targets").split()
         assert targets, "Make target rule declares no targets."
-        assert all("$(" not in target and "${" not in target for target in targets), (
+        assert all("$" not in target for target in targets), (
             "Variable-expanded Make targets are unsupported by the wiki reachability guard."
         )
         prerequisite_declaration = declaration.partition(";")[0]
-        assert "$(" not in prerequisite_declaration and "${" not in prerequisite_declaration, (
+        assert "$" not in prerequisite_declaration, (
             "Variable-expanded Make prerequisites are unsupported by the wiki reachability guard."
         )
         prerequisites = prerequisite_declaration.split()
@@ -156,17 +159,34 @@ def test_reachability_parses_continuations_without_reading_recipe_text() -> None
     assert "recipe-only-gate" not in reachable
 
 
-def test_reachability_fails_closed_on_variable_prerequisites() -> None:
+@pytest.mark.parametrize("reference", ["$(GATES)", "${GATES}", "$G"])
+def test_reachability_fails_closed_on_variable_prerequisites(reference: str) -> None:
     makefile = "\n".join(
         [
             "GATES := hidden-gate",
-            "check: $(GATES)",
+            f"check: {reference}",
             "ci: visible-gate",
             "visible-gate:",
         ]
     )
 
     with pytest.raises(AssertionError, match="Variable-expanded Make prerequisites"):
+        _reachable_targets(makefile)
+
+
+def test_reachability_fails_closed_on_conditional_rules() -> None:
+    makefile = "\n".join(
+        [
+            "ifeq (1, 0)",
+            "check: disabled-gate",
+            "endif",
+            "check: visible-gate",
+            "ci: visible-gate",
+            "visible-gate:",
+        ]
+    )
+
+    with pytest.raises(AssertionError, match="Conditional Make syntax"):
         _reachable_targets(makefile)
 
 
