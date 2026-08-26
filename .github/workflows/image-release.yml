@@ -101,11 +101,13 @@ jobs:
           set -euo pipefail
           image_ref="${IMAGE_NAME}:${GITHUB_SHA}"
           local_image_id="$(docker image inspect --format='{{.Id}}' "$image_ref")"
-          docker push "$image_ref"
-          published_digest="$(docker buildx imagetools inspect "$image_ref" \
-            --format '{{json .Manifest.Digest}}' | tr -d '"')"
+          push_output="$(docker push "$image_ref" 2>&1)"
+          printf '%s\n' "$push_output"
+          published_digest="$(printf '%s\n' "$push_output" \
+            | sed -nE 's/^.*digest: (sha256:[0-9a-f]{64}) size:.*$/\1/p' \
+            | tail -n 1)"
           if [[ ! "$published_digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
-            echo "::error::Registry returned an invalid image digest: $published_digest"
+            echo "::error::Docker push did not return a valid image digest: $published_digest"
             exit 1
           fi
           if [ "$(docker image inspect --format='{{.Id}}' "$image_ref")" != "$local_image_id" ]; then
