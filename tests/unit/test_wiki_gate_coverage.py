@@ -27,8 +27,24 @@ MAKEFILE = ROOT / "Makefile"
 WIKI = ROOT / "wiki" / "Validation-and-CI.md"
 
 
+def _logical_make_lines(makefile: str) -> list[str]:
+    logical_lines: list[str] = []
+    pending = ""
+    for physical_line in makefile.splitlines():
+        line = f"{pending}{physical_line.lstrip() if pending else physical_line}"
+        if line.rstrip().endswith("\\"):
+            pending = f"{line.rstrip()[:-1]} "
+            continue
+        logical_lines.append(line)
+        pending = ""
+    if pending:
+        logical_lines.append(pending.rstrip())
+    return logical_lines
+
+
 def _targets_in(lane: str, makefile: str) -> list[str]:
-    match = re.search(rf"^{lane}: (.+)$", makefile, re.M)
+    logical_makefile = "\n".join(_logical_make_lines(makefile))
+    match = re.search(rf"^{lane}:[ \t]*(.*)$", logical_makefile, re.M)
     assert match is not None, f"The {lane} lane is missing from the Makefile."
     return match.group(1).split()
 
@@ -39,7 +55,8 @@ def _is_gate(target: str) -> bool:
 
 def _target_dependencies(makefile: str) -> dict[str, list[str]]:
     dependencies: dict[str, list[str]] = {}
-    for match in re.finditer(r"^([a-zA-Z0-9_-]+):\s*(.*)$", makefile, re.M):
+    logical_makefile = "\n".join(_logical_make_lines(makefile))
+    for match in re.finditer(r"^([a-zA-Z0-9_-]+):[ \t]*(.*)$", logical_makefile, re.M):
         prerequisites = match.group(2).partition(";")[0].split()
         dependencies.setdefault(match.group(1), []).extend(prerequisites)
     return dependencies
@@ -62,7 +79,7 @@ def _targets_with_recipes(makefile: str) -> set[str]:
     targets: set[str] = set()
     current_target: str | None = None
     for line in makefile.splitlines():
-        target_match = re.match(r"^([a-zA-Z0-9_-]+):\s*(.*)$", line)
+        target_match = re.match(r"^([a-zA-Z0-9_-]+):[ \t]*(.*)$", line)
         if target_match:
             current_target = target_match.group(1)
             if ";" in target_match.group(2):
@@ -71,12 +88,6 @@ def _targets_with_recipes(makefile: str) -> set[str]:
         if line.startswith("\t") and line.strip() and current_target is not None:
             targets.add(current_target)
     return targets
-
-
-def _targets_with_continued_prerequisites(makefile: str) -> set[str]:
-    return {
-        match.group(1) for match in re.finditer(r"^([a-zA-Z0-9_-]+):[^\n]*\\\s*$", makefile, re.M)
-    }
 
 
 def _gate_targets() -> set[str]:
@@ -109,7 +120,6 @@ def _invalid_documented_aliases(aliases: frozenset[str], makefile: str) -> list[
     dependencies = _target_dependencies(makefile)
     reachable = _reachable_targets(makefile)
     targets_with_recipes = _targets_with_recipes(makefile)
-    targets_with_continued_prerequisites = _targets_with_continued_prerequisites(makefile)
     invalid: list[str] = []
     for alias in sorted(aliases):
         if alias not in dependencies:
@@ -117,9 +127,6 @@ def _invalid_documented_aliases(aliases: frozenset[str], makefile: str) -> list[
             continue
         if alias in targets_with_recipes:
             invalid.append(f"{alias} (contains recipe commands)")
-            continue
-        if alias in targets_with_continued_prerequisites:
-            invalid.append(f"{alias} (uses continued prerequisites)")
             continue
         unreachable = sorted(set(dependencies[alias]) - reachable)
         if not dependencies[alias] or unreachable:
@@ -168,13 +175,32 @@ def test_documented_alias_guard_rejects_fabricated_and_unreachable_names() -> No
     )
 
     assert invalid == [
-        "continued-alias (uses continued prerequisites)",
+        "continued-alias (unreachable prerequisites: ['hidden-validation'])",
         "fabricated-gate (not a Makefile target)",
         "inline-recipe-alias (contains recipe commands)",
         "orphan-gate (unreachable prerequisites: ['orphan-validation'])",
         "recipe-alias (contains recipe commands)",
         "repeated-alias (unreachable prerequisites: ['hidden-validation'])",
     ]
+
+
+def test_reachability_parses_continuations_without_reading_recipe_text() -> None:
+    makefile = "\n".join(
+        [
+            "check: aggregate-gate \\",
+            " continued-gate",
+            "ci: aggregate-gate",
+            "aggregate-gate:",
+            "\t@echo disabled-gate",
+            "continued-gate:",
+            "\tpython continued_check.py",
+        ]
+    )
+
+    reachable = _reachable_targets(makefile)
+
+    assert "continued-gate" in reachable
+    assert "disabled-gate" not in reachable
 
 
 def test_the_wiki_names_every_gate_the_blocking_lanes_run() -> None:
