@@ -1,4 +1,4 @@
-.PHONY: architecture-gate complexity-gate source-size-gate dead-code-gate dependency-hygiene-gate github-actions-runtime-gate install install-ci check check-all test test-unit test-integration test-e2e test-all test-coverage test-fast test-all-fast test-all-no-cov test-all-parallel ci ci-local ci-local-docker ci-local-docker-down typecheck typecheck-tests-critical lint monetary-float-guard domain-product-validate domain-data-product-gate trust-telemetry-validate observability-contract-validate mesh-contract-validate idea-opportunity-evidence-gate idea-opportunity-runtime-evidence image-supply-chain-gate no-alias-gate openapi-gate openapi-artifact-gate api-vocabulary-gate format clean run check-deps security-audit migration-smoke migration-apply pre-commit docker-build docker-up docker-down test-pyramid-gate quality-baseline
+.PHONY: architecture-gate complexity-gate source-size-gate dead-code-gate dependency-hygiene-gate github-actions-runtime-gate install install-ci check check-all test test-unit test-integration test-e2e test-all test-coverage test-fast test-all-fast test-all-no-cov test-all-parallel ci ci-local ci-local-docker ci-local-docker-down typecheck typecheck-tests-critical lint monetary-float-guard domain-product-validate domain-data-product-gate trust-telemetry-validate observability-contract-validate mesh-contract-validate idea-opportunity-evidence-gate idea-opportunity-runtime-evidence image-supply-chain-gate no-alias-gate openapi-gate openapi-artifact-gate api-vocabulary-gate format clean run check-deps security-audit migration-smoke migration-apply pre-commit docker-build docker-up docker-down test-pyramid-gate quality-baseline maintainability-report
 
 COVERAGE_FAIL_UNDER ?= 98
 SOURCE_FILE_MAX_LINES ?= 450
@@ -124,7 +124,9 @@ architecture-gate:
 	python -m importlinter.cli check .importlinter
 
 complexity-gate:
-	python -m radon cc src -s -n C
+	python scripts/python_complexity_inventory.py --limit 15 --max-cc 24 --max-high-complexity 1
+
+maintainability-report:
 	python -m radon mi src -s
 
 source-size-gate:
