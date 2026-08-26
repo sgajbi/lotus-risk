@@ -81,6 +81,7 @@ IGNORED_REPOSITORY_SCAN_DIRS = {
 
 FORBIDDEN_TRIVY_OVERRIDE_FIELDS = (
     "docker-host",
+    "ignorefile",
     "ignore-policy",
     "input",
     "scan-ref",
@@ -329,6 +330,8 @@ def validate_ci_image_release_workflow(
         _workflow_field_value(inventory_upload, "uses") != "github/codeql-action/upload-sarif@v4"
         or _workflow_field_value(inventory_upload, "sarif_file")
         != "output/image-release/trivy-results.sarif"
+        or _workflow_field_value(inventory_upload, "if") != "always()"
+        or _workflow_field_value(inventory_upload, "continue-on-error") is not None
     ):
         issues.append(f"{workflow_path}: complete vulnerability inventory SARIF must be uploaded")
 

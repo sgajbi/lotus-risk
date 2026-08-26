@@ -595,6 +595,63 @@ def test_image_release_contract_rejects_vulnerability_suppression_overrides(
 
 
 @pytest.mark.parametrize(
+    "step_name",
+    ["Block application-library vulnerabilities", "Vulnerability scan"],
+)
+def test_image_release_contract_rejects_legacy_ignorefile_override(
+    tmp_path: Path,
+    step_name: str,
+) -> None:
+    workflow_path = tmp_path / "image-release.yml"
+    current = Path(".github/workflows/image-release.yml").read_text(encoding="utf-8")
+    marker = f"      - name: {step_name}\n"
+    workflow_path.write_text(
+        current.replace(marker, f"{marker}        ignorefile: .trivyignore\n", 1),
+        encoding="utf-8",
+    )
+
+    issues = validate_ci_image_release_workflow(workflow_path)
+
+    expected_scope = (
+        "application-library scan"
+        if step_name == "Block application-library vulnerabilities"
+        else "OS vulnerability scan"
+    )
+    assert f"{workflow_path}: {expected_scope} must not use scan overrides: ignorefile" in issues
+
+
+@pytest.mark.parametrize(
+    ("old", "new"),
+    [
+        ("        if: always()\n", "        if: false\n"),
+        (
+            "        if: always()\n",
+            "        if: always()\n        continue-on-error: true\n",
+        ),
+    ],
+)
+def test_image_release_contract_requires_sarif_upload_to_execute(
+    tmp_path: Path,
+    old: str,
+    new: str,
+) -> None:
+    workflow_path = tmp_path / "image-release.yml"
+    current = Path(".github/workflows/image-release.yml").read_text(encoding="utf-8")
+    start = current.index("- name: Upload vulnerability scan results")
+    next_step = current.find("\n      - name:", start + 1)
+    end = len(current) if next_step < 0 else next_step
+    corrupted_step = current[start:end].replace(old, new)
+    workflow_path.write_text(
+        current[:start] + corrupted_step + current[end:],
+        encoding="utf-8",
+    )
+
+    issues = validate_ci_image_release_workflow(workflow_path)
+
+    assert f"{workflow_path}: complete vulnerability inventory SARIF must be uploaded" in issues
+
+
+@pytest.mark.parametrize(
     ("marker", "replacement"),
     [
         (
