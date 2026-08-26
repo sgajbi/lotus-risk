@@ -256,13 +256,12 @@ def validate_ci_image_release_workflow(
         issues.append(
             f"{workflow_path}: digest must come from this run's push, not a mutable tag lookup"
         )
-    if 'exit-code: "1"' not in text:
-        issues.append(f"{workflow_path}: vulnerability scan must retain blocking exit-code 1")
-    if "ignore-unfixed: true" not in text:
-        issues.append(
-            f"{workflow_path}: blocking scan must ignore only vulnerabilities without a fix"
-        )
-    if "Generate complete vulnerability inventory" not in text or 'exit-code: "0"' not in text:
+    inventory = _workflow_step_block(text, "Generate complete vulnerability inventory")
+    if (
+        "vuln-type: os,library" not in inventory
+        or 'exit-code: "0"' not in inventory
+        or "ignore-unfixed: true" in inventory
+    ):
         issues.append(
             f"{workflow_path}: complete HIGH/CRITICAL vulnerability inventory must remain visible"
         )
@@ -278,6 +277,12 @@ def validate_ci_image_release_workflow(
     os_gate = _workflow_step_block(text, "Vulnerability scan")
     if "vuln-type: os" not in os_gate:
         issues.append(f"{workflow_path}: unfixed exception must be scoped to OS findings")
+    if "ignore-unfixed: true" not in os_gate:
+        issues.append(
+            f"{workflow_path}: OS blocking scan must ignore only vulnerabilities without a fix"
+        )
+    if 'exit-code: "1"' not in os_gate:
+        issues.append(f"{workflow_path}: fixable OS HIGH/CRITICAL findings must be blocking")
 
     expiry_match = UNFIXED_EXCEPTION_EXPIRY_PATTERN.search(text)
     if expiry_match is None:

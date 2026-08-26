@@ -79,6 +79,7 @@ jobs:
           image-ref: ${{ env.IMAGE_NAME }}:${{ github.sha }}
           format: sarif
           output: output/image-release/trivy-results.sarif
+          vuln-type: os,library
           severity: HIGH,CRITICAL
           exit-code: "0"
 
