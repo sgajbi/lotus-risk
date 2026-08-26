@@ -33,8 +33,13 @@ ROUTE_LITERAL_PREFIX = re.compile(
     r"|\b(?:[a-z_]\w*_client|client|requests?|httpx)(?:\.\w+)*"
     r"\.(?:get|head|post|put|patch|delete|options|websocket_connect)"
     r"\s*\(\s*(?:url\s*=\s*)?)(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
+    r"|\b(?:[a-z_]\w*_client|client|requests?|httpx)(?:\.\w+)*"
+    r"\.(?:get|head|post|put|patch|delete|options|websocket_connect)"
+    r"\s*\([^)]*\burl\s*=\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
     r"|\b\w+(?:\.\w+)*\.(?:add_api_route|add_route|add_websocket_route)"
     r"\s*\(\s*(?:path\s*=\s*)?(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
+    r"|\b\w+(?:\.\w+)*\.(?:add_api_route|add_route|add_websocket_route)"
+    r"\s*\([^)]*\bpath\s*=\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
     r"|\b(?:httpx\.)?Request\s*\(\s*[\"']"
     r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)[\"']\s*,\s*(?:url\s*=\s*)?"
     r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
@@ -147,6 +152,7 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             '@app.api_route(path="/home/dashboard/stats", methods=["GET"])',
             'client.get("/home/dashboard/stats")',
             'client.get(url="/home/dashboard/stats")',
+            'client.get(headers=HEADERS, url="/home/dashboard/stats")',
             'client.get(f"/home/dashboard/{section}")',
             'client.get(r"/home/dashboard/stats")',
             'response_client.get("/home/dashboard/stats")',
@@ -155,6 +161,7 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             'Request({"type": "http", "path": "/home/dashboard/stats"})',
             'app.add_api_route("/home/dashboard/stats", handler)',
             'app.add_api_route(path="/home/dashboard/stats", endpoint=handler)',
+            'app.add_api_route(endpoint=handler, path="/home/dashboard/stats")',
             'app.add_route("/home/dashboard/stats", handler)',
             'router.add_websocket_route("/home/dashboard/stats", handler)',
         ]
