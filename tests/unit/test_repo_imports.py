@@ -114,14 +114,10 @@ def test_absolute_user_home_guard_does_not_let_an_adjacent_url_hide_a_path() -> 
     assert _absolute_user_home_references(payload) == ["/" + "/".join(["home", "alice"])]
 
     delimited = f"entry=https://example.test/api;{linux}"
-    assert _absolute_user_home_references(delimited) == [
-        "/" + "/".join(["home", "alice"])
-    ]
+    assert _absolute_user_home_references(delimited) == ["/" + "/".join(["home", "alice"])]
 
     path_assignment = f'path = "{linux}"'
-    assert _absolute_user_home_references(path_assignment) == [
-        "/" + "/".join(["home", "alice"])
-    ]
+    assert _absolute_user_home_references(path_assignment) == ["/" + "/".join(["home", "alice"])]
 
 
 def test_absolute_user_home_guard_detects_file_uris() -> None:
