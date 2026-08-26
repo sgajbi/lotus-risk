@@ -14,8 +14,10 @@ ROOT = Path(__file__).resolve().parents[2]
 TESTS_ROOT = ROOT / "tests"
 ABSOLUTE_USER_HOME = re.compile(
     r"(?i)(?:[a-z]:[\\/](?:users|documents and settings)[\\/][^\\/\s\"']+"
-    r"|/(?:home|users)/[^/\s\"']+)"
+    r"|/(?:home|users)/[^/\s\"']+|/r"
+    r"oot(?=[/\s\"']|$))"
 )
+IGNORED_GENERATED_TEST_DIRS = {"__pycache__", ".pytest_cache"}
 
 
 def _absolute_user_home_references(text: str) -> list[str]:
@@ -49,19 +51,29 @@ def test_absolute_user_home_guard_detects_cross_platform_paths() -> None:
     windows = "/".join(["D:", "Users", "example", "project"])
     linux = "/" + "/".join(["home", "example", "project"])
     mac = "/" + "/".join(["Users", "example", "project"])
-    references = _absolute_user_home_references(f"windows={windows} linux={linux} mac={mac}")
+    root = "/" + "/".join(["root", "project"])
+    references = _absolute_user_home_references(
+        f"windows={windows} linux={linux} mac={mac} root={root}"
+    )
 
     assert references == [
         "/".join(["D:", "Users", "example"]),
         "/" + "/".join(["home", "example"]),
         "/" + "/".join(["Users", "example"]),
+        "/" + "root",
     ]
 
 
 def test_test_sources_do_not_disclose_absolute_user_home_paths() -> None:
     findings: dict[str, list[str]] = {}
-    for path in sorted(TESTS_ROOT.rglob("*.py")):
-        references = _absolute_user_home_references(path.read_text(encoding="utf-8"))
+    for path in sorted(TESTS_ROOT.rglob("*")):
+        if not path.is_file() or any(part in IGNORED_GENERATED_TEST_DIRS for part in path.parts):
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        references = _absolute_user_home_references(text)
         if references:
             findings[path.relative_to(ROOT).as_posix()] = references
 
