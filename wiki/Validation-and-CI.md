@@ -44,7 +44,11 @@ The repo-native commands are designed to map to those lanes directly.
 - `make quality-baseline` - report-only enterprise refactor baseline and quality scorecard
 - `make mesh-contract-validate` - domain product, trust telemetry, and observability contract validation
 - `make image-supply-chain-gate` - image metadata, CI-only push, digest deployment, SBOM, vulnerability scan, signing, provenance, and secret-free Docker metadata validation
-- `make domain-data-product-gate` - repo-native domain product declaration validation
+- `make domain-data-product-gate` - repo-native domain product declaration validation. This is a
+  convenience alias for running that check alone; **no blocking lane invokes it by this name**.
+  The validation itself is not optional - `mesh-contract-validate` above runs the same
+  `domain-product-validate` target in both `check` and `ci`. Listed so the alias is discoverable,
+  marked so nobody reads it as the gate that would fail their build.
 - `make openapi-gate` - generated schema quality
 - `make openapi-artifact-gate` - generated artifact policy
 - `make api-vocabulary-gate` - API vocabulary inventory validation
