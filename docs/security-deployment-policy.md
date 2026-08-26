@@ -145,8 +145,8 @@ The governed release image policy is:
 2. OCI labels include commit SHA, Git branch/ref, service version, UTC build timestamp, repository
    URL, image digest field, and CI pipeline/run ID,
 3. image push is permitted only through `.github/workflows/image-release.yml`,
-4. the image is built and loaded locally so an SPDX SBOM and the blocking Trivy HIGH/CRITICAL
-   vulnerability scan complete before registry authentication or publication,
+4. the image is built and loaded locally so an SPDX SBOM and the blocking
+   Trivy HIGH/CRITICAL vulnerability scan complete before registry authentication or publication,
 5. a failed vulnerability scan prevents the image from being pushed to the registry,
 6. after the scan passes, the immutable image is pushed and its registry digest is captured in
    `output/image-release/image-release-manifest.json`,
