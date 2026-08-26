@@ -89,14 +89,17 @@ Release images are governed by the same security posture as runtime configuratio
 1. CI is the only image-push path, through `.github/workflows/image-release.yml`;
 2. images are tagged with the Git SHA and labeled with commit, branch/ref, service version, build
    timestamp, repository URL, image digest field, and CI run ID;
-3. the release workflow generates SBOM evidence, runs a HIGH/CRITICAL vulnerability scan, signs the
-   digest, generates provenance attestation, and writes `image-release-manifest.json`;
-4. Kubernetes and Helm manifests must deploy by `image@sha256:<digest>`;
-5. environment promotion must reuse the same digest instead of rebuilding per environment;
-6. Docker build arguments and environment declarations must not carry secret-like names or values.
+3. the release workflow builds locally, generates SBOM evidence, and completes a blocking
+   HIGH/CRITICAL vulnerability scan before registry authentication or image publication;
+4. only a scan-passing image is pushed, after which the registry digest is signed, attested, and
+   recorded in `image-release-manifest.json`;
+5. Kubernetes and Helm manifests must deploy by `image@sha256:<digest>`;
+6. environment promotion must reuse the same digest instead of rebuilding per environment;
+7. Docker build arguments and environment declarations must not carry secret-like names or values.
 
 `/version` exposes the runtime service version and the same source/build/image/CI metadata expected
-on the released image. `make image-supply-chain-gate` is the local and CI guard for this contract.
+on the released image. `make image-supply-chain-gate` is the local and CI guard for this contract,
+including the enforced scan-before-publication sequence.
 The deployable runtime image installs runtime dependencies only and rejects dev tooling during the
 Docker build if pytest, ruff, mypy, bandit, deptry, radon, vulture, or pre-commit are present.
 

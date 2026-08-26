@@ -51,6 +51,16 @@ FORBIDDEN_RUNTIME_DEV_DEPENDENCIES = (
     "pre_commit",
 )
 
+RELEASE_STEP_ORDER = (
+    "Build image for validation",
+    "Generate SBOM",
+    "Vulnerability scan",
+    "Authenticate to release registry",
+    "Push immutable image after scan",
+    "Sign image by digest",
+    "Generate provenance attestation",
+)
+
 IGNORED_REPOSITORY_SCAN_DIRS = {
     ".git",
     ".lotus-platform",
@@ -121,6 +131,26 @@ def _workflow_texts() -> dict[Path, str]:
     return {path: _read(path) for path in WORKFLOW_DIR.glob("*.yml")}
 
 
+def validate_release_publication_order(text: str, workflow_path: Path) -> list[str]:
+    """Require the blocking scan to finish before registry authentication and publication."""
+
+    issues: list[str] = []
+    positions: list[int] = []
+    for step_name in RELEASE_STEP_ORDER:
+        marker = f"- name: {step_name}"
+        position = text.find(marker)
+        if position < 0:
+            issues.append(f"{workflow_path}: missing ordered release step {step_name}")
+        positions.append(position)
+
+    if all(position >= 0 for position in positions) and positions != sorted(positions):
+        issues.append(
+            f"{workflow_path}: release order must be build, SBOM, vulnerability scan, registry "
+            "authentication, push, signing, then provenance attestation"
+        )
+    return issues
+
+
 def validate_ci_image_release_workflow(
     workflow_path: Path = IMAGE_RELEASE_WORKFLOW,
 ) -> list[str]:
@@ -135,14 +165,16 @@ def validate_ci_image_release_workflow(
         "attestations: write": "provenance attestation permission",
         "security-events: write": "vulnerability scan upload permission",
         "docker/build-push-action@v6": "Docker build/push action",
-        "push: true": "CI-only image push",
+        "push: false": "local-only image build before validation",
+        "load: true": "locally loaded image for pre-publication scanning",
+        "docker push": "post-scan CI-only image push",
         "${{ github.sha }}": "Git SHA image tag",
         "anchore/sbom-action": "SBOM generation",
         "aquasecurity/trivy-action": "vulnerability scan",
         "sigstore/cosign-installer": "cosign installer",
         "cosign sign": "image signing",
         "actions/attest-build-provenance": "provenance attestation",
-        "steps.build.outputs.digest": "digest capture",
+        "steps.publish.outputs.digest": "post-publication digest capture",
         "image-release-manifest.json": "release manifest",
         "service_version": "release manifest service version",
         "LOTUS_IMAGE_DIGEST": "runtime digest metadata",
@@ -150,6 +182,13 @@ def validate_ci_image_release_workflow(
     for term, description in required_terms.items():
         if term not in text:
             issues.append(f"{workflow_path}: missing {description}")
+
+    issues.extend(validate_release_publication_order(text, workflow_path))
+
+    if re.search(r"^\s*push:\s*true\s*$", text, flags=re.MULTILINE):
+        issues.append(f"{workflow_path}: build must not publish before the vulnerability scan")
+    if 'exit-code: "1"' not in text:
+        issues.append(f"{workflow_path}: vulnerability scan must retain blocking exit-code 1")
 
     if 'branches: [ "main" ]' not in text and "branches: [main]" not in text:
         issues.append(f"{workflow_path}: image push must be scoped to main")

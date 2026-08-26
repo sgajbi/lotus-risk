@@ -388,10 +388,11 @@ Important validation expectations:
    fails if artifact upload/download actions drift below the Node 24 runtime majors required for
    current CI dependency posture (`actions/upload-artifact@v6`, `actions/download-artifact@v7`).
    Do not downgrade these to Node 20-era majors to clear a transient workflow issue.
-8. Release image posture is governed by `make image-supply-chain-gate`: images are pushed only by
-   `.github/workflows/image-release.yml`, tagged by Git SHA, labeled with source/build/version/CI
-   metadata, scanned, signed, attested, accompanied by SBOM and release-manifest evidence, and
-   promoted by digest rather than environment-specific rebuilds.
+8. Release image posture is governed by `make image-supply-chain-gate`: images are built locally,
+   tagged by Git SHA, labeled with source/build/version/CI metadata, accompanied by an SBOM, and
+   scanned before registry authentication or publication. Only scan-passing images are pushed by
+   `.github/workflows/image-release.yml`, then signed, attested, recorded in release-manifest
+   evidence, and promoted by digest rather than environment-specific rebuilds.
 9. When a PR branch is refreshed, verify both the remote branch SHA and the PR-reported head SHA
    before trusting branch protection state. RFC-0002 PR #212 exposed stale `pull_request` check
    contexts after branch pushes and close/reopen refreshes; if `git ls-remote --heads origin
