@@ -30,6 +30,14 @@ run. A dispatcher that fails is visible; a suppressed push trigger is not. Gate 
 keyed per commit rather than per branch, so a later merge cannot cancel an earlier commit's
 in-flight gate.
 
+The immutable dispatch tag is consumed infrastructure, not a release. An `always()` cleanup job
+runs after the independent workflow-lint branch and the full Docker-gate dependency chain reach a
+terminal state. It deletes only `main-releasability-<expected_sha>` after verifying the ref points
+to that exact SHA. Lookup/deletion failures warn without changing the analytical gate verdict, and
+an already-absent ref is harmless. Because the tag is reclaimed even after a failed gate, an
+operator who needs a later rerun must recreate `main-releasability-<sha>` at the exact commit and
+dispatch `main-releasability.yml` with the same `expected_sha`; the run reclaims it again.
+
 **Auditing a merge:** use `gh run list --commit <full-sha>`. Listing by `--branch main` misses the
 run, because the dispatch ref is a tag rather than `main`.
 

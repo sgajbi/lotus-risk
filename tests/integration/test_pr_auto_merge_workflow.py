@@ -146,3 +146,31 @@ def test_main_releasability_concurrency_is_keyed_per_commit_not_per_branch() -> 
 
     assert "group: ${{ github.workflow }}-${{ github.sha }}" in workflow
     assert "group: ${{ github.workflow }}-${{ github.ref }}" not in workflow
+
+
+def test_main_releasability_reclaims_only_the_consumed_exact_sha_tag() -> None:
+    workflow = (WORKFLOW_ROOT / "main-releasability.yml").read_text(encoding="utf-8")
+
+    cleanup = workflow[workflow.index("  reclaim-dispatch-tag:") :]
+    assert "needs: [workflow-lint, docker-build]" in cleanup
+    assert "always() &&" in cleanup
+    assert "github.ref_type == 'tag'" in cleanup
+    assert "startsWith(github.ref_name, 'main-releasability-')" in cleanup
+    assert cleanup.index("continue-on-error: true") < cleanup.index("runs-on: ubuntu-latest")
+    assert "contents: write" in cleanup
+    assert "uses: actions/checkout@v6" in cleanup
+    checkout, deletion = cleanup.split("      - name: Delete consumed immutable dispatch tag")
+    assert "continue-on-error: true" in checkout
+    assert "ref: ${{ inputs.expected_sha }}" in checkout
+    assert "continue-on-error: true" in deletion
+    assert "GITHUB_REF_TYPE: ${{ github.ref_type }}" in cleanup
+    assert "python scripts/reclaim_main_releasability_tag.py" in cleanup
+
+
+def test_operator_dispatches_do_not_enter_the_tag_cleanup_job() -> None:
+    workflow = (WORKFLOW_ROOT / "main-releasability.yml").read_text(encoding="utf-8")
+
+    cleanup = workflow[workflow.index("  reclaim-dispatch-tag:") :]
+    assert "github.ref_type == 'tag'" in cleanup
+    assert "startsWith(github.ref_name, 'main-releasability-')" in cleanup
+    assert "github.ref_name == 'main'" not in cleanup
