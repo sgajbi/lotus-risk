@@ -13,9 +13,13 @@ pytestmark = pytest.mark.governance
 ROOT = Path(__file__).resolve().parents[2]
 TESTS_ROOT = ROOT / "tests"
 ABSOLUTE_USER_HOME = re.compile(
-    r"(?i)(?:[a-z]:[\\/]+(?:users|documents and settings)[\\/]+[^\\/\s\"']+"
-    r"|/(?:home|users)/[^/\s\"']+|/r"
-    r"oot(?=[/\s\"']|$))"
+    r"(?:(?i:[a-z]:[\\/]+(?:users|documents and settings)[\\/]+[^\\/\s\"']+)"
+    r"|/ho"
+    r"me/[^/\s\"']+(?=/[^/\s\"']+)"
+    r"|/Us"
+    r"ers/[^/\s\"']+(?=/[^/\s\"']+)"
+    r"|/r"
+    r"oot(?=/[^/\s\"']+))"
 )
 IGNORED_GENERATED_TEST_DIRS = {"__pycache__", ".pytest_cache"}
 
@@ -64,6 +68,18 @@ def test_absolute_user_home_guard_detects_cross_platform_paths() -> None:
         "/" + "/".join(["Users", "example"]),
         "/" + "root",
     ]
+
+
+def test_absolute_user_home_guard_ignores_web_routes() -> None:
+    routes = " ".join(
+        [
+            "https://example.test/users/123",
+            "GET /users/alice",
+            "/home/dashboard",
+        ]
+    )
+
+    assert _absolute_user_home_references(routes) == []
 
 
 def test_test_sources_do_not_disclose_absolute_user_home_paths() -> None:
