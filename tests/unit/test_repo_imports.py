@@ -16,11 +16,11 @@ TESTS_ROOT = ROOT / "tests"
 ABSOLUTE_USER_HOME = re.compile(
     r"(?:(?i:[a-z]:[\\/]+(?:users|documents and settings)[\\/]+[^\\/\s\"']+)"
     r"|/ho"
-    r"me/[^/\s\"']+(?=/[^/\s\"']+)"
+    r"me/[^/\s\"']+(?=/+[^/\s\"']+)"
     r"|/Us"
-    r"ers/[^/\s\"']+(?=/[^/\s\"']+)"
+    r"ers/[^/\s\"']+(?=/+[^/\s\"']+)"
     r"|/r"
-    r"oot(?=/[^/\s\"']+))"
+    r"oot(?=/+[^/\s\"']+))"
 )
 EXACT_POSIX_USER_HOME = re.compile(
     r"(?:/ho" r"me/[^/\s\"']+|/Us" r"ers/[^/\s\"']+|/r" r"oot)/?(?=$|[\s\"'])"
@@ -52,6 +52,10 @@ ROUTE_LITERAL_PREFIX = re.compile(
     r"|\b(?:[a-z_]\w*_client|client)\.request\s*\(\s*method\s*=\s*[\"']"
     r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)[\"']\s*,\s*url\s*=\s*"
     r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
+    r"|\b(?:[a-z_]\w*_client|client)\.request\s*\("
+    r"(?:[^()]|\([^()]*\))*\bmethod\s*=\s*[\"']"
+    r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)[\"']"
+    r"(?:[^()]|\([^()]*\))*\burl\s*=\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
     r"|\b\w+(?:\.\w+)*\.(?:add_api_route|add_route|add_websocket_route)"
     r"\s*\(\s*(?:path\s*=\s*)?(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
     r"|\b\w+(?:\.\w+)*\.(?:add_api_route|add_route|add_websocket_route)"
@@ -82,13 +86,9 @@ ASGI_SCOPE_ROUTE_PREFIX = re.compile(
     r"\{(?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*[\"']path[\"']\s*:\s*"
     r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
 )
-QUOTED_WEB_URL = re.compile(
-    r"(?i:(?<=[\"'])(?:https?://|(?<![:/])//)"
-    r"(?:[a-z0-9]|\[[0-9a-f:.]+\])[^\\\s\"']*)"
-)
-UNQUOTED_WEB_URL = re.compile(
-    r"(?i:(?<![\"'])https?://(?:[a-z0-9]|\[[0-9a-f:.]+\])[^\s\"';,)\]}]*"
-    r"|(?<![:/\"'])//(?:[a-z0-9]|\[[0-9a-f:.]+\])[^\s\"';,)\]}]*)"
+WEB_URL_START = re.compile(
+    r"(?i:https?://(?:[a-z0-9]|\[[0-9a-f:.]+\])"
+    r"|(?<![:/])//(?:[a-z0-9]|\[[0-9a-f:.]+\]))"
 )
 INLINE_TEST_CLIENT_ROUTE_SUFFIX = re.compile(
     r"\)\.(?:get|head|post|put|patch|delete|options|websocket_connect)"
@@ -131,13 +131,41 @@ def _has_inline_test_client_route_context(preceding_text: str) -> bool:
     return receiver.startswith("(") and _balanced_parentheses(receiver)
 
 
+def _active_quote_before(text: str, end: int) -> str:
+    quote = ""
+    escaped = False
+    for character in text[:end]:
+        if escaped:
+            escaped = False
+        elif character == "\\":
+            escaped = True
+        elif quote:
+            if character == quote:
+                quote = ""
+        elif character in {'"', "'"}:
+            quote = character
+    return quote
+
+
+def _web_url_spans(text: str) -> list[tuple[int, int]]:
+    spans: list[tuple[int, int]] = []
+    for match in WEB_URL_START.finditer(text):
+        quote = _active_quote_before(text, match.start())
+        end = match.end()
+        while end < len(text):
+            character = text[end]
+            if character.isspace() or character == "\\" or (quote and character == quote):
+                break
+            if not quote and character in {'"', "'", ";", ",", ")", "]", "}"}:
+                break
+            end += 1
+        spans.append((match.start(), end))
+    return spans
+
+
 def _absolute_user_home_references(text: str) -> list[str]:
     references: list[str] = []
-    url_spans = [
-        url.span()
-        for pattern in (QUOTED_WEB_URL, UNQUOTED_WEB_URL)
-        for url in pattern.finditer(text)
-    ]
+    url_spans = _web_url_spans(text)
     candidates = [
         *((match, False) for match in ABSOLUTE_USER_HOME.finditer(text)),
         *((match, True) for match in EXACT_POSIX_USER_HOME.finditer(text)),
@@ -200,15 +228,18 @@ def test_absolute_user_home_guard_detects_cross_platform_paths() -> None:
     windows = "/".join(["D:", "Users", "example", "project"])
     escaped_windows = "D:" + "\\\\" + "Users" + "\\\\" + "example" + "\\\\" + "project"
     linux = "/" + "/".join(["home", "example", "project"])
+    repeated_linux = "/" + "/".join(["home", "example", "", "project"])
     mac = "/" + "/".join(["Users", "example", "project"])
     root = "/" + "/".join(["root", "project"])
     references = _absolute_user_home_references(
-        f"windows={windows} escaped={escaped_windows} linux={linux} mac={mac} root={root}"
+        f"windows={windows} escaped={escaped_windows} linux={linux} "
+        f"repeated={repeated_linux} mac={mac} root={root}"
     )
 
     assert references == [
         "/".join(["D:", "Users", "example"]),
         "D:" + "\\\\" + "Users" + "\\\\" + "example",
+        "/" + "/".join(["home", "example"]),
         "/" + "/".join(["home", "example"]),
         "/" + "/".join(["Users", "example"]),
         "/" + "root",
@@ -252,6 +283,7 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             'TestClient(create_app(Settings())).get("/home/dashboard/stats")',
             'client.request("GET", "/home/dashboard/stats")',
             'client.request(method="GET", url="/home/dashboard/stats")',
+            'client.request(method="GET", headers=HEADERS, url="/home/dashboard/stats")',
             'client.websocket_connect("/home/dashboard/stats")',
             'httpx.Request("GET", "/home/dashboard/stats")',
             'Request({"type": "http", "path": "/home/dashboard/stats"})',
@@ -284,6 +316,9 @@ def test_absolute_user_home_guard_does_not_let_an_adjacent_url_hide_a_path() -> 
 
     escaped_newline = f'value = "https://example.test/api\\n{linux}"'
     assert _absolute_user_home_references(escaped_newline) == ["/" + "/".join(["home", "alice"])]
+
+    prefixed_url = f'value = "prefix https://example.test/api\\n{linux}"'
+    assert _absolute_user_home_references(prefixed_url) == ["/" + "/".join(["home", "alice"])]
 
     path_assignment = f'path = "{linux}"'
     assert _absolute_user_home_references(path_assignment) == ["/" + "/".join(["home", "alice"])]
