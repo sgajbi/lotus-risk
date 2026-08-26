@@ -25,7 +25,7 @@ IGNORED_GENERATED_TEST_DIRS = {"__pycache__", ".pytest_cache"}
 HTTP_ROUTE_PREFIX = re.compile(
     r"(?:^|[\s\"'])(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)\s+$", re.IGNORECASE
 )
-WEB_URL = re.compile(r"(?i:(?:[a-z][a-z0-9+.-]*:)?//[^\s\"']+)")
+WEB_URL = re.compile(r"(?i:https?://[^\s\"']+|(?<![:/])//[^\s\"']+)")
 
 
 def _absolute_user_home_references(text: str) -> list[str]:
@@ -102,6 +102,16 @@ def test_absolute_user_home_guard_does_not_let_an_adjacent_url_hide_a_path() -> 
     payload = f'{{"url":"https://example.test/api","path":"{linux}"}}'
 
     assert _absolute_user_home_references(payload) == ["/" + "/".join(["home", "alice"])]
+
+
+def test_absolute_user_home_guard_detects_file_uris() -> None:
+    linux_uri = "file://" + "/" + "/".join(["home", "alice", "project"])
+    windows_uri = "file://" + "/" + "/".join(["C:", "Users", "alice", "project"])
+
+    assert _absolute_user_home_references(f"{linux_uri} {windows_uri}") == [
+        "/" + "/".join(["home", "alice"]),
+        "/".join(["C:", "Users", "alice"]),
+    ]
 
 
 def test_test_sources_do_not_disclose_absolute_user_home_paths() -> None:
