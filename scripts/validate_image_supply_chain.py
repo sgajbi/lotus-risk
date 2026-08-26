@@ -106,6 +106,22 @@ FORBIDDEN_DEFAULT_TRIVY_FILES = (
     "trivy.yaml",
     "trivy.yml",
 )
+TRIVY_INVENTORY_ALLOWED_FIELDS = {
+    "name",
+    "uses",
+    "with",
+    "scan-type",
+    "scanners",
+    "version",
+    "image-ref",
+    "format",
+    "output",
+    "vuln-type",
+    "severity",
+    "exit-code",
+}
+TRIVY_LIBRARY_GATE_ALLOWED_FIELDS = TRIVY_INVENTORY_ALLOWED_FIELDS - {"output"}
+TRIVY_OS_GATE_ALLOWED_FIELDS = TRIVY_LIBRARY_GATE_ALLOWED_FIELDS | {"ignore-unfixed"}
 
 
 def _read(path: Path) -> str:
@@ -263,6 +279,15 @@ def _trivy_override_fields(block: str) -> list[str]:
     ]
 
 
+def _unexpected_workflow_fields(block: str, allowed_fields: set[str]) -> list[str]:
+    field_pattern = re.compile(
+        r"^\s*(?:-\s+)?(?P<quote>[\"']?)(?P<field>[A-Za-z0-9_-]+)(?P=quote)\s*:",
+        flags=re.MULTILINE,
+    )
+    declared_fields = {match.group("field") for match in field_pattern.finditer(block)}
+    return sorted(declared_fields - allowed_fields)
+
+
 def validate_ci_image_release_workflow(
     workflow_path: Path = IMAGE_RELEASE_WORKFLOW,
     *,
@@ -350,6 +375,11 @@ def validate_ci_image_release_workflow(
             f"{workflow_path}: complete vulnerability inventory must not use scan overrides: "
             f"{', '.join(overrides)}"
         )
+    if unexpected_fields := _unexpected_workflow_fields(inventory, TRIVY_INVENTORY_ALLOWED_FIELDS):
+        issues.append(
+            f"{workflow_path}: complete vulnerability inventory contains unexpected fields: "
+            f"{', '.join(unexpected_fields)}"
+        )
 
     inventory_upload = _workflow_step_block(text, "Upload vulnerability scan results")
     if (
@@ -380,6 +410,13 @@ def validate_ci_image_release_workflow(
         issues.append(
             f"{workflow_path}: application-library scan must not use scan overrides: "
             f"{', '.join(overrides)}"
+        )
+    if unexpected_fields := _unexpected_workflow_fields(
+        library_gate, TRIVY_LIBRARY_GATE_ALLOWED_FIELDS
+    ):
+        issues.append(
+            f"{workflow_path}: application-library scan contains unexpected fields: "
+            f"{', '.join(unexpected_fields)}"
         )
     if _workflow_field_value(library_gate, "ignore-unfixed") is not None:
         issues.append(f"{workflow_path}: unfixed exception must not apply to application libraries")
@@ -417,6 +454,11 @@ def validate_ci_image_release_workflow(
         issues.append(
             f"{workflow_path}: OS vulnerability scan must not use scan overrides: "
             f"{', '.join(overrides)}"
+        )
+    if unexpected_fields := _unexpected_workflow_fields(os_gate, TRIVY_OS_GATE_ALLOWED_FIELDS):
+        issues.append(
+            f"{workflow_path}: OS vulnerability scan contains unexpected fields: "
+            f"{', '.join(unexpected_fields)}"
         )
 
     expiry_match = UNFIXED_EXCEPTION_EXPIRY_PATTERN.search(text)

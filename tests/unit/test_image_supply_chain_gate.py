@@ -624,6 +624,37 @@ def test_image_release_contract_rejects_every_forbidden_trivy_override(
 
 
 @pytest.mark.parametrize(
+    ("step_name", "expected_scope"),
+    [
+        ("Generate complete vulnerability inventory", "complete vulnerability inventory"),
+        ("Block application-library vulnerabilities", "application-library scan"),
+        ("Vulnerability scan", "OS vulnerability scan"),
+    ],
+)
+@pytest.mark.parametrize("quoted", [False, True])
+def test_image_release_contract_fails_closed_on_unknown_scan_fields(
+    tmp_path: Path,
+    step_name: str,
+    expected_scope: str,
+    quoted: bool,
+) -> None:
+    workflow_path = tmp_path / "image-release.yml"
+    current = Path(".github/workflows/image-release.yml").read_text(encoding="utf-8")
+    marker = f"      - name: {step_name}\n"
+    field = '"future-suppression-mode"' if quoted else "future-suppression-mode"
+    workflow_path.write_text(
+        current.replace(marker, f"{marker}        {field}: true\n", 1),
+        encoding="utf-8",
+    )
+
+    issues = validate_ci_image_release_workflow(workflow_path)
+
+    assert (
+        f"{workflow_path}: {expected_scope} contains unexpected fields: future-suppression-mode"
+    ) in issues
+
+
+@pytest.mark.parametrize(
     "step_name",
     ["Block application-library vulnerabilities", "Vulnerability scan"],
 )
