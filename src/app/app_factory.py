@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
-from app.app_lifecycle import application_lifespan
 from app.api_errors import register_exception_handlers
+from app.app_lifecycle import application_lifespan
 from app.enterprise_readiness import (
     build_enterprise_audit_middleware,
     validate_enterprise_runtime_config,

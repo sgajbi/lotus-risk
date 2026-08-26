@@ -14,7 +14,7 @@ pytestmark = pytest.mark.governance
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from scripts.resolve_github_action_references import (  # noqa: E402
+from scripts.resolve_github_action_references import (
     ActionReference,
     ApiResponse,
     collect_references,

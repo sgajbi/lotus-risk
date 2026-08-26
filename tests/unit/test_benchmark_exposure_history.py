@@ -212,7 +212,7 @@ def test_fetch_benchmark_exposure_history_rejects_repeated_page_token() -> None:
             )
         )
 
-    details = getattr(exc_info.value, "details")
+    details = getattr(exc_info.value, "details")  # noqa: B009 - domain error extension
     assert details["reason"] == "repeated_page_token"
     assert len(performance.benchmark_exposure_context_calls) == 2
     assert {call["correlation_id"] for call in performance.benchmark_exposure_context_calls} == {
@@ -245,7 +245,7 @@ def test_fetch_benchmark_exposure_history_rejects_excessive_page_count() -> None
     with pytest.raises(ValueError) as exc_info:
         asyncio.run(fetch_benchmark_exposure_history(_benchmark_request(performance)))
 
-    details = getattr(exc_info.value, "details")
+    details = getattr(exc_info.value, "details")  # noqa: B009 - domain error extension
     assert details["reason"] == "max_pages_exceeded"
     assert details["page_count"] == BENCHMARK_EXPOSURE_MAX_PAGES
 
@@ -275,7 +275,7 @@ def test_fetch_benchmark_exposure_history_rejects_excessive_row_count() -> None:
     with pytest.raises(ValueError) as exc_info:
         asyncio.run(fetch_benchmark_exposure_history(_benchmark_request(performance)))
 
-    details = getattr(exc_info.value, "details")
+    details = getattr(exc_info.value, "details")  # noqa: B009 - domain error extension
     assert details["reason"] == "max_rows_exceeded"
     assert details["row_count"] == BENCHMARK_EXPOSURE_MAX_ROWS + BENCHMARK_EXPOSURE_PAGE_SIZE
 

@@ -1,8 +1,10 @@
 import json
 import os
-from typing import Any, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from fastapi import Request, Response
+
 from app.enterprise_audit import emit_audit_event, redact_sensitive
 from app.enterprise_authorization import (
     WRITE_METHODS,

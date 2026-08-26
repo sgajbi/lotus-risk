@@ -172,7 +172,8 @@ def test_correlation_middleware_emits_bounded_structured_request_event(
     )
 
     assert response.status_code == 200
-    event = cast(dict[str, Any], getattr(caplog.records[-1], "request_observation"))
+    # LogRecord extensions are attached dynamically by the structured logging adapter.
+    event = cast(dict[str, Any], getattr(caplog.records[-1], "request_observation"))  # noqa: B009
     log_payload = json.loads(caplog.records[-1].getMessage())
     assert event["service"] == "lotus-risk"
     assert event["method"] == "GET"

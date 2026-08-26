@@ -3,8 +3,8 @@ import json
 from types import SimpleNamespace
 from typing import Any, cast
 
-from fastapi import HTTPException
 import pytest
+from fastapi import HTTPException
 from starlette.requests import Request
 
 from app.api_errors import (

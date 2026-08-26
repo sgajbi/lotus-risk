@@ -59,9 +59,7 @@ class _ExposureAggregation:
         grouping_dimensions: list[GroupingDimension],
         issuer_map: dict[str, tuple[str, str | None]],
     ) -> None:
-        self.totals_by_date[obs_date] = (
-            self.totals_by_date.get(obs_date, Decimal("0")) + market_value
-        )
+        self.totals_by_date[obs_date] = self.totals_by_date.get(obs_date, Decimal(0)) + market_value
         for grouping_dimension in grouping_dimensions:
             group_key, group_label = group_key_and_label(
                 row=row,
@@ -70,7 +68,7 @@ class _ExposureAggregation:
             )
             self.labels[(grouping_dimension, group_key)] = group_label
             key = (obs_date, grouping_dimension, group_key)
-            self.grouped_values[key] = self.grouped_values.get(key, Decimal("0")) + market_value
+            self.grouped_values[key] = self.grouped_values.get(key, Decimal(0)) + market_value
 
 
 def build_exposure_points(
@@ -105,7 +103,7 @@ def _exposure_points_from_aggregation(
 ) -> list[ExposurePoint]:
     points: list[ExposurePoint] = []
     for (obs_date, grouping_dimension, group_key), numerator in aggregation.grouped_values.items():
-        denominator = aggregation.totals_by_date.get(obs_date, Decimal("0"))
+        denominator = aggregation.totals_by_date.get(obs_date, Decimal(0))
         if denominator == 0:
             continue
         points.append(

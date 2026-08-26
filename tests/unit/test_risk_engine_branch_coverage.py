@@ -3,6 +3,7 @@ from typing import Any, cast
 
 import pandas as pd
 import pytest
+from pydantic import ValidationError
 
 from app.contracts.risk import RiskCalculationRequest, RiskRequestPeriod
 from app.main import app
@@ -179,7 +180,7 @@ def test_health_ready_draining_branch() -> None:
 
 
 def test_period_year_requires_year_validation() -> None:
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         RiskRequestPeriod.model_validate({"type": "YEAR"})
 
 

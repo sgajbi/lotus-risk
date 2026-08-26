@@ -42,7 +42,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 
 sys.path.insert(0, str(ROOT))
 
-from scripts.validate_github_actions_runtime import (  # noqa: E402
+from scripts.validate_github_actions_runtime import (
     ANY_ACTION_USE_PATTERN,
     RESOLVABLE_REF_PATTERN,
 )

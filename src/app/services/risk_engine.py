@@ -3,8 +3,8 @@ from __future__ import annotations
 from app.contracts.risk import (
     RiskCalculationSupportability,
     RiskPeriodResult,
-    RiskResponseMetadata,
     RiskResponse,
+    RiskResponseMetadata,
     RiskStatelessCalculationInput,
 )
 from app.services.calculation_supportability import record_operation_supportability

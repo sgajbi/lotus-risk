@@ -67,7 +67,7 @@ class StatelessRiskInput(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_unique_period_names(self) -> "StatelessRiskInput":
+    def validate_unique_period_names(self) -> StatelessRiskInput:
         validate_unique_period_names(self.periods)
         return self
 

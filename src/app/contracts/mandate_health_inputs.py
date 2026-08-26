@@ -41,7 +41,7 @@ class MandateRiskHealthContextRequest(BaseModel):
     )
     tracking_error_attention_threshold: Decimal = Field(
         default=Decimal("0.05"),
-        ge=Decimal("0"),
+        ge=Decimal(0),
         description=(
             "Annualized tracking-error attention threshold as a decimal ratio. "
             "For example, 0.05 represents 5 percent annualized tracking error."

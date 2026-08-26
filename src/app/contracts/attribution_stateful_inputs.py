@@ -53,7 +53,7 @@ class HistoricalAttributionStatefulInput(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_semantics(self) -> "HistoricalAttributionStatefulInput":
+    def validate_semantics(self) -> HistoricalAttributionStatefulInput:
         validate_unique_period_names(self.periods)
 
         grouping_dimensions = self.attribution_options.grouping_dimensions

@@ -95,7 +95,7 @@ def test_fetch_position_timeseries_rows_rejects_repeated_page_token() -> None:
     with pytest.raises(ValueError) as exc_info:
         _fetch_rows(client)
 
-    details = getattr(exc_info.value, "details")
+    details = getattr(exc_info.value, "details")  # noqa: B009 - domain error extension
     assert details["service"] == "lotus-core"
     assert details["operation"] == (
         "/integration/portfolios/PB_SG_GLOBAL_BAL_001/analytics/position-timeseries"
@@ -119,7 +119,7 @@ def test_fetch_position_timeseries_rows_rejects_excessive_page_count() -> None:
     with pytest.raises(ValueError) as exc_info:
         _fetch_rows(client)
 
-    details = getattr(exc_info.value, "details")
+    details = getattr(exc_info.value, "details")  # noqa: B009 - domain error extension
     assert details["reason"] == "max_pages_exceeded"
     assert details["page_count"] == POSITION_TIMESERIES_MAX_PAGES
 
@@ -138,6 +138,6 @@ def test_fetch_position_timeseries_rows_rejects_excessive_row_count() -> None:
     with pytest.raises(ValueError) as exc_info:
         _fetch_rows(client)
 
-    details = getattr(exc_info.value, "details")
+    details = getattr(exc_info.value, "details")  # noqa: B009 - domain error extension
     assert details["reason"] == "max_rows_exceeded"
     assert details["row_count"] == POSITION_TIMESERIES_MAX_ROWS + 1

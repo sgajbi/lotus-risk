@@ -21,7 +21,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-  "ruff==0.15.21",
+  "ruff==0.16.4",
   "mypy==2.3.0",
   "pytest>=9.0.0",
   "pytest-asyncio>=1.2.0",
@@ -40,6 +40,14 @@ dev = [
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+
+[tool.ruff.lint.per-file-ignores]
+# This exact Decimal string constructor is part of a monetary-float allowlist signature. Rewriting
+# it is semantically neutral but invalidates independently governed evidence.
+"src/app/services/stateful_returns_series_parser.py" = ["FURB157"]
+# This guard's fixtures assemble forbidden absolute-home paths so those literals do not make the
+# repository source fail the same guard they are designed to exercise.
+"tests/unit/test_repo_imports.py" = ["FLY002"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

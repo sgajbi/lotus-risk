@@ -56,8 +56,13 @@ and deterministic for local and protected lanes.
 
 - `make check` - fast local gate
 - `make ci` - PR-grade local gate
+- `make lint` - Ruff `0.16.4` check and format enforcement. The package pin and pre-commit hook use
+  the same release; all findings from the upgrade are fixed or narrowly dispositioned. The only
+  exceptions are exact-file rules for a governed Decimal signature and adversarial repository-path
+  fixtures; there is no global ignore
 - `make ci-local` - split-suite coverage loop without Docker
-- `make ci-local-docker` - isolated Docker lane for the split-suite coverage loop
+- `make ci-local-docker` - isolated Docker lane for the split-suite coverage loop; the image
+  normalizes Python source modes so Ruff sees Git-equivalent permissions from Windows hosts
 - `make quality-baseline` - report-only enterprise refactor baseline and quality scorecard
 - `make mesh-contract-validate` - domain product, trust telemetry, and observability contract validation
 - `make image-supply-chain-gate` - image metadata, CI-only push, digest deployment, SBOM, vulnerability scan, signing, provenance, and secret-free Docker metadata validation

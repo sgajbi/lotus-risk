@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 import sys
-from datetime import date
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -473,7 +473,7 @@ def validate_ci_image_release_workflow(
                 f"{workflow_path}: invalid unfixed-vulnerability exception expiry {expiry_text!r}"
             )
         else:
-            effective_today = today or date.today()
+            effective_today = today or datetime.now(UTC).date()
             if effective_today > expiry:
                 issues.append(
                     f"{workflow_path}: unfixed-vulnerability exception expired on {expiry.isoformat()}"

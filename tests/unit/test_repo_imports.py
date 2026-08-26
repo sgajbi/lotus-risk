@@ -473,11 +473,7 @@ def _has_balanced_filesystem_call_context(text: str, position: int) -> bool:
         if callee is None:
             continue
         qualified_name = callee.group("name")
-        if (
-            qualified_name in filesystem_calls
-            or qualified_name.startswith("os.path.")
-            or qualified_name.startswith("shutil.")
-        ):
+        if qualified_name in filesystem_calls or qualified_name.startswith(("os.path.", "shutil.")):
             return True
     return False
 

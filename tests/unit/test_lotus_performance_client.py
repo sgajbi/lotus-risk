@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any, cast
+from typing import Any, ClassVar, Self, cast
 
 import httpx
 import pytest
@@ -21,12 +21,12 @@ from app.upstream_errors import UpstreamServiceError
 class _FakeAsyncClient:
     response_factory: Callable[..., httpx.Response] | None = None
     last_request: dict[str, Any] | None = None
-    requests: list[dict[str, Any]] = []
+    requests: ClassVar[list[dict[str, Any]]] = []
 
     def __init__(self, *, timeout: httpx.Timeout) -> None:
         self.timeout = timeout
 
-    async def __aenter__(self) -> "_FakeAsyncClient":
+    async def __aenter__(self) -> Self:
         return self
 
     async def __aexit__(self, *_args: object) -> None:
@@ -371,8 +371,8 @@ async def test_client_rejects_invalid_async_accepted_payloads(
         ({"result_path": "/result", "poll_path": "relative"}, "invalid poll_path"),
     ]:
 
-        def _response_factory(**_: Any) -> httpx.Response:
-            return _ok_response(payload, status_code=202)
+        def _response_factory(_payload: dict[str, str] = payload, **_: Any) -> httpx.Response:
+            return _ok_response(_payload, status_code=202)
 
         _FakeAsyncClient.response_factory = _response_factory
         client = LotusPerformanceClient(base_url="http://performance.local")

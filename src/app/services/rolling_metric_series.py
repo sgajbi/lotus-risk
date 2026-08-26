@@ -13,12 +13,18 @@ from app.services.rolling_benchmark_metric_series import (
     calculate_rolling_benchmark_metric_values,
 )
 from app.services.rolling_max_drawdown_series import rolling_max_drawdown_metric
-from app.services.rolling_metric_outputs import (
-    rolling_metric_series_context as rolling_metric_series_context,
-    rolling_metric_series_points as rolling_metric_series_points,
-    rolling_metric_summary as rolling_metric_summary,
-)
 
+# These explicit aliases are public compatibility re-exports; removing them would silently narrow
+# the facade even though the local module does not call them.
+from app.services.rolling_metric_outputs import (
+    rolling_metric_series_context as rolling_metric_series_context,  # noqa: PLC0414
+)
+from app.services.rolling_metric_outputs import (
+    rolling_metric_series_points as rolling_metric_series_points,  # noqa: PLC0414
+)
+from app.services.rolling_metric_outputs import (
+    rolling_metric_summary as rolling_metric_summary,  # noqa: PLC0414
+)
 
 ROLLING_SHARPE_METRIC = "ROLLING_SHARPE"
 ROLLING_MAX_DRAWDOWN_METRIC = "ROLLING_MAX_DRAWDOWN"

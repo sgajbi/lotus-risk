@@ -15,8 +15,8 @@ stays and is checked, which is the weaker of the two answers.
 
 from __future__ import annotations
 
-import re
 import os
+import re
 import subprocess
 from pathlib import Path
 
@@ -30,7 +30,7 @@ WIKI = ROOT / "wiki" / "Validation-and-CI.md"
 
 
 def _is_gate(target: str) -> bool:
-    return target.endswith("-gate") or target.endswith("-gates")
+    return target.endswith(("-gate", "-gates"))
 
 
 def _resolved_make_database(makefile: str) -> str:
@@ -121,23 +121,7 @@ def _stale_wiki_gates(wiki: str, makefile: str) -> list[str]:
 
 
 def test_reachability_parses_continuations_without_reading_recipe_text() -> None:
-    makefile = "\n".join(
-        [
-            "check: aggregate-gate \\",
-            " continued-gate # disabled-gate",
-            "check: repeated-gate",
-            "ci: aggregate-gate ; @echo recipe-only-gate",
-            "aggregate-gate sibling-gate: multi-target-gate",
-            "aggregate-gate:",
-            "\t@echo disabled-gate",
-            "continued-gate:",
-            "\tpython continued_check.py",
-            "repeated-gate:",
-            "\tpython repeated_check.py",
-            "multi-target-gate:",
-            "\tpython multi_target_check.py",
-        ]
-    )
+    makefile = "check: aggregate-gate \\\n continued-gate # disabled-gate\ncheck: repeated-gate\nci: aggregate-gate ; @echo recipe-only-gate\naggregate-gate sibling-gate: multi-target-gate\naggregate-gate:\n\t@echo disabled-gate\ncontinued-gate:\n\tpython continued_check.py\nrepeated-gate:\n\tpython repeated_check.py\nmulti-target-gate:\n\tpython multi_target_check.py"
 
     reachable = _reachable_targets(makefile)
 
@@ -171,16 +155,7 @@ def test_reachability_expands_variable_prerequisites(assignment: str, reference:
 
 
 def test_reachability_observes_active_conditional_rules() -> None:
-    makefile = "\n".join(
-        [
-            "ifeq (1, 0)",
-            "check: disabled-gate",
-            "endif",
-            "check: visible-gate",
-            "ci: visible-gate",
-            "visible-gate:",
-        ]
-    )
+    makefile = "ifeq (1, 0)\ncheck: disabled-gate\nendif\ncheck: visible-gate\nci: visible-gate\nvisible-gate:"
 
     reachable = _reachable_targets(makefile)
 
@@ -206,7 +181,7 @@ def test_reachability_excludes_target_specific_variable_values(prefix: str) -> N
 
 
 def test_reverse_wiki_guard_rejects_fabricated_gate_without_exemptions() -> None:
-    makefile = "\n".join(["check: live-gate", "ci: live-gate", "live-gate:"])
+    makefile = "check: live-gate\nci: live-gate\nlive-gate:"
     wiki = "`make live-gate`\n`make fabricated-gate`\n"
 
     assert _stale_wiki_gates(wiki, makefile) == ["fabricated-gate"]

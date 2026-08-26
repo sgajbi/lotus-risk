@@ -5,7 +5,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 
-def _default_var_options() -> "VaROptions":
+def _default_var_options() -> VaROptions:
     return VaROptions.model_validate({})
 
 

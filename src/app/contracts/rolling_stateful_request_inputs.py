@@ -58,7 +58,7 @@ class RollingStatefulInput(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_semantics(self) -> "RollingStatefulInput":
+    def validate_semantics(self) -> RollingStatefulInput:
         validate_unique_period_names(self.periods)
         return self
 

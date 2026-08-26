@@ -6,9 +6,9 @@ import os
 import re
 import subprocess
 import sys
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Mapping, Protocol, Sequence
-
+from typing import Protocol
 
 DISPATCH_TAG_PATTERN = re.compile(r"^main-releasability-(?P<sha>[0-9a-f]{40})$")
 REPOSITORY_PATTERN = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")

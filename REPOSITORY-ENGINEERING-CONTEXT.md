@@ -353,11 +353,14 @@ closed here:
 Audit a merge with `gh run list --commit <full-sha>`; `--branch main` misses the run, because the
 dispatch ref is a tag rather than `main`.
 
-Tools whose **output is the gate** are pinned to exact versions in `pyproject.toml`, not floored. A floored
-linter changes the gate's verdict with no commit: `ruff>=0.15.0` resolved to 0.16.4 in CI while the
-local virtualenv held 0.15.21, so `make lint` passed locally and reported 237 errors in CI on the
-same commit. `tests/unit/test_static_analysis_pins.py` fails if any of them is floored, and if a
-pinned version is not the one installed — a pin nobody runs has not been tested.
+Tools whose **output is the gate** are pinned to exact versions in `pyproject.toml`, not floored.
+Ruff is pinned at `0.16.4` after its findings were explicitly dispositioned; the pre-commit hook uses
+the same release. One exact-file `FURB157` exception retains a string-based `Decimal` expression
+whose full source signature is governed by the monetary float allowlist. One test-only `FLY002`
+exception lets the repository-path guard assemble forbidden absolute-home fixtures without making
+those same literals fail the guard. There is no global lint ignore. `tests/unit/test_static_analysis_pins.py`
+fails if any gate-output tool is floored, or if a pinned version is not the one installed — a pin
+nobody runs has not been tested.
 
 Type stubs count as static analysis. `pandas-stubs` floating from `3.0.3.260530` to
 `3.0.5.260730` produced five mypy errors in `src/app/services/risk/helpers.py:73` on unchanged
@@ -392,6 +395,8 @@ Important validation expectations:
    when the developer Python environment is polluted by other editable Lotus apps. The CI-local
    Compose project name is derived from the resolved checkout path and used symmetrically for
    bring-up and cleanup so it cannot remove the live product runtime or collide across worktrees.
+   Its image normalizes Python sources to non-executable mode because Docker Desktop can lose Git's
+   file-mode truth when sending a Windows build context to the Linux builder.
 7. GitHub Actions artifact dependencies are governed by `make github-actions-runtime-gate`, which
    fails if artifact upload/download actions drift below the Node 24 runtime majors required for
    current CI dependency posture (`actions/upload-artifact@v6`, `actions/download-artifact@v7`).

@@ -52,9 +52,9 @@ async def execute_lotus_core_json_request(
             headers=headers,
             started_at=started_at,
         )
-    async with profile.make_client() as client:
+    async with profile.make_client() as owned_client:
         return await _execute_lotus_core_json_request(
-            client=client,
+            client=owned_client,
             method=method,
             url=url,
             path=path,

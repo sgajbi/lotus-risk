@@ -5,10 +5,20 @@ from contextlib import AbstractContextManager
 
 from app.observability import (
     observation_start as _observation_start,
+)
+from app.observability import (
     observe_risk_metric_duration as _observe_risk_metric_duration,
+)
+from app.observability import (
     record_analytics_freshness_bucket as _record_analytics_freshness_bucket,
+)
+from app.observability import (
     record_calculation_supportability as _record_calculation_supportability,
+)
+from app.observability import (
     record_endpoint_execution as _record_endpoint_execution,
+)
+from app.observability import (
     record_risk_metric_requests as _record_risk_metric_requests,
 )
 

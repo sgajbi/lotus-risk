@@ -5,7 +5,6 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DOMAIN_DOCS = REPO_ROOT / "docs" / "domain-apis"
 

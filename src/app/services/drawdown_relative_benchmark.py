@@ -12,6 +12,8 @@ from app.contracts.drawdown import (
 )
 from app.services.drawdown_series import (
     drawdown_from_returns as _drawdown_from_returns,
+)
+from app.services.drawdown_series import (
     drawdown_summary as _drawdown_summary,
 )
 

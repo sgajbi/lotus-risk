@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import cast
+from typing import ClassVar, Self, cast
 
 import httpx
 import pytest
@@ -102,13 +102,13 @@ def test_make_client_honors_profile_limits(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     class _FakeAsyncClient:
-        last_init_kwargs: dict[str, object] = {}
+        last_init_kwargs: ClassVar[dict[str, object]] = {}
 
         def __init__(self, **kwargs: object) -> None:
             self._init_kwargs = kwargs
             _FakeAsyncClient.last_init_kwargs = kwargs
 
-        async def __aenter__(self) -> "_FakeAsyncClient":
+        async def __aenter__(self) -> Self:
             return self
 
         async def __aexit__(self, *_: object) -> None:
@@ -143,7 +143,7 @@ def test_make_client_falls_back_to_legacy_async_client_signature(
     """Compatibility path should be used when httpx.AsyncClient lacks limits support."""
 
     class _LegacyAsyncClient:
-        last_init_kwargs: dict[str, object] = {}
+        last_init_kwargs: ClassVar[dict[str, object]] = {}
 
         def __init__(self, **kwargs: object) -> None:
             if "limits" in kwargs:
@@ -151,7 +151,7 @@ def test_make_client_falls_back_to_legacy_async_client_signature(
             self._init_kwargs = kwargs
             _LegacyAsyncClient.last_init_kwargs = kwargs
 
-        async def __aenter__(self) -> "_LegacyAsyncClient":
+        async def __aenter__(self) -> Self:
             return self
 
         async def __aexit__(self, *_: object) -> None:

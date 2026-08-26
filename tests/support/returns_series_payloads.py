@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Iterable
+from collections.abc import Iterable
 
 
 def build_return_rows(rows: Iterable[tuple[str, str]]) -> list[dict[str, str]]:

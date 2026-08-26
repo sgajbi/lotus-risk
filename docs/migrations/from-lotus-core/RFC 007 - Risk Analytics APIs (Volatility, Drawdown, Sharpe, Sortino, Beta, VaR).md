@@ -68,7 +68,8 @@ A new file, `src/services/query_service/app/dtos/risk_dto.py`, will be created. 
 # --- Reused from performance_dto.py ---
 # ExplicitPeriod, YearPeriod, StandardPeriod
 
-from .performance_dto import PerformanceRequestPeriod # Reusing for consistency
+from .performance_dto import PerformanceRequestPeriod  # Reusing for consistency
+
 
 # --- New DTOs ---
 class RiskRequestScope(BaseModel):
@@ -76,11 +77,13 @@ class RiskRequestScope(BaseModel):
     reporting_currency: Optional[str] = None
     net_or_gross: Literal["NET", "GROSS"] = "NET"
 
+
 class VaROptions(BaseModel):
     method: Literal["HISTORICAL", "GAUSSIAN", "CORNISH_FISHER"] = "HISTORICAL"
     confidence: float = Field(0.99, gt=0, lt=1)
     horizon_days: int = Field(1, gt=0)
     include_expected_shortfall: bool = True
+
 
 class RiskOptions(BaseModel):
     frequency: Literal["DAILY", "WEEKLY", "MONTHLY"] = "DAILY"
@@ -88,28 +91,42 @@ class RiskOptions(BaseModel):
     use_log_returns: bool = False
     risk_free_mode: Literal["ZERO", "ANNUAL_RATE"] = "ZERO"
     risk_free_annual_rate: Optional[float] = Field(None, ge=0)
-    mar_annual_rate: float = Field(0.0, ge=0, description="Minimum Acceptable Return for Sortino Ratio")
+    mar_annual_rate: float = Field(
+        0.0, ge=0, description="Minimum Acceptable Return for Sortino Ratio"
+    )
     benchmark_security_id: Optional[str] = None
     var: VaROptions = Field(default_factory=VaROptions)
+
 
 class RiskRequest(BaseModel):
     scope: RiskRequestScope
     periods: List[PerformanceRequestPeriod]
-    metrics: List[Literal[
-        "VOLATILITY", "DRAWDOWN", "SHARPE", "SORTINO",
-        "BETA", "TRACKING_ERROR", "INFORMATION_RATIO", "VAR"
-    ]]
+    metrics: List[
+        Literal[
+            "VOLATILITY",
+            "DRAWDOWN",
+            "SHARPE",
+            "SORTINO",
+            "BETA",
+            "TRACKING_ERROR",
+            "INFORMATION_RATIO",
+            "VAR",
+        ]
+    ]
     options: RiskOptions = Field(default_factory=RiskOptions)
+
 
 # --- Response DTOs (Sketch) ---
 class RiskValue(BaseModel):
     value: Optional[float] = None
-    details: Optional[Dict[str, Any]] = None # For drawdown dates, VaR ES, etc.
+    details: Optional[Dict[str, Any]] = None  # For drawdown dates, VaR ES, etc.
+
 
 class RiskPeriodResult(BaseModel):
     start_date: date
     end_date: date
     metrics: Dict[str, RiskValue]
+
 
 class RiskResponse(BaseModel):
     scope: RiskRequestScope

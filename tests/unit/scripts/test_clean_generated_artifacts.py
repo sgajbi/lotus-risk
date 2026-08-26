@@ -1,8 +1,8 @@
 from pathlib import Path
 
-from scripts.clean_generated_artifacts import clean_generated_artifacts
-
 import pytest
+
+from scripts.clean_generated_artifacts import clean_generated_artifacts
 
 pytestmark = pytest.mark.governance
 

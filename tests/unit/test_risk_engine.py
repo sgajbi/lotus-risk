@@ -3,6 +3,7 @@ import statistics
 from typing import Any
 
 import pytest
+from pydantic import ValidationError
 
 from app.contracts.risk import RiskCalculationRequest, RiskRequestPeriod
 from app.services.risk_engine import calculate_risk
@@ -56,11 +57,8 @@ def test_period_normalizes_legacy_trailing_year_alias_type() -> None:
 
 
 def test_period_validation_rejects_missing_explicit_bounds() -> None:
-    try:
+    with pytest.raises(ValidationError, match="EXPLICIT period requires"):
         RiskRequestPeriod.model_validate({"type": "EXPLICIT"})
-        assert False, "Expected validation error"
-    except Exception as exc:  # pydantic validation type is enough here
-        assert "EXPLICIT period requires" in str(exc)
 
 
 def test_calculate_risk_var_methods() -> None:

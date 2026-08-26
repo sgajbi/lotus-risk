@@ -1,15 +1,12 @@
 from collections.abc import Awaitable, Callable
-from typing import TypeVar, overload
+from typing import overload
 
 from pydantic import BaseModel
 
 from app.services.observability_ports import observation_start, record_endpoint_execution
 
-ResponseT = TypeVar("ResponseT")
-ResponseModelT = TypeVar("ResponseModelT", bound=BaseModel)
 
-
-def _validate_response_model(
+def _validate_response_model[ResponseModelT: BaseModel](
     result: object,
     response_model: type[ResponseModelT] | None,
 ) -> object:
@@ -24,7 +21,7 @@ def _validate_response_model(
 
 
 @overload
-async def observed_endpoint(
+async def observed_endpoint[ResponseT](
     *,
     endpoint: str,
     input_mode: str,
@@ -34,7 +31,7 @@ async def observed_endpoint(
 
 
 @overload
-async def observed_endpoint(
+async def observed_endpoint[ResponseModelT: BaseModel](
     *,
     endpoint: str,
     input_mode: str,
@@ -43,7 +40,7 @@ async def observed_endpoint(
 ) -> ResponseModelT: ...
 
 
-async def observed_endpoint(
+async def observed_endpoint[ResponseModelT: BaseModel](
     *,
     endpoint: str,
     input_mode: str,

@@ -1,9 +1,9 @@
 from pathlib import Path
 from typing import Any
 
-from scripts import generate_quality_baseline
-
 import pytest
+
+from scripts import generate_quality_baseline
 
 pytestmark = pytest.mark.governance
 

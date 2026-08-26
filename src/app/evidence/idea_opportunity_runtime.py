@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from collections.abc import Callable, Mapping
 from copy import deepcopy
 from datetime import UTC, date, datetime
-import hashlib
-import json
 from typing import Any
 
 from app.evidence.idea_opportunity_constants import (
@@ -394,7 +394,7 @@ def _parse_utc(value: Any) -> datetime | None:
     if not isinstance(value, str) or not value.endswith("Z"):
         return None
     try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(value)
     except ValueError:
         return None
     return parsed if parsed.tzinfo is not None else None

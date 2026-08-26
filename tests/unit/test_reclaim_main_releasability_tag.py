@@ -11,7 +11,6 @@ from scripts.reclaim_main_releasability_tag import (
     reclaim_dispatch_tag,
 )
 
-
 pytestmark = pytest.mark.governance
 SHA = "a" * 40
 TAG = f"main-releasability-{SHA}"

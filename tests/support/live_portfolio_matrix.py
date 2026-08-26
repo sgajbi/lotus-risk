@@ -6,7 +6,6 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
-
 CANONICAL_LIVE_PORTFOLIO_ID = "PB_SG_GLOBAL_BAL_001"
 CANONICAL_LIVE_AS_OF_DATE = "2026-03-31"
 
@@ -83,7 +82,10 @@ def load_live_portfolio_matrix(
         raise ValueError(f"{LIVE_PORTFOLIO_MATRIX_JSON_ENV} must contain valid JSON") from exc
 
     if not isinstance(parsed, list):
-        raise ValueError(f"{LIVE_PORTFOLIO_MATRIX_JSON_ENV} must be a JSON array")
+        # The environment value parsed as JSON but violates the configured matrix shape.
+        raise ValueError(  # noqa: TRY004
+            f"{LIVE_PORTFOLIO_MATRIX_JSON_ENV} must be a JSON array"
+        )
 
     cases = tuple(_case_from_mapping(item) for item in parsed)
     if not cases:
@@ -100,7 +102,8 @@ def missing_required_archetypes(cases: Sequence[LivePortfolioCase]) -> tuple[str
 
 def _case_from_mapping(value: Any) -> LivePortfolioCase:
     if not isinstance(value, dict):
-        raise ValueError("each live portfolio matrix entry must be an object")
+        # A JSON array entry has the wrong configured value shape, not a Python API argument type.
+        raise ValueError("each live portfolio matrix entry must be an object")  # noqa: TRY004
 
     portfolio_id = _required_string(value, "portfolio_id")
     archetype = _required_string(value, "archetype")

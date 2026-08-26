@@ -35,7 +35,7 @@ class RiskEventPortfolioExposure(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_exposure_weights(self) -> "RiskEventPortfolioExposure":
+    def validate_exposure_weights(self) -> RiskEventPortfolioExposure:
         if not self.exposure_weights:
             raise ValueError("exposure_weights must contain at least one exposure bucket")
         normalized_buckets = [bucket.upper() for bucket in self.exposure_weights]
@@ -95,7 +95,7 @@ class RiskEventAffectedCohortRequest(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_candidate_portfolios(self) -> "RiskEventAffectedCohortRequest":
+    def validate_candidate_portfolios(self) -> RiskEventAffectedCohortRequest:
         if not self.portfolios:
             raise ValueError("portfolios must contain at least one candidate portfolio")
         return self

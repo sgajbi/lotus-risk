@@ -6,7 +6,6 @@ from typing import Any, cast
 
 import httpx
 
-
 RETRYABLE_STATUS_CODES = {502, 503, 504}
 
 
@@ -58,7 +57,11 @@ def fetch_live_returns_series(
 
         result_path = body.get("result_path")
         if not isinstance(result_path, str):
-            raise AssertionError("live returns-series response missing result_path")
+            # This helper is executable test evidence; a malformed live response is an assertion
+            # failure rather than a caller-facing type contract.
+            raise AssertionError(  # noqa: TRY004
+                "live returns-series response missing result_path"
+            )
 
         for _ in range(poll_attempts):
             result_body = _request_json_with_retries(

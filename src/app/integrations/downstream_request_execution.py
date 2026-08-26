@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from typing import NoReturn, TypeVar
+from typing import NoReturn
 
 import httpx
 
@@ -13,8 +13,6 @@ from app.upstream_errors import (
     classify_upstream_http_error,
     classify_upstream_transport_error,
 )
-
-_T = TypeVar("_T")
 
 
 async def execute_downstream_request(
@@ -146,16 +144,16 @@ def _transport_upstream_error(
     )
 
 
-async def execute_downstream_request_json(
+async def execute_downstream_request_json[T](
     *,
     dependency: str,
     operation: str,
     started_at: float,
     request_factory: Callable[[], Awaitable[httpx.Response]],
-    parse_response: Callable[[httpx.Response], _T],
+    parse_response: Callable[[httpx.Response], T],
     record_success: bool = True,
     accepted_status_codes: set[int] | None = None,
-) -> _T:
+) -> T:
     """Execute one outbound request, parse response JSON, and record supportability."""
     response = await execute_downstream_request(
         dependency=dependency,

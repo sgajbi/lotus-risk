@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-import logging
 
 import httpx
 from fastapi import FastAPI
@@ -47,7 +47,9 @@ async def _close_owned_http_clients(
     for state_attribute, http_client in reversed(owned_http_clients):
         try:
             await http_client.aclose()
-        except Exception:
+        # Shutdown must attempt to close both downstream clients regardless of one adapter's
+        # concrete close failure type.
+        except Exception:  # noqa: BLE001
             logger.error(
                 "downstream_http_client_close_failed",
                 extra={"state_attribute": state_attribute},

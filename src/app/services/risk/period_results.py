@@ -6,12 +6,12 @@ from dataclasses import dataclass
 import pandas as pd
 
 from app.contracts.risk import RiskPeriodResult, RiskStatelessCalculationInput, RiskValue
+from app.services.risk.metric_timing import MetricDurationObserver
 from app.services.risk.period_metrics import (
     BenchmarkContextPayload,
     PeriodMetricCalculationRequest,
     calculate_period_metrics,
 )
-from app.services.risk.metric_timing import MetricDurationObserver
 from app.services.risk.period_windows import RiskPeriodWindow, risk_period_window
 
 

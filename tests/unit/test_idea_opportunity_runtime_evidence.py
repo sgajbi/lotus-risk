@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from copy import deepcopy
-from collections.abc import Mapping
-from datetime import UTC, date, datetime
 import json
+from collections.abc import Mapping
+from copy import deepcopy
+from datetime import UTC, date, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
-from fastapi.testclient import TestClient
 import pytest
+from fastapi.testclient import TestClient
 
 from app.evidence.idea_opportunity_constants import (
     CANONICAL_AS_OF_DATE,
@@ -28,7 +28,6 @@ from tests.support.app_runtime import override_app_runtime
 from tests.support.lotus_core_fakes import SimulationLotusCoreClient
 from tests.support.lotus_performance_fakes import RecordingLotusPerformanceClient
 from tests.support.returns_series_payloads import build_returns_series_response
-
 
 GENERATED_AT = datetime(2026, 7, 23, 6, 30, tzinfo=UTC)
 _CANONICAL_RETURN_ROWS = (
@@ -350,7 +349,7 @@ def test_idea_opportunity_runtime_evidence_cli_writes_valid_artifact(
         def __init__(self, *_args: object, **_kwargs: object) -> None:
             pass
 
-        def __enter__(self) -> "_Client":
+        def __enter__(self) -> Self:
             return self
 
         def __exit__(self, *_args: object) -> None:
@@ -387,7 +386,7 @@ def test_idea_opportunity_runtime_evidence_cli_rejects_noncanonical_portfolio(
         def __init__(self, *_args: object, **_kwargs: object) -> None:
             pass
 
-        def __enter__(self) -> "_Client":
+        def __enter__(self) -> Self:
             return self
 
         def __exit__(self, *_args: object) -> None:
@@ -419,7 +418,7 @@ def test_idea_opportunity_runtime_evidence_cli_rejects_noncanonical_as_of_date(
         def __init__(self, *_args: object, **_kwargs: object) -> None:
             pass
 
-        def __enter__(self) -> "_Client":
+        def __enter__(self) -> Self:
             return self
 
         def __exit__(self, *_args: object) -> None:

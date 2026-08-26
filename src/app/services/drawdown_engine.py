@@ -19,9 +19,10 @@ from app.services.calculation_supportability import (
 from app.services.drawdown_periods import build_input_frames, drawdown_period_results
 from app.services.drawdown_series import (
     drawdown_summary as _drawdown_summary,
+)
+from app.services.drawdown_series import (
     duration_days as _duration_days,
 )
-
 
 __all__ = ["_drawdown_summary", "_duration_days", "calculate_drawdown"]
 

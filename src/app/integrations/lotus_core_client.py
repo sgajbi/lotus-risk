@@ -16,6 +16,8 @@ from app.integrations.lotus_core_operations import (
 )
 from app.integrations.lotus_core_transport import (
     DEFAULT_LOTUS_CORE_BASE_URL as _DEFAULT_LOTUS_CORE_BASE_URL,
+)
+from app.integrations.lotus_core_transport import (
     resolve_lotus_core_base_url,
 )
 

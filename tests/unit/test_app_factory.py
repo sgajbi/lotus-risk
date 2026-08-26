@@ -1,5 +1,5 @@
-from fastapi.testclient import TestClient
 import pytest
+from fastapi.testclient import TestClient
 
 from app.app_factory import create_app
 from app.service_metadata import SERVICE_NAME, SERVICE_VERSION

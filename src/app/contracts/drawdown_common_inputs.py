@@ -62,7 +62,7 @@ class DrawdownAnalysisOptions(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_alpha(self) -> "DrawdownAnalysisOptions":
+    def validate_alpha(self) -> DrawdownAnalysisOptions:
         allowed = {0.90, 0.95, 0.99}
         if self.cdar_alpha not in allowed:
             raise ValueError("cdar_alpha must be one of 0.90, 0.95, or 0.99")

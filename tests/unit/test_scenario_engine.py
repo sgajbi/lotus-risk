@@ -14,6 +14,8 @@ from app.contracts.scenario_inputs import (
     SCENARIO_MAX_EXPOSURE_BUCKETS,
     SCENARIO_MAX_EXPOSURE_COMPONENTS,
     SCENARIO_MAX_POSITION_CONTRIBUTION_ROWS,
+)
+from app.contracts.scenario_inputs import (
     RegimeScenarioPackRequest as RegimeScenarioPackRequestSource,
 )
 from app.contracts.scenario_outputs import (

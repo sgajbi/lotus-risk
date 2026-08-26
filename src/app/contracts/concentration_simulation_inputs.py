@@ -70,7 +70,7 @@ class SimulationChangeInput(BaseModel):
         return value
 
     @model_validator(mode="after")
-    def validate_supported_change_semantics(self) -> "SimulationChangeInput":
+    def validate_supported_change_semantics(self) -> SimulationChangeInput:
         if self.quantity is None and self.amount is None:
             raise ValueError(
                 "simulation_changes[].quantity or simulation_changes[].amount is required for BUY/SELL"
@@ -116,7 +116,7 @@ class SimulationConcentrationInput(StatefulConcentrationInput):
     )
 
     @model_validator(mode="after")
-    def validate_session_controls(self) -> "SimulationConcentrationInput":
+    def validate_session_controls(self) -> SimulationConcentrationInput:
         if self.session_id and not self.start_new_session and self.session_ttl_hours is not None:
             raise ValueError(
                 "simulation_input.session_ttl_hours is not allowed when reusing simulation_input.session_id"

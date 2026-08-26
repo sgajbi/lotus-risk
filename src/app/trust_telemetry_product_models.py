@@ -13,7 +13,6 @@ from app.trust_telemetry_product_examples import (
     UPSTREAM_REQUEST_FINGERPRINT_EXAMPLE,
 )
 
-
 TelemetryLifecycleStatus = Literal["active", "deprecated", "retired"]
 
 

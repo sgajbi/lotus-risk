@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from app.enterprise_policy import enterprise_policy_version
@@ -51,7 +51,7 @@ def emit_audit_event(
                 "tenant_id": tenant_id,
                 "role": role,
                 "correlation_id": correlation_id or "",
-                "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+                "timestamp_utc": datetime.now(UTC).isoformat(),
                 "policy_version": enterprise_policy_version(),
                 "metadata": redact_sensitive(metadata),
             }

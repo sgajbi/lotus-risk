@@ -85,9 +85,12 @@ def _imports_product_code(module: Path) -> bool:
         if isinstance(node, ast.Import):
             if any(alias.name.split(".")[0] == PRODUCT_PACKAGE for alias in node.names):
                 return True
-        elif isinstance(node, ast.ImportFrom):
-            if node.module and node.module.split(".")[0] == PRODUCT_PACKAGE:
-                return True
+        elif (
+            isinstance(node, ast.ImportFrom)
+            and node.module
+            and node.module.split(".")[0] == PRODUCT_PACKAGE
+        ):
+            return True
     return False
 
 

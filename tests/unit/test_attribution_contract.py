@@ -22,7 +22,6 @@ from app.contracts.attribution_response_outputs import (
     HistoricalAttributionResponse as HistoricalAttributionResponseImplementation,
 )
 
-
 BASE_STATELESS_PAYLOAD: dict[str, Any] = {
     "input_mode": "stateless",
     "stateless_input": {

@@ -8,17 +8,8 @@ from app.contracts.drawdown import (
     DrawdownSummary,
 )
 from app.contracts.drawdown_inputs import DrawdownAnalyticsRequest as DrawdownAnalyticsRequestSource
-from app.contracts.drawdown_outputs import DrawdownResponse as DrawdownResponseSource
 from app.contracts.drawdown_metric_outputs import DrawdownSummary as DrawdownSummarySource
-from app.contracts.drawdown_request_inputs import (
-    DrawdownAnalyticsRequest as DrawdownAnalyticsRequestImplementation,
-)
-from app.contracts.drawdown_request_field_examples import (
-    DRAWDOWN_ANALYSIS_OPTIONS_EXAMPLE,
-    DRAWDOWN_BENCHMARK_POLICY_EXAMPLE,
-    DRAWDOWN_STATEFUL_INPUT_EXAMPLE,
-    DRAWDOWN_STATELESS_INPUT_EXAMPLE,
-)
+from app.contracts.drawdown_outputs import DrawdownResponse as DrawdownResponseSource
 from app.contracts.drawdown_period_field_examples import (
     DRAWDOWN_PERIOD_EPISODES_EXAMPLE,
     DRAWDOWN_PERIOD_RELATIVE_CONTEXT_EXAMPLE,
@@ -27,11 +18,20 @@ from app.contracts.drawdown_period_field_examples import (
     DRAWDOWN_PERIOD_UNDERWATER_SERIES_EXAMPLE,
 )
 from app.contracts.drawdown_period_outputs import DrawdownPeriodResult
-from app.contracts.drawdown_response_outputs import (
-    DrawdownResponse as DrawdownResponseImplementation,
+from app.contracts.drawdown_request_field_examples import (
+    DRAWDOWN_ANALYSIS_OPTIONS_EXAMPLE,
+    DRAWDOWN_BENCHMARK_POLICY_EXAMPLE,
+    DRAWDOWN_STATEFUL_INPUT_EXAMPLE,
+    DRAWDOWN_STATELESS_INPUT_EXAMPLE,
+)
+from app.contracts.drawdown_request_inputs import (
+    DrawdownAnalyticsRequest as DrawdownAnalyticsRequestImplementation,
 )
 from app.contracts.drawdown_response_envelope_outputs import (
     DrawdownResponse as DrawdownResponseEnvelope,
+)
+from app.contracts.drawdown_response_outputs import (
+    DrawdownResponse as DrawdownResponseImplementation,
 )
 
 

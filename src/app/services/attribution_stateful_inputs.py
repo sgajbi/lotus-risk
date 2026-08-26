@@ -25,7 +25,6 @@ from app.services.attribution_stateful_returns import (
     requires_active_attribution,
 )
 
-
 __all__ = [
     "LotusCoreClientProtocol",
     "LotusPerformanceClientProtocol",

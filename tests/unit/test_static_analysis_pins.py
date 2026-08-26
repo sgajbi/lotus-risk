@@ -39,6 +39,7 @@ pytestmark = pytest.mark.governance
 
 ROOT = Path(__file__).resolve().parents[2]
 PYPROJECT = ROOT / "pyproject.toml"
+PRE_COMMIT_CONFIG = ROOT / ".pre-commit-config.yaml"
 
 # Tools whose output is the gate: a release can change the verdict with no commit.
 GATE_OUTPUT_TOOLS = frozenset(
@@ -125,7 +126,7 @@ def test_every_gate_output_tool_is_pinned_to_an_exact_version() -> None:
 def test_the_pinned_versions_are_the_ones_actually_installed() -> None:
     """A pin nobody installs is a pin that has not been tested."""
 
-    import importlib.metadata as metadata
+    from importlib import metadata
 
     requirements = _dev_requirements()
     mismatched = []
@@ -141,6 +142,21 @@ def test_the_pinned_versions_are_the_ones_actually_installed() -> None:
     assert mismatched == [], (
         "The pinned version differs from what this environment runs, so local validation is not "
         f"evidence about CI: {mismatched}"
+    )
+
+
+def test_ruff_pre_commit_hook_matches_the_package_pin() -> None:
+    pinned = _dev_requirements()["ruff"].removeprefix("==").strip()
+    config = PRE_COMMIT_CONFIG.read_text(encoding="utf-8")
+    ruff_block = re.search(
+        r"repo: https://github\.com/astral-sh/ruff-pre-commit\s+rev: v(?P<version>[^\s]+)",
+        config,
+    )
+
+    assert ruff_block is not None, "The governed Ruff pre-commit hook is missing."
+    assert ruff_block.group("version") == pinned, (
+        "The Ruff pre-commit hook and installed gate package differ, so contributors and CI "
+        f"enforce different rule sets: hook={ruff_block.group('version')}, package={pinned}."
     )
 
 

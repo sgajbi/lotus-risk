@@ -10,7 +10,7 @@ PROJECT_ROOT_PATH = str(PROJECT_ROOT)
 if PROJECT_ROOT_PATH not in sys.path:
     sys.path.insert(0, PROJECT_ROOT_PATH)
 
-from scripts.openapi_quality_gate import evaluate_schema  # noqa: E402
+from scripts.openapi_quality_gate import evaluate_schema
 
 pytestmark = pytest.mark.governance
 

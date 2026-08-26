@@ -1,5 +1,5 @@
-from fastapi.testclient import TestClient
 import pytest
+from fastapi.testclient import TestClient
 
 from app.main import app
 from tests.support.app_runtime import override_app_runtime
@@ -731,7 +731,7 @@ def test_e2e_historical_attribution_stateful_issuer_active_risk_mode() -> None:
             self,
             *,
             security_ids: list[str],
-            correlation_id: str | None,  # noqa: ARG002
+            correlation_id: str | None,
         ) -> dict[str, object]:
             return {
                 "records": [

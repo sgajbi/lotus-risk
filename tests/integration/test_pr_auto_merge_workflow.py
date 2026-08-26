@@ -90,7 +90,7 @@ def test_protected_branch_skip_handling_is_preserved() -> None:
     # Anchor the terminator to a line that is only whitespace and `fi`. Searching for the bare
     # substring terminates inside "con-fi-gured" on the very first line, yielding an empty slice
     # that would then fail for a reason unrelated to the handler.
-    end = re.search(r"^\s*fi\s*$", workflow[start:], re.M)
+    end = re.search(r"^\s*fi\s*$", workflow[start:], re.MULTILINE)
     assert end is not None, "The protected-branch handler is no longer a closed `if` block."
     handler = workflow[start : start + end.start()]
     assert "exit 0" in handler, (

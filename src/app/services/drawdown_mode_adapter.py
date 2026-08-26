@@ -10,8 +10,7 @@ from app.contracts.drawdown import (
     DrawdownStatefulInput,
     DrawdownStatelessInput,
 )
-from app.contracts.risk import RiskRequestScope
-from app.contracts.risk import ReturnPoint
+from app.contracts.risk import ReturnPoint, RiskRequestScope
 from app.services.audit_lineage import ordered_source_services, upstream_request_fingerprint
 from app.services.drawdown_engine import calculate_drawdown
 from app.services.stateful_returns_request import build_stateful_returns_series_request
@@ -68,11 +67,14 @@ def _parse_drawdown_source_series(
 ) -> _DrawdownSourceSeries:
     series, portfolio_points = extract_required_portfolio_returns(source_response)
     benchmark_points = to_return_points(series.get("benchmark_returns"))
-    if stateful.benchmark_policy.include_benchmark and not benchmark_points:
-        if stateful.benchmark_policy.missing_benchmark_policy == "REQUIRE":
-            raise ValueError(
-                "lotus-performance returns-series returned no benchmark returns while benchmark was required"
-            )
+    if (
+        stateful.benchmark_policy.include_benchmark
+        and not benchmark_points
+        and stateful.benchmark_policy.missing_benchmark_policy == "REQUIRE"
+    ):
+        raise ValueError(
+            "lotus-performance returns-series returned no benchmark returns while benchmark was required"
+        )
     return _DrawdownSourceSeries(
         portfolio_points=portfolio_points,
         benchmark_points=benchmark_points,

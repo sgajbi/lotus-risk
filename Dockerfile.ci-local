@@ -12,6 +12,11 @@ RUN apt-get update \
 
 COPY . .
 
+# Docker Desktop can mark every file in a Windows build context executable even when Git records
+# Python sources as 0644. Restore the repository's all-Python-source policy before Ruff evaluates
+# executable-file rules inside the Linux validation container.
+RUN find . -type f -name '*.py' -exec chmod a-x {} +
+
 RUN python -m pip install --upgrade pip \
     && pip install -e ".[dev]"
 

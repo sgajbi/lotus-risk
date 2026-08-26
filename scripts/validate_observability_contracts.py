@@ -6,7 +6,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 SRC_STR = str(SRC)
@@ -14,8 +13,8 @@ while SRC_STR in sys.path:
     sys.path.remove(SRC_STR)
 sys.path.insert(0, SRC_STR)
 
-import app.observability as observability  # noqa: E402
-from app.integrations.upstream_operations import UPSTREAM_OPERATION_VALUES  # noqa: E402
+from app import observability
+from app.integrations.upstream_operations import UPSTREAM_OPERATION_VALUES
 
 LOCAL_OBSERVABILITY_DIR = ROOT / "contracts" / "observability"
 CONTRACT_PATH = LOCAL_OBSERVABILITY_DIR / "lotus-risk-monitoring.v1.json"
@@ -63,7 +62,8 @@ def implemented_metric_contract() -> dict[str, tuple[str, ...]]:
 def _load_contract(path: Path = CONTRACT_PATH) -> dict[str, Any]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
-        raise ValueError("Observability contract root must be an object.")
+        # This is invalid contract content after successful JSON parsing, so ValueError is exact.
+        raise ValueError("Observability contract root must be an object.")  # noqa: TRY004
     return payload
 
 

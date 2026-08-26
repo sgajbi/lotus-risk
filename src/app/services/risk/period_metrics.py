@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Callable
 
 import pandas as pd
 
@@ -12,11 +11,6 @@ from app.services.risk.benchmark_period_metrics import (
     BenchmarkPeriodMetricResult,
     calculate_benchmark_period_metrics,
 )
-from app.services.risk.metric_return_series import (
-    metric_series_error_map,
-    resolve_metric_return_series,
-)
-from app.services.risk.metric_timing import MetricDurationObserver
 from app.services.risk.metric_calculators import (
     calculate_drawdown,
     calculate_sharpe,
@@ -25,6 +19,11 @@ from app.services.risk.metric_calculators import (
     calculate_volatility,
     metric_error,
 )
+from app.services.risk.metric_return_series import (
+    metric_series_error_map,
+    resolve_metric_return_series,
+)
+from app.services.risk.metric_timing import MetricDurationObserver
 
 
 @dataclass(frozen=True)

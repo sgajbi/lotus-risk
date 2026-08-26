@@ -25,7 +25,6 @@ from app.services.attribution_source_frames import (
     window_returns,
 )
 
-
 __all__ = [
     "AttributionSourceFrames",
     "build_period_attribution_sets",

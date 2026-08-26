@@ -3,9 +3,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from scripts import check_monetary_float_usage
-
 import pytest
+
+from scripts import check_monetary_float_usage
 
 pytestmark = pytest.mark.governance
 
@@ -28,8 +28,10 @@ def test_load_allowlist_rejects_legacy_string_entries(tmp_path: Path) -> None:
     assert entries == {}
     assert stale == []
     assert errors == [
-        "Legacy allowlist string entry must be migrated: "
-        "src/app/services/example.py:12:amount: float"
+        (
+            "Legacy allowlist string entry must be migrated: "
+            "src/app/services/example.py:12:amount: float"
+        )
     ]
 
 
@@ -40,7 +42,7 @@ def test_scan_repo_ignores_tests_and_explicit_allow_comments(tmp_path: Path) -> 
     tests_dir.mkdir(parents=True)
 
     (src_dir / "engine.py").write_text(
-        "\n".join(
+        "\n".join(  # noqa: FLY002 - line lists keep generated source fixtures auditable.
             [
                 "approved_amount: float  # monetary-float-allow",
                 "unauthorized_amount: float",
@@ -63,7 +65,7 @@ def test_scan_repo_ignores_non_monetary_analytics_float_annotations(tmp_path: Pa
     src_dir.mkdir(parents=True)
 
     (src_dir / "analytics.py").write_text(
-        "\n".join(
+        "\n".join(  # noqa: FLY002 - line lists keep generated source fixtures auditable.
             [
                 "rolling_risk: float",
                 "benchmark_return: float",
@@ -84,7 +86,7 @@ def test_scan_repo_flags_money_bearing_snake_case_identifiers(tmp_path: Path) ->
     src_dir.mkdir(parents=True)
 
     (src_dir / "portfolio.py").write_text(
-        "\n".join(
+        "\n".join(  # noqa: FLY002 - line lists keep generated source fixtures auditable.
             [
                 "portfolio_market_value: float",
                 "cash_balance: float",

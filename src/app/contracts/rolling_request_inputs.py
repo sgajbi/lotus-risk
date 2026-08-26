@@ -55,7 +55,7 @@ class RollingAnalyticsRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     @model_validator(mode="after")
-    def normalize_and_validate(self) -> "RollingAnalyticsRequest":
+    def normalize_and_validate(self) -> RollingAnalyticsRequest:
         if self.input_mode == RollingInputMode.STATELESS and self.stateless_input is None:
             raise ValueError("stateless_input is required when input_mode=stateless")
         if self.input_mode == RollingInputMode.STATEFUL and self.stateful_input is None:

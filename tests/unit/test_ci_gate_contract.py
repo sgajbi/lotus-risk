@@ -1,8 +1,8 @@
 from pathlib import Path
 
-from scripts.ci_local_compose_project import compose_project_name
-
 import pytest
+
+from scripts.ci_local_compose_project import compose_project_name
 
 pytestmark = pytest.mark.governance
 
@@ -82,6 +82,7 @@ def test_ci_local_docker_target_points_to_existing_compose_lane() -> None:
     assert "ci-local:" in compose
     assert "dockerfile: Dockerfile.ci-local" in compose
     assert "command: make ci-local" in compose
+    assert "find . -type f -name '*.py' -exec chmod a-x {} +" in dockerfile
     assert 'pip install -e ".[dev]"' in dockerfile
     assert 'CMD ["make", "ci-local"]' in dockerfile
 

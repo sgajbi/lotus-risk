@@ -8,9 +8,9 @@ from app.contracts.drawdown import (
     DrawdownAnalysisOptions,
     DrawdownEpisode,
     DrawdownPeriodResult,
+    DrawdownStatelessInput,
     DrawdownSummary,
     RelativeDrawdownContext,
-    DrawdownStatelessInput,
 )
 from app.services.drawdown_period_series import (
     DrawdownInputFrames,
@@ -25,8 +25,14 @@ from app.services.drawdown_relative_benchmark import (
 )
 from app.services.drawdown_series import (
     EpisodeRecord,
+)
+from app.services.drawdown_series import (
     drawdown_from_returns as _drawdown_from_returns,
+)
+from app.services.drawdown_series import (
     drawdown_summary as _drawdown_summary,
+)
+from app.services.drawdown_series import (
     to_underwater_series as _to_underwater_series,
 )
 

@@ -82,7 +82,7 @@ class RollingStatelessInput(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_semantics(self) -> "RollingStatelessInput":
+    def validate_semantics(self) -> RollingStatelessInput:
         validate_unique_period_names(self.periods)
         validate_rolling_time_series_workload(
             period_count=len(self.periods),

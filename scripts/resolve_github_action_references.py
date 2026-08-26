@@ -17,13 +17,11 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Protocol
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from scripts.validate_github_actions_runtime import ANY_ACTION_USE_PATTERN  # noqa: E402
-
+from scripts.validate_github_actions_runtime import ANY_ACTION_USE_PATTERN
 
 DEFAULT_WORKFLOWS_DIR = REPO_ROOT / ".github" / "workflows"
 EXIT_MISSING = 1
@@ -75,7 +73,7 @@ class GitHubApiClient:
             },
         )
         try:
-            with urllib.request.urlopen(request, timeout=20) as response:  # noqa: S310
+            with urllib.request.urlopen(request, timeout=20) as response:
                 return ApiResponse(status=response.status, payload=json.load(response))
         except urllib.error.HTTPError as error:
             remaining = error.headers.get("x-ratelimit-remaining", "unknown")
@@ -240,11 +238,10 @@ def _append_github_metadata(outcome: str, report_path: Path, resolutions: list[R
             summary.write("## GitHub Action reference resolution\n\n")
             summary.write(f"Outcome: **{outcome}**  \nReport: `{report_path}`\n\n")
             summary.write("| Action | Status | Locations |\n| --- | --- | --- |\n")
-            for item in resolutions:
-                summary.write(
-                    f"| `{item.slug}@{item.ref}` | {item.status} | "
-                    f"{', '.join(item.occurrences)} |\n"
-                )
+            summary.writelines(
+                f"| `{item.slug}@{item.ref}` | {item.status} | {', '.join(item.occurrences)} |\n"
+                for item in resolutions
+            )
 
 
 def parse_args() -> argparse.Namespace:

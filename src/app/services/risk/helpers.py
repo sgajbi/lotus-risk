@@ -11,8 +11,14 @@ from app.services.risk.benchmark_metrics import (
     BENCHMARK_METRICS,
     RISK_METRICS_REQUIRING_BENCHMARK,
     RiskMetricDetails,
+)
+from app.services.risk.benchmark_metrics import (
     beta as _beta,
+)
+from app.services.risk.benchmark_metrics import (
     calculate_benchmark_metric as _calculate_benchmark_metric,
+)
+from app.services.risk.benchmark_metrics import (
     information_ratio as _information_ratio,
 )
 from app.services.risk.drawdown_details import drawdown_details as _drawdown
@@ -140,10 +146,10 @@ def _require_data(series: pd.Series, minimum: int = 2) -> None:
 
 __all__ = [
     "BENCHMARK_METRICS",
+    "LOG_RETURN_UNDEFINED_ERROR",
     "RISK_METRICS_REQUIRING_BENCHMARK",
     "RISK_METRICS_REQUIRING_RISK_FREE",
     "RiskMetricDetails",
-    "LOG_RETURN_UNDEFINED_ERROR",
     "_annual_to_periodic",
     "_as_number",
     "_beta",
@@ -153,8 +159,8 @@ __all__ = [
     "_expected_shortfall",
     "_information_ratio",
     "_require_data",
+    "_resample_returns",
     "_resolve_period",
     "_resolve_period_bounds",
-    "_resample_returns",
     "_to_log_returns",
 ]

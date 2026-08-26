@@ -14,7 +14,6 @@ from scripts.domain_data_product_contract_check import (
     validate_repo_native_contracts,
 )
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 LOCAL_DECLARATIONS_DIR = REPO_ROOT / "contracts" / "domain-data-products"
 PLATFORM_DECLARATIONS_DIR = (

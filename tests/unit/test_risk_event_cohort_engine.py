@@ -10,6 +10,8 @@ from app.contracts.risk_event_cohort import (
 from app.contracts.risk_event_cohort_inputs import (
     RISK_EVENT_MAX_CANDIDATE_PORTFOLIOS,
     RISK_EVENT_MAX_EXPOSURE_BUCKETS_PER_PORTFOLIO,
+)
+from app.contracts.risk_event_cohort_inputs import (
     RiskEventAffectedCohortRequest as RiskEventAffectedCohortRequestImplementation,
 )
 from app.contracts.risk_event_cohort_response import (

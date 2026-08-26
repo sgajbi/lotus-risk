@@ -2,19 +2,18 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from pydantic import BaseModel
 from prometheus_client import REGISTRY, generate_latest
+from pydantic import BaseModel
 
 from app.main import app
 from app.observability_contracts import (
     RISK_ANALYTICS_FRESHNESS_METRIC_LABELS,
     RISK_CALCULATION_SUPPORTABILITY_METRIC_LABELS,
 )
+from app.services.endpoint_observation import observed_endpoint
 from tests.support.app_runtime import override_app_runtime
 from tests.support.lotus_performance_fakes import RecordingLotusPerformanceClient
 from tests.support.returns_series_payloads import build_returns_series_response
-from app.services.endpoint_observation import observed_endpoint
-
 
 client = TestClient(app)
 FORBIDDEN_SUPPORTABILITY_METRIC_LABELS = {
