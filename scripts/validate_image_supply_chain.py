@@ -83,6 +83,8 @@ IGNORED_REPOSITORY_SCAN_DIRS = {
 
 FORBIDDEN_TRIVY_OVERRIDE_FIELDS = (
     "docker-host",
+    "download-db-only",
+    "download-java-db-only",
     "ignorefile",
     "ignore-policy",
     "ignore-status",
