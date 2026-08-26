@@ -35,11 +35,13 @@ ROUTE_LITERAL_PREFIX = re.compile(
     r"\s*\(\s*(?:url\s*=\s*)?)(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
     r"|\b(?:[a-z_]\w*_client|client|requests?|httpx)(?:\.\w+)*"
     r"\.(?:get|head|post|put|patch|delete|options|websocket_connect)"
-    r"\s*\([^\r\n]*\burl\s*=\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
+    r"\s*\((?:[^()\r\n]|\([^()\r\n]*\))*\burl\s*=\s*"
+    r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
     r"|\b\w+(?:\.\w+)*\.(?:add_api_route|add_route|add_websocket_route)"
     r"\s*\(\s*(?:path\s*=\s*)?(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
     r"|\b\w+(?:\.\w+)*\.(?:add_api_route|add_route|add_websocket_route)"
-    r"\s*\([^\r\n]*\bpath\s*=\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
+    r"\s*\((?:[^()\r\n]|\([^()\r\n]*\))*\bpath\s*=\s*"
+    r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
     r"|\b(?:httpx\.)?Request\s*\(\s*[\"']"
     r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)[\"']\s*,\s*(?:url\s*=\s*)?"
     r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
@@ -153,6 +155,7 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             'client.get("/home/dashboard/stats")',
             'client.get(url="/home/dashboard/stats")',
             'client.get(headers=HEADERS, url="/home/dashboard/stats")',
+            'client.get(headers=build_headers(), url="/home/dashboard/stats")',
             'client.get(f"/home/dashboard/{section}")',
             'client.get(r"/home/dashboard/stats")',
             'response_client.get("/home/dashboard/stats")',
@@ -181,6 +184,9 @@ def test_absolute_user_home_guard_does_not_let_an_adjacent_url_hide_a_path() -> 
 
     path_assignment = f'path = "{linux}"'
     assert _absolute_user_home_references(path_assignment) == ["/" + "/".join(["home", "alice"])]
+
+    after_closed_call = f'client.get("/api"); url="{linux}"'
+    assert _absolute_user_home_references(after_closed_call) == ["/" + "/".join(["home", "alice"])]
 
     data_decorator = f'@data_file("{linux}/input.json")'
     assert _absolute_user_home_references(data_decorator) == ["/" + "/".join(["home", "alice"])]
