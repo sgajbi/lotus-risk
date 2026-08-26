@@ -327,6 +327,31 @@ Use these commands as the primary local contract:
 2. `Pull Request Merge Gate`
 3. `Main Releasability Gate`
 
+Tools whose **output is the gate** are pinned to exact versions in `pyproject.toml`, not floored. A floored
+linter changes the gate's verdict with no commit: `ruff>=0.15.0` resolved to 0.16.4 in CI while the
+local virtualenv held 0.15.21, so `make lint` passed locally and reported 237 errors in CI on the
+same commit. `tests/unit/test_static_analysis_pins.py` fails if any of them is floored, and if a
+pinned version is not the one installed — a pin nobody runs has not been tested.
+
+Type stubs count as static analysis. `pandas-stubs` floating from `3.0.3.260530` to
+`3.0.5.260730` produced five mypy errors in `src/app/services/risk/helpers.py:73` on unchanged
+code — the same defect as a new lint rule, because stubs are the analyser's rule set for
+third-party APIs. `pandas` and `numpy` are pinned alongside their stubs: a pinned stub against a
+floating runtime is worse than either, since mypy would check against an API the installed package
+does not have. A test asserts the `pandas-stubs` version tracks the pinned `pandas`.
+
+Coverage tooling is pinned for a sharper reason than the linters. `--cov-fail-under` compares a
+produced number against a fixed `COVERAGE_FAIL_UNDER` threshold, and which branches count has
+changed across coverage majors. A floored linter fails **loudly** — 237 red errors. A floored
+coverage tool can fail **silently and in the permissive direction**: measure fewer branches, the
+percentage rises, the gate passes more easily, and nothing reports that the bar moved.
+
+Test runners are deliberately left floored. A `pytest` upgrade does not invent new assertions about
+this codebase. `pytest-asyncio` is the nearest counter-example — an `asyncio_mode` default change
+could silently skip unmarked async tests — but all 61 async tests here carry an explicit
+`@pytest.mark.asyncio`, so they are marker-protected. The line is *output of the gate* versus
+*runner of the code*. Upgrading a pinned tool is its own reviewed commit with a visible diff.
+
 Important validation expectations:
 
 1. no-alias, OpenAPI, vocabulary, and test-pyramid gates are active,
