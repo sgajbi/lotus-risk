@@ -59,8 +59,14 @@ def test_github_actions_runtime_gate_rejects_unparseable_and_quoted_refs(tmp_pat
 
     violations = validate_workflows(workflows_dir)
 
+    # `actions/upload-artifact@main` violates two independent rules and is reported under both:
+    # it is unpinned (a branch can change under the workflow with no commit) and it is below the
+    # governed Node runtime major. The reference-form check was added for issue #227; before it,
+    # only the second violation was reported.
     assert [violation.slug for violation in violations] == [
         "actions/download-artifact",
         "actions/upload-artifact",
+        "actions/upload-artifact",
     ]
-    assert [violation.ref for violation in violations] == ["v6", "main"]
+    assert [violation.ref for violation in violations] == ["v6", "main", "main"]
+    assert [violation.minimum_major for violation in violations] == [7, 0, 6]
