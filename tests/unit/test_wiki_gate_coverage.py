@@ -64,7 +64,11 @@ def _target_dependencies(makefile: str) -> dict[str, list[str]]:
             continue
         targets = rule_match.group("targets").split()
         prerequisite_text = rule_match.group("prerequisites")
-        if re.match(r"^[A-Za-z_][A-Za-z0-9_]*[ \t]*[?+:!]?=", prerequisite_text):
+        if re.match(
+            r"^(?:(?:override|private|export|unexport)[ \t]+)?"
+            r"[A-Za-z_][A-Za-z0-9_]*[ \t]*[?+:!]?=",
+            prerequisite_text,
+        ):
             continue  # GNU Make database record for a target-specific variable assignment.
         prerequisites = [
             prerequisite for prerequisite in prerequisite_text.split() if prerequisite != "|"
@@ -184,11 +188,12 @@ def test_reachability_observes_active_conditional_rules() -> None:
     assert "disabled-gate" not in reachable
 
 
-def test_reachability_excludes_target_specific_variable_values() -> None:
+@pytest.mark.parametrize("prefix", ["", "private ", "override ", "export "])
+def test_reachability_excludes_target_specific_variable_values(prefix: str) -> None:
     makefile = "\n".join(
         [
             "check: visible-gate",
-            "check: GATES = disabled-gate",
+            f"check: {prefix}GATES = disabled-gate",
             "ci: visible-gate",
             "visible-gate:",
         ]
