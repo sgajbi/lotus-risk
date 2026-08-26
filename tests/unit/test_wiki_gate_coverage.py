@@ -38,10 +38,11 @@ def _is_gate(target: str) -> bool:
 
 
 def _target_dependencies(makefile: str) -> dict[str, list[str]]:
-    return {
-        match.group(1): match.group(2).split()
-        for match in re.finditer(r"^([a-zA-Z0-9_-]+):\s*(.*)$", makefile, re.M)
-    }
+    dependencies: dict[str, list[str]] = {}
+    for match in re.finditer(r"^([a-zA-Z0-9_-]+):\s*(.*)$", makefile, re.M):
+        prerequisites = match.group(2).partition(";")[0].split()
+        dependencies.setdefault(match.group(1), []).extend(prerequisites)
+    return dependencies
 
 
 def _reachable_targets(makefile: str) -> set[str]:
@@ -135,6 +136,8 @@ def test_documented_alias_guard_rejects_fabricated_and_unreachable_names() -> No
             "orphan-gate: orphan-validation",
             "recipe-alias: live-validation",
             "\tpython recipe_check.py",
+            "repeated-alias: hidden-validation",
+            "repeated-alias: live-validation",
         ]
     )
 
@@ -145,6 +148,7 @@ def test_documented_alias_guard_rejects_fabricated_and_unreachable_names() -> No
                 "inline-recipe-alias",
                 "orphan-gate",
                 "recipe-alias",
+                "repeated-alias",
             }
         ),
         makefile,
@@ -155,6 +159,7 @@ def test_documented_alias_guard_rejects_fabricated_and_unreachable_names() -> No
         "inline-recipe-alias (contains recipe commands)",
         "orphan-gate (unreachable prerequisites: ['orphan-validation'])",
         "recipe-alias (contains recipe commands)",
+        "repeated-alias (unreachable prerequisites: ['hidden-validation'])",
     ]
 
 
