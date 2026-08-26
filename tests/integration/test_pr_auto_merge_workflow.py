@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -77,10 +78,26 @@ def test_protected_branch_skip_handling_is_preserved() -> None:
     workflow = (WORKFLOW_ROOT / "pr-auto-merge.yml").read_text(encoding="utf-8")
 
     assert "Protected branch rules not configured" in workflow
-    # Pin the exit-0 behaviour explicitly rather than leaving it implied, so a future reader sees
-    # that reporting success here is known and deferred, not overlooked.
     assert "Auto-merge skipped: branch protection/auto-merge is not enabled on target branch." in (
         workflow
+    )
+
+    # Assert the exit status *within this handler*, not anywhere in the file. The token guard also
+    # ends in `exit 0`, so a bare `"exit 0" in workflow` would pass on the wrong block and this
+    # test would claim to pin something it never read. Scoped from the branch-protection match to
+    # the end of its `if`.
+    start = workflow.index("Protected branch rules not configured")
+    # Anchor the terminator to a line that is only whitespace and `fi`. Searching for the bare
+    # substring terminates inside "con-fi-gured" on the very first line, yielding an empty slice
+    # that would then fail for a reason unrelated to the handler.
+    end = re.search(r"^\s*fi\s*$", workflow[start:], re.M)
+    assert end is not None, "The protected-branch handler is no longer a closed `if` block."
+    handler = workflow[start : start + end.start()]
+    assert "exit 0" in handler, (
+        "The protected-branch handler no longer exits 0. That would be an improvement - it is the "
+        "silent-success path recorded on lotus-platform#710 - but it is a behaviour change away "
+        "from lotus-gateway and belongs in the estate fix with its own evidence, not here. Update "
+        "this test and its docstring together with whatever change made it true."
     )
 
 
