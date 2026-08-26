@@ -2,12 +2,20 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, cast
 
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+def _resolve_repo_root() -> Path:
+    configured_root = os.getenv("LOTUS_REPO_ROOT")
+    if configured_root:
+        return Path(configured_root).resolve()
+    return Path(__file__).resolve().parents[2]
+
+
+REPO_ROOT = _resolve_repo_root()
 LOCAL_PRODUCER_DECLARATION_PATH = (
     REPO_ROOT / "contracts" / "domain-data-products" / "lotus-risk-products.v1.json"
 )
