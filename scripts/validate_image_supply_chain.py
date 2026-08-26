@@ -273,6 +273,8 @@ def validate_ci_image_release_workflow(
     inventory = _workflow_step_block(text, "Generate complete vulnerability inventory")
     if (
         _workflow_field_value(inventory, "uses") != "aquasecurity/trivy-action@v0.36.0"
+        or _workflow_field_value(inventory, "scan-type") != "image"
+        or _workflow_field_value(inventory, "scanners") != "vuln"
         or _workflow_field_value(inventory, "image-ref")
         != "${{ env.IMAGE_NAME }}:${{ github.sha }}"
         or _workflow_field_value(inventory, "format") != "sarif"
@@ -297,6 +299,8 @@ def validate_ci_image_release_workflow(
     library_gate = _workflow_step_block(text, "Block application-library vulnerabilities")
     if (
         _workflow_field_value(library_gate, "uses") != "aquasecurity/trivy-action@v0.36.0"
+        or _workflow_field_value(library_gate, "scan-type") != "image"
+        or _workflow_field_value(library_gate, "scanners") != "vuln"
         or _workflow_field_value(library_gate, "image-ref")
         != "${{ env.IMAGE_NAME }}:${{ github.sha }}"
         or _workflow_field_value(library_gate, "vuln-type") != "library"
@@ -316,6 +320,10 @@ def validate_ci_image_release_workflow(
     os_gate = _workflow_step_block(text, "Vulnerability scan")
     if _workflow_field_value(os_gate, "uses") != "aquasecurity/trivy-action@v0.36.0":
         issues.append(f"{workflow_path}: OS vulnerability gate must use the governed Trivy action")
+    if _workflow_field_value(os_gate, "scan-type") != "image":
+        issues.append(f"{workflow_path}: OS vulnerability gate must use image scan mode")
+    if _workflow_field_value(os_gate, "scanners") != "vuln":
+        issues.append(f"{workflow_path}: OS vulnerability gate must enable vulnerability scanning")
     if _workflow_field_value(os_gate, "image-ref") != "${{ env.IMAGE_NAME }}:${{ github.sha }}":
         issues.append(f"{workflow_path}: OS vulnerability gate must scan the release image")
     if _workflow_field_value(os_gate, "vuln-type") != "os":
