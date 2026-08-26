@@ -90,19 +90,44 @@ def _rounded_away_from(percent: float, *, below_bound: bool) -> str:
     return f"{rounded / scale:.{_DISPLAY_PRECISION}f}"
 
 
+def _tests_to_add(policy: BucketPolicy, count: int, total: int, *, below_bound: bool) -> int:
+    """How many tests must be added to clear the bound, accounting for the moving total.
+
+    A bucket's ratio is measured against a total the bucket is part of, so adding a test changes
+    both sides. Solving for tests added *to this bucket* when it is under its floor:
+
+        (count + n) / (total + n) >= min   ->   n >= (min * total - count) / (1 - min)
+
+    and for a ceiling, where the realistic action is adding tests to the *other* buckets rather
+    than deleting tests from this one:
+
+        count / (total + n) <= max         ->   n >= count / max - total
+
+    Reporting `min * total` - the naive form - under-shoots, because it treats the total as fixed.
+    At 14 of 100 against a 15% floor it advises "at least 15", and 15/101 is 14.85%: still failing.
+    The reader follows precise-sounding advice and the gate fails again.
+    """
+
+    if below_bound:
+        needed = (policy.min_ratio * total - count) / (1 - policy.min_ratio)
+    else:
+        needed = count / policy.max_ratio - total
+    return max(1, math.ceil(needed))
+
+
 def _failure_message(policy: BucketPolicy, count: int, total: int, percent: float) -> str:
     below = percent < policy.min_ratio * 100
     bound = policy.min_ratio if below else policy.max_ratio
     side = "below the" if below else "above the"
     limit = "floor" if below else "ceiling"
-    required = (
-        math.ceil(policy.min_ratio * total) if below else math.floor(policy.max_ratio * total)
-    )
-    direction = "at least" if below else "at most"
+    needed = _tests_to_add(policy, count, total, below_bound=below)
+    where = f"the {policy.name} bucket" if below else "the other buckets"
+    plural = "" if needed == 1 else "s"
     return (
         f"test pyramid gate failed for {policy.name}: {count} of {total} product tests is "
         f"{_rounded_away_from(percent, below_bound=below)}%, {side} {bound * 100:.0f}% {limit}. "
-        f"At this total the bucket needs {direction} {required} tests."
+        f"Adding {needed} product test{plural} to {where} clears it - the total moves with the "
+        f"bucket, so a count derived from the current total is not enough."
     )
 
 
