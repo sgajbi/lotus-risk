@@ -36,7 +36,10 @@ ROUTE_LITERAL_PREFIX = re.compile(
     r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)[\"']\s*,\s*[\"']$",
     re.IGNORECASE,
 )
-WEB_URL = re.compile(r"(?i:https?://[a-z0-9][^\s\"';,)\]}]*|(?<![:/])//[a-z0-9][^\s\"';,)\]}]*)")
+WEB_URL = re.compile(
+    r"(?i:https?://(?:[a-z0-9]|\[[0-9a-f:.]+\])[^\s\"';,)\]}]*"
+    r"|(?<![:/])//(?:[a-z0-9]|\[[0-9a-f:.]+\])[^\s\"';,)\]}]*)"
+)
 
 
 def _absolute_user_home_references(text: str) -> list[str]:
@@ -115,6 +118,7 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             "/home/dashboard",
             "GET /home/dashboard/stats",
             "https://example.test/root/project",
+            "https://[2001:db8::1]:8443/home/dashboard/stats",
             "//example.test/home/dashboard/stats",
             'route = "/home/dashboard/stats"',
             '@router.get("/home/dashboard/stats")',
