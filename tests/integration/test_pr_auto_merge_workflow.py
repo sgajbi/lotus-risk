@@ -36,7 +36,15 @@ def test_auto_merge_uses_a_token_that_can_trigger_downstream_workflows() -> None
     assert "GH_TOKEN: ${{ github.token }}" not in workflow, GATEWAY_REFERENCE_NOTE
 
 
-def test_auto_merge_fails_visibly_when_the_token_is_absent() -> None:
+def test_auto_merge_warns_when_the_token_is_absent() -> None:
+    """Named for what the guard does, not what it should do.
+
+    The guard `exit 0`s, so `Queue Auto Merge` reports **success** whether it armed or skipped.
+    That is the silent-success defect recorded on lotus-platform#710, and it is deliberately not
+    fixed here: this workflow is byte-identical to lotus-gateway's, and a local improvement would
+    cost that identity for a fix that belongs estate-wide.
+    """
+
     workflow = (WORKFLOW_ROOT / "pr-auto-merge.yml").read_text(encoding="utf-8")
 
     assert 'if [ -z "$GH_TOKEN" ]; then' in workflow
@@ -52,11 +60,28 @@ def test_auto_merge_requests_no_more_permission_than_it_needs() -> None:
 
 
 def test_protected_branch_skip_handling_is_preserved() -> None:
-    """This repository handles a case the reference does not; adopting the token fix must keep it."""
+    """This repository handles a case the reference does not; adopting the token fix must keep it.
+
+    The handler was earned: five of the last six pre-fix `Queue Auto Merge` runs hit it
+    (`29994249895`, `29993888190`, `29992183884`, `29992145403`, `29991585111`). Deleting it for
+    byte-identity with lotus-gateway would discard local history the current branch-protection
+    settings no longer explain.
+
+    What this guarantees is only that the branch still exists. Like the token guard it `exit 0`s,
+    so `Queue Auto Merge` reported **success** on those five runs while merging nothing — the same
+    silent-success defect as lotus-platform#710, reached by a different path and demonstrably
+    occurring rather than hypothetical. Both silent-success paths are recorded here so neither
+    looks resolved by the other being fixed.
+    """
 
     workflow = (WORKFLOW_ROOT / "pr-auto-merge.yml").read_text(encoding="utf-8")
 
     assert "Protected branch rules not configured" in workflow
+    # Pin the exit-0 behaviour explicitly rather than leaving it implied, so a future reader sees
+    # that reporting success here is known and deferred, not overlooked.
+    assert "Auto-merge skipped: branch protection/auto-merge is not enabled on target branch." in (
+        workflow
+    )
 
 
 def test_a_dispatcher_exists_so_the_gate_does_not_depend_on_the_push_trigger() -> None:
