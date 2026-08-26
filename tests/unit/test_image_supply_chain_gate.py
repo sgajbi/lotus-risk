@@ -215,3 +215,23 @@ def test_image_release_contract_rejects_build_time_publication(tmp_path: Path) -
     issues = validate_ci_image_release_workflow(workflow_path)
 
     assert f"{workflow_path}: build must not publish before the vulnerability scan" in issues
+
+
+def test_image_release_contract_rejects_digest_lookup_by_mutable_tag(tmp_path: Path) -> None:
+    workflow_path = tmp_path / "image-release.yml"
+    current = Path(".github/workflows/image-release.yml").read_text(encoding="utf-8")
+    workflow_path.write_text(
+        current.replace(
+            'push_output="$(docker push "$image_ref" 2>&1)"',
+            'push_output="$(docker push "$image_ref" 2>&1)"\n'
+            '          docker buildx imagetools inspect "$image_ref"',
+        ),
+        encoding="utf-8",
+    )
+
+    issues = validate_ci_image_release_workflow(workflow_path)
+
+    assert (
+        f"{workflow_path}: digest must come from this run's push, not a mutable tag lookup"
+        in issues
+    )

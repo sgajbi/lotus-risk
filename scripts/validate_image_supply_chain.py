@@ -168,6 +168,8 @@ def validate_ci_image_release_workflow(
         "push: false": "local-only image build before validation",
         "load: true": "locally loaded image for pre-publication scanning",
         "docker push": "post-scan CI-only image push",
+        "push_output=": "digest evidence captured directly from the image push",
+        "digest: (sha256:": "immutable digest parsed from the image push response",
         "${{ github.sha }}": "Git SHA image tag",
         "anchore/sbom-action": "SBOM generation",
         "aquasecurity/trivy-action": "vulnerability scan",
@@ -187,6 +189,10 @@ def validate_ci_image_release_workflow(
 
     if re.search(r"^\s*push:\s*true\s*$", text, flags=re.MULTILINE):
         issues.append(f"{workflow_path}: build must not publish before the vulnerability scan")
+    if "imagetools inspect" in text:
+        issues.append(
+            f"{workflow_path}: digest must come from this run's push, not a mutable tag lookup"
+        )
     if 'exit-code: "1"' not in text:
         issues.append(f"{workflow_path}: vulnerability scan must retain blocking exit-code 1")
 
