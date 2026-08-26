@@ -2,6 +2,10 @@ from pathlib import Path
 
 from scripts.clean_generated_artifacts import clean_generated_artifacts
 
+import pytest
+
+pytestmark = pytest.mark.governance
+
 
 def test_clean_generated_artifacts_removes_only_allowlisted_byproducts(tmp_path: Path) -> None:
     generated_paths = [

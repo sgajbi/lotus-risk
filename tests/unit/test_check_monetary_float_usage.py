@@ -5,6 +5,10 @@ from pathlib import Path
 
 from scripts import check_monetary_float_usage
 
+import pytest
+
+pytestmark = pytest.mark.governance
+
 
 def test_load_allowlist_rejects_legacy_string_entries(tmp_path: Path) -> None:
     allowlist_path = tmp_path / "monetary-float-allowlist.json"

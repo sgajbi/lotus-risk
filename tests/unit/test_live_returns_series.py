@@ -9,6 +9,8 @@ from tests.support.live_returns_series import (
     fetch_live_risk_free_series,
 )
 
+pytestmark = pytest.mark.governance
+
 
 class _FakeClient:
     def __init__(self, responses: list[httpx.Response]) -> None:

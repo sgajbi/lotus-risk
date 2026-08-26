@@ -1,5 +1,9 @@
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.governance
+
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 READINESS_DOC = REPO_ROOT / "quality" / "final_pr_readiness.md"
