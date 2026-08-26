@@ -647,6 +647,34 @@ def test_image_release_contract_rejects_ignore_status_override(
 
 
 @pytest.mark.parametrize(
+    ("step_name", "expected_scope"),
+    [
+        ("Generate complete vulnerability inventory", "complete vulnerability inventory"),
+        ("Block application-library vulnerabilities", "application-library scan"),
+        ("Vulnerability scan", "OS vulnerability scan"),
+    ],
+)
+@pytest.mark.parametrize("override", ["skip-db-update", "skip-java-db-update", "offline-scan"])
+def test_image_release_contract_rejects_database_freshness_overrides(
+    tmp_path: Path,
+    step_name: str,
+    expected_scope: str,
+    override: str,
+) -> None:
+    workflow_path = tmp_path / "image-release.yml"
+    current = Path(".github/workflows/image-release.yml").read_text(encoding="utf-8")
+    marker = f"      - name: {step_name}\n"
+    workflow_path.write_text(
+        current.replace(marker, f"{marker}        {override}: true\n", 1),
+        encoding="utf-8",
+    )
+
+    issues = validate_ci_image_release_workflow(workflow_path)
+
+    assert f"{workflow_path}: {expected_scope} must not use scan overrides: {override}" in issues
+
+
+@pytest.mark.parametrize(
     "relative_path",
     [".trivyignore", ".trivyignore.yaml", ".trivyignore.yml", "trivy.yaml", "trivy.yml"],
 )
