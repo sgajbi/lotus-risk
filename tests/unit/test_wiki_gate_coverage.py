@@ -60,7 +60,8 @@ def _targets_in(lane: str, makefile: str) -> list[str]:
     logical_makefile = "\n".join(_logical_make_lines(makefile))
     match = re.search(rf"^{lane}:[ \t]*(.*)$", logical_makefile, re.M)
     assert match is not None, f"The {lane} lane is missing from the Makefile."
-    return _strip_unescaped_make_comment(match.group(1)).split()
+    declaration = _strip_unescaped_make_comment(match.group(1))
+    return declaration.partition(";")[0].split()
 
 
 def _is_gate(target: str) -> bool:
@@ -122,7 +123,7 @@ def test_reachability_parses_continuations_without_reading_recipe_text() -> None
         [
             "check: aggregate-gate \\",
             " continued-gate # disabled-gate",
-            "ci: aggregate-gate",
+            "ci: aggregate-gate ; @echo recipe-only-gate",
             "aggregate-gate:",
             "\t@echo disabled-gate",
             "continued-gate:",
@@ -134,6 +135,7 @@ def test_reachability_parses_continuations_without_reading_recipe_text() -> None
 
     assert "continued-gate" in reachable
     assert "disabled-gate" not in reachable
+    assert "recipe-only-gate" not in reachable
 
 
 def test_reverse_wiki_guard_rejects_fabricated_gate_without_exemptions() -> None:
