@@ -10,6 +10,10 @@ from scripts.validate_image_supply_chain import (
     validate_kubernetes_digest_references,
 )
 
+import pytest
+
+pytestmark = pytest.mark.governance
+
 
 def test_image_supply_chain_gate_passes_current_repo() -> None:
     assert validate_image_supply_chain() == []

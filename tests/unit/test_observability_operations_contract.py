@@ -6,6 +6,10 @@ from typing import Any
 
 from scripts.validate_observability_contracts import validate_observability_contract
 
+import pytest
+
+pytestmark = pytest.mark.governance
+
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 OBSERVABILITY_CONTRACT = REPO_ROOT / "contracts" / "observability" / "lotus-risk-monitoring.v1.json"

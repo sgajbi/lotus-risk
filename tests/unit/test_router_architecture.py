@@ -3,6 +3,10 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.governance
+
 
 ROUTERS_DIR = Path(__file__).resolve().parents[2] / "src" / "app" / "routers"
 

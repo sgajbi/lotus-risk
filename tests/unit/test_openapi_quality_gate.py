@@ -3,12 +3,16 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
+
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PROJECT_ROOT_PATH = str(PROJECT_ROOT)
 if PROJECT_ROOT_PATH not in sys.path:
     sys.path.insert(0, PROJECT_ROOT_PATH)
 
 from scripts.openapi_quality_gate import evaluate_schema  # noqa: E402
+
+pytestmark = pytest.mark.governance
 
 
 def _operation(**overrides: object) -> dict[str, object]:

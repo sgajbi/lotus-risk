@@ -44,6 +44,13 @@ target-version = "py312"
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+# A governance test asserts about the repository - its configuration, tooling, workflows,
+# documentation, or test infrastructure - rather than about product behaviour. The test pyramid
+# gate deselects these, because counting them distorts the shape of the *product's* suite and made
+# the gate hostile to adding CI-contract coverage. See issue #220.
+markers = [
+    "governance: asserts about the repository rather than product behaviour; excluded from the test pyramid",
+]
 
 [tool.coverage.run]
 branch = true

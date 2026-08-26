@@ -21,6 +21,8 @@ from tests.support.live_portfolio_matrix import (
     missing_required_archetypes,
 )
 
+pytestmark = pytest.mark.governance
+
 
 def test_default_live_portfolio_case_preserves_canonical_global_balanced_baseline() -> None:
     case = default_live_portfolio_case({})

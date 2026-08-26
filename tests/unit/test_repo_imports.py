@@ -5,6 +5,10 @@ from pathlib import Path
 
 from scripts._repo_imports import force_repo_src_first
 
+import pytest
+
+pytestmark = pytest.mark.governance
+
 
 def test_force_repo_src_first_moves_repo_src_ahead_of_other_lotus_apps() -> None:
     original_path = list(sys.path)
