@@ -22,6 +22,13 @@ ABSOLUTE_USER_HOME = re.compile(
     r"|/r"
     r"oot(?=/[^/\s\"']+))"
 )
+EXACT_POSIX_USER_HOME = re.compile(
+    r"(?:/ho" r"me/[^/\s\"']+|/Us" r"ers/[^/\s\"']+|/r" r"oot)(?=$|[\s\"'])"
+)
+FILESYSTEM_LITERAL_PREFIX = re.compile(
+    r"(?:\b(?:Path|PurePath|PurePosixPath)\s*\(\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"']"
+    r"|file://)$"
+)
 IGNORED_GENERATED_TEST_DIRS = {"__pycache__", ".pytest_cache"}
 HTTP_ROUTE_PREFIX = re.compile(
     r"(?:^|[\s\"'])(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)\s+$", re.IGNORECASE
@@ -55,7 +62,8 @@ ROUTE_CONSTRUCTOR_PREFIX = re.compile(
     r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
 )
 REQUEST_SCOPE_ROUTE_PREFIX = re.compile(
-    r"\bRequest\s*\([^)]*[\"']path[\"']\s*:\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
+    r"\bRequest\s*\((?:[^()]|\([^()]*\))*[\"']path[\"']\s*:\s*"
+    r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
 )
 ASGI_SCOPE_ROUTE_PREFIX = re.compile(
     r"\b(?:scope|request_scope)\s*=\s*\{[^}]*[\"']path[\"']\s*:\s*"
@@ -78,8 +86,14 @@ def _absolute_user_home_references(text: str) -> list[str]:
         for pattern in (QUOTED_WEB_URL, UNQUOTED_WEB_URL)
         for url in pattern.finditer(text)
     ]
-    for match in ABSOLUTE_USER_HOME.finditer(text):
+    candidates = [
+        *((match, False) for match in ABSOLUTE_USER_HOME.finditer(text)),
+        *((match, True) for match in EXACT_POSIX_USER_HOME.finditer(text)),
+    ]
+    for match, requires_filesystem_context in sorted(candidates, key=lambda item: item[0].start()):
         preceding_text = text[: match.start()]
+        if requires_filesystem_context and not FILESYSTEM_LITERAL_PREFIX.search(preceding_text):
+            continue
         inside_url = any(start <= match.start() < end for start, end in url_spans)
         request_scope_route = REQUEST_SCOPE_ROUTE_PREFIX.search(preceding_text)
         if (
@@ -147,6 +161,12 @@ def test_absolute_user_home_guard_detects_cross_platform_paths() -> None:
     ]
 
 
+def test_absolute_user_home_guard_detects_exact_posix_home_in_path_context() -> None:
+    exact_home = "/" + "/".join(["home", "alice"])
+
+    assert _absolute_user_home_references(f'Path("{exact_home}")') == [exact_home]
+
+
 def test_absolute_user_home_guard_ignores_web_routes() -> None:
     routes = " ".join(
         [
@@ -173,6 +193,7 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             'client.websocket_connect("/home/dashboard/stats")',
             'httpx.Request("GET", "/home/dashboard/stats")',
             'Request({"type": "http", "path": "/home/dashboard/stats"})',
+            'Request({"client": ("127.0.0.1", 80), "path": "/home/dashboard/stats"})',
             'Route("/home/dashboard/stats", endpoint)',
             'WebSocketRoute(path="/home/dashboard/stats", endpoint=handler)',
             'scope = {"type": "http", "path": "/home/dashboard/stats"}',
