@@ -242,6 +242,8 @@ def test_image_release_order_guard_rejects_publication_before_scan(tmp_path: Pat
         for step in (
             "Build image for validation",
             "Generate SBOM",
+            "Generate complete vulnerability inventory",
+            "Upload vulnerability scan results",
             "Block application-library vulnerabilities",
             "Authenticate to release registry",
             "Push immutable image after scan",
@@ -254,9 +256,71 @@ def test_image_release_order_guard_rejects_publication_before_scan(tmp_path: Pat
     issues = validate_release_publication_order(workflow, workflow_path)
 
     assert issues == [
-        f"{workflow_path}: release order must be build, SBOM, vulnerability scan, registry "
-        "authentication, push, signing, then provenance attestation"
+        f"{workflow_path}: release order must be build, SBOM, vulnerability inventory and "
+        "upload, blocking scans, registry authentication, push, signing, then provenance "
+        "attestation"
     ]
+
+
+def test_image_release_order_guard_rejects_inventory_after_publication(tmp_path: Path) -> None:
+    workflow_path = tmp_path / "image-release.yml"
+    current = Path(".github/workflows/image-release.yml").read_text(encoding="utf-8")
+    start = current.index("      - name: Generate complete vulnerability inventory")
+    end = current.index("      - name: Block application-library vulnerabilities", start)
+    inventory_and_upload = current[start:end]
+    workflow_without_inventory = current[:start] + current[end:]
+    publication = workflow_without_inventory.index("      - name: Push immutable image after scan")
+    workflow_path.write_text(
+        workflow_without_inventory[:publication]
+        + inventory_and_upload
+        + workflow_without_inventory[publication:],
+        encoding="utf-8",
+    )
+
+    issues = validate_release_publication_order(
+        workflow_path.read_text(encoding="utf-8"), workflow_path
+    )
+
+    assert issues == [
+        f"{workflow_path}: release order must be build, SBOM, vulnerability inventory and "
+        "upload, blocking scans, registry authentication, push, signing, then provenance "
+        "attestation"
+    ]
+
+
+@pytest.mark.parametrize(
+    ("old", "new", "expected_issue"),
+    [
+        (
+            "          format: sarif\n",
+            "          format: table\n",
+            "complete HIGH/CRITICAL vulnerability inventory must remain visible",
+        ),
+        (
+            "          output: output/image-release/trivy-results.sarif\n",
+            "",
+            "complete HIGH/CRITICAL vulnerability inventory must remain visible",
+        ),
+        (
+            "          sarif_file: output/image-release/trivy-results.sarif\n",
+            "          sarif_file: output/image-release/other.sarif\n",
+            "complete vulnerability inventory SARIF must be uploaded",
+        ),
+    ],
+)
+def test_image_release_contract_rejects_incomplete_inventory_evidence(
+    tmp_path: Path,
+    old: str,
+    new: str,
+    expected_issue: str,
+) -> None:
+    workflow_path = tmp_path / "image-release.yml"
+    current = Path(".github/workflows/image-release.yml").read_text(encoding="utf-8")
+    workflow_path.write_text(current.replace(old, new, 1), encoding="utf-8")
+
+    issues = validate_ci_image_release_workflow(workflow_path)
+
+    assert f"{workflow_path}: {expected_issue}" in issues
 
 
 def test_image_release_contract_rejects_build_time_publication(tmp_path: Path) -> None:

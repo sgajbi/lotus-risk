@@ -59,6 +59,8 @@ FORBIDDEN_RUNTIME_DEV_DEPENDENCIES = (
 RELEASE_STEP_ORDER = (
     "Build image for validation",
     "Generate SBOM",
+    "Generate complete vulnerability inventory",
+    "Upload vulnerability scan results",
     "Block application-library vulnerabilities",
     "Vulnerability scan",
     "Authenticate to release registry",
@@ -197,8 +199,9 @@ def validate_release_publication_order(text: str, workflow_path: Path) -> list[s
 
     if all(position >= 0 for position in positions) and positions != sorted(positions):
         issues.append(
-            f"{workflow_path}: release order must be build, SBOM, vulnerability scan, registry "
-            "authentication, push, signing, then provenance attestation"
+            f"{workflow_path}: release order must be build, SBOM, vulnerability inventory and "
+            "upload, blocking scans, registry authentication, push, signing, then provenance "
+            "attestation"
         )
     return issues
 
@@ -258,7 +261,9 @@ def validate_ci_image_release_workflow(
         )
     inventory = _workflow_step_block(text, "Generate complete vulnerability inventory")
     if (
-        "vuln-type: os,library" not in inventory
+        "format: sarif" not in inventory
+        or "output: output/image-release/trivy-results.sarif" not in inventory
+        or "vuln-type: os,library" not in inventory
         or "severity: HIGH,CRITICAL" not in inventory
         or 'exit-code: "0"' not in inventory
         or "ignore-unfixed: true" in inventory
@@ -266,6 +271,13 @@ def validate_ci_image_release_workflow(
         issues.append(
             f"{workflow_path}: complete HIGH/CRITICAL vulnerability inventory must remain visible"
         )
+
+    inventory_upload = _workflow_step_block(text, "Upload vulnerability scan results")
+    if (
+        "github/codeql-action/upload-sarif@v4" not in inventory_upload
+        or "sarif_file: output/image-release/trivy-results.sarif" not in inventory_upload
+    ):
+        issues.append(f"{workflow_path}: complete vulnerability inventory SARIF must be uploaded")
 
     library_gate = _workflow_step_block(text, "Block application-library vulnerabilities")
     if (
