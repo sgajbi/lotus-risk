@@ -327,6 +327,26 @@ Use these commands as the primary local contract:
 2. `Pull Request Merge Gate`
 3. `Main Releasability Gate`
 
+`Main Releasability Gate` does not run on push. It is dispatched by
+`merged-pr-main-releasability.yml` after a pull request merges, against an immutable tag at the
+merge commit, and its first job refuses to continue unless the checked-out revision matches the
+`expected_sha` it was dispatched with.
+
+Three independent mechanisms could otherwise leave a `main` commit ungated, and all three are
+closed here:
+
+1. PR auto-merge must run under `secrets.LOTUS_AUTOMERGE_TOKEN`, never `github.token`. GitHub does
+   not trigger workflow runs from events caused by `GITHUB_TOKEN`, so an automated merge under it
+   pushes to `main` without triggering anything.
+2. The dispatcher must exist, so the gate does not depend on the push trigger at all. A suppressed
+   push trigger is silent; a dispatcher that cannot dispatch is a failed run.
+3. Gate concurrency is keyed on `github.sha`, not `github.ref`. With `cancel-in-progress: true` a
+   branch-keyed group lets a second merge cancel the in-flight gate for the first commit, leaving
+   it with a cancelled run that is neither pass nor fail.
+
+Audit a merge with `gh run list --commit <full-sha>`; `--branch main` misses the run, because the
+dispatch ref is a tag rather than `main`.
+
 Tools whose **output is the gate** are pinned to exact versions in `pyproject.toml`, not floored. A floored
 linter changes the gate's verdict with no commit: `ruff>=0.15.0` resolved to 0.16.4 in CI while the
 local virtualenv held 0.15.21, so `make lint` passed locally and reported 237 errors in CI on the
