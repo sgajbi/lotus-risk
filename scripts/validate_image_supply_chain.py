@@ -294,6 +294,8 @@ def validate_ci_image_release_workflow(
         issues.append(f"{workflow_path}: unfixed exception must not apply to application libraries")
     if "continue-on-error: true" in library_gate:
         issues.append(f"{workflow_path}: application-library scan failure must block publication")
+    if re.search(r"^\s+if:", library_gate, flags=re.MULTILINE):
+        issues.append(f"{workflow_path}: application-library scan must run unconditionally")
 
     os_gate = _workflow_step_block(text, "Vulnerability scan")
     if "uses: aquasecurity/trivy-action@v0.36.0" not in os_gate:
@@ -310,6 +312,8 @@ def validate_ci_image_release_workflow(
         issues.append(f"{workflow_path}: OS blocking scan must cover HIGH/CRITICAL findings")
     if "continue-on-error: true" in os_gate:
         issues.append(f"{workflow_path}: OS vulnerability scan failure must block publication")
+    if re.search(r"^\s+if:", os_gate, flags=re.MULTILINE):
+        issues.append(f"{workflow_path}: OS vulnerability scan must run unconditionally")
 
     expiry_match = UNFIXED_EXCEPTION_EXPIRY_PATTERN.search(text)
     if expiry_match is None:
