@@ -560,6 +560,46 @@ def test_image_release_contract_rejects_vulnerability_suppression_overrides(
 
 
 @pytest.mark.parametrize(
+    ("marker", "replacement"),
+    [
+        (
+            '  UNFIXED_VULNERABILITY_EXCEPTION_EXPIRES_ON: "2026-09-30"\n',
+            '  UNFIXED_VULNERABILITY_EXCEPTION_EXPIRES_ON: "2026-09-30"\n'
+            '  TRIVY_SKIP_DIRS: "/usr/local/lib/python3.12/site-packages"\n',
+        ),
+        (
+            "      - name: Generate complete vulnerability inventory\n",
+            "      - name: Generate complete vulnerability inventory\n"
+            "        env:\n"
+            '          TRIVY_SKIP_DIRS: "/usr/local/lib/python3.12/site-packages"\n',
+        ),
+        (
+            "      - name: Validate image supply-chain contract\n",
+            "      - name: Set forbidden Trivy environment\n"
+            '        run: echo "TRIVY_SKIP_DIRS=/usr/local/lib/python3.12/site-packages" '
+            '>> "$GITHUB_ENV"\n\n'
+            "      - name: Validate image supply-chain contract\n",
+        ),
+    ],
+)
+def test_image_release_contract_rejects_trivy_environment_overrides(
+    tmp_path: Path,
+    marker: str,
+    replacement: str,
+) -> None:
+    workflow_path = tmp_path / "image-release.yml"
+    current = Path(".github/workflows/image-release.yml").read_text(encoding="utf-8")
+    workflow_path.write_text(
+        current.replace(marker, replacement, 1),
+        encoding="utf-8",
+    )
+
+    issues = validate_ci_image_release_workflow(workflow_path)
+
+    assert f"{workflow_path}: Trivy environment overrides are forbidden: TRIVY_SKIP_DIRS" in issues
+
+
+@pytest.mark.parametrize(
     ("step_name", "expected_issue"),
     [
         (
