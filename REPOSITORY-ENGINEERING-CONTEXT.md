@@ -327,6 +327,16 @@ Use these commands as the primary local contract:
 2. `Pull Request Merge Gate`
 3. `Main Releasability Gate`
 
+Static-analysis tools are pinned to exact versions in `pyproject.toml`, not floored. A floored
+linter changes the gate's verdict with no commit: `ruff>=0.15.0` resolved to 0.16.4 in CI while the
+local virtualenv held 0.15.21, so `make lint` passed locally and reported 237 errors in CI on the
+same commit. `tests/unit/test_static_analysis_pins.py` fails if any of them is floored, and if a
+pinned version is not the one installed — a pin nobody runs has not been tested.
+
+Test runners are deliberately left floored. A `pytest` upgrade does not invent new assertions about
+this codebase; a linter upgrade invents new findings about code nobody touched. Upgrading a pinned
+tool is its own reviewed commit with a visible diff.
+
 Important validation expectations:
 
 1. no-alias, OpenAPI, vocabulary, and test-pyramid gates are active,
