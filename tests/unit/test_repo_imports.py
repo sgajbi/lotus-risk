@@ -13,7 +13,7 @@ pytestmark = pytest.mark.governance
 ROOT = Path(__file__).resolve().parents[2]
 TESTS_ROOT = ROOT / "tests"
 ABSOLUTE_USER_HOME = re.compile(
-    r"(?i)(?:[a-z]:[\\/](?:users|documents and settings)[\\/][^\\/\s\"']+"
+    r"(?i)(?:[a-z]:[\\/]+(?:users|documents and settings)[\\/]+[^\\/\s\"']+"
     r"|/(?:home|users)/[^/\s\"']+|/r"
     r"oot(?=[/\s\"']|$))"
 )
@@ -49,15 +49,17 @@ def test_force_repo_src_first_moves_repo_src_ahead_of_other_lotus_apps(
 
 def test_absolute_user_home_guard_detects_cross_platform_paths() -> None:
     windows = "/".join(["D:", "Users", "example", "project"])
+    escaped_windows = "D:" + "\\\\" + "Users" + "\\\\" + "example" + "\\\\" + "project"
     linux = "/" + "/".join(["home", "example", "project"])
     mac = "/" + "/".join(["Users", "example", "project"])
     root = "/" + "/".join(["root", "project"])
     references = _absolute_user_home_references(
-        f"windows={windows} linux={linux} mac={mac} root={root}"
+        f"windows={windows} escaped={escaped_windows} linux={linux} mac={mac} root={root}"
     )
 
     assert references == [
         "/".join(["D:", "Users", "example"]),
+        "D:" + "\\\\" + "Users" + "\\\\" + "example",
         "/" + "/".join(["home", "example"]),
         "/" + "/".join(["Users", "example"]),
         "/" + "root",
