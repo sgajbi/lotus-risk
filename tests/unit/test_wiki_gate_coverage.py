@@ -27,8 +27,8 @@ MAKEFILE = ROOT / "Makefile"
 WIKI = ROOT / "wiki" / "Validation-and-CI.md"
 
 
-def _targets_in(lane: str) -> list[str]:
-    match = re.search(rf"^{lane}: (.+)$", MAKEFILE.read_text(encoding="utf-8"), re.M)
+def _targets_in(lane: str, makefile: str) -> list[str]:
+    match = re.search(rf"^{lane}: (.+)$", makefile, re.M)
     assert match is not None, f"The {lane} lane is missing from the Makefile."
     return match.group(1).split()
 
@@ -37,19 +37,34 @@ def _is_gate(target: str) -> bool:
     return target.endswith("-gate") or target.endswith("-gates")
 
 
+def _target_dependencies(makefile: str) -> dict[str, list[str]]:
+    return {
+        match.group(1): match.group(2).split()
+        for match in re.finditer(r"^([a-zA-Z0-9_-]+):\s*(.*)$", makefile, re.M)
+    }
+
+
+def _reachable_targets(makefile: str) -> set[str]:
+    dependencies = _target_dependencies(makefile)
+    pending = [target for lane in ("check", "ci") for target in _targets_in(lane, makefile)]
+    reachable: set[str] = set()
+    while pending:
+        target = pending.pop()
+        if target in reachable:
+            continue
+        reachable.add(target)
+        pending.extend(dependencies.get(target, []))
+    return reachable
+
+
 def _gate_targets() -> set[str]:
     """Every `*-gate` target reachable from the blocking lanes, including aggregate members."""
 
-    makefile = MAKEFILE.read_text(encoding="utf-8")
-    reachable: set[str] = set()
-    for lane in ("check", "ci"):
-        for target in _targets_in(lane):
-            if not _is_gate(target):
-                continue
-            reachable.add(target)
-            aggregate = re.search(rf"^{re.escape(target)}: (.+)$", makefile, re.M)
-            if aggregate:
-                reachable.update(m for m in aggregate.group(1).split() if _is_gate(m))
+    reachable = {
+        target
+        for target in _reachable_targets(MAKEFILE.read_text(encoding="utf-8"))
+        if _is_gate(target)
+    }
     assert reachable, (
         "No gate targets found in the blocking lanes; this check would assert nothing."
     )
@@ -62,12 +77,54 @@ def _gate_targets() -> set[str]:
 # content, including an injected `make totally-fictional-gate`. See lotus-render#77.
 _WIKI_GATE_NAME = re.compile(r"`(?:make\s+)?([a-z0-9]+(?:-[a-z0-9]+)*-gates?)`")
 
-# Targets the wiki documents as standalone conveniences that no blocking lane invokes by name.
-# `domain-data-product-gate` is an alias for `domain-product-validate`, which `check` and `ci`
-# both run via `mesh-contract-validate` - so the validation is enforced and only the NAME is
-# absent from any failing build. The wiki entry says so explicitly; this allowance exists so
-# that statement is asserted rather than assumed, and a new entry cannot join it silently.
-DOCUMENTED_ALIASES = frozenset({"domain-data-product-gate"})
+# Standalone convenience aliases documented in the wiki but not invoked by a blocking lane. Empty
+# is the preferred state; any future exemption must prove that it is a real target whose complete
+# prerequisite work is reachable from `check` or `ci`.
+DOCUMENTED_ALIASES: frozenset[str] = frozenset()
+
+
+def _invalid_documented_aliases(aliases: frozenset[str], makefile: str) -> list[str]:
+    dependencies = _target_dependencies(makefile)
+    reachable = _reachable_targets(makefile)
+    invalid: list[str] = []
+    for alias in sorted(aliases):
+        if alias not in dependencies:
+            invalid.append(f"{alias} (not a Makefile target)")
+            continue
+        unreachable = sorted(set(dependencies[alias]) - reachable)
+        if not dependencies[alias] or unreachable:
+            invalid.append(f"{alias} (unreachable prerequisites: {unreachable})")
+    return invalid
+
+
+def test_documented_alias_exemptions_are_real_and_reachable() -> None:
+    invalid = _invalid_documented_aliases(
+        DOCUMENTED_ALIASES,
+        MAKEFILE.read_text(encoding="utf-8"),
+    )
+
+    assert invalid == [], f"Documented gate aliases do not prove blocking work: {invalid}"
+
+
+def test_documented_alias_guard_rejects_fabricated_and_unreachable_names() -> None:
+    makefile = "\n".join(
+        [
+            "check: live-gate",
+            "ci: live-gate",
+            "live-gate: live-validation",
+            "orphan-gate: orphan-validation",
+        ]
+    )
+
+    invalid = _invalid_documented_aliases(
+        frozenset({"fabricated-gate", "orphan-gate"}),
+        makefile,
+    )
+
+    assert invalid == [
+        "fabricated-gate (not a Makefile target)",
+        "orphan-gate (unreachable prerequisites: ['orphan-validation'])",
+    ]
 
 
 def test_the_wiki_names_every_gate_the_blocking_lanes_run() -> None:

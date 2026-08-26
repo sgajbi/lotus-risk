@@ -26,9 +26,9 @@ install-ci:
 pre-commit:
 	pre-commit run --all-files
 
-check: github-actions-runtime-gate lint no-alias-gate typecheck openapi-gate openapi-artifact-gate api-vocabulary-gate mesh-contract-validate image-supply-chain-gate source-size-gate test
+check: github-actions-runtime-gate lint no-alias-gate typecheck openapi-gate openapi-artifact-gate api-vocabulary-gate mesh-contract-validate domain-data-product-gate idea-opportunity-evidence-gate image-supply-chain-gate source-size-gate test
 
-ci: github-actions-runtime-gate lint check-deps architecture-gate no-alias-gate typecheck openapi-gate openapi-artifact-gate api-vocabulary-gate mesh-contract-validate image-supply-chain-gate complexity-gate source-size-gate dependency-hygiene-gate dead-code-gate migration-smoke test-pyramid-gate test-all security-audit docker-build
+ci: github-actions-runtime-gate lint check-deps architecture-gate no-alias-gate typecheck openapi-gate openapi-artifact-gate api-vocabulary-gate mesh-contract-validate domain-data-product-gate idea-opportunity-evidence-gate image-supply-chain-gate complexity-gate source-size-gate dependency-hygiene-gate dead-code-gate migration-smoke test-pyramid-gate test-all security-audit docker-build
 
 quality-baseline:
 	python scripts/generate_quality_baseline.py
