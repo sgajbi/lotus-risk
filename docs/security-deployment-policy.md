@@ -185,6 +185,9 @@ for which the vulnerability feed publishes no fixed version, while every fixable
 finding remains release-blocking. This is an actionability rule, not a severity downgrade or a
 package-specific ignore list.
 
+The governed Trivy HIGH/CRITICAL vulnerability scan therefore has two evidence-preserving passes:
+complete SARIF visibility first, followed by the fixable-finding publication gate.
+
 | Control field | Governed value |
 |---|---|
 | Owner | `lotus-risk` maintainers |
