@@ -50,8 +50,16 @@ ROUTE_LITERAL_PREFIX = re.compile(
     r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$",
     re.IGNORECASE,
 )
+ROUTE_CONSTRUCTOR_PREFIX = re.compile(
+    r"\b(?:Route|WebSocketRoute)\s*\(\s*(?:path\s*=\s*)?"
+    r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
+)
 REQUEST_SCOPE_ROUTE_PREFIX = re.compile(
     r"\bRequest\s*\([^)]*[\"']path[\"']\s*:\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
+)
+ASGI_SCOPE_ROUTE_PREFIX = re.compile(
+    r"\b(?:scope|request_scope)\s*=\s*\{[^}]*[\"']path[\"']\s*:\s*"
+    r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
 )
 QUOTED_WEB_URL = re.compile(
     r"(?i:(?<=[\"'])(?:https?://|(?<![:/])//)"
@@ -78,7 +86,9 @@ def _absolute_user_home_references(text: str) -> list[str]:
             inside_url
             or HTTP_ROUTE_PREFIX.search(preceding_text)
             or ROUTE_LITERAL_PREFIX.search(preceding_text)
+            or ROUTE_CONSTRUCTOR_PREFIX.search(preceding_text)
             or request_scope_route
+            or ASGI_SCOPE_ROUTE_PREFIX.search(preceding_text)
         ):
             continue
         references.append(match.group(0))
@@ -163,6 +173,9 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             'client.websocket_connect("/home/dashboard/stats")',
             'httpx.Request("GET", "/home/dashboard/stats")',
             'Request({"type": "http", "path": "/home/dashboard/stats"})',
+            'Route("/home/dashboard/stats", endpoint)',
+            'WebSocketRoute(path="/home/dashboard/stats", endpoint=handler)',
+            'scope = {"type": "http", "path": "/home/dashboard/stats"}',
             'app.add_api_route("/home/dashboard/stats", handler)',
             'app.add_api_route(path="/home/dashboard/stats", endpoint=handler)',
             'app.add_api_route(endpoint=handler, path="/home/dashboard/stats")',
