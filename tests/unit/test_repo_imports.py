@@ -46,7 +46,11 @@ ROUTE_LITERAL_PREFIX = re.compile(
 REQUEST_SCOPE_ROUTE_PREFIX = re.compile(
     r"\bRequest\s*\([^)]*[\"']path[\"']\s*:\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
 )
-WEB_URL = re.compile(
+QUOTED_WEB_URL = re.compile(
+    r"(?i:(?<=[\"'])(?:https?://|(?<![:/])//)"
+    r"(?:[a-z0-9]|\[[0-9a-f:.]+\])[^\s\"']*)"
+)
+UNQUOTED_WEB_URL = re.compile(
     r"(?i:https?://(?:[a-z0-9]|\[[0-9a-f:.]+\])[^\s\"';,)\]}]*"
     r"|(?<![:/])//(?:[a-z0-9]|\[[0-9a-f:.]+\])[^\s\"';,)\]}]*)"
 )
@@ -54,7 +58,11 @@ WEB_URL = re.compile(
 
 def _absolute_user_home_references(text: str) -> list[str]:
     references: list[str] = []
-    url_spans = [url.span() for url in WEB_URL.finditer(text)]
+    url_spans = [
+        url.span()
+        for pattern in (QUOTED_WEB_URL, UNQUOTED_WEB_URL)
+        for url in pattern.finditer(text)
+    ]
     for match in ABSOLUTE_USER_HOME.finditer(text):
         preceding_text = text[: match.start()]
         inside_url = any(start <= match.start() < end for start, end in url_spans)
@@ -131,6 +139,7 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             "GET /home/dashboard/stats",
             "https://example.test/root/project",
             "https://[2001:db8::1]:8443/home/dashboard/stats",
+            'url = "https://example.test/api;v=1/home/dashboard/stats"',
             "//example.test/home/dashboard/stats",
             'route = "/home/dashboard/stats"',
             '@router.get("/home/dashboard/stats")',
