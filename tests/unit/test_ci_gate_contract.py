@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from scripts.ci_local_compose_project import compose_project_name
+
 import pytest
 
 pytestmark = pytest.mark.governance
@@ -82,6 +84,37 @@ def test_ci_local_docker_target_points_to_existing_compose_lane() -> None:
     assert "command: make ci-local" in compose
     assert 'pip install -e ".[dev]"' in dockerfile
     assert 'CMD ["make", "ci-local"]' in dockerfile
+
+
+def test_ci_local_compose_cleanup_uses_checkout_specific_project_identity() -> None:
+    makefile = MAKEFILE.read_text(encoding="utf-8")
+
+    assert (
+        "CI_LOCAL_COMPOSE_PROJECT ?= $(shell python scripts/ci_local_compose_project.py)"
+        in makefile
+    )
+    project_prefix = '--project-name "$(CI_LOCAL_COMPOSE_PROJECT)" '
+    assert (
+        f"docker compose {project_prefix}-f docker-compose.ci-local.yml up --build "
+        "--force-recreate --remove-orphans --abort-on-container-exit "
+        "--exit-code-from ci-local ci-local"
+    ) in makefile
+    assert (
+        f"docker compose {project_prefix}-f docker-compose.ci-local.yml down -v --remove-orphans"
+    ) in makefile
+    assert "docker compose -f docker-compose.ci-local.yml" not in makefile
+
+
+def test_ci_local_compose_project_name_is_stable_and_checkout_specific(tmp_path: Path) -> None:
+    first_checkout = tmp_path / "first" / "lotus-risk"
+    second_checkout = tmp_path / "second" / "lotus-risk"
+
+    first_name = compose_project_name(first_checkout)
+
+    assert first_name == compose_project_name(first_checkout)
+    assert first_name != compose_project_name(second_checkout)
+    assert first_name.startswith("lotus-risk-ci-local-lotus-risk-")
+    assert first_name.replace("-", "").isalnum()
 
 
 def test_make_clean_delegates_to_cleanup_script() -> None:

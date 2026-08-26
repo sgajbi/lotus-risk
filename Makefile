@@ -13,6 +13,7 @@ CONTAINER_BUILD_TARGET ?= runtime
 IDEA_OPPORTUNITY_RISK_BASE_URL ?= http://localhost:8130
 IDEA_OPPORTUNITY_GENERATED_AT_UTC ?= $(BUILD_TIMESTAMP)
 IDEA_OPPORTUNITY_EVIDENCE_OUTPUT ?= output/idea-opportunity-runtime-evidence/idea-risk-runtime-evidence.json
+CI_LOCAL_COMPOSE_PROJECT ?= $(shell python scripts/ci_local_compose_project.py)
 
 install:
 	python -m pip install --upgrade pip
@@ -85,10 +86,10 @@ ci-local: lint check-deps
 	$(MAKE) typecheck
 
 ci-local-docker:
-	docker compose -f docker-compose.ci-local.yml up --build --force-recreate --remove-orphans --abort-on-container-exit --exit-code-from ci-local ci-local
+	docker compose --project-name "$(CI_LOCAL_COMPOSE_PROJECT)" -f docker-compose.ci-local.yml up --build --force-recreate --remove-orphans --abort-on-container-exit --exit-code-from ci-local ci-local
 
 ci-local-docker-down:
-	docker compose -f docker-compose.ci-local.yml down -v --remove-orphans
+	docker compose --project-name "$(CI_LOCAL_COMPOSE_PROJECT)" -f docker-compose.ci-local.yml down -v --remove-orphans
 
 check-all: lint typecheck test-all
 

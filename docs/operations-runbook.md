@@ -7,6 +7,13 @@
 3. PR-grade gate: `make ci`
 4. Quality baseline: `make quality-baseline`
 5. Domain data product gate: `make domain-data-product-gate`
+6. Isolated container gate: `make ci-local-docker`
+7. Isolated container cleanup: `make ci-local-docker-down`
+
+The CI-local Compose lifecycle derives a stable project name from the checkout path. Its `up` and
+`down` commands therefore affect only that checkout's test containers, network, and volumes; they
+must not remove the separately running product Compose project. Set `CI_LOCAL_COMPOSE_PROJECT` only
+when an operator needs an explicit, equally isolated namespace.
 
 ## Operational Endpoints
 
