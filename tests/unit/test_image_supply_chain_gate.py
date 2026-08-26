@@ -621,6 +621,32 @@ def test_image_release_contract_rejects_legacy_ignorefile_override(
 
 
 @pytest.mark.parametrize(
+    ("step_name", "expected_scope"),
+    [
+        ("Generate complete vulnerability inventory", "complete vulnerability inventory"),
+        ("Block application-library vulnerabilities", "application-library scan"),
+        ("Vulnerability scan", "OS vulnerability scan"),
+    ],
+)
+def test_image_release_contract_rejects_ignore_status_override(
+    tmp_path: Path,
+    step_name: str,
+    expected_scope: str,
+) -> None:
+    workflow_path = tmp_path / "image-release.yml"
+    current = Path(".github/workflows/image-release.yml").read_text(encoding="utf-8")
+    marker = f"      - name: {step_name}\n"
+    workflow_path.write_text(
+        current.replace(marker, f"{marker}        ignore-status: fixed\n", 1),
+        encoding="utf-8",
+    )
+
+    issues = validate_ci_image_release_workflow(workflow_path)
+
+    assert f"{workflow_path}: {expected_scope} must not use scan overrides: ignore-status" in issues
+
+
+@pytest.mark.parametrize(
     "relative_path",
     [".trivyignore", ".trivyignore.yaml", ".trivyignore.yml", "trivy.yaml", "trivy.yml"],
 )
