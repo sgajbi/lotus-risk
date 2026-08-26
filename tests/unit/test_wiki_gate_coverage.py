@@ -16,6 +16,8 @@ stays and is checked, which is the weaker of the two answers.
 from __future__ import annotations
 
 import re
+import os
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -27,63 +29,45 @@ MAKEFILE = ROOT / "Makefile"
 WIKI = ROOT / "wiki" / "Validation-and-CI.md"
 
 
-def _logical_make_lines(makefile: str) -> list[str]:
-    logical_lines: list[str] = []
-    pending = ""
-    for physical_line in makefile.splitlines():
-        line = f"{pending}{physical_line.lstrip() if pending else physical_line}"
-        if line.rstrip().endswith("\\"):
-            pending = f"{line.rstrip()[:-1]} "
-            continue
-        logical_lines.append(line)
-        pending = ""
-    if pending:
-        logical_lines.append(pending.rstrip())
-    return logical_lines
-
-
-def _strip_unescaped_make_comment(line: str) -> str:
-    for index, character in enumerate(line):
-        if character != "#":
-            continue
-        preceding_backslashes = 0
-        cursor = index - 1
-        while cursor >= 0 and line[cursor] == "\\":
-            preceding_backslashes += 1
-            cursor -= 1
-        if preceding_backslashes % 2 == 0:
-            return line[:index]
-    return line
-
-
 def _is_gate(target: str) -> bool:
     return target.endswith("-gate") or target.endswith("-gates")
 
 
+def _resolved_make_database(makefile: str) -> str:
+    environment = os.environ.copy()
+    environment.pop("MAKEFLAGS", None)
+    environment.pop("MFLAGS", None)
+    result = subprocess.run(
+        ["make", "--no-print-directory", "-rR", "-qp", "-f", "-"],
+        input=makefile,
+        text=True,
+        capture_output=True,
+        cwd=ROOT,
+        env=environment,
+        check=False,
+    )
+    assert result.returncode in {0, 1}, (
+        f"GNU Make could not resolve the gate dependency graph: {result.stderr.strip()}"
+    )
+    _, marker, files_section = result.stdout.partition("# Files")
+    assert marker, "GNU Make database did not contain a Files section."
+    return files_section.partition("# files hash-table stats:")[0]
+
+
 def _target_dependencies(makefile: str) -> dict[str, list[str]]:
     dependencies: dict[str, list[str]] = {}
-    for logical_line in _logical_make_lines(makefile):
-        assert not re.match(
-            r"^(?:ifeq|ifneq|ifdef|ifndef|else|endif)(?:\s|$)", logical_line.strip()
-        ), "Conditional Make syntax is unsupported by the wiki reachability guard."
-        if re.match(r"^[A-Za-z_][A-Za-z0-9_]*[ \t]*[?+:!]?=", logical_line):
+    for database_line in _resolved_make_database(makefile).splitlines():
+        rule_match = re.match(
+            r"^(?P<targets>[^:#][^:]*):[ \t]*(?P<prerequisites>.*)$", database_line
+        )
+        if rule_match is None:
             continue
-        rule_match = re.match(r"^(?P<targets>[^:]+):(?P<declaration>.*)$", logical_line)
-        if rule_match is None or logical_line.startswith("\t"):
-            continue
-        declaration = _strip_unescaped_make_comment(rule_match.group("declaration"))
-        if declaration.lstrip().startswith("="):
-            continue  # A := variable assignment, not a target rule.
         targets = rule_match.group("targets").split()
-        assert targets, "Make target rule declares no targets."
-        assert all("$" not in target for target in targets), (
-            "Variable-expanded Make targets are unsupported by the wiki reachability guard."
-        )
-        prerequisite_declaration = declaration.partition(";")[0]
-        assert "$" not in prerequisite_declaration, (
-            "Variable-expanded Make prerequisites are unsupported by the wiki reachability guard."
-        )
-        prerequisites = prerequisite_declaration.split()
+        prerequisites = [
+            prerequisite
+            for prerequisite in rule_match.group("prerequisites").split()
+            if prerequisite != "|"
+        ]
         for target in targets:
             dependencies.setdefault(target, []).extend(prerequisites)
     return dependencies
@@ -159,22 +143,29 @@ def test_reachability_parses_continuations_without_reading_recipe_text() -> None
     assert "recipe-only-gate" not in reachable
 
 
-@pytest.mark.parametrize("reference", ["$(GATES)", "${GATES}", "$G"])
-def test_reachability_fails_closed_on_variable_prerequisites(reference: str) -> None:
+@pytest.mark.parametrize(
+    ("assignment", "reference"),
+    [
+        ("GATES := hidden-gate", "$(GATES)"),
+        ("GATES := hidden-gate", "${GATES}"),
+        ("G := hidden-gate", "$G"),
+    ],
+)
+def test_reachability_expands_variable_prerequisites(assignment: str, reference: str) -> None:
     makefile = "\n".join(
         [
-            "GATES := hidden-gate",
+            assignment,
             f"check: {reference}",
             "ci: visible-gate",
+            "hidden-gate:",
             "visible-gate:",
         ]
     )
 
-    with pytest.raises(AssertionError, match="Variable-expanded Make prerequisites"):
-        _reachable_targets(makefile)
+    assert "hidden-gate" in _reachable_targets(makefile)
 
 
-def test_reachability_fails_closed_on_conditional_rules() -> None:
+def test_reachability_observes_active_conditional_rules() -> None:
     makefile = "\n".join(
         [
             "ifeq (1, 0)",
@@ -186,8 +177,10 @@ def test_reachability_fails_closed_on_conditional_rules() -> None:
         ]
     )
 
-    with pytest.raises(AssertionError, match="Conditional Make syntax"):
-        _reachable_targets(makefile)
+    reachable = _reachable_targets(makefile)
+
+    assert "visible-gate" in reachable
+    assert "disabled-gate" not in reachable
 
 
 def test_reverse_wiki_guard_rejects_fabricated_gate_without_exemptions() -> None:
