@@ -56,14 +56,6 @@ def _strip_unescaped_make_comment(line: str) -> str:
     return line
 
 
-def _targets_in(lane: str, makefile: str) -> list[str]:
-    logical_makefile = "\n".join(_logical_make_lines(makefile))
-    match = re.search(rf"^{lane}:[ \t]*(.*)$", logical_makefile, re.M)
-    assert match is not None, f"The {lane} lane is missing from the Makefile."
-    declaration = _strip_unescaped_make_comment(match.group(1))
-    return declaration.partition(";")[0].split()
-
-
 def _is_gate(target: str) -> bool:
     return target.endswith("-gate") or target.endswith("-gates")
 
@@ -80,7 +72,9 @@ def _target_dependencies(makefile: str) -> dict[str, list[str]]:
 
 def _reachable_targets(makefile: str) -> set[str]:
     dependencies = _target_dependencies(makefile)
-    pending = [target for lane in ("check", "ci") for target in _targets_in(lane, makefile)]
+    for lane in ("check", "ci"):
+        assert lane in dependencies, f"The {lane} lane is missing from the Makefile."
+    pending = [target for lane in ("check", "ci") for target in dependencies[lane]]
     reachable: set[str] = set()
     while pending:
         target = pending.pop()
@@ -123,17 +117,21 @@ def test_reachability_parses_continuations_without_reading_recipe_text() -> None
         [
             "check: aggregate-gate \\",
             " continued-gate # disabled-gate",
+            "check: repeated-gate",
             "ci: aggregate-gate ; @echo recipe-only-gate",
             "aggregate-gate:",
             "\t@echo disabled-gate",
             "continued-gate:",
             "\tpython continued_check.py",
+            "repeated-gate:",
+            "\tpython repeated_check.py",
         ]
     )
 
     reachable = _reachable_targets(makefile)
 
     assert "continued-gate" in reachable
+    assert "repeated-gate" in reachable
     assert "disabled-gate" not in reachable
     assert "recipe-only-gate" not in reachable
 
