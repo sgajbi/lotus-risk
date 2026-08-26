@@ -1,0 +1,52 @@
+name: Action Reference Resolution
+
+on:
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  resolve:
+    name: Resolve pinned action references
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Resolve references against GitHub
+        id: resolver
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: >-
+          python scripts/resolve_github_action_references.py
+          --report action-reference-resolution.json
+      - name: Upload resolution evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: action-reference-resolution
+          path: action-reference-resolution.json
+          if-no-files-found: warn
+      - name: Fail on missing repositories, references, or an empty scan
+        if: steps.resolver.outputs.outcome == 'missing'
+        run: exit 1
+      - name: Mark an inconclusive registry check as cancelled
+        if: steps.resolver.outputs.outcome == 'inconclusive'
+        timeout-minutes: 1
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "::warning::GitHub API resolution was inconclusive; cancelling instead of reporting green."
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/cancel"
+          while true; do sleep 5; done
+      - name: Guard the resolver outcome contract
+        if: >-
+          steps.resolver.outputs.outcome != 'resolved' &&
+          steps.resolver.outputs.outcome != 'missing' &&
+          steps.resolver.outputs.outcome != 'inconclusive'
+        run: |
+          echo "Resolver did not publish a recognized outcome."
+          exit 1
