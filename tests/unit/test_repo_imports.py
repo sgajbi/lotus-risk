@@ -22,10 +22,21 @@ ABSOLUTE_USER_HOME = re.compile(
     r"oot(?=/[^/\s\"']+))"
 )
 IGNORED_GENERATED_TEST_DIRS = {"__pycache__", ".pytest_cache"}
+HTTP_ROUTE_PREFIX = re.compile(
+    r"(?:^|[\s\"'])(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)\s+$", re.IGNORECASE
+)
 
 
 def _absolute_user_home_references(text: str) -> list[str]:
-    return [match.group(0) for match in ABSOLUTE_USER_HOME.finditer(text)]
+    references: list[str] = []
+    for match in ABSOLUTE_USER_HOME.finditer(text):
+        preceding_text = text[: match.start()]
+        prefix_parts = preceding_text.rsplit(maxsplit=1)
+        token_prefix = prefix_parts[-1] if prefix_parts else ""
+        if "://" in token_prefix or HTTP_ROUTE_PREFIX.search(preceding_text):
+            continue
+        references.append(match.group(0))
+    return references
 
 
 def test_force_repo_src_first_moves_repo_src_ahead_of_other_lotus_apps(
@@ -76,6 +87,8 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             "https://example.test/users/123",
             "GET /users/alice",
             "/home/dashboard",
+            "GET /home/dashboard/stats",
+            "https://example.test/root/project",
         ]
     )
 
