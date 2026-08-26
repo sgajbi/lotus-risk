@@ -261,7 +261,8 @@ def validate_ci_image_release_workflow(
         )
     inventory = _workflow_step_block(text, "Generate complete vulnerability inventory")
     if (
-        "format: sarif" not in inventory
+        "uses: aquasecurity/trivy-action@v0.36.0" not in inventory
+        or "format: sarif" not in inventory
         or "output: output/image-release/trivy-results.sarif" not in inventory
         or "vuln-type: os,library" not in inventory
         or "severity: HIGH,CRITICAL" not in inventory
@@ -281,7 +282,8 @@ def validate_ci_image_release_workflow(
 
     library_gate = _workflow_step_block(text, "Block application-library vulnerabilities")
     if (
-        "vuln-type: library" not in library_gate
+        "uses: aquasecurity/trivy-action@v0.36.0" not in library_gate
+        or "vuln-type: library" not in library_gate
         or "severity: HIGH,CRITICAL" not in library_gate
         or 'exit-code: "1"' not in library_gate
     ):
@@ -290,8 +292,12 @@ def validate_ci_image_release_workflow(
         )
     if "ignore-unfixed: true" in library_gate:
         issues.append(f"{workflow_path}: unfixed exception must not apply to application libraries")
+    if "continue-on-error: true" in library_gate:
+        issues.append(f"{workflow_path}: application-library scan failure must block publication")
 
     os_gate = _workflow_step_block(text, "Vulnerability scan")
+    if "uses: aquasecurity/trivy-action@v0.36.0" not in os_gate:
+        issues.append(f"{workflow_path}: OS vulnerability gate must use the governed Trivy action")
     if "vuln-type: os" not in os_gate:
         issues.append(f"{workflow_path}: unfixed exception must be scoped to OS findings")
     if "ignore-unfixed: true" not in os_gate:
@@ -302,6 +308,8 @@ def validate_ci_image_release_workflow(
         issues.append(f"{workflow_path}: fixable OS HIGH/CRITICAL findings must be blocking")
     if "severity: HIGH,CRITICAL" not in os_gate:
         issues.append(f"{workflow_path}: OS blocking scan must cover HIGH/CRITICAL findings")
+    if "continue-on-error: true" in os_gate:
+        issues.append(f"{workflow_path}: OS vulnerability scan failure must block publication")
 
     expiry_match = UNFIXED_EXCEPTION_EXPIRY_PATTERN.search(text)
     if expiry_match is None:
