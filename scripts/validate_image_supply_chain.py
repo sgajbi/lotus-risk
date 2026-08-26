@@ -14,7 +14,9 @@ UNFIXED_EXCEPTION_EXPIRY_PATTERN = re.compile(
     r'^\s*UNFIXED_VULNERABILITY_EXCEPTION_EXPIRES_ON:\s*"(?P<expiry>[^\"]+)"\s*$',
     flags=re.MULTILINE,
 )
-TRIVY_ENV_OVERRIDE_PATTERN = re.compile(r"\b(?P<name>TRIVY_[A-Z0-9_]+)(?:\s*:|=)")
+TRIVY_ENV_OVERRIDE_PATTERN = re.compile(
+    r"(?<![A-Z0-9_])(?P<quote>[\"']?)(?P<name>TRIVY_[A-Z0-9_]+)(?P=quote)(?:\s*:|=)"
+)
 
 REQUIRED_OCI_LABELS = {
     "org.opencontainers.image.revision",
