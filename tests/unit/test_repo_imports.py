@@ -29,13 +29,16 @@ HTTP_ROUTE_PREFIX = re.compile(
 ROUTE_LITERAL_PREFIX = re.compile(
     r"(?:\b(?:route|endpoint)(?:_path)?\s*=\s*"
     r"|@\w+(?:\.\w+)*\.(?:get|head|post|put|patch|delete|options|route|api_route|websocket)"
-    r"\s*\(\s*"
+    r"\s*\(\s*(?:path\s*=\s*)?"
     r"|\b(?:client|http_client|async_client|requests?|httpx)(?:\.\w+)*"
-    r"\.(?:get|head|post|put|patch|delete|options|websocket_connect)\s*\(\s*)[\"']$"
+    r"\.(?:get|head|post|put|patch|delete|options|websocket_connect)"
+    r"\s*\(\s*(?:url\s*=\s*)?)[\"']$"
     r"|\b\w+(?:\.\w+)*\.(?:add_api_route|add_route|add_websocket_route)"
-    r"\s*\(\s*[\"']$"
+    r"\s*\(\s*(?:path\s*=\s*)?[\"']$"
     r"|\b(?:httpx\.)?Request\s*\(\s*[\"']"
-    r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)[\"']\s*,\s*[\"']$",
+    r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)[\"']\s*,\s*(?:url\s*=\s*)?[\"']$"
+    r"|\b(?:httpx\.)?Request\s*\(\s*method\s*=\s*[\"']"
+    r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)[\"']\s*,\s*url\s*=\s*[\"']$",
     re.IGNORECASE,
 )
 REQUEST_SCOPE_ROUTE_PREFIX = re.compile(r"\bRequest\s*\([^)]*[\"']path[\"']\s*:\s*[\"']$")
@@ -128,11 +131,14 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             'route = "/home/dashboard/stats"',
             '@router.get("/home/dashboard/stats")',
             '@app.api_route("/home/dashboard/stats", methods=["GET"])',
+            '@app.api_route(path="/home/dashboard/stats", methods=["GET"])',
             'client.get("/home/dashboard/stats")',
+            'client.get(url="/home/dashboard/stats")',
             'client.websocket_connect("/home/dashboard/stats")',
             'httpx.Request("GET", "/home/dashboard/stats")',
             'Request({"type": "http", "path": "/home/dashboard/stats"})',
             'app.add_api_route("/home/dashboard/stats", handler)',
+            'app.add_api_route(path="/home/dashboard/stats", endpoint=handler)',
             'app.add_route("/home/dashboard/stats", handler)',
             'router.add_websocket_route("/home/dashboard/stats", handler)',
         ]
