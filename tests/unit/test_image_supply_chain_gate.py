@@ -301,6 +301,41 @@ def test_image_release_contract_rejects_nonblocking_os_scan(tmp_path: Path) -> N
     assert f"{workflow_path}: fixable OS HIGH/CRITICAL findings must be blocking" in issues
 
 
+@pytest.mark.parametrize(
+    ("step_name", "expected_issue"),
+    [
+        (
+            "Generate complete vulnerability inventory",
+            "complete HIGH/CRITICAL vulnerability inventory must remain visible",
+        ),
+        (
+            "Block application-library vulnerabilities",
+            "application-library HIGH/CRITICAL findings must be blocking",
+        ),
+        ("Vulnerability scan", "OS blocking scan must cover HIGH/CRITICAL findings"),
+    ],
+)
+def test_image_release_contract_rejects_severity_drift_in_each_scan(
+    tmp_path: Path,
+    step_name: str,
+    expected_issue: str,
+) -> None:
+    workflow_path = tmp_path / "image-release.yml"
+    current = Path(".github/workflows/image-release.yml").read_text(encoding="utf-8")
+    start = current.index(f"- name: {step_name}")
+    next_step = current.find("\n      - name:", start + 1)
+    end = len(current) if next_step < 0 else next_step
+    corrupted_step = current[start:end].replace("severity: HIGH,CRITICAL", "severity: LOW")
+    workflow_path.write_text(
+        current[:start] + corrupted_step + current[end:],
+        encoding="utf-8",
+    )
+
+    issues = validate_ci_image_release_workflow(workflow_path)
+
+    assert f"{workflow_path}: {expected_issue}" in issues
+
+
 def test_image_release_contract_rejects_library_unfixed_exception(tmp_path: Path) -> None:
     workflow_path = tmp_path / "image-release.yml"
     current = Path(".github/workflows/image-release.yml").read_text(encoding="utf-8")

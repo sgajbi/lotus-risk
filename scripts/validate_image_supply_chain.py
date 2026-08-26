@@ -259,6 +259,7 @@ def validate_ci_image_release_workflow(
     inventory = _workflow_step_block(text, "Generate complete vulnerability inventory")
     if (
         "vuln-type: os,library" not in inventory
+        or "severity: HIGH,CRITICAL" not in inventory
         or 'exit-code: "0"' not in inventory
         or "ignore-unfixed: true" in inventory
     ):
@@ -267,7 +268,11 @@ def validate_ci_image_release_workflow(
         )
 
     library_gate = _workflow_step_block(text, "Block application-library vulnerabilities")
-    if "vuln-type: library" not in library_gate or 'exit-code: "1"' not in library_gate:
+    if (
+        "vuln-type: library" not in library_gate
+        or "severity: HIGH,CRITICAL" not in library_gate
+        or 'exit-code: "1"' not in library_gate
+    ):
         issues.append(
             f"{workflow_path}: application-library HIGH/CRITICAL findings must be blocking"
         )
@@ -283,6 +288,8 @@ def validate_ci_image_release_workflow(
         )
     if 'exit-code: "1"' not in os_gate:
         issues.append(f"{workflow_path}: fixable OS HIGH/CRITICAL findings must be blocking")
+    if "severity: HIGH,CRITICAL" not in os_gate:
+        issues.append(f"{workflow_path}: OS blocking scan must cover HIGH/CRITICAL findings")
 
     expiry_match = UNFIXED_EXCEPTION_EXPIRY_PATTERN.search(text)
     if expiry_match is None:
