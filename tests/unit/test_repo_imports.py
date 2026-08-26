@@ -32,16 +32,20 @@ ROUTE_LITERAL_PREFIX = re.compile(
     r"\s*\(\s*(?:path\s*=\s*)?"
     r"|\b(?:[a-z_]\w*_client|client|requests?|httpx)(?:\.\w+)*"
     r"\.(?:get|head|post|put|patch|delete|options|websocket_connect)"
-    r"\s*\(\s*(?:url\s*=\s*)?)[\"']$"
+    r"\s*\(\s*(?:url\s*=\s*)?)(?i:[rubf]{0,2})[\"']$"
     r"|\b\w+(?:\.\w+)*\.(?:add_api_route|add_route|add_websocket_route)"
-    r"\s*\(\s*(?:path\s*=\s*)?[\"']$"
+    r"\s*\(\s*(?:path\s*=\s*)?(?i:[rubf]{0,2})[\"']$"
     r"|\b(?:httpx\.)?Request\s*\(\s*[\"']"
-    r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)[\"']\s*,\s*(?:url\s*=\s*)?[\"']$"
+    r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)[\"']\s*,\s*(?:url\s*=\s*)?"
+    r"(?i:[rubf]{0,2})[\"']$"
     r"|\b(?:httpx\.)?Request\s*\(\s*method\s*=\s*[\"']"
-    r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)[\"']\s*,\s*url\s*=\s*[\"']$",
+    r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)[\"']\s*,\s*url\s*=\s*"
+    r"(?i:[rubf]{0,2})[\"']$",
     re.IGNORECASE,
 )
-REQUEST_SCOPE_ROUTE_PREFIX = re.compile(r"\bRequest\s*\([^)]*[\"']path[\"']\s*:\s*[\"']$")
+REQUEST_SCOPE_ROUTE_PREFIX = re.compile(
+    r"\bRequest\s*\([^)]*[\"']path[\"']\s*:\s*(?i:[rubf]{0,2})[\"']$"
+)
 WEB_URL = re.compile(
     r"(?i:https?://(?:[a-z0-9]|\[[0-9a-f:.]+\])[^\s\"';,)\]}]*"
     r"|(?<![:/])//(?:[a-z0-9]|\[[0-9a-f:.]+\])[^\s\"';,)\]}]*)"
@@ -134,6 +138,8 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             '@app.api_route(path="/home/dashboard/stats", methods=["GET"])',
             'client.get("/home/dashboard/stats")',
             'client.get(url="/home/dashboard/stats")',
+            'client.get(f"/home/dashboard/{section}")',
+            'client.get(r"/home/dashboard/stats")',
             'response_client.get("/home/dashboard/stats")',
             'client.websocket_connect("/home/dashboard/stats")',
             'httpx.Request("GET", "/home/dashboard/stats")',
