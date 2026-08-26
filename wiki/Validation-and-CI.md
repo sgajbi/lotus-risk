@@ -60,7 +60,8 @@ The repo-native commands are designed to map to those lanes directly.
   cannot resolve. This runs *first* in both `check` and `ci`. It was added after
   `aquasecurity/trivy-action@0.32.0` - a tag that does not exist - sat in `image-release.yml` and
   broke the release supply chain before any step ran; see issue #227
-- `make source-size-gate` - fails when any module grows past the governed line count
+- `make source-size-gate` - fails when any module grows past the governed line count or when the
+  source scan inspects zero files; successful output names the inspected file count
 - `make complexity-gate` - **blocking** cyclomatic complexity ratchet. Fails when the maximum rises
   above `24`, when rank D-F blocks exceed `1`, or when rank C blocks exceed `6`. All three are
   banked at the measured tree with no headroom, so an improvement left unbanked fails too. It was
