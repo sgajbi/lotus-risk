@@ -9,6 +9,7 @@ from scripts.validate_image_supply_chain import (
     validate_image_supply_chain,
     validate_kubernetes_digest_references,
     validate_release_publication_order,
+    validate_runtime_container_contract,
 )
 
 import pytest
@@ -55,14 +56,51 @@ def test_image_supply_chain_gate_rejects_secret_build_args(tmp_path: Path) -> No
     assert any("DEPLOY_TOKEN" in issue for issue in issues)
 
 
-def test_dockerfile_uses_runtime_dependencies_without_dev_extra() -> None:
+def test_dockerfile_uses_hardened_runtime_target_without_dev_extra() -> None:
     dockerfile = Path("Dockerfile").read_text(encoding="utf-8")
 
-    assert 'pip install --no-cache-dir -e "."' in dockerfile
+    assert validate_runtime_container_contract() == []
+    assert "AS builder" in dockerfile
+    assert "AS runtime" in dockerfile
+    assert "pip install --prefix=/install ." in dockerfile
+    assert " -e " not in dockerfile
+    assert "COPY scripts" not in dockerfile
+    assert "USER lotus" in dockerfile
+    assert "HEALTHCHECK" in dockerfile
     assert ".[dev]" not in dockerfile
     assert "importlib.util.find_spec" in dockerfile
     for package in FORBIDDEN_RUNTIME_DEV_DEPENDENCIES:
         assert package in dockerfile
+
+
+def test_runtime_container_contract_rejects_single_stage_root_runtime(
+    tmp_path: Path,
+) -> None:
+    dockerfile = tmp_path / "Dockerfile"
+    dockerfile.write_text(
+        "\n".join(
+            [
+                "FROM python:3.12-slim",
+                "WORKDIR /app",
+                "COPY scripts ./scripts",
+                'RUN pip install -e "."',
+                'CMD ["uvicorn", "src.app.main:app"]',
+            ]
+        ),
+        encoding="utf-8",
+    )
+    makefile = tmp_path / "Makefile"
+    makefile.write_text("docker-build:\n\tdocker build .\n", encoding="utf-8")
+
+    issues = validate_runtime_container_contract(dockerfile, makefile)
+
+    assert f"{dockerfile}: runtime image must use a multi-stage build" in issues
+    assert f"{dockerfile}: runtime package install must not be editable" in issues
+    assert f"{dockerfile}: runtime image must not copy repository scripts" in issues
+    assert f"{dockerfile}: missing non-root runtime user selection" in issues
+    assert f"{dockerfile}: missing container healthcheck" in issues
+    assert f"{makefile}: missing default runtime build target" in issues
+    assert f"{makefile}: missing explicit container build target" in issues
 
 
 def test_image_supply_chain_gate_rejects_runtime_dev_extra_install(tmp_path: Path) -> None:

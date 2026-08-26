@@ -127,6 +127,47 @@ def validate_dockerfile(dockerfile_path: Path = DOCKERFILE) -> list[str]:
     return issues
 
 
+def validate_runtime_container_contract(
+    dockerfile_path: Path = DOCKERFILE,
+    makefile_path: Path = MAKEFILE,
+) -> list[str]:
+    """Validate the production runtime target and its repository-native build path."""
+
+    dockerfile_text = _read(dockerfile_path)
+    makefile_text = _read(makefile_path)
+    issues: list[str] = []
+    required_dockerfile_terms = {
+        "AS builder": "builder stage",
+        "AS runtime": "runtime stage",
+        "COPY --from=builder /install /usr/local": "builder-to-runtime dependency copy",
+        "groupadd --system --gid 10001 lotus": "non-root runtime group",
+        "useradd --system --uid 10001": "non-root runtime user",
+        "USER lotus": "non-root runtime user selection",
+        "HEALTHCHECK": "container healthcheck",
+        "http://127.0.0.1:8130/health/ready": "readiness healthcheck endpoint",
+        '"app.main:app"': "installed-package application entrypoint",
+    }
+    for term, description in required_dockerfile_terms.items():
+        if term not in dockerfile_text:
+            issues.append(f"{dockerfile_path}: missing {description}")
+
+    if len(re.findall(r"^FROM\s+", dockerfile_text, flags=re.MULTILINE)) < 2:
+        issues.append(f"{dockerfile_path}: runtime image must use a multi-stage build")
+    if re.search(r"\bpip\s+install\b[^\n]*\s-e(?:\s|$)", dockerfile_text):
+        issues.append(f"{dockerfile_path}: runtime package install must not be editable")
+    if re.search(r"^COPY\s+(?:--\S+\s+)*scripts(?:\s|/)", dockerfile_text, flags=re.MULTILINE):
+        issues.append(f"{dockerfile_path}: runtime image must not copy repository scripts")
+
+    required_makefile_terms = {
+        "CONTAINER_BUILD_TARGET ?= runtime": "default runtime build target",
+        '--target "$(CONTAINER_BUILD_TARGET)"': "explicit container build target",
+    }
+    for term, description in required_makefile_terms.items():
+        if term not in makefile_text:
+            issues.append(f"{makefile_path}: missing {description}")
+    return issues
+
+
 def _workflow_texts() -> dict[Path, str]:
     return {path: _read(path) for path in WORKFLOW_DIR.glob("*.yml")}
 
@@ -231,6 +272,7 @@ def validate_kubernetes_digest_references(root: Path = ROOT) -> list[str]:
 def validate_image_supply_chain() -> list[str]:
     issues: list[str] = []
     issues.extend(validate_dockerfile())
+    issues.extend(validate_runtime_container_contract())
     issues.extend(validate_ci_image_release_workflow())
     issues.extend(validate_kubernetes_digest_references())
 

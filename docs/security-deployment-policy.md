@@ -160,14 +160,18 @@ The governed release image policy is:
     per environment,
 12. Docker `ARG` and `ENV` declarations must not expose secrets, tokens, passwords, private keys, or
     credentials. Use CI secret stores, deployment secret stores, or BuildKit secret mounts rather
-    than baking secret names or values into the image.
+    than baking secret names or values into the image,
+13. the deployable `runtime` target must be a non-editable installed package copied from a separate
+    builder stage, run as the non-root `lotus` user at UID/GID `10001`, omit repository `scripts/`,
+    and expose a `/health/ready` container healthcheck.
 
 `make image-supply-chain-gate` is the repository-native guard for these requirements. It validates
-the build, SBOM, blocking scan, registry authentication, publication, signing, and attestation order,
-validates required Docker metadata, blocks image push outside the image-release workflow, rejects mutable
-Kubernetes image references, rejects secret-like Docker build argument or environment names, rejects
-runtime installation of the project `dev` extra, and verifies that pytest, ruff, mypy, bandit,
-deptry, radon, vulture, and pre-commit are absent from the deployable runtime image.
+the build, SBOM, blocking scan, registry authentication, publication, signing, and attestation
+order; validates required Docker metadata; enforces the multi-stage, installed-package, non-root,
+healthchecked runtime target; blocks image push outside the image-release workflow; rejects mutable
+Kubernetes image references and secret-like Docker build argument or environment names; and verifies
+that pytest, ruff, mypy, bandit, deptry, radon, vulture, and pre-commit are absent from the deployable
+runtime image.
 
 ## Evidence Commands
 
