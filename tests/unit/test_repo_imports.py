@@ -46,9 +46,6 @@ ROUTE_LITERAL_PREFIX = re.compile(
     r"\.(?:get|head|post|put|patch|delete|options|websocket_connect)"
     r"\s*\((?:[^()]|\([^()]*\))*\burl\s*=\s*"
     r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
-    r"|\bTestClient\s*\((?:[^()]|\([^()]*\))*\)"
-    r"\.(?:get|head|post|put|patch|delete|options|websocket_connect)"
-    r"\s*\(\s*(?:url\s*=\s*)?(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
     r"|\b(?:[a-z_]\w*_client|client)\.request\s*\(\s*[\"']"
     r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)[\"']\s*,\s*(?:url\s*=\s*)?"
     r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
@@ -87,12 +84,51 @@ ASGI_SCOPE_ROUTE_PREFIX = re.compile(
 )
 QUOTED_WEB_URL = re.compile(
     r"(?i:(?<=[\"'])(?:https?://|(?<![:/])//)"
-    r"(?:[a-z0-9]|\[[0-9a-f:.]+\])[^\s\"']*)"
+    r"(?:[a-z0-9]|\[[0-9a-f:.]+\])[^\\\s\"']*)"
 )
 UNQUOTED_WEB_URL = re.compile(
-    r"(?i:https?://(?:[a-z0-9]|\[[0-9a-f:.]+\])[^\s\"';,)\]}]*"
-    r"|(?<![:/])//(?:[a-z0-9]|\[[0-9a-f:.]+\])[^\s\"';,)\]}]*)"
+    r"(?i:(?<![\"'])https?://(?:[a-z0-9]|\[[0-9a-f:.]+\])[^\s\"';,)\]}]*"
+    r"|(?<![:/\"'])//(?:[a-z0-9]|\[[0-9a-f:.]+\])[^\s\"';,)\]}]*)"
 )
+INLINE_TEST_CLIENT_ROUTE_SUFFIX = re.compile(
+    r"\)\.(?:get|head|post|put|patch|delete|options|websocket_connect)"
+    r"\s*\(\s*(?:url\s*=\s*)?(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
+)
+
+
+def _balanced_parentheses(text: str) -> bool:
+    depth = 0
+    quote = ""
+    escaped = False
+    for character in text:
+        if quote:
+            if escaped:
+                escaped = False
+            elif character == "\\":
+                escaped = True
+            elif character == quote:
+                quote = ""
+            continue
+        if character in {'"', "'"}:
+            quote = character
+        elif character == "(":
+            depth += 1
+        elif character == ")":
+            depth -= 1
+            if depth < 0:
+                return False
+    return depth == 0 and not quote
+
+
+def _has_inline_test_client_route_context(preceding_text: str) -> bool:
+    suffix = INLINE_TEST_CLIENT_ROUTE_SUFFIX.search(preceding_text)
+    if suffix is None:
+        return False
+    receiver_start = preceding_text.rfind("TestClient", 0, suffix.start())
+    if receiver_start < 0:
+        return False
+    receiver = preceding_text[receiver_start + len("TestClient") : suffix.start() + 1]
+    return receiver.startswith("(") and _balanced_parentheses(receiver)
 
 
 def _absolute_user_home_references(text: str) -> list[str]:
@@ -120,6 +156,7 @@ def _absolute_user_home_references(text: str) -> list[str]:
             or ROUTER_PREFIX_ROUTE_PREFIX.search(preceding_text)
             or request_scope_route
             or ASGI_SCOPE_ROUTE_PREFIX.search(preceding_text)
+            or _has_inline_test_client_route_context(preceding_text)
         ):
             continue
         references.append(match.group(0))
@@ -212,6 +249,7 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             'response_client.get("/home/dashboard/stats")',
             'TestClient(app).get("/home/dashboard/stats")',
             'TestClient(create_app()).get("/home/dashboard/stats")',
+            'TestClient(create_app(Settings())).get("/home/dashboard/stats")',
             'client.request("GET", "/home/dashboard/stats")',
             'client.request(method="GET", url="/home/dashboard/stats")',
             'client.websocket_connect("/home/dashboard/stats")',
@@ -243,6 +281,9 @@ def test_absolute_user_home_guard_does_not_let_an_adjacent_url_hide_a_path() -> 
 
     delimited = f"entry=https://example.test/api;{linux}"
     assert _absolute_user_home_references(delimited) == ["/" + "/".join(["home", "alice"])]
+
+    escaped_newline = f'value = "https://example.test/api\\n{linux}"'
+    assert _absolute_user_home_references(escaped_newline) == ["/" + "/".join(["home", "alice"])]
 
     path_assignment = f'path = "{linux}"'
     assert _absolute_user_home_references(path_assignment) == ["/" + "/".join(["home", "alice"])]
