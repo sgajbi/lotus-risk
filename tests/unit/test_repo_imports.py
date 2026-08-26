@@ -30,7 +30,7 @@ ROUTE_LITERAL_PREFIX = re.compile(
     r"(?:\b(?:route|endpoint)(?:_path)?\s*=\s*"
     r"|@\w+(?:\.\w+)*\.(?:get|head|post|put|patch|delete|options|route|api_route|websocket)"
     r"\s*\(\s*(?:path\s*=\s*)?"
-    r"|\b(?:client|http_client|async_client|requests?|httpx)(?:\.\w+)*"
+    r"|\b(?:[a-z_]\w*_client|client|requests?|httpx)(?:\.\w+)*"
     r"\.(?:get|head|post|put|patch|delete|options|websocket_connect)"
     r"\s*\(\s*(?:url\s*=\s*)?)[\"']$"
     r"|\b\w+(?:\.\w+)*\.(?:add_api_route|add_route|add_websocket_route)"
@@ -134,6 +134,7 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             '@app.api_route(path="/home/dashboard/stats", methods=["GET"])',
             'client.get("/home/dashboard/stats")',
             'client.get(url="/home/dashboard/stats")',
+            'response_client.get("/home/dashboard/stats")',
             'client.websocket_connect("/home/dashboard/stats")',
             'httpx.Request("GET", "/home/dashboard/stats")',
             'Request({"type": "http", "path": "/home/dashboard/stats"})',
