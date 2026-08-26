@@ -26,10 +26,15 @@ HTTP_ROUTE_PREFIX = re.compile(
     r"(?:^|[\s\"'])(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)\s+$", re.IGNORECASE
 )
 ROUTE_LITERAL_PREFIX = re.compile(
-    r"(?:\b(?:route|endpoint)(?:_path)?\s*=\s*|@\w+(?:\.\w+)*\s*\(\s*)[\"']$",
+    r"(?:\b(?:route|endpoint)(?:_path)?\s*=\s*"
+    r"|@\w+(?:\.\w+)*\s*\(\s*"
+    r"|\b(?:client|http_client|async_client|requests?|httpx)(?:\.\w+)*"
+    r"\.(?:get|head|post|put|patch|delete|options)\s*\(\s*)[\"']$"
+    r"|\b(?:httpx\.)?Request\s*\(\s*[\"']"
+    r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)[\"']\s*,\s*[\"']$",
     re.IGNORECASE,
 )
-WEB_URL = re.compile(r"(?i:https?://[^\s\"';,)\]}]+|(?<![:/])//[^\s\"';,)\]}]+)")
+WEB_URL = re.compile(r"(?i:https?://[a-z0-9][^\s\"';,)\]}]*|(?<![:/])//[a-z0-9][^\s\"';,)\]}]*)")
 
 
 def _absolute_user_home_references(text: str) -> list[str]:
@@ -101,6 +106,8 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             "//example.test/home/dashboard/stats",
             'route = "/home/dashboard/stats"',
             '@router.get("/home/dashboard/stats")',
+            'client.get("/home/dashboard/stats")',
+            'httpx.Request("GET", "/home/dashboard/stats")',
         ]
     )
 
@@ -128,6 +135,9 @@ def test_absolute_user_home_guard_detects_file_uris() -> None:
         "/" + "/".join(["home", "alice"]),
         "/".join(["C:", "Users", "alice"]),
     ]
+
+    redundant_slashes = "//" + linux_uri.removeprefix("file://")
+    assert _absolute_user_home_references(redundant_slashes) == ["/" + "/".join(["home", "alice"])]
 
 
 def test_test_sources_do_not_disclose_absolute_user_home_paths() -> None:
