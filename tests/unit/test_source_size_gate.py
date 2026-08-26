@@ -2,6 +2,10 @@ from pathlib import Path
 
 from scripts.source_size_gate import find_source_size_violations, main
 
+import pytest
+
+pytestmark = pytest.mark.governance
+
 
 def test_source_size_gate_reports_only_files_above_limit(tmp_path: Path) -> None:
     source_root = tmp_path / "src"

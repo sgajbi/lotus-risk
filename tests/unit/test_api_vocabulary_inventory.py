@@ -4,6 +4,10 @@ from typing import Any, cast
 
 from scripts.api_vocabulary_inventory import build_inventory, validate_inventory
 
+import pytest
+
+pytestmark = pytest.mark.governance
+
 
 def _endpoint(inventory: dict[str, Any], *, method: str, path: str) -> dict[str, Any]:
     for endpoint in inventory["endpoints"]:

@@ -4,6 +4,10 @@ from pathlib import Path
 
 from scripts.validate_github_actions_runtime import validate_workflows
 
+import pytest
+
+pytestmark = pytest.mark.governance
+
 
 def _write_workflow(path: Path, action_ref: str) -> None:
     path.write_text(

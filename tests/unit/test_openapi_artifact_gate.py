@@ -13,6 +13,10 @@ from scripts.export_openapi_artifact import (
     write_openapi_artifact,
 )
 
+import pytest
+
+pytestmark = pytest.mark.governance
+
 
 def _valid_schema() -> dict[str, object]:
     return {

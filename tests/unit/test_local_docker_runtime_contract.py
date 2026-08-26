@@ -1,5 +1,9 @@
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.governance
+
 
 def test_local_docker_compose_sets_explicit_upstream_urls() -> None:
     compose_text = Path("docker-compose.yml").read_text(encoding="utf-8")

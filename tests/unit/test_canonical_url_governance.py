@@ -1,5 +1,9 @@
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.governance
+
 
 LIVE_TEST_FILES = [
     Path("tests/integration/test_concentration_live_characterization.py"),

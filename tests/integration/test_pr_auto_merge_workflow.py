@@ -2,6 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.governance
+
 
 def test_pr_auto_merge_workflow_uses_rebase_strategy() -> None:
     workflow = Path(".github/workflows/pr-auto-merge.yml").read_text(encoding="utf-8")
