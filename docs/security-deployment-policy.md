@@ -180,13 +180,15 @@ runtime image.
 ### Unfixed base-image vulnerability treatment
 
 The complete Trivy SARIF inventory intentionally retains HIGH/CRITICAL findings regardless of fix
-availability. The separate blocking scan uses `ignore-unfixed: true`; it suppresses only findings
-for which the vulnerability feed publishes no fixed version, while every fixable HIGH/CRITICAL
-finding remains release-blocking. This is an actionability rule, not a severity downgrade or a
-package-specific ignore list.
+availability. A separate application-library scan blocks every HIGH/CRITICAL finding, including
+findings without a published fix. The OS-only blocking scan uses `ignore-unfixed: true`; it
+suppresses only base-image findings for which the vulnerability feed publishes no fixed version,
+while every fixable OS HIGH/CRITICAL finding remains release-blocking. This is an actionability rule,
+not a severity downgrade or a package-specific ignore list.
 
-The governed Trivy HIGH/CRITICAL vulnerability scan therefore has two evidence-preserving passes:
-complete SARIF visibility first, followed by the fixable-finding publication gate.
+The governed Trivy HIGH/CRITICAL vulnerability scan therefore has three evidence-preserving passes:
+complete SARIF visibility, an unconditional application-library gate, and the expiring OS-only
+fixable-finding gate.
 
 | Control field | Governed value |
 |---|---|

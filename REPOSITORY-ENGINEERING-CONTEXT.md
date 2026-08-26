@@ -390,8 +390,9 @@ Important validation expectations:
    Do not downgrade these to Node 20-era majors to clear a transient workflow issue.
 8. Release image posture is governed by `make image-supply-chain-gate`: images are built locally,
    tagged by Git SHA, labeled with source/build/version/CI metadata, accompanied by an SBOM, and
-   fully inventoried and scanned for fixable HIGH/CRITICAL findings before registry authentication
-   or publication. Only scan-passing images are pushed by `.github/workflows/image-release.yml`,
+    fully inventoried, scanned unconditionally for application-library HIGH/CRITICAL findings, and
+    scanned for fixable OS HIGH/CRITICAL findings before registry authentication or publication.
+    Only scan-passing images are pushed by `.github/workflows/image-release.yml`,
    then signed, attested, recorded in release-manifest evidence, and promoted by digest rather than
    environment-specific rebuilds. The full SARIF retains unfixed findings; the time-bounded
     `ignore-unfixed` blocking posture is governed in `docs/security-deployment-policy.md`, and the
