@@ -90,7 +90,7 @@ Release images are governed by the same security posture as runtime configuratio
 2. images are tagged with the Git SHA and labeled with commit, branch/ref, service version, build
    timestamp, repository URL, image digest field, and CI run ID;
 3. the release workflow builds locally, generates SBOM evidence, and completes a blocking
-   HIGH/CRITICAL vulnerability scan before registry authentication or image publication;
+   Trivy HIGH/CRITICAL vulnerability scan before registry authentication or image publication;
 4. only a scan-passing image is pushed, after which the registry digest is signed, attested, and
    recorded in `image-release-manifest.json`;
 5. Kubernetes and Helm manifests must deploy by `image@sha256:<digest>`;
