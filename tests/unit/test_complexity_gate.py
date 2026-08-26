@@ -18,6 +18,7 @@ import pytest
 
 from scripts.python_complexity_inventory import (
     HIGH_COMPLEXITY_RANKS,
+    MEDIUM_COMPLEXITY_RANKS,
     ComplexityFinding,
     collect_complexity,
     complexity_gate_failures,
@@ -44,7 +45,9 @@ def _declared_thresholds() -> dict[str, int]:
     assert target is not None, "complexity-gate is no longer defined in the Makefile"
     return {
         flag: int(value)
-        for flag, value in re.findall(r"--(max-cc|max-high-complexity) (\d+)", target.group(0))
+        for flag, value in re.findall(
+            r"--(max-cc|max-high-complexity|max-medium-complexity) (\d+)", target.group(0)
+        )
     }
 
 
@@ -145,7 +148,7 @@ def test_the_declared_thresholds_equal_the_measured_tree() -> None:
     """
 
     declared = _declared_thresholds()
-    assert set(declared) == {"max-cc", "max-high-complexity"}, declared
+    assert set(declared) == {"max-cc", "max-high-complexity", "max-medium-complexity"}, declared
 
     findings = collect_complexity(("src",))
     assert findings, "collected no complexity findings; the gate would be measuring nothing"
@@ -158,3 +161,55 @@ def test_the_declared_thresholds_equal_the_measured_tree() -> None:
         f"complexity-gate declares --max-high-complexity {declared['max-high-complexity']} but the "
         f"tree measures {rank_count(findings, HIGH_COMPLEXITY_RANKS)}."
     )
+    assert declared["max-medium-complexity"] == rank_count(findings, MEDIUM_COMPLEXITY_RANKS), (
+        f"complexity-gate declares --max-medium-complexity "
+        f"{declared['max-medium-complexity']} but the tree measures "
+        f"{rank_count(findings, MEDIUM_COMPLEXITY_RANKS)}."
+    )
+
+
+def test_rank_c_growth_fails_even_when_the_maximum_holds() -> None:
+    """Capping only D-F left rank C (complexity 11-20) unbanked.
+
+    Any number of new rank-C blocks passed while the maximum stayed 24 and the D-F count stayed 1,
+    so the pile could grow indefinitely with the gate green - the six existing C blocks were
+    governed by nothing.
+    """
+
+    findings = [_finding(24, "D")] + [_finding(12, "C") for _ in range(7)]
+
+    failures = complexity_gate_failures(
+        findings, max_cc=24, max_high_complexity=1, max_medium_complexity=6
+    )
+
+    assert len(failures) == 1
+    assert "rank C) block count 7 exceeds allowed 6" in failures[0]
+
+
+def test_the_banked_rank_c_count_itself_passes() -> None:
+    findings = [_finding(24, "D")] + [_finding(12, "C") for _ in range(6)]
+
+    assert (
+        complexity_gate_failures(
+            findings, max_cc=24, max_high_complexity=1, max_medium_complexity=6
+        )
+        == []
+    )
+
+
+def test_the_wiki_documents_the_gate_and_the_renamed_report() -> None:
+    """Operator documentation must match the commands that exist.
+
+    `wiki/Validation-and-CI.md` described `make complexity-gate` as producing a maintainability
+    report, which stopped being true when that output moved to its own target. A documented command
+    that no longer behaves as described is the drift class `lotus-platform#734` exists for.
+    """
+
+    wiki = (ROOT / "wiki" / "Validation-and-CI.md").read_text(encoding="utf-8")
+
+    assert "`make maintainability-report`" in wiki, (
+        "the renamed maintainability command is not documented for operators"
+    )
+    declared = _declared_thresholds()
+    for value in declared.values():
+        assert f"`{value}`" in wiki, f"the wiki does not state the banked threshold {value}"

@@ -61,7 +61,13 @@ The repo-native commands are designed to map to those lanes directly.
   `aquasecurity/trivy-action@0.32.0` - a tag that does not exist - sat in `image-release.yml` and
   broke the release supply chain before any step ran; see issue #227
 - `make source-size-gate` - fails when any module grows past the governed line count
-- `make complexity-gate` - cyclomatic complexity and maintainability report
+- `make complexity-gate` - **blocking** cyclomatic complexity ratchet. Fails when the maximum rises
+  above `24`, when rank D-F blocks exceed `1`, or when rank C blocks exceed `6`. All three are
+  banked at the measured tree with no headroom, so an improvement left unbanked fails too. It was
+  two `radon` report commands until issue #225 - neither accepts a failure threshold, so the target
+  sat in the blocking lane and could not fail
+- `make maintainability-report` - `radon mi` output. A report, not a gate, and deliberately no
+  longer named as one
 - `make dead-code-gate` - vulture findings at 80% confidence
 - `make dependency-hygiene-gate` - deptry findings
 - `make test-pyramid-gate` - the *product* test shape. Tests marked `pytest.mark.governance` assert

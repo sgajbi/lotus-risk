@@ -124,7 +124,7 @@ architecture-gate:
 	python -m importlinter.cli check .importlinter
 
 complexity-gate:
-	python scripts/python_complexity_inventory.py --limit 15 --max-cc 24 --max-high-complexity 1
+	python scripts/python_complexity_inventory.py --limit 15 --max-cc 24 --max-high-complexity 1 --max-medium-complexity 6
 
 maintainability-report:
 	python -m radon mi src -s

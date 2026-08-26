@@ -27,6 +27,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_PATHS = ("src",)
 HIGH_COMPLEXITY_RANKS = frozenset({"D", "E", "F"})
+# Rank C is complexity 11-20. Capping only D-F leaves it unbanked: any number of new rank-C blocks
+# passes while the maximum and the D-F count hold, so the pile grows and the gate stays green.
+MEDIUM_COMPLEXITY_RANKS = frozenset({"C"})
 
 
 @dataclass(frozen=True)
@@ -88,6 +91,7 @@ def complexity_gate_failures(
     *,
     max_cc: int | None,
     max_high_complexity: int | None,
+    max_medium_complexity: int | None = None,
 ) -> list[str]:
     """Threshold breaches, plus the zero-input case.
 
@@ -120,6 +124,13 @@ def complexity_gate_failures(
             f"{max_high_complexity}"
         )
 
+    observed_medium = rank_count(findings, MEDIUM_COMPLEXITY_RANKS)
+    if max_medium_complexity is not None and observed_medium > max_medium_complexity:
+        failures.append(
+            f"medium-complexity (rank C) block count {observed_medium} exceeds allowed "
+            f"{max_medium_complexity}"
+        )
+
     return failures
 
 
@@ -148,13 +159,19 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--max-high-complexity", type=int, help="Fail when rank D-F block count exceeds this"
     )
+    parser.add_argument(
+        "--max-medium-complexity", type=int, help="Fail when rank C block count exceeds this"
+    )
     args = parser.parse_args(argv)
 
     findings = collect_complexity(tuple(args.paths or DEFAULT_PATHS))
     print(render_report(findings, limit=args.limit))
 
     failures = complexity_gate_failures(
-        findings, max_cc=args.max_cc, max_high_complexity=args.max_high_complexity
+        findings,
+        max_cc=args.max_cc,
+        max_high_complexity=args.max_high_complexity,
+        max_medium_complexity=args.max_medium_complexity,
     )
     if failures:
         print("\nComplexity gate failed:", file=sys.stderr)
