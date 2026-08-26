@@ -75,21 +75,6 @@ def _reachable_targets(makefile: str) -> set[str]:
     return reachable
 
 
-def _targets_with_recipes(makefile: str) -> set[str]:
-    targets: set[str] = set()
-    current_target: str | None = None
-    for line in makefile.splitlines():
-        target_match = re.match(r"^([a-zA-Z0-9_-]+):[ \t]*(.*)$", line)
-        if target_match:
-            current_target = target_match.group(1)
-            if ";" in target_match.group(2):
-                targets.add(current_target)
-            continue
-        if line.startswith("\t") and line.strip() and current_target is not None:
-            targets.add(current_target)
-    return targets
-
-
 def _gate_targets() -> set[str]:
     """Every `*-gate` target reachable from the blocking lanes, including aggregate members."""
 
@@ -110,78 +95,11 @@ def _gate_targets() -> set[str]:
 # content, including an injected `make totally-fictional-gate`. See lotus-render#77.
 _WIKI_GATE_NAME = re.compile(r"`(?:make\s+)?([a-z0-9]+(?:-[a-z0-9]+)*-gates?)`")
 
-# Standalone convenience aliases documented in the wiki but not invoked by a blocking lane. Empty
-# is the preferred state; any future exemption must prove that it is a real target whose complete
-# prerequisite work is reachable from `check` or `ci`.
-DOCUMENTED_ALIASES: frozenset[str] = frozenset()
 
-
-def _invalid_documented_aliases(aliases: frozenset[str], makefile: str) -> list[str]:
-    dependencies = _target_dependencies(makefile)
-    reachable = _reachable_targets(makefile)
-    targets_with_recipes = _targets_with_recipes(makefile)
-    invalid: list[str] = []
-    for alias in sorted(aliases):
-        if alias not in dependencies:
-            invalid.append(f"{alias} (not a Makefile target)")
-            continue
-        if alias in targets_with_recipes:
-            invalid.append(f"{alias} (contains recipe commands)")
-            continue
-        unreachable = sorted(set(dependencies[alias]) - reachable)
-        if not dependencies[alias] or unreachable:
-            invalid.append(f"{alias} (unreachable prerequisites: {unreachable})")
-    return invalid
-
-
-def test_documented_alias_exemptions_are_real_and_reachable() -> None:
-    invalid = _invalid_documented_aliases(
-        DOCUMENTED_ALIASES,
-        MAKEFILE.read_text(encoding="utf-8"),
-    )
-
-    assert invalid == [], f"Documented gate aliases do not prove blocking work: {invalid}"
-
-
-def test_documented_alias_guard_rejects_fabricated_and_unreachable_names() -> None:
-    makefile = "\n".join(
-        [
-            "check: live-gate",
-            "ci: live-gate",
-            "live-gate: live-validation",
-            "inline-recipe-alias: live-validation ; python inline_check.py",
-            "orphan-gate: orphan-validation",
-            "recipe-alias: live-validation",
-            "\tpython recipe_check.py",
-            "repeated-alias: hidden-validation",
-            "repeated-alias: live-validation",
-            "continued-alias: live-validation \\",
-            " hidden-validation",
-        ]
-    )
-
-    invalid = _invalid_documented_aliases(
-        frozenset(
-            {
-                "fabricated-gate",
-                "continued-alias",
-                "inline-recipe-alias",
-                "orphan-gate",
-                "recipe-alias",
-                "repeated-alias",
-            }
-        ),
-        makefile,
-    )
-
-    assert invalid == [
-        "continued-alias (unreachable prerequisites: ['hidden-validation'])",
-        "fabricated-gate (not a Makefile target)",
-        "inline-recipe-alias (contains recipe commands)",
-        "orphan-gate (unreachable prerequisites: ['orphan-validation'])",
-        "recipe-alias (contains recipe commands)",
-        "repeated-alias (unreachable prerequisites: ['hidden-validation'])",
-    ]
+def _stale_wiki_gates(wiki: str, makefile: str) -> list[str]:
+    live = {target for target in _reachable_targets(makefile) if _is_gate(target)}
+    named_in_wiki = {match.group(1) for match in _WIKI_GATE_NAME.finditer(wiki)}
+    return sorted(name for name in named_in_wiki if name not in live)
 
 
 def test_reachability_parses_continuations_without_reading_recipe_text() -> None:
@@ -201,6 +119,13 @@ def test_reachability_parses_continuations_without_reading_recipe_text() -> None
 
     assert "continued-gate" in reachable
     assert "disabled-gate" not in reachable
+
+
+def test_reverse_wiki_guard_rejects_fabricated_gate_without_exemptions() -> None:
+    makefile = "\n".join(["check: live-gate", "ci: live-gate", "live-gate:"])
+    wiki = "`make live-gate`\n`make fabricated-gate`\n"
+
+    assert _stale_wiki_gates(wiki, makefile) == ["fabricated-gate"]
 
 
 def test_the_wiki_names_every_gate_the_blocking_lanes_run() -> None:
@@ -249,9 +174,7 @@ def test_the_wiki_names_no_gate_the_blocking_lanes_have_stopped_running() -> Non
         "are written, in which case this check asserts nothing. Both are failures."
     )
 
-    stale = sorted(
-        name for name in named_in_wiki if name not in live and name not in DOCUMENTED_ALIASES
-    )
+    stale = sorted(name for name in named_in_wiki if name not in live)
 
     assert stale == [], (
         "The wiki names these gates, but no blocking lane in the Makefile runs them any more. A "
