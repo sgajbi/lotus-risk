@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from pathlib import Path
 
 from scripts.validate_image_supply_chain import (
@@ -275,6 +276,33 @@ def test_image_release_contract_rejects_unactionable_blocking_scan(tmp_path: Pat
 
     assert (
         f"{workflow_path}: blocking scan must ignore only vulnerabilities without a fix" in issues
+    )
+
+
+def test_image_release_contract_rejects_expired_unfixed_exception(tmp_path: Path) -> None:
+    workflow_path = tmp_path / "image-release.yml"
+    workflow_path.write_text(
+        Path(".github/workflows/image-release.yml").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+
+    issues = validate_ci_image_release_workflow(workflow_path, today=date(2026, 10, 1))
+
+    assert f"{workflow_path}: unfixed-vulnerability exception expired on 2026-09-30" in issues
+
+
+def test_image_release_contract_rejects_malformed_unfixed_exception(tmp_path: Path) -> None:
+    workflow_path = tmp_path / "image-release.yml"
+    current = Path(".github/workflows/image-release.yml").read_text(encoding="utf-8")
+    workflow_path.write_text(
+        current.replace('EXPIRES_ON: "2026-09-30"', 'EXPIRES_ON: "renew-later"'),
+        encoding="utf-8",
+    )
+
+    issues = validate_ci_image_release_workflow(workflow_path, today=date(2026, 8, 27))
+
+    assert (
+        f"{workflow_path}: invalid unfixed-vulnerability exception expiry 'renew-later'" in issues
     )
 
 

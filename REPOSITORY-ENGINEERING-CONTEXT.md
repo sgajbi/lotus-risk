@@ -394,7 +394,8 @@ Important validation expectations:
    or publication. Only scan-passing images are pushed by `.github/workflows/image-release.yml`,
    then signed, attested, recorded in release-manifest evidence, and promoted by digest rather than
    environment-specific rebuilds. The full SARIF retains unfixed findings; the time-bounded
-   `ignore-unfixed` blocking posture is governed in `docs/security-deployment-policy.md`.
+    `ignore-unfixed` blocking posture is governed in `docs/security-deployment-policy.md`, and the
+    supply-chain gate rejects it after `UNFIXED_VULNERABILITY_EXCEPTION_EXPIRES_ON`.
    `make docker-build`
    targets the multi-stage `runtime` image by default; that target copies a non-editable package from
    its builder, applies current operating-system security updates, runs as `lotus` UID/GID `10001`,

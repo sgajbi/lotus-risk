@@ -19,6 +19,7 @@ permissions:
 env:
   IMAGE_NAME: ghcr.io/${{ github.repository }}
   PYTHON_VERSION: "3.12"
+  UNFIXED_VULNERABILITY_EXCEPTION_EXPIRES_ON: "2026-09-30"
 
 jobs:
   release-image:

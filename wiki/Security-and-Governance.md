@@ -111,7 +111,9 @@ build if pytest, ruff, mypy, bandit, deptry, radon, vulture, or pre-commit are p
 The blocking scan uses `ignore-unfixed: true` only after the full SARIF inventory is written. This
 keeps every newly fixable HIGH/CRITICAL finding release-blocking while retaining visibility of Debian
 base-image findings that have no published remediation. The posture is owned by `lotus-risk`
-maintainers, expires on 2026-09-30, and must be renewed only from a fresh image scan.
+maintainers and expires on 2026-09-30. The repository gate enforces
+`UNFIXED_VULNERABILITY_EXCEPTION_EXPIRES_ON` and fails after that date unless maintainers renew it
+from a fresh image scan.
 
 ## Upstream Boundary Discipline
 

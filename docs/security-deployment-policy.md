@@ -193,7 +193,7 @@ complete SARIF visibility first, followed by the fixable-finding publication gat
 | Owner | `lotus-risk` maintainers |
 | Reason | Debian base-image findings without an upstream fixed version cannot be remediated by this repository; blocking them would permanently disable signing and attestation without reducing risk. |
 | Review trigger | Every image build, base-image digest change, or vulnerability-database change; newly fixable findings fail the release automatically. |
-| Expiry | 2026-09-30; renew only with a fresh scan and explicit evidence. |
+| Expiry | 2026-09-30; encoded by `UNFIXED_VULNERABILITY_EXCEPTION_EXPIRES_ON`; the repository gate fails after this date unless maintainers renew it with a fresh scan and explicit evidence. |
 | Compensating evidence | Complete SARIF inventory, SPDX SBOM, immutable digest, signature, provenance attestation, and fixable-finding blocking scan. |
 
 ## Evidence Commands

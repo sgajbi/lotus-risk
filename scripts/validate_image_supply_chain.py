@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import sys
+from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -9,6 +10,10 @@ DOCKERFILE = ROOT / "Dockerfile"
 MAKEFILE = ROOT / "Makefile"
 WORKFLOW_DIR = ROOT / ".github" / "workflows"
 IMAGE_RELEASE_WORKFLOW = WORKFLOW_DIR / "image-release.yml"
+UNFIXED_EXCEPTION_EXPIRY_PATTERN = re.compile(
+    r'^\s*UNFIXED_VULNERABILITY_EXCEPTION_EXPIRES_ON:\s*"(?P<expiry>[^\"]+)"\s*$',
+    flags=re.MULTILINE,
+)
 
 REQUIRED_OCI_LABELS = {
     "org.opencontainers.image.revision",
@@ -199,6 +204,8 @@ def validate_release_publication_order(text: str, workflow_path: Path) -> list[s
 
 def validate_ci_image_release_workflow(
     workflow_path: Path = IMAGE_RELEASE_WORKFLOW,
+    *,
+    today: date | None = None,
 ) -> list[str]:
     if not workflow_path.exists():
         return [f"{workflow_path}: image release workflow is missing"]
@@ -249,6 +256,24 @@ def validate_ci_image_release_workflow(
         issues.append(
             f"{workflow_path}: complete HIGH/CRITICAL vulnerability inventory must remain visible"
         )
+
+    expiry_match = UNFIXED_EXCEPTION_EXPIRY_PATTERN.search(text)
+    if expiry_match is None:
+        issues.append(f"{workflow_path}: missing unfixed-vulnerability exception expiry")
+    else:
+        expiry_text = expiry_match.group("expiry")
+        try:
+            expiry = date.fromisoformat(expiry_text)
+        except ValueError:
+            issues.append(
+                f"{workflow_path}: invalid unfixed-vulnerability exception expiry {expiry_text!r}"
+            )
+        else:
+            effective_today = today or date.today()
+            if effective_today > expiry:
+                issues.append(
+                    f"{workflow_path}: unfixed-vulnerability exception expired on {expiry.isoformat()}"
+                )
 
     if 'branches: [ "main" ]' not in text and "branches: [main]" not in text:
         issues.append(f"{workflow_path}: image push must be scoped to main")
