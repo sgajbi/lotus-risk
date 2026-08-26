@@ -73,6 +73,12 @@ def _targets_with_recipes(makefile: str) -> set[str]:
     return targets
 
 
+def _targets_with_continued_prerequisites(makefile: str) -> set[str]:
+    return {
+        match.group(1) for match in re.finditer(r"^([a-zA-Z0-9_-]+):[^\n]*\\\s*$", makefile, re.M)
+    }
+
+
 def _gate_targets() -> set[str]:
     """Every `*-gate` target reachable from the blocking lanes, including aggregate members."""
 
@@ -103,6 +109,7 @@ def _invalid_documented_aliases(aliases: frozenset[str], makefile: str) -> list[
     dependencies = _target_dependencies(makefile)
     reachable = _reachable_targets(makefile)
     targets_with_recipes = _targets_with_recipes(makefile)
+    targets_with_continued_prerequisites = _targets_with_continued_prerequisites(makefile)
     invalid: list[str] = []
     for alias in sorted(aliases):
         if alias not in dependencies:
@@ -110,6 +117,9 @@ def _invalid_documented_aliases(aliases: frozenset[str], makefile: str) -> list[
             continue
         if alias in targets_with_recipes:
             invalid.append(f"{alias} (contains recipe commands)")
+            continue
+        if alias in targets_with_continued_prerequisites:
+            invalid.append(f"{alias} (uses continued prerequisites)")
             continue
         unreachable = sorted(set(dependencies[alias]) - reachable)
         if not dependencies[alias] or unreachable:
@@ -138,6 +148,8 @@ def test_documented_alias_guard_rejects_fabricated_and_unreachable_names() -> No
             "\tpython recipe_check.py",
             "repeated-alias: hidden-validation",
             "repeated-alias: live-validation",
+            "continued-alias: live-validation \\",
+            " hidden-validation",
         ]
     )
 
@@ -145,6 +157,7 @@ def test_documented_alias_guard_rejects_fabricated_and_unreachable_names() -> No
         frozenset(
             {
                 "fabricated-gate",
+                "continued-alias",
                 "inline-recipe-alias",
                 "orphan-gate",
                 "recipe-alias",
@@ -155,6 +168,7 @@ def test_documented_alias_guard_rejects_fabricated_and_unreachable_names() -> No
     )
 
     assert invalid == [
+        "continued-alias (uses continued prerequisites)",
         "fabricated-gate (not a Makefile target)",
         "inline-recipe-alias (contains recipe commands)",
         "orphan-gate (unreachable prerequisites: ['orphan-validation'])",
