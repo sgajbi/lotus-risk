@@ -43,6 +43,9 @@ WORKDIR /app
 COPY --from=builder /install /usr/local
 COPY contracts/domain-data-products ./contracts/domain-data-products
 
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get upgrade --yes && \
+    rm -rf /var/lib/apt/lists/*
 RUN groupadd --system --gid 10001 lotus && \
     useradd --system --uid 10001 --gid lotus --home-dir /app --shell /usr/sbin/nologin lotus && \
     chown lotus:lotus /app

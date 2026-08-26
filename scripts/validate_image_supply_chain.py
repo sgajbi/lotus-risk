@@ -144,6 +144,7 @@ def validate_runtime_container_contract(
             "runtime data-product declarations"
         ),
         'LOTUS_REPO_ROOT="/app"': "runtime repository-root declaration",
+        "apt-get upgrade --yes": "runtime operating-system security update",
         "groupadd --system --gid 10001 lotus": "non-root runtime group",
         "useradd --system --uid 10001": "non-root runtime user",
         "USER lotus": "non-root runtime user selection",
@@ -240,6 +241,14 @@ def validate_ci_image_release_workflow(
         )
     if 'exit-code: "1"' not in text:
         issues.append(f"{workflow_path}: vulnerability scan must retain blocking exit-code 1")
+    if "ignore-unfixed: true" not in text:
+        issues.append(
+            f"{workflow_path}: blocking scan must ignore only vulnerabilities without a fix"
+        )
+    if "Generate complete vulnerability inventory" not in text or 'exit-code: "0"' not in text:
+        issues.append(
+            f"{workflow_path}: complete HIGH/CRITICAL vulnerability inventory must remain visible"
+        )
 
     if 'branches: [ "main" ]' not in text and "branches: [main]" not in text:
         issues.append(f"{workflow_path}: image push must be scoped to main")

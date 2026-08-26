@@ -145,9 +145,10 @@ The governed release image policy is:
 2. OCI labels include commit SHA, Git branch/ref, service version, UTC build timestamp, repository
    URL, image digest field, and CI pipeline/run ID,
 3. image push is permitted only through `.github/workflows/image-release.yml`,
-4. the image is built and loaded locally so an SPDX SBOM and the blocking
-   Trivy HIGH/CRITICAL vulnerability scan complete before registry authentication or publication,
-5. a failed vulnerability scan prevents the image from being pushed to the registry,
+4. the image is built and loaded locally so an SPDX SBOM, a complete HIGH/CRITICAL vulnerability
+   inventory, and the blocking scan for fixable HIGH/CRITICAL findings complete before registry
+   authentication or publication,
+5. a fixable HIGH/CRITICAL finding fails the blocking scan and prevents publication,
 6. after the scan passes, the immutable image is pushed and its registry digest is captured in
    `output/image-release/image-release-manifest.json`,
 7. the image is signed by digest with keyless cosign signing,
@@ -162,9 +163,10 @@ The governed release image policy is:
     credentials. Use CI secret stores, deployment secret stores, or BuildKit secret mounts rather
     than baking secret names or values into the image,
 13. the deployable `runtime` target must be a non-editable installed package copied from a separate
-    builder stage, run as the non-root `lotus` user at UID/GID `10001`, omit repository `scripts/`,
-    include the governed domain-data-product declarations under the explicit `LOTUS_REPO_ROOT`, and
-    expose a `/health/ready` container healthcheck.
+    builder stage, apply current operating-system security updates, run as the non-root `lotus` user
+    at UID/GID `10001`, omit repository `scripts/`, include the governed domain-data-product
+    declarations under the explicit `LOTUS_REPO_ROOT`, and expose a `/health/ready` container
+    healthcheck.
 
 `make image-supply-chain-gate` is the repository-native guard for these requirements. It validates
 the build, SBOM, blocking scan, registry authentication, publication, signing, and attestation
@@ -174,6 +176,22 @@ the image-release workflow; rejects mutable
 Kubernetes image references and secret-like Docker build argument or environment names; and verifies
 that pytest, ruff, mypy, bandit, deptry, radon, vulture, and pre-commit are absent from the deployable
 runtime image.
+
+### Unfixed base-image vulnerability treatment
+
+The complete Trivy SARIF inventory intentionally retains HIGH/CRITICAL findings regardless of fix
+availability. The separate blocking scan uses `ignore-unfixed: true`; it suppresses only findings
+for which the vulnerability feed publishes no fixed version, while every fixable HIGH/CRITICAL
+finding remains release-blocking. This is an actionability rule, not a severity downgrade or a
+package-specific ignore list.
+
+| Control field | Governed value |
+|---|---|
+| Owner | `lotus-risk` maintainers |
+| Reason | Debian base-image findings without an upstream fixed version cannot be remediated by this repository; blocking them would permanently disable signing and attestation without reducing risk. |
+| Review trigger | Every image build, base-image digest change, or vulnerability-database change; newly fixable findings fail the release automatically. |
+| Expiry | 2026-09-30; renew only with a fresh scan and explicit evidence. |
+| Compensating evidence | Complete SARIF inventory, SPDX SBOM, immutable digest, signature, provenance attestation, and fixable-finding blocking scan. |
 
 ## Evidence Commands
 
