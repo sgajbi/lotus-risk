@@ -1,0 +1,160 @@
+"""`complexity-gate` must be able to fail.
+
+It used to be `radon cc` and `radon mi`, neither of which accepts a failure threshold, wired into the
+blocking `ci` lane beside three gates that do fail. Complexity could regress without limit and the
+lane stayed green, with nothing in the output to tell it apart from a gate that was enforcing
+something. See issue #225.
+
+These tests pin the two properties that made it not-a-gate: that a breach returns non-zero, and that
+the declared thresholds equal the measured tree with no headroom.
+"""
+
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+import pytest
+
+from scripts.python_complexity_inventory import (
+    HIGH_COMPLEXITY_RANKS,
+    ComplexityFinding,
+    collect_complexity,
+    complexity_gate_failures,
+    parse_complexity_payload,
+    rank_count,
+)
+
+pytestmark = pytest.mark.governance
+
+ROOT = Path(__file__).resolve().parents[2]
+MAKEFILE = ROOT / "Makefile"
+
+
+def _finding(complexity: int, rank: str) -> ComplexityFinding:
+    return ComplexityFinding(
+        path="src/app/m.py", name="f", kind="function", rank=rank, complexity=complexity, line=1
+    )
+
+
+def _declared_thresholds() -> dict[str, int]:
+    target = re.search(
+        r"^complexity-gate:\n(?:\t.*\n)+", MAKEFILE.read_text(encoding="utf-8"), re.M
+    )
+    assert target is not None, "complexity-gate is no longer defined in the Makefile"
+    return {
+        flag: int(value)
+        for flag, value in re.findall(r"--(max-cc|max-high-complexity) (\d+)", target.group(0))
+    }
+
+
+def test_the_gate_target_no_longer_runs_a_command_that_cannot_fail() -> None:
+    """`radon cc` and `radon mi` exit 0 whatever they print; `-n C` filters output, not status."""
+
+    target = re.search(
+        r"^complexity-gate:\n(?:\t.*\n)+", MAKEFILE.read_text(encoding="utf-8"), re.M
+    )
+    assert target is not None
+    recipe = target.group(0)
+
+    assert "radon" not in recipe, (
+        "complexity-gate invokes radon directly again. radon has no failing exit code in any mode, "
+        "so the target would report success whatever the tree contains. See issue #225."
+    )
+    assert "python_complexity_inventory.py" in recipe
+
+
+def test_a_complexity_rise_above_the_banked_maximum_fails() -> None:
+    findings = [_finding(25, "D"), _finding(3, "A")]
+
+    failures = complexity_gate_failures(findings, max_cc=24, max_high_complexity=1)
+
+    assert len(failures) == 1
+    assert "25 exceeds allowed 24" in failures[0]
+
+
+def test_the_banked_maximum_itself_passes() -> None:
+    """A ratchet is banked at exact equality, so the measured value must not fail."""
+
+    findings = [_finding(24, "D"), _finding(3, "A")]
+
+    assert complexity_gate_failures(findings, max_cc=24, max_high_complexity=1) == []
+
+
+def test_an_extra_high_complexity_block_fails_even_below_the_maximum() -> None:
+    """The two thresholds catch different regressions: one deep block, or more deep blocks."""
+
+    findings = [_finding(24, "D"), _finding(22, "D")]
+
+    failures = complexity_gate_failures(findings, max_cc=24, max_high_complexity=1)
+
+    assert len(failures) == 1
+    assert "block count 2 exceeds allowed 1" in failures[0]
+
+
+def test_an_empty_scan_fails_rather_than_reporting_a_clean_tree() -> None:
+    """A gate that inspected nothing must fail. Silence is never a pass.
+
+    The reference implementation this was ported from treats an empty result as a maximum of 0 and
+    passes, so a renamed source root or a lane running from the wrong directory reports the
+    cleanest possible tree. See `lotus-platform#738`.
+    """
+
+    failures = complexity_gate_failures([], max_cc=24, max_high_complexity=1)
+
+    assert len(failures) == 1
+    assert "empty scan is not a clean tree" in failures[0]
+
+
+def test_a_file_radon_could_not_parse_is_an_error_not_a_skip() -> None:
+    """Skipping an unparseable file would let it quietly reduce the measured maximum."""
+
+    with pytest.raises(RuntimeError, match="could not analyse"):
+        parse_complexity_payload({"src/app/broken.py": {"error": "invalid syntax"}})
+
+
+def test_findings_are_ordered_so_the_first_is_the_worst() -> None:
+    """`complexity_gate_failures` reads `findings[0]` as the observed maximum."""
+
+    findings = parse_complexity_payload(
+        {
+            "src/a.py": [
+                {"name": "low", "type": "function", "rank": "A", "complexity": 2, "lineno": 1}
+            ],
+            "src/b.py": [
+                {"name": "high", "type": "function", "rank": "D", "complexity": 30, "lineno": 9}
+            ],
+        }
+    )
+
+    assert findings[0].name == "high"
+    assert findings[0].complexity == 30
+
+
+def test_rank_counting_covers_every_high_rank() -> None:
+    findings = [_finding(30, "F"), _finding(25, "E"), _finding(21, "D"), _finding(9, "C")]
+
+    assert rank_count(findings, HIGH_COMPLEXITY_RANKS) == 3
+
+
+def test_the_declared_thresholds_equal_the_measured_tree() -> None:
+    """Banked at exact equality: an allowance above the measurement is unbanked slack.
+
+    This also fails if complexity *improves* without the threshold being re-banked downward, which
+    is the half of ratchet discipline that is easy to skip.
+    """
+
+    declared = _declared_thresholds()
+    assert set(declared) == {"max-cc", "max-high-complexity"}, declared
+
+    findings = collect_complexity(("src",))
+    assert findings, "collected no complexity findings; the gate would be measuring nothing"
+
+    assert declared["max-cc"] == findings[0].complexity, (
+        f"complexity-gate declares --max-cc {declared['max-cc']} but the tree measures "
+        f"{findings[0].complexity}. Re-bank a ceiling downward in the change that improves it."
+    )
+    assert declared["max-high-complexity"] == rank_count(findings, HIGH_COMPLEXITY_RANKS), (
+        f"complexity-gate declares --max-high-complexity {declared['max-high-complexity']} but the "
+        f"tree measures {rank_count(findings, HIGH_COMPLEXITY_RANKS)}."
+    )
