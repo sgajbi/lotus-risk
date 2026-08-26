@@ -88,11 +88,21 @@ jobs:
         with:
           sarif_file: output/image-release/trivy-results.sarif
 
+      - name: Block application-library vulnerabilities
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          format: table
+          vuln-type: library
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+
       - name: Vulnerability scan
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ env.IMAGE_NAME }}:${{ github.sha }}
           format: table
+          vuln-type: os
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: "1"

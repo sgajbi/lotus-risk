@@ -108,10 +108,11 @@ including the enforced scan-before-publication sequence and hardened runtime-tar
 deployable runtime image installs runtime dependencies only and rejects dev tooling during the Docker
 build if pytest, ruff, mypy, bandit, deptry, radon, vulture, or pre-commit are present.
 
-The blocking scan uses `ignore-unfixed: true` only after the full SARIF inventory is written. This
-keeps every newly fixable HIGH/CRITICAL finding release-blocking while retaining visibility of Debian
-base-image findings that have no published remediation. The posture is owned by `lotus-risk`
-maintainers and expires on 2026-09-30. The repository gate enforces
+After the full SARIF inventory is written, a library-only scan blocks every application dependency
+HIGH/CRITICAL finding, including findings without a published fix. The separate OS-only scan uses
+`ignore-unfixed: true`; this keeps every newly fixable base-image HIGH/CRITICAL finding
+release-blocking while retaining visibility of Debian findings that have no published remediation.
+The OS-only posture is owned by `lotus-risk` maintainers and expires on 2026-09-30. The repository gate enforces
 `UNFIXED_VULNERABILITY_EXCEPTION_EXPIRES_ON` and fails after that date unless maintainers renew it
 from a fresh image scan.
 

@@ -226,6 +226,9 @@ def test_image_release_scans_before_registry_authentication_and_publication() ->
     assert 'exit-code: "0"' in workflow
     assert "ignore-unfixed: true" in workflow
     assert 'exit-code: "1"' in workflow
+    assert workflow.index("- name: Block application-library vulnerabilities") < workflow.index(
+        "- name: Vulnerability scan"
+    )
     assert workflow.index("- name: Vulnerability scan") < workflow.index(
         "- name: Push immutable image after scan"
     )
@@ -238,6 +241,7 @@ def test_image_release_order_guard_rejects_publication_before_scan(tmp_path: Pat
         for step in (
             "Build image for validation",
             "Generate SBOM",
+            "Block application-library vulnerabilities",
             "Authenticate to release registry",
             "Push immutable image after scan",
             "Vulnerability scan",
@@ -277,6 +281,35 @@ def test_image_release_contract_rejects_unactionable_blocking_scan(tmp_path: Pat
     assert (
         f"{workflow_path}: blocking scan must ignore only vulnerabilities without a fix" in issues
     )
+
+
+def test_image_release_contract_rejects_library_unfixed_exception(tmp_path: Path) -> None:
+    workflow_path = tmp_path / "image-release.yml"
+    current = Path(".github/workflows/image-release.yml").read_text(encoding="utf-8")
+    workflow_path.write_text(
+        current.replace(
+            "          vuln-type: library\n",
+            "          vuln-type: library\n          ignore-unfixed: true\n",
+        ),
+        encoding="utf-8",
+    )
+
+    issues = validate_ci_image_release_workflow(workflow_path)
+
+    assert f"{workflow_path}: unfixed exception must not apply to application libraries" in issues
+
+
+def test_image_release_contract_rejects_unscoped_os_exception(tmp_path: Path) -> None:
+    workflow_path = tmp_path / "image-release.yml"
+    current = Path(".github/workflows/image-release.yml").read_text(encoding="utf-8")
+    workflow_path.write_text(
+        current.replace("          vuln-type: os\n", ""),
+        encoding="utf-8",
+    )
+
+    issues = validate_ci_image_release_workflow(workflow_path)
+
+    assert f"{workflow_path}: unfixed exception must be scoped to OS findings" in issues
 
 
 def test_image_release_contract_rejects_expired_unfixed_exception(tmp_path: Path) -> None:

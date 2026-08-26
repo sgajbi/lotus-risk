@@ -59,6 +59,7 @@ FORBIDDEN_RUNTIME_DEV_DEPENDENCIES = (
 RELEASE_STEP_ORDER = (
     "Build image for validation",
     "Generate SBOM",
+    "Block application-library vulnerabilities",
     "Vulnerability scan",
     "Authenticate to release registry",
     "Push immutable image after scan",
@@ -202,6 +203,15 @@ def validate_release_publication_order(text: str, workflow_path: Path) -> list[s
     return issues
 
 
+def _workflow_step_block(text: str, step_name: str) -> str:
+    marker = f"- name: {step_name}"
+    start = text.find(marker)
+    if start < 0:
+        return ""
+    next_step = text.find("\n      - name:", start + len(marker))
+    return text[start:] if next_step < 0 else text[start:next_step]
+
+
 def validate_ci_image_release_workflow(
     workflow_path: Path = IMAGE_RELEASE_WORKFLOW,
     *,
@@ -256,6 +266,18 @@ def validate_ci_image_release_workflow(
         issues.append(
             f"{workflow_path}: complete HIGH/CRITICAL vulnerability inventory must remain visible"
         )
+
+    library_gate = _workflow_step_block(text, "Block application-library vulnerabilities")
+    if "vuln-type: library" not in library_gate or 'exit-code: "1"' not in library_gate:
+        issues.append(
+            f"{workflow_path}: application-library HIGH/CRITICAL findings must be blocking"
+        )
+    if "ignore-unfixed: true" in library_gate:
+        issues.append(f"{workflow_path}: unfixed exception must not apply to application libraries")
+
+    os_gate = _workflow_step_block(text, "Vulnerability scan")
+    if "vuln-type: os" not in os_gate:
+        issues.append(f"{workflow_path}: unfixed exception must be scoped to OS findings")
 
     expiry_match = UNFIXED_EXCEPTION_EXPIRY_PATTERN.search(text)
     if expiry_match is None:
