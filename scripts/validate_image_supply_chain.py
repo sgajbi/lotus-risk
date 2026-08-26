@@ -14,6 +14,7 @@ UNFIXED_EXCEPTION_EXPIRY_PATTERN = re.compile(
     r'^\s*UNFIXED_VULNERABILITY_EXCEPTION_EXPIRES_ON:\s*"(?P<expiry>[^\"]+)"\s*$',
     flags=re.MULTILINE,
 )
+TRIVY_ENV_OVERRIDE_PATTERN = re.compile(r"\b(?P<name>TRIVY_[A-Z0-9_]+)(?:\s*:|=)")
 
 REQUIRED_OCI_LABELS = {
     "org.opencontainers.image.revision",
@@ -279,6 +280,15 @@ def validate_ci_image_release_workflow(
     for term, description in required_terms.items():
         if term not in text:
             issues.append(f"{workflow_path}: missing {description}")
+
+    trivy_env_overrides = sorted(
+        {match.group("name") for match in TRIVY_ENV_OVERRIDE_PATTERN.finditer(text)}
+    )
+    if trivy_env_overrides:
+        issues.append(
+            f"{workflow_path}: Trivy environment overrides are forbidden: "
+            f"{', '.join(trivy_env_overrides)}"
+        )
 
     issues.extend(validate_release_publication_order(text, workflow_path))
 
