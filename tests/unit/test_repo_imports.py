@@ -32,19 +32,19 @@ ROUTE_LITERAL_PREFIX = re.compile(
     r"\s*\(\s*(?:path\s*=\s*)?"
     r"|\b(?:[a-z_]\w*_client|client|requests?|httpx)(?:\.\w+)*"
     r"\.(?:get|head|post|put|patch|delete|options|websocket_connect)"
-    r"\s*\(\s*(?:url\s*=\s*)?)(?i:[rubf]{0,2})[\"']$"
+    r"\s*\(\s*(?:url\s*=\s*)?)(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
     r"|\b\w+(?:\.\w+)*\.(?:add_api_route|add_route|add_websocket_route)"
-    r"\s*\(\s*(?:path\s*=\s*)?(?i:[rubf]{0,2})[\"']$"
+    r"\s*\(\s*(?:path\s*=\s*)?(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
     r"|\b(?:httpx\.)?Request\s*\(\s*[\"']"
     r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)[\"']\s*,\s*(?:url\s*=\s*)?"
-    r"(?i:[rubf]{0,2})[\"']$"
+    r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
     r"|\b(?:httpx\.)?Request\s*\(\s*method\s*=\s*[\"']"
     r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)[\"']\s*,\s*url\s*=\s*"
-    r"(?i:[rubf]{0,2})[\"']$",
+    r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$",
     re.IGNORECASE,
 )
 REQUEST_SCOPE_ROUTE_PREFIX = re.compile(
-    r"\bRequest\s*\([^)]*[\"']path[\"']\s*:\s*(?i:[rubf]{0,2})[\"']$"
+    r"\bRequest\s*\([^)]*[\"']path[\"']\s*:\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
 )
 WEB_URL = re.compile(
     r"(?i:https?://(?:[a-z0-9]|\[[0-9a-f:.]+\])[^\s\"';,)\]}]*"
