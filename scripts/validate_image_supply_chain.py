@@ -140,6 +140,10 @@ def validate_runtime_container_contract(
         "AS builder": "builder stage",
         "AS runtime": "runtime stage",
         "COPY --from=builder /install /usr/local": "builder-to-runtime dependency copy",
+        "COPY contracts/domain-data-products ./contracts/domain-data-products": (
+            "runtime data-product declarations"
+        ),
+        'LOTUS_REPO_ROOT="/app"': "runtime repository-root declaration",
         "groupadd --system --gid 10001 lotus": "non-root runtime group",
         "useradd --system --uid 10001": "non-root runtime user",
         "USER lotus": "non-root runtime user selection",

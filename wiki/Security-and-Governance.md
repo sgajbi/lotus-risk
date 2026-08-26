@@ -97,8 +97,9 @@ Release images are governed by the same security posture as runtime configuratio
 6. environment promotion must reuse the same digest instead of rebuilding per environment;
 7. Docker build arguments and environment declarations must not carry secret-like names or values;
 8. the production `runtime` target installs the package non-editably from a separate builder stage,
-   runs as the non-root `lotus` user at UID/GID `10001`, excludes repository `scripts/`, and declares
-   a `/health/ready` container healthcheck.
+   runs as the non-root `lotus` user at UID/GID `10001`, excludes repository `scripts/`, copies the
+   governed domain-data-product declarations beneath `LOTUS_REPO_ROOT=/app`, and declares a
+   `/health/ready` container healthcheck.
 
 `/version` exposes the runtime service version and the same source/build/image/CI metadata expected
 on the released image. `make image-supply-chain-gate` is the local and CI guard for this contract,

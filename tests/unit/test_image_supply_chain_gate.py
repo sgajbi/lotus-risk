@@ -65,6 +65,8 @@ def test_dockerfile_uses_hardened_runtime_target_without_dev_extra() -> None:
     assert "pip install --prefix=/install ." in dockerfile
     assert " -e " not in dockerfile
     assert "COPY scripts" not in dockerfile
+    assert "COPY contracts/domain-data-products ./contracts/domain-data-products" in dockerfile
+    assert 'LOTUS_REPO_ROOT="/app"' in dockerfile
     assert "USER lotus" in dockerfile
     assert "HEALTHCHECK" in dockerfile
     assert ".[dev]" not in dockerfile
@@ -97,6 +99,8 @@ def test_runtime_container_contract_rejects_single_stage_root_runtime(
     assert f"{dockerfile}: runtime image must use a multi-stage build" in issues
     assert f"{dockerfile}: runtime package install must not be editable" in issues
     assert f"{dockerfile}: runtime image must not copy repository scripts" in issues
+    assert f"{dockerfile}: missing runtime data-product declarations" in issues
+    assert f"{dockerfile}: missing runtime repository-root declaration" in issues
     assert f"{dockerfile}: missing non-root runtime user selection" in issues
     assert f"{dockerfile}: missing container healthcheck" in issues
     assert f"{makefile}: missing default runtime build target" in issues

@@ -5,6 +5,7 @@ from pathlib import Path
 
 from app.domain_data_products import (
     LOCAL_PRODUCER_DECLARATION_PATH,
+    _resolve_repo_root,
     get_declared_product,
     list_declared_products,
     load_local_producer_declaration,
@@ -30,6 +31,15 @@ def test_load_local_producer_declaration_uses_repo_native_contract_path() -> Non
 
     assert payload["producer_repository"] == "lotus-risk"
     assert LOCAL_PRODUCER_DECLARATION_PATH.name == "lotus-risk-products.v1.json"
+
+
+def test_resolve_repo_root_honors_packaged_runtime_location(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setenv("LOTUS_REPO_ROOT", str(tmp_path / "runtime-root"))
+
+    assert _resolve_repo_root() == (tmp_path / "runtime-root").resolve()
 
 
 def test_list_declared_products_matches_expected_wave() -> None:

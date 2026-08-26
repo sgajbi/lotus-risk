@@ -35,11 +35,13 @@ ENV LOTUS_GIT_COMMIT_SHA="${LOTUS_GIT_COMMIT_SHA}" \
     LOTUS_REPO_URL="${LOTUS_REPO_URL}" \
     LOTUS_IMAGE_DIGEST="${LOTUS_IMAGE_DIGEST}" \
     LOTUS_CI_PIPELINE_RUN_ID="${LOTUS_CI_PIPELINE_RUN_ID}" \
+    LOTUS_REPO_ROOT="/app" \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 WORKDIR /app
 COPY --from=builder /install /usr/local
+COPY contracts/domain-data-products ./contracts/domain-data-products
 
 RUN groupadd --system --gid 10001 lotus && \
     useradd --system --uid 10001 --gid lotus --home-dir /app --shell /usr/sbin/nologin lotus && \
