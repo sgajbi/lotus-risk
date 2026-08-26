@@ -666,6 +666,18 @@ def test_image_release_contract_requires_sarif_upload_to_execute(
             '          TRIVY_SKIP_DIRS: "/usr/local/lib/python3.12/site-packages"\n',
         ),
         (
+            "      - name: Generate complete vulnerability inventory\n",
+            "      - name: Generate complete vulnerability inventory\n"
+            "        env:\n"
+            '          "TRIVY_SKIP_DIRS": "/usr/local/lib/python3.12/site-packages"\n',
+        ),
+        (
+            "      - name: Generate complete vulnerability inventory\n",
+            "      - name: Generate complete vulnerability inventory\n"
+            "        env:\n"
+            "          'TRIVY_SKIP_DIRS': '/usr/local/lib/python3.12/site-packages'\n",
+        ),
+        (
             "      - name: Validate image supply-chain contract\n",
             "      - name: Set forbidden Trivy environment\n"
             '        run: echo "TRIVY_SKIP_DIRS=/usr/local/lib/python3.12/site-packages" '
