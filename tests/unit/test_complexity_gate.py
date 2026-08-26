@@ -116,6 +116,52 @@ def test_a_file_radon_could_not_parse_is_an_error_not_a_skip() -> None:
         parse_complexity_payload({"src/app/broken.py": {"error": "invalid syntax"}})
 
 
+def test_radon_emits_class_methods_as_top_level_findings_without_double_counting(
+    tmp_path: Path,
+) -> None:
+    """Pin the Radon 6.0.1 payload shape the inventory deliberately consumes.
+
+    Radon repeats a class method in the class entry's ``methods`` metadata and as a top-level
+    finding. The inventory consumes top-level findings, so recursively flattening ``methods``
+    would count every method twice and spend the rank-C ratchet incorrectly.
+    """
+
+    source = tmp_path / "class_with_complex_method.py"
+    source.write_text(
+        "class Holder:\n"
+        "    def complex_method(self, value):\n"
+        "        if value == 1:\n"
+        "            return 1\n"
+        "        if value == 2:\n"
+        "            return 2\n"
+        "        if value == 3:\n"
+        "            return 3\n"
+        "        if value == 4:\n"
+        "            return 4\n"
+        "        if value == 5:\n"
+        "            return 5\n"
+        "        if value == 6:\n"
+        "            return 6\n"
+        "        if value == 7:\n"
+        "            return 7\n"
+        "        if value == 8:\n"
+        "            return 8\n"
+        "        if value == 9:\n"
+        "            return 9\n"
+        "        if value == 10:\n"
+        "            return 10\n"
+        "        return 0\n",
+        encoding="utf-8",
+    )
+
+    findings = collect_complexity((str(source),))
+    methods = [finding for finding in findings if finding.name == "complex_method"]
+
+    assert len(methods) == 1
+    assert methods[0].kind == "method"
+    assert methods[0].rank == "C"
+
+
 def test_findings_are_ordered_so_the_first_is_the_worst() -> None:
     """`complexity_gate_failures` reads `findings[0]` as the observed maximum."""
 
