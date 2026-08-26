@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import sys
+import tokenize
 from pathlib import Path
 
 from scripts._repo_imports import force_repo_src_first
@@ -51,6 +52,16 @@ def _absolute_user_home_references(text: str) -> list[str]:
             continue
         references.append(match.group(0))
     return references
+
+
+def _read_scannable_test_text(path: Path) -> str | None:
+    if path.suffix == ".py":
+        with tokenize.open(path) as source:
+            return source.read()
+    try:
+        return path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        return None
 
 
 def test_force_repo_src_first_moves_repo_src_ahead_of_other_lotus_apps(
@@ -140,14 +151,24 @@ def test_absolute_user_home_guard_detects_file_uris() -> None:
     assert _absolute_user_home_references(redundant_slashes) == ["/" + "/".join(["home", "alice"])]
 
 
+def test_python_test_sources_use_their_declared_encoding(tmp_path: Path) -> None:
+    linux = "/" + "/".join(["home", "alice", "project"])
+    source = tmp_path / "test_latin1.py"
+    source.write_bytes(f"# -*- coding: latin-1 -*-\nPATH = '{linux}/café'\n".encode("latin-1"))
+
+    text = _read_scannable_test_text(source)
+
+    assert text is not None
+    assert _absolute_user_home_references(text) == ["/" + "/".join(["home", "alice"])]
+
+
 def test_test_sources_do_not_disclose_absolute_user_home_paths() -> None:
     findings: dict[str, list[str]] = {}
     for path in sorted(TESTS_ROOT.rglob("*")):
         if not path.is_file() or any(part in IGNORED_GENERATED_TEST_DIRS for part in path.parts):
             continue
-        try:
-            text = path.read_text(encoding="utf-8")
-        except UnicodeDecodeError:
+        text = _read_scannable_test_text(path)
+        if text is None:
             continue
         references = _absolute_user_home_references(text)
         if references:
