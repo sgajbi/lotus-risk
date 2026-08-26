@@ -50,7 +50,8 @@ ANY_ACTION_USE_PATTERN = re.compile(
     re.VERBOSE,
 )
 
-# A resolvable reference is a `v`-prefixed tag or a full commit SHA. Every action publisher this
+# A well-formed, pinned reference is a `v`-prefixed tag or a full commit SHA. This is a form
+# check: `@v9.99.0` passes and does not exist. Full resolution needs the network. Every action publisher this
 # repository consumes tags with a `v`; `aquasecurity/trivy-action@0.32.0` did not exist and never
 # had, and the release lane failed at `Set up job` before a single step ran - for seven weeks,
 # invisibly, because the workflow had never been triggered. See issue #227.

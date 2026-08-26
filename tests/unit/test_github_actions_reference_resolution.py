@@ -1,4 +1,15 @@
-"""Every action reference in every workflow must be able to resolve.
+"""Every action reference in every workflow must be a *well-formed, pinned* reference.
+
+    This is a FORM check, not a resolvability check, and the distinction matters. It rejects a
+    bare version like `0.32.0`, which cannot resolve, and a mutable branch like `main`, which
+    resolves but is unpinned. It accepts `aquasecurity/trivy-action@v9.99.0` - well-formed,
+    pinned, and nonexistent. A deleted or renamed `v`-tag still fails at `Set up job` and
+    nothing here sees it.
+
+    Saying otherwise would be the failure mode this repository keeps finding: a name asserting a
+    property the code does not have, in the place people look for the guarantee. Full
+    resolution against the registry needs the network and belongs in a scheduled check - filed
+    separately - not in pre-push validation.
 
 `image-release.yml` referenced `aquasecurity/trivy-action@0.32.0`. That tag does not exist - the
 publisher tags with a `v` prefix - so the job failed at `Set up job` before a single step ran,
@@ -58,16 +69,17 @@ def test_the_matcher_finds_the_references_that_are_actually_there() -> None:
         assert expected in slugs, f"{expected} not matched; slugs seen: {sorted(slugs)}"
 
 
-def test_every_action_reference_can_resolve() -> None:
-    unresolvable = [
+def test_every_action_reference_is_a_pinned_well_formed_ref() -> None:
+    malformed = [
         f"{name}:{number}: {slug}@{ref}"
         for name, number, slug, ref in _all_references()
         if not RESOLVABLE_REF_PATTERN.fullmatch(ref)
     ]
 
-    assert unresolvable == [], (
-        "These action references are neither a `v`-prefixed tag nor a commit SHA, so the job fails "
-        f"at `Set up job` before any step runs: {unresolvable}. See issue #227."
+    assert malformed == [], (
+        "These action references are neither a `v`-prefixed tag nor a commit SHA. A bare version "
+        "cannot resolve at all; a branch resolves but is unpinned, so the action can change "
+        f"under the workflow with no commit: {malformed}. See issue #227."
     )
 
 
@@ -133,3 +145,16 @@ def test_the_trivy_reference_matches_the_sibling_that_demonstrably_works() -> No
     match = re.search(r"aquasecurity/trivy-action@(\S+)", release)
     assert match is not None, "The vulnerability scan no longer references trivy-action."
     assert match.group(1) == "v0.36.0", match.group(1)
+
+
+def test_the_form_check_accepts_a_well_formed_reference_that_does_not_exist() -> None:
+    """Pins the limit of this guard so nobody reads it as more than it is.
+
+    `v9.99.0` is a `v`-prefixed tag and passes. It does not exist. A deleted or renamed tag behaves
+    the same way, and the job would still fail at `Set up job` - which is the class this guard does
+    NOT close. Recorded as a passing assertion rather than a comment, so the boundary is checked
+    rather than described.
+    """
+
+    assert RESOLVABLE_REF_PATTERN.fullmatch("v9.99.0") is not None
+    assert RESOLVABLE_REF_PATTERN.fullmatch("v0.0.0-does-not-exist") is not None
