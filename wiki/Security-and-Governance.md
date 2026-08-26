@@ -89,23 +89,29 @@ Release images are governed by the same security posture as runtime configuratio
 1. CI is the only image-push path, through `.github/workflows/image-release.yml`;
 2. images are tagged with the Git SHA and labeled with commit, branch/ref, service version, build
    timestamp, repository URL, image digest field, and CI run ID;
-3. the release workflow builds locally, generates SBOM evidence, and completes a blocking
-   Trivy HIGH/CRITICAL vulnerability scan before registry authentication or image publication;
+3. the release workflow builds locally, generates SBOM plus complete HIGH/CRITICAL SARIF evidence,
+   and completes a blocking scan for fixable HIGH/CRITICAL findings before registry authentication
+   or image publication;
 4. only a scan-passing image is pushed, after which the registry digest is signed, attested, and
    recorded in `image-release-manifest.json`;
 5. Kubernetes and Helm manifests must deploy by `image@sha256:<digest>`;
 6. environment promotion must reuse the same digest instead of rebuilding per environment;
 7. Docker build arguments and environment declarations must not carry secret-like names or values;
 8. the production `runtime` target installs the package non-editably from a separate builder stage,
-   runs as the non-root `lotus` user at UID/GID `10001`, excludes repository `scripts/`, copies the
-   governed domain-data-product declarations beneath `LOTUS_REPO_ROOT=/app`, and declares a
-   `/health/ready` container healthcheck.
+   applies current operating-system security updates, runs as the non-root `lotus` user at UID/GID
+   `10001`, excludes repository `scripts/`, copies the governed domain-data-product declarations
+   beneath `LOTUS_REPO_ROOT=/app`, and declares a `/health/ready` container healthcheck.
 
 `/version` exposes the runtime service version and the same source/build/image/CI metadata expected
 on the released image. `make image-supply-chain-gate` is the local and CI guard for this contract,
 including the enforced scan-before-publication sequence and hardened runtime-target contract. The
 deployable runtime image installs runtime dependencies only and rejects dev tooling during the Docker
 build if pytest, ruff, mypy, bandit, deptry, radon, vulture, or pre-commit are present.
+
+The blocking scan uses `ignore-unfixed: true` only after the full SARIF inventory is written. This
+keeps every newly fixable HIGH/CRITICAL finding release-blocking while retaining visibility of Debian
+base-image findings that have no published remediation. The posture is owned by `lotus-risk`
+maintainers, expires on 2026-09-30, and must be renewed only from a fresh image scan.
 
 ## Upstream Boundary Discipline
 

@@ -63,6 +63,7 @@ def test_dockerfile_uses_hardened_runtime_target_without_dev_extra() -> None:
     assert "AS builder" in dockerfile
     assert "AS runtime" in dockerfile
     assert "pip install --prefix=/install ." in dockerfile
+    assert "apt-get upgrade --yes" in dockerfile
     assert " -e " not in dockerfile
     assert "COPY scripts" not in dockerfile
     assert "COPY contracts/domain-data-products ./contracts/domain-data-products" in dockerfile
@@ -220,6 +221,9 @@ def test_image_release_scans_before_registry_authentication_and_publication() ->
     assert validate_release_publication_order(workflow, workflow_path) == []
     assert "push: false" in workflow
     assert "load: true" in workflow
+    assert "Generate complete vulnerability inventory" in workflow
+    assert 'exit-code: "0"' in workflow
+    assert "ignore-unfixed: true" in workflow
     assert 'exit-code: "1"' in workflow
     assert workflow.index("- name: Vulnerability scan") < workflow.index(
         "- name: Push immutable image after scan"
@@ -257,6 +261,21 @@ def test_image_release_contract_rejects_build_time_publication(tmp_path: Path) -
     issues = validate_ci_image_release_workflow(workflow_path)
 
     assert f"{workflow_path}: build must not publish before the vulnerability scan" in issues
+
+
+def test_image_release_contract_rejects_unactionable_blocking_scan(tmp_path: Path) -> None:
+    workflow_path = tmp_path / "image-release.yml"
+    current = Path(".github/workflows/image-release.yml").read_text(encoding="utf-8")
+    workflow_path.write_text(
+        current.replace("          ignore-unfixed: true\n", ""),
+        encoding="utf-8",
+    )
+
+    issues = validate_ci_image_release_workflow(workflow_path)
+
+    assert (
+        f"{workflow_path}: blocking scan must ignore only vulnerabilities without a fix" in issues
+    )
 
 
 def test_image_release_contract_rejects_digest_lookup_by_mutable_tag(tmp_path: Path) -> None:
