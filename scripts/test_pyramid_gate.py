@@ -77,6 +77,27 @@ def _collect_count(path: str) -> int:
     return int(match.group(1))
 
 
+def _headroom(policy: BucketPolicy, count: int, total: int) -> tuple[int, int]:
+    """Tests that can still be added before this bucket breaches each bound.
+
+    Both bounds move as the suite grows, so neither is a simple subtraction:
+
+        floor   - adding to the OTHER buckets dilutes this one:
+                  count / (total + n) >= min   ->   n <= count/min - total
+        ceiling - adding to THIS bucket concentrates it:
+                  (count + n) / (total + n) <= max  ->  n <= (max*total - count) / (1 - max)
+
+    Published on every run, not only on failure. `lotus-risk` sat two unit tests away from breaching
+    two floors at once and nothing said so - the gate printed three green percentages and gave no
+    indication that the next routine change would turn it red. A ratio near its bound is not
+    visible as a number; it is only visible as a distance. See issue #220.
+    """
+
+    to_floor = math.floor(count / policy.min_ratio - total)
+    to_ceiling = math.floor((policy.max_ratio * total - count) / (1 - policy.max_ratio))
+    return max(0, to_floor), max(0, to_ceiling)
+
+
 def _rounded_away_from(percent: float, *, below_bound: bool) -> str:
     """Render `percent` so it never crosses the bound it failed.
 
@@ -148,9 +169,12 @@ def main() -> int:
     for policy in BUCKET_POLICIES:
         count = counts[policy.name]
         percent = count / total * 100
+        to_floor, to_ceiling = _headroom(policy, count, total)
         print(
             f"{policy.name}: {count} product tests ({percent:.2f}%) "
-            f"target {policy.min_ratio * 100:.0f}%..{policy.max_ratio * 100:.0f}%"
+            f"target {policy.min_ratio * 100:.0f}%..{policy.max_ratio * 100:.0f}% "
+            f"| headroom: {to_floor} elsewhere before the floor, "
+            f"{to_ceiling} here before the ceiling"
         )
         if not policy.min_ratio <= count / total <= policy.max_ratio:
             failed = True

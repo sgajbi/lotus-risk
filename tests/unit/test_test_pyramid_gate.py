@@ -225,3 +225,81 @@ def test_the_gate_fails_when_a_configured_bucket_path_is_missing() -> None:
 
     assert "Configured test bucket paths are missing" in source
     assert "No product tests collected." in source
+
+
+# A tree that satisfies every bound, so headroom exists in both directions for each bucket. These
+# are the counts this repository measures today; the exactness properties below are about the
+# arithmetic, not about these particular numbers.
+MEASURED_COUNTS = {"unit": 582, "integration": 128, "e2e": 26}
+
+
+def test_headroom_is_published_on_every_run_not_only_on_failure() -> None:
+    """A ratio near its bound is not visible as a number, only as a distance - issue #220."""
+
+    completed = subprocess.run(
+        [sys.executable, str(GATE)], cwd=ROOT, capture_output=True, text=True, check=False
+    )
+
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    for bucket in ("unit", "integration", "e2e"):
+        line = next(row for row in completed.stdout.splitlines() if row.startswith(bucket + ":"))
+        assert "headroom:" in line, line
+        assert "before the floor" in line and "before the ceiling" in line, line
+
+
+def test_headroom_to_the_floor_is_exact() -> None:
+    """One more than the reported headroom must actually breach, and the headroom itself must not."""
+
+    from scripts.test_pyramid_gate import BUCKET_POLICIES, _headroom
+
+    # Each bucket measured against its own count. Using one bucket's count for all three would put
+    # unit below its floor and e2e above its ceiling, where the exactness property does not apply
+    # because there is no headroom to be exact about.
+    total = sum(MEASURED_COUNTS.values())
+    for policy in BUCKET_POLICIES:
+        count = MEASURED_COUNTS[policy.name]
+        to_floor, _ = _headroom(policy, count, total)
+        assert to_floor > 0, (policy.name, to_floor)
+        assert count / (total + to_floor) >= policy.min_ratio, (policy.name, to_floor)
+        assert count / (total + to_floor + 1) < policy.min_ratio, (policy.name, to_floor)
+
+
+def test_headroom_to_the_ceiling_is_exact() -> None:
+    from scripts.test_pyramid_gate import BUCKET_POLICIES, _headroom
+
+    total = sum(MEASURED_COUNTS.values())
+    for policy in BUCKET_POLICIES:
+        count = MEASURED_COUNTS[policy.name]
+        _, to_ceiling = _headroom(policy, count, total)
+        assert to_ceiling > 0, (policy.name, to_ceiling)
+        assert (count + to_ceiling) / (total + to_ceiling) <= policy.max_ratio, policy.name
+        assert (count + to_ceiling + 1) / (total + to_ceiling + 1) > policy.max_ratio, policy.name
+
+
+def test_the_state_that_produced_this_issue_reports_two() -> None:
+    """The incident, pinned to a number.
+
+    On `39514f39` the suite was unit 708 / integration 130 / e2e 26, total 864. Both the 15% and 3%
+    floors breach at total 867, so the repository could accept exactly two more tests of any kind
+    before CI turned red - and the gate's output said only `15.05%` and `3.01%`. PR #219 added four.
+    """
+
+    from scripts.test_pyramid_gate import BUCKET_POLICIES, _headroom
+
+    integration = next(policy for policy in BUCKET_POLICIES if policy.name == "integration")
+    e2e = next(policy for policy in BUCKET_POLICIES if policy.name == "e2e")
+
+    assert _headroom(integration, 130, 864)[0] == 2
+    assert _headroom(e2e, 26, 864)[0] == 2
+
+
+def test_headroom_never_reports_a_negative_distance() -> None:
+    """A bucket already below its floor has no headroom, not negative headroom."""
+
+    from scripts.test_pyramid_gate import BUCKET_POLICIES, _headroom
+
+    integration = next(policy for policy in BUCKET_POLICIES if policy.name == "integration")
+    to_floor, to_ceiling = _headroom(integration, 1, 1000)
+
+    assert to_floor == 0
+    assert to_ceiling >= 0
