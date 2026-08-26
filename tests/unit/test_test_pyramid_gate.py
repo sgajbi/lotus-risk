@@ -32,8 +32,52 @@ pytestmark = pytest.mark.governance
 ROOT = Path(__file__).resolve().parents[2]
 GATE = ROOT / "scripts" / "test_pyramid_gate.py"
 
-MARKER = "pytestmark = pytest.mark.governance"
+MARKER_NAME = "governance"
 PRODUCT_PACKAGE = "app"
+
+
+def _is_governance_mark(node: ast.expr) -> bool:
+    """Match `pytest.mark.governance` as an expression, not as text."""
+
+    return (
+        isinstance(node, ast.Attribute)
+        and node.attr == MARKER_NAME
+        and isinstance(node.value, ast.Attribute)
+        and node.value.attr == "mark"
+        and isinstance(node.value.value, ast.Name)
+        and node.value.value.id == "pytest"
+    )
+
+
+def _declares_governance_marker(module: Path) -> bool:
+    """Whether pytest will actually apply the marker, not whether the text appears.
+
+    A substring search over the source passes when the marker text sits in a comment, a docstring
+    or an unrelated string constant, so a module that merely *mentions* the marker would satisfy
+    the completeness guard while pytest never deselects it. It also rejects valid forms: an
+    annotated assignment, or a list of markers.
+
+    Reading the module-level `pytestmark` binding from the AST answers the question that matters:
+    is this module actually marked.
+    """
+
+    tree = ast.parse(module.read_text(encoding="utf-8"))
+    for node in tree.body:
+        if isinstance(node, ast.AnnAssign):
+            targets: list[ast.expr] = [node.target]
+        elif isinstance(node, ast.Assign):
+            targets = list(node.targets)
+        else:
+            continue
+        if not any(isinstance(t, ast.Name) and t.id == "pytestmark" for t in targets):
+            continue
+        value = node.value
+        if value is None:
+            continue
+        candidates = list(value.elts) if isinstance(value, ast.List | ast.Tuple) else [value]
+        if any(_is_governance_mark(candidate) for candidate in candidates):
+            return True
+    return False
 
 
 def _imports_product_code(module: Path) -> bool:
@@ -51,14 +95,36 @@ def test_unit_modules_that_never_touch_product_code_declare_the_marker() -> None
     unmarked = [
         module.relative_to(ROOT).as_posix()
         for module in sorted((ROOT / "tests" / "unit").rglob("test_*.py"))
-        if not _imports_product_code(module) and MARKER not in module.read_text(encoding="utf-8")
+        if not _imports_product_code(module) and not _declares_governance_marker(module)
     ]
 
     assert unmarked == [], (
         "These unit modules never import product code, so they are not product tests, but they do "
-        f"not declare `{MARKER}`. They will be counted in the product pyramid and squeeze the "
-        f"integration and e2e ratios: {unmarked}. See issue #220."
+        f"not bind `pytestmark` to `pytest.mark.{MARKER_NAME}`. They will be counted in the "
+        f"product pyramid and squeeze the integration and e2e ratios: {unmarked}. See issue #220."
     )
+
+
+MARKER_DECLARATION_CASES = {
+    "pytestmark = pytest.mark.governance": True,
+    "pytestmark = [pytest.mark.governance]": True,
+    "pytestmark = (pytest.mark.governance,)": True,
+    "pytestmark: object = pytest.mark.governance": True,
+    "pytestmark = [pytest.mark.slow, pytest.mark.governance]": True,
+    "# pytestmark = pytest.mark.governance": False,
+    "NOTE = " + chr(34) + "pytestmark = pytest.mark.governance" + chr(34): False,
+    "other = pytest.mark.governance": False,
+    "pytestmark = pytest.mark.slow": False,
+}
+
+
+def test_the_marker_check_is_structural_rather_than_a_substring_match(tmp_path: Path) -> None:
+    """A mention of the marker must not count as declaring it, and valid forms must count."""
+
+    for source, expected in MARKER_DECLARATION_CASES.items():
+        module = tmp_path / "test_case.py"
+        module.write_text("import pytest" + chr(10) * 2 + source + chr(10), encoding="utf-8")
+        assert _declares_governance_marker(module) is expected, source
 
 
 def test_the_marker_is_registered_so_a_typo_is_not_silently_ignored() -> None:
@@ -135,8 +201,21 @@ def test_the_failure_message_names_the_side_and_the_actionable_count() -> None:
 
     assert "2.9953%" in message
     assert "below the 3% floor" in message
-    assert "at least 27 tests" in message
     assert "not in [" not in message
+    assert "the e2e bucket" in message
+
+    # The under-shoot case the naive form got wrong: 14 of 100 against a 15% floor. Reporting
+    # `min * total` advises 15, and 15/101 is 14.85% - still failing. The total moves with the
+    # bucket, so two tests are needed.
+    integration = next(policy for policy in BUCKET_POLICIES if policy.name == "integration")
+    under_shooting = _failure_message(integration, count=14, total=100, percent=14.0)
+    assert "Adding 2 product tests" in under_shooting, under_shooting
+
+    # And the mirror: a bucket over its ceiling is cleared by growing the others, not by
+    # deleting tests, which would shrink the total and move the ratio the wrong way.
+    unit = next(policy for policy in BUCKET_POLICIES if policy.name == "unit")
+    over_ceiling = _failure_message(unit, count=86, total=100, percent=86.0)
+    assert "Adding 2 product tests to the other buckets" in over_ceiling, over_ceiling
 
 
 def test_the_gate_fails_when_a_configured_bucket_path_is_missing() -> None:
