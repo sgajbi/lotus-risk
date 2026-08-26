@@ -85,6 +85,7 @@ FORBIDDEN_TRIVY_OVERRIDE_FIELDS = (
     "docker-host",
     "ignorefile",
     "ignore-policy",
+    "ignore-status",
     "input",
     "scan-ref",
     "skip-dirs",
