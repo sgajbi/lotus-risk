@@ -93,6 +93,13 @@ FORBIDDEN_TRIVY_OVERRIDE_FIELDS = (
     "trivy-config",
     "trivyignores",
 )
+FORBIDDEN_DEFAULT_TRIVY_FILES = (
+    ".trivyignore",
+    ".trivyignore.yaml",
+    ".trivyignore.yml",
+    "trivy.yaml",
+    "trivy.yml",
+)
 
 
 def _read(path: Path) -> str:
@@ -260,6 +267,17 @@ def validate_ci_image_release_workflow(
 
     text = _read(workflow_path)
     issues: list[str] = []
+    repository_root = (
+        ROOT
+        if workflow_path.resolve() == IMAGE_RELEASE_WORKFLOW.resolve()
+        else workflow_path.parent
+    )
+    for relative_path in FORBIDDEN_DEFAULT_TRIVY_FILES:
+        if (repository_root / relative_path).exists():
+            issues.append(
+                f"{workflow_path}: repository-default Trivy policy/config file is forbidden: "
+                f"{relative_path}"
+            )
     required_terms = {
         "packages: write": "push package permission",
         "id-token: write": "keyless signing/provenance permission",

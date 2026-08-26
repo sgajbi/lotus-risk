@@ -621,6 +621,29 @@ def test_image_release_contract_rejects_legacy_ignorefile_override(
 
 
 @pytest.mark.parametrize(
+    "relative_path",
+    [".trivyignore", ".trivyignore.yaml", ".trivyignore.yml", "trivy.yaml", "trivy.yml"],
+)
+def test_image_release_contract_rejects_default_trivy_policy_files(
+    tmp_path: Path,
+    relative_path: str,
+) -> None:
+    workflow_path = tmp_path / "image-release.yml"
+    workflow_path.write_text(
+        Path(".github/workflows/image-release.yml").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    (tmp_path / relative_path).write_text("CVE-2099-0001\n", encoding="utf-8")
+
+    issues = validate_ci_image_release_workflow(workflow_path)
+
+    assert (
+        f"{workflow_path}: repository-default Trivy policy/config file is forbidden: "
+        f"{relative_path}"
+    ) in issues
+
+
+@pytest.mark.parametrize(
     ("old", "new"),
     [
         ("        if: always()\n", "        if: false\n"),
