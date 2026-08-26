@@ -78,6 +78,16 @@ IGNORED_REPOSITORY_SCAN_DIRS = {
     "lotus-platform",
 }
 
+FORBIDDEN_TRIVY_OVERRIDE_FIELDS = (
+    "ignore-policy",
+    "input",
+    "scan-ref",
+    "skip-dirs",
+    "skip-files",
+    "trivy-config",
+    "trivyignores",
+)
+
 
 def _read(path: Path) -> str:
     return path.read_text(encoding="utf-8")
@@ -226,6 +236,14 @@ def _workflow_field_value(block: str, field: str) -> str | None:
     return match.group("value").strip().strip("\"'")
 
 
+def _trivy_override_fields(block: str) -> list[str]:
+    return [
+        field
+        for field in FORBIDDEN_TRIVY_OVERRIDE_FIELDS
+        if _workflow_field_value(block, field) is not None
+    ]
+
+
 def validate_ci_image_release_workflow(
     workflow_path: Path = IMAGE_RELEASE_WORKFLOW,
     *,
@@ -287,6 +305,11 @@ def validate_ci_image_release_workflow(
         issues.append(
             f"{workflow_path}: complete HIGH/CRITICAL vulnerability inventory must remain visible"
         )
+    if overrides := _trivy_override_fields(inventory):
+        issues.append(
+            f"{workflow_path}: complete vulnerability inventory must not use scan overrides: "
+            f"{', '.join(overrides)}"
+        )
 
     inventory_upload = _workflow_step_block(text, "Upload vulnerability scan results")
     if (
@@ -309,6 +332,11 @@ def validate_ci_image_release_workflow(
     ):
         issues.append(
             f"{workflow_path}: application-library HIGH/CRITICAL findings must be blocking"
+        )
+    if overrides := _trivy_override_fields(library_gate):
+        issues.append(
+            f"{workflow_path}: application-library scan must not use scan overrides: "
+            f"{', '.join(overrides)}"
         )
     if _workflow_field_value(library_gate, "ignore-unfixed") is not None:
         issues.append(f"{workflow_path}: unfixed exception must not apply to application libraries")
@@ -340,6 +368,11 @@ def validate_ci_image_release_workflow(
         issues.append(f"{workflow_path}: OS vulnerability scan failure must block publication")
     if _workflow_field_value(os_gate, "if") is not None:
         issues.append(f"{workflow_path}: OS vulnerability scan must run unconditionally")
+    if overrides := _trivy_override_fields(os_gate):
+        issues.append(
+            f"{workflow_path}: OS vulnerability scan must not use scan overrides: "
+            f"{', '.join(overrides)}"
+        )
 
     expiry_match = UNFIXED_EXCEPTION_EXPIRY_PATTERN.search(text)
     if expiry_match is None:

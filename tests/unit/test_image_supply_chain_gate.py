@@ -528,6 +528,41 @@ def test_image_release_contract_rejects_nonimage_scan_mode(
     ("step_name", "expected_issue"),
     [
         (
+            "Generate complete vulnerability inventory",
+            "complete vulnerability inventory must not use scan overrides: trivyignores",
+        ),
+        (
+            "Block application-library vulnerabilities",
+            "application-library scan must not use scan overrides: trivyignores",
+        ),
+        (
+            "Vulnerability scan",
+            "OS vulnerability scan must not use scan overrides: trivyignores",
+        ),
+    ],
+)
+def test_image_release_contract_rejects_vulnerability_suppression_overrides(
+    tmp_path: Path,
+    step_name: str,
+    expected_issue: str,
+) -> None:
+    workflow_path = tmp_path / "image-release.yml"
+    current = Path(".github/workflows/image-release.yml").read_text(encoding="utf-8")
+    marker = f"      - name: {step_name}\n"
+    workflow_path.write_text(
+        current.replace(marker, f"{marker}        trivyignores: .trivyignore\n", 1),
+        encoding="utf-8",
+    )
+
+    issues = validate_ci_image_release_workflow(workflow_path)
+
+    assert f"{workflow_path}: {expected_issue}" in issues
+
+
+@pytest.mark.parametrize(
+    ("step_name", "expected_issue"),
+    [
+        (
             "Block application-library vulnerabilities",
             "application-library scan failure must block publication",
         ),
