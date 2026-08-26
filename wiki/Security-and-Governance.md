@@ -95,13 +95,16 @@ Release images are governed by the same security posture as runtime configuratio
    recorded in `image-release-manifest.json`;
 5. Kubernetes and Helm manifests must deploy by `image@sha256:<digest>`;
 6. environment promotion must reuse the same digest instead of rebuilding per environment;
-7. Docker build arguments and environment declarations must not carry secret-like names or values.
+7. Docker build arguments and environment declarations must not carry secret-like names or values;
+8. the production `runtime` target installs the package non-editably from a separate builder stage,
+   runs as the non-root `lotus` user at UID/GID `10001`, excludes repository `scripts/`, and declares
+   a `/health/ready` container healthcheck.
 
 `/version` exposes the runtime service version and the same source/build/image/CI metadata expected
 on the released image. `make image-supply-chain-gate` is the local and CI guard for this contract,
-including the enforced scan-before-publication sequence.
-The deployable runtime image installs runtime dependencies only and rejects dev tooling during the
-Docker build if pytest, ruff, mypy, bandit, deptry, radon, vulture, or pre-commit are present.
+including the enforced scan-before-publication sequence and hardened runtime-target contract. The
+deployable runtime image installs runtime dependencies only and rejects dev tooling during the Docker
+build if pytest, ruff, mypy, bandit, deptry, radon, vulture, or pre-commit are present.
 
 ## Upstream Boundary Discipline
 

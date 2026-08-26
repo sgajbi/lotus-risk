@@ -392,7 +392,10 @@ Important validation expectations:
    tagged by Git SHA, labeled with source/build/version/CI metadata, accompanied by an SBOM, and
    scanned before registry authentication or publication. Only scan-passing images are pushed by
    `.github/workflows/image-release.yml`, then signed, attested, recorded in release-manifest
-   evidence, and promoted by digest rather than environment-specific rebuilds.
+   evidence, and promoted by digest rather than environment-specific rebuilds. `make docker-build`
+   targets the multi-stage `runtime` image by default; that target copies a non-editable package from
+   its builder, runs as `lotus` UID/GID `10001`, excludes repository scripts, and healthchecks
+   `/health/ready`.
 9. When a PR branch is refreshed, verify both the remote branch SHA and the PR-reported head SHA
    before trusting branch protection state. RFC-0002 PR #212 exposed stale `pull_request` check
    contexts after branch pushes and close/reopen refreshes; if `git ls-remote --heads origin

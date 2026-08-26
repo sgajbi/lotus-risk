@@ -9,6 +9,7 @@ BUILD_TIMESTAMP ?= $(shell python -c "from datetime import datetime, timezone; p
 REPO_URL ?= $(if $(GITHUB_REPOSITORY),$(GITHUB_SERVER_URL)/$(GITHUB_REPOSITORY),$(shell git config --get remote.origin.url 2>/dev/null || echo unknown))
 IMAGE_DIGEST ?= $(if $(LOTUS_IMAGE_DIGEST),$(LOTUS_IMAGE_DIGEST),unavailable-before-publish)
 CI_PIPELINE_RUN_ID ?= $(if $(GITHUB_RUN_ID),$(GITHUB_RUN_ID),local)
+CONTAINER_BUILD_TARGET ?= runtime
 IDEA_OPPORTUNITY_RISK_BASE_URL ?= http://localhost:8130
 IDEA_OPPORTUNITY_GENERATED_AT_UTC ?= $(BUILD_TIMESTAMP)
 IDEA_OPPORTUNITY_EVIDENCE_OUTPUT ?= output/idea-opportunity-runtime-evidence/idea-risk-runtime-evidence.json
@@ -189,6 +190,7 @@ security-audit:
 
 docker-build:
 	docker build \
+		--target "$(CONTAINER_BUILD_TARGET)" \
 		--build-arg LOTUS_GIT_COMMIT_SHA="$(GIT_COMMIT_SHA)" \
 		--build-arg LOTUS_GIT_BRANCH="$(GIT_BRANCH)" \
 		--build-arg LOTUS_SERVICE_VERSION="$(SERVICE_VERSION)" \
