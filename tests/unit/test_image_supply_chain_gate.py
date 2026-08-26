@@ -223,6 +223,7 @@ def test_image_release_scans_before_registry_authentication_and_publication() ->
     assert "push: false" in workflow
     assert "load: true" in workflow
     assert "Generate complete vulnerability inventory" in workflow
+    assert "vuln-type: os,library" in workflow
     assert 'exit-code: "0"' in workflow
     assert "ignore-unfixed: true" in workflow
     assert 'exit-code: "1"' in workflow
@@ -279,8 +280,25 @@ def test_image_release_contract_rejects_unactionable_blocking_scan(tmp_path: Pat
     issues = validate_ci_image_release_workflow(workflow_path)
 
     assert (
-        f"{workflow_path}: blocking scan must ignore only vulnerabilities without a fix" in issues
+        f"{workflow_path}: OS blocking scan must ignore only vulnerabilities without a fix"
+        in issues
     )
+
+
+def test_image_release_contract_rejects_nonblocking_os_scan(tmp_path: Path) -> None:
+    workflow_path = tmp_path / "image-release.yml"
+    current = Path(".github/workflows/image-release.yml").read_text(encoding="utf-8")
+    workflow_path.write_text(
+        current.replace(
+            '          ignore-unfixed: true\n          exit-code: "1"',
+            '          ignore-unfixed: true\n          exit-code: "0"',
+        ),
+        encoding="utf-8",
+    )
+
+    issues = validate_ci_image_release_workflow(workflow_path)
+
+    assert f"{workflow_path}: fixable OS HIGH/CRITICAL findings must be blocking" in issues
 
 
 def test_image_release_contract_rejects_library_unfixed_exception(tmp_path: Path) -> None:
