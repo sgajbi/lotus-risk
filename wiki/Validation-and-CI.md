@@ -48,6 +48,21 @@ The repo-native commands are designed to map to those lanes directly.
 - `make openapi-gate` - generated schema quality
 - `make openapi-artifact-gate` - generated artifact policy
 - `make api-vocabulary-gate` - API vocabulary inventory validation
+- `make no-alias-gate` - rejects Pydantic field aliases and `by_alias` serialisation under `src/`,
+  so the wire contract is the field name and there is no second spelling of a payload
+- `make architecture-gate` - import-linter contracts from `.importlinter`, including that the domain
+  and service layers stay framework independent and never import FastAPI
+- `make github-actions-runtime-gate` - workflow action runtime posture, and reference forms that
+  cannot resolve. This runs *first* in both `check` and `ci`. It was added after
+  `aquasecurity/trivy-action@0.32.0` - a tag that does not exist - sat in `image-release.yml` and
+  broke the release supply chain before any step ran; see issue #227
+- `make source-size-gate` - fails when any module grows past the governed line count
+- `make complexity-gate` - cyclomatic complexity and maintainability report
+- `make dead-code-gate` - vulture findings at 80% confidence
+- `make dependency-hygiene-gate` - deptry findings
+- `make test-pyramid-gate` - the *product* test shape. Tests marked `pytest.mark.governance` assert
+  about the repository rather than product behaviour and are deselected, because counting them
+  distorted the shape and made the gate hostile to adding CI-contract coverage; see issue #220
 - `make test-unit` - unit suite
 - `make test-integration` - integration suite
 - `make test-e2e` - e2e suite
