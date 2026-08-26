@@ -110,9 +110,10 @@ def _validate_reference_forms(path: Path) -> list[WorkflowActionViolation]:
                 ref=ref,
                 minimum_major=0,
                 rationale=(
-                    "An action reference must be a `v`-prefixed tag or a 40-character commit SHA. "
-                    "A bare version like `0.32.0` does not resolve, and the job fails at `Set up "
-                    "job` before any step runs."
+                    "An action reference must be a `v`-prefixed tag or a 40-character commit "
+                    "SHA. A bare version like `0.32.0` does not resolve at all and the job fails "
+                    "at `Set up job` before any step runs; a branch like `main` resolves but is "
+                    "unpinned, so the action can change under the workflow with no commit."
                 ),
             )
         )
