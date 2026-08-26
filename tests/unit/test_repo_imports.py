@@ -25,15 +25,16 @@ IGNORED_GENERATED_TEST_DIRS = {"__pycache__", ".pytest_cache"}
 HTTP_ROUTE_PREFIX = re.compile(
     r"(?:^|[\s\"'])(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)\s+$", re.IGNORECASE
 )
+WEB_URL = re.compile(r"(?i:(?:[a-z][a-z0-9+.-]*:)?//[^\s\"']+)")
 
 
 def _absolute_user_home_references(text: str) -> list[str]:
     references: list[str] = []
+    url_spans = [url.span() for url in WEB_URL.finditer(text)]
     for match in ABSOLUTE_USER_HOME.finditer(text):
         preceding_text = text[: match.start()]
-        prefix_parts = preceding_text.rsplit(maxsplit=1)
-        token_prefix = prefix_parts[-1] if prefix_parts else ""
-        if "://" in token_prefix or HTTP_ROUTE_PREFIX.search(preceding_text):
+        inside_url = any(start <= match.start() < end for start, end in url_spans)
+        if inside_url or HTTP_ROUTE_PREFIX.search(preceding_text):
             continue
         references.append(match.group(0))
     return references
@@ -89,10 +90,18 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             "/home/dashboard",
             "GET /home/dashboard/stats",
             "https://example.test/root/project",
+            "//example.test/home/dashboard/stats",
         ]
     )
 
     assert _absolute_user_home_references(routes) == []
+
+
+def test_absolute_user_home_guard_does_not_let_an_adjacent_url_hide_a_path() -> None:
+    linux = "/" + "/".join(["home", "alice", "project"])
+    payload = f'{{"url":"https://example.test/api","path":"{linux}"}}'
+
+    assert _absolute_user_home_references(payload) == ["/" + "/".join(["home", "alice"])]
 
 
 def test_test_sources_do_not_disclose_absolute_user_home_paths() -> None:
