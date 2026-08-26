@@ -72,7 +72,8 @@ REQUEST_SCOPE_ROUTE_PREFIX = re.compile(
     r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
 )
 ASGI_SCOPE_ROUTE_PREFIX = re.compile(
-    r"\b(?:scope|request_scope)\s*=\s*\{[^}]*[\"']path[\"']\s*:\s*"
+    r"\b(?:scope|request_scope)\s*=\s*"
+    r"\{(?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*[\"']path[\"']\s*:\s*"
     r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
 )
 QUOTED_WEB_URL = re.compile(
@@ -205,6 +206,7 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             'Route("/home/dashboard/stats", endpoint)',
             'WebSocketRoute(path="/home/dashboard/stats", endpoint=handler)',
             'scope = {"type": "http", "path": "/home/dashboard/stats"}',
+            'scope = {"extensions": {"http.response.debug": {}}, "path": "/home/dashboard/stats"}',
             'app.add_api_route("/home/dashboard/stats", handler)',
             'app.add_api_route(path="/home/dashboard/stats", endpoint=handler)',
             'app.add_api_route(endpoint=handler, path="/home/dashboard/stats")',
