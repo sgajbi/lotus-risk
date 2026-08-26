@@ -25,7 +25,11 @@ IGNORED_GENERATED_TEST_DIRS = {"__pycache__", ".pytest_cache"}
 HTTP_ROUTE_PREFIX = re.compile(
     r"(?:^|[\s\"'])(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)\s+$", re.IGNORECASE
 )
-WEB_URL = re.compile(r"(?i:https?://[^\s\"']+|(?<![:/])//[^\s\"']+)")
+ROUTE_LITERAL_PREFIX = re.compile(
+    r"(?:\b(?:route|endpoint)(?:_path)?\s*=\s*|@\w+(?:\.\w+)*\s*\(\s*)[\"']$",
+    re.IGNORECASE,
+)
+WEB_URL = re.compile(r"(?i:https?://[^\s\"';,)\]}]+|(?<![:/])//[^\s\"';,)\]}]+)")
 
 
 def _absolute_user_home_references(text: str) -> list[str]:
@@ -34,7 +38,11 @@ def _absolute_user_home_references(text: str) -> list[str]:
     for match in ABSOLUTE_USER_HOME.finditer(text):
         preceding_text = text[: match.start()]
         inside_url = any(start <= match.start() < end for start, end in url_spans)
-        if inside_url or HTTP_ROUTE_PREFIX.search(preceding_text):
+        if (
+            inside_url
+            or HTTP_ROUTE_PREFIX.search(preceding_text)
+            or ROUTE_LITERAL_PREFIX.search(preceding_text)
+        ):
             continue
         references.append(match.group(0))
     return references
@@ -91,6 +99,8 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             "GET /home/dashboard/stats",
             "https://example.test/root/project",
             "//example.test/home/dashboard/stats",
+            'route = "/home/dashboard/stats"',
+            '@router.get("/home/dashboard/stats")',
         ]
     )
 
@@ -102,6 +112,16 @@ def test_absolute_user_home_guard_does_not_let_an_adjacent_url_hide_a_path() -> 
     payload = f'{{"url":"https://example.test/api","path":"{linux}"}}'
 
     assert _absolute_user_home_references(payload) == ["/" + "/".join(["home", "alice"])]
+
+    delimited = f"entry=https://example.test/api;{linux}"
+    assert _absolute_user_home_references(delimited) == [
+        "/" + "/".join(["home", "alice"])
+    ]
+
+    path_assignment = f'path = "{linux}"'
+    assert _absolute_user_home_references(path_assignment) == [
+        "/" + "/".join(["home", "alice"])
+    ]
 
 
 def test_absolute_user_home_guard_detects_file_uris() -> None:
