@@ -19,6 +19,16 @@ Use this first-pass sequence:
 3. `/ops`
 4. `/metadata` or `/version`
 
+## CI-Local Container Isolation
+
+Run `make ci-local-docker` for the isolated split-suite container gate and
+`make ci-local-docker-down` to remove its resources. Both commands use the same checkout-specific
+Compose project name, derived from the resolved checkout path. Cleanup affects only that CI-local
+project and must not stop or remove the product runtime started from `docker-compose.yml`.
+
+`CI_LOCAL_COMPOSE_PROJECT` is an explicit override for operators who need a different isolated
+namespace; use the same value for bring-up and cleanup.
+
 `/metadata` and `/version` expose identical service, policy, build, image, and CI provenance:
 Git commit SHA, branch/ref, build timestamp, repository URL, image digest, and CI pipeline/run ID.
 The final image digest is supplied by registry/deployment metadata through `LOTUS_IMAGE_DIGEST`;

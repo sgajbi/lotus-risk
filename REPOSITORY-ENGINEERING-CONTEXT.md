@@ -386,7 +386,9 @@ Important validation expectations:
    image-supply-chain, complexity, source-size, dependency-hygiene, dead-code, migration,
    test-pyramid, coverage, security, and Docker evidence; `ci-local` is only a split-suite coverage
    loop without Docker, while `ci-local-docker` runs that split-suite loop in an isolated container
-   when the developer Python environment is polluted by other editable Lotus apps.
+   when the developer Python environment is polluted by other editable Lotus apps. The CI-local
+   Compose project name is derived from the resolved checkout path and used symmetrically for
+   bring-up and cleanup so it cannot remove the live product runtime or collide across worktrees.
 7. GitHub Actions artifact dependencies are governed by `make github-actions-runtime-gate`, which
    fails if artifact upload/download actions drift below the Node 24 runtime majors required for
    current CI dependency posture (`actions/upload-artifact@v6`, `actions/download-artifact@v7`).
