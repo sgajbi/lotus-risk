@@ -56,6 +56,20 @@ def _gate_targets() -> set[str]:
     return reachable
 
 
+# Gate names as the wiki actually writes them: inside backticks, usually behind `make `. The
+# first version omitted the optional `make ` prefix and so matched NOTHING - 0 of 13 backticked
+# gate spellings on this page - which made the reverse check pass for every possible page
+# content, including an injected `make totally-fictional-gate`. See lotus-render#77.
+_WIKI_GATE_NAME = re.compile(r"`(?:make\s+)?([a-z0-9]+(?:-[a-z0-9]+)*-gates?)`")
+
+# Targets the wiki documents as standalone conveniences that no blocking lane invokes by name.
+# `domain-data-product-gate` is an alias for `domain-product-validate`, which `check` and `ci`
+# both run via `mesh-contract-validate` - so the validation is enforced and only the NAME is
+# absent from any failing build. The wiki entry says so explicitly; this allowance exists so
+# that statement is asserted rather than assumed, and a new entry cannot join it silently.
+DOCUMENTED_ALIASES = frozenset({"domain-data-product-gate"})
+
+
 def test_the_wiki_names_every_gate_the_blocking_lanes_run() -> None:
     wiki = WIKI.read_text(encoding="utf-8")
 
@@ -91,8 +105,20 @@ def test_the_wiki_names_no_gate_the_blocking_lanes_have_stopped_running() -> Non
     wiki = WIKI.read_text(encoding="utf-8")
     live = _gate_targets()
 
-    named_in_wiki = {token.strip("`") for token in re.findall(r"`[a-z0-9-]+-gates?`", wiki)}
-    stale = sorted(name for name in named_in_wiki if name not in live)
+    named_in_wiki = {match.group(1) for match in _WIKI_GATE_NAME.finditer(wiki)}
+
+    # The guard the first version omitted, and the reason it failed open. `_gate_targets`
+    # already asserts its own set is non-empty; the wiki-derived set had no such check, so the
+    # one side whose input format can change underneath it was the one side left unguarded.
+    assert named_in_wiki, (
+        "No gate names were found in the wiki page. Either the page stopped naming gates - "
+        "which the forward check would also catch - or this pattern stopped matching how they "
+        "are written, in which case this check asserts nothing. Both are failures."
+    )
+
+    stale = sorted(
+        name for name in named_in_wiki if name not in live and name not in DOCUMENTED_ALIASES
+    )
 
     assert stale == [], (
         "The wiki names these gates, but no blocking lane in the Makefile runs them any more. A "
