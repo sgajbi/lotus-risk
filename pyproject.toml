@@ -28,7 +28,7 @@ dev = [
   "pytest-cov==7.1.0",
   "coverage==7.15.1",
   "pandas-stubs==3.0.3.260530",
-  "pip-audit>=2.10.0",
+  "pip-audit==2.10.1",
   "bandit==1.9.4",
   "deptry==0.25.1",
   "import-linter==2.13",
