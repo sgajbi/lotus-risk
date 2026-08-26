@@ -529,6 +529,41 @@ def test_image_release_contract_rejects_nonimage_scan_mode(
     [
         (
             "Generate complete vulnerability inventory",
+            "complete HIGH/CRITICAL vulnerability inventory must remain visible",
+        ),
+        (
+            "Block application-library vulnerabilities",
+            "application-library HIGH/CRITICAL findings must be blocking",
+        ),
+        ("Vulnerability scan", "OS vulnerability gate must use the governed Trivy version"),
+    ],
+)
+def test_image_release_contract_rejects_trivy_version_drift(
+    tmp_path: Path,
+    step_name: str,
+    expected_issue: str,
+) -> None:
+    workflow_path = tmp_path / "image-release.yml"
+    current = Path(".github/workflows/image-release.yml").read_text(encoding="utf-8")
+    start = current.index(f"- name: {step_name}")
+    next_step = current.find("\n      - name:", start + 1)
+    end = len(current) if next_step < 0 else next_step
+    corrupted_step = current[start:end].replace("version: v0.70.0", "version: v0.1.0")
+    workflow_path.write_text(
+        current[:start] + corrupted_step + current[end:],
+        encoding="utf-8",
+    )
+
+    issues = validate_ci_image_release_workflow(workflow_path)
+
+    assert f"{workflow_path}: {expected_issue}" in issues
+
+
+@pytest.mark.parametrize(
+    ("step_name", "expected_issue"),
+    [
+        (
+            "Generate complete vulnerability inventory",
             "complete vulnerability inventory must not use scan overrides: trivyignores",
         ),
         (
