@@ -80,11 +80,13 @@ IGNORED_REPOSITORY_SCAN_DIRS = {
 }
 
 FORBIDDEN_TRIVY_OVERRIDE_FIELDS = (
+    "docker-host",
     "ignore-policy",
     "input",
     "scan-ref",
     "skip-dirs",
     "skip-files",
+    "skip-setup-trivy",
     "trivy-config",
     "trivyignores",
 )
@@ -303,6 +305,7 @@ def validate_ci_image_release_workflow(
         _workflow_field_value(inventory, "uses") != "aquasecurity/trivy-action@v0.36.0"
         or _workflow_field_value(inventory, "scan-type") != "image"
         or _workflow_field_value(inventory, "scanners") != "vuln"
+        or _workflow_field_value(inventory, "version") != "v0.70.0"
         or _workflow_field_value(inventory, "image-ref")
         != "${{ env.IMAGE_NAME }}:${{ github.sha }}"
         or _workflow_field_value(inventory, "format") != "sarif"
@@ -334,6 +337,7 @@ def validate_ci_image_release_workflow(
         _workflow_field_value(library_gate, "uses") != "aquasecurity/trivy-action@v0.36.0"
         or _workflow_field_value(library_gate, "scan-type") != "image"
         or _workflow_field_value(library_gate, "scanners") != "vuln"
+        or _workflow_field_value(library_gate, "version") != "v0.70.0"
         or _workflow_field_value(library_gate, "image-ref")
         != "${{ env.IMAGE_NAME }}:${{ github.sha }}"
         or _workflow_field_value(library_gate, "vuln-type") != "library"
@@ -362,6 +366,8 @@ def validate_ci_image_release_workflow(
         issues.append(f"{workflow_path}: OS vulnerability gate must use image scan mode")
     if _workflow_field_value(os_gate, "scanners") != "vuln":
         issues.append(f"{workflow_path}: OS vulnerability gate must enable vulnerability scanning")
+    if _workflow_field_value(os_gate, "version") != "v0.70.0":
+        issues.append(f"{workflow_path}: OS vulnerability gate must use the governed Trivy version")
     if _workflow_field_value(os_gate, "image-ref") != "${{ env.IMAGE_NAME }}:${{ github.sha }}":
         issues.append(f"{workflow_path}: OS vulnerability gate must scan the release image")
     if _workflow_field_value(os_gate, "vuln-type") != "os":
