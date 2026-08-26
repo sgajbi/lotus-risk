@@ -333,7 +333,10 @@ Use these commands as the primary local contract:
 `Main Releasability Gate` does not run on push. It is dispatched by
 `merged-pr-main-releasability.yml` after a pull request merges, against an immutable tag at the
 merge commit, and its first job refuses to continue unless the checked-out revision matches the
-`expected_sha` it was dispatched with.
+`expected_sha` it was dispatched with. Its final `always()` job verifies and deletes the consumed
+`main-releasability-<expected_sha>` tag without changing the gate verdict if cleanup fails. To rerun
+an older merge after reclamation, recreate that exact tag and dispatch the workflow with the same
+`expected_sha`; the rerun reclaims the temporary ref again.
 
 Three independent mechanisms could otherwise leave a `main` commit ungated, and all three are
 closed here:
