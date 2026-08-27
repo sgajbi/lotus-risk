@@ -8,9 +8,10 @@ Read in this order:
 
 1. [Overview](./Overview.md)
 2. [Architecture](./Architecture.md)
-3. [Getting Started](./Getting-Started.md)
-4. [Validation and CI](./Validation-and-CI.md)
-5. [Integrations](./Integrations.md)
+3. [API Surface](./API-Surface.md)
+4. [Getting Started](./Getting-Started.md)
+5. [Validation and CI](./Validation-and-CI.md)
+6. [Integrations](./Integrations.md)
 
 ## Current Posture
 
@@ -69,7 +70,9 @@ Use:
 6. [Security and Governance](./Security-and-Governance.md) for contract and supportability discipline,
 7. [Supported Features](./Supported-Features.md) for implementation-backed support and limits,
 8. [RFC Index](./RFC-Index.md) for local decision history,
-9. [Roadmap](./Roadmap.md) for remaining gaps and rollout posture.
+9. [Roadmap](./Roadmap.md) for remaining gaps and rollout posture,
+10. [API Surface](./API-Surface.md) for the published operations and the supportability vocabulary,
+11. [Glossary](./Glossary.md) for the risk terminology and where each metric's methodology lives.
 
 ## Core Commands
 
