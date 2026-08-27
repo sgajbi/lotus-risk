@@ -47,10 +47,20 @@ configuration, readiness, or whether upstreams are reachable.
 
 That makes it authoritative for one question and silent on another:
 
-| question | ask |
-|---|---|
-| is this workflow supported by the implementation at all? | `GET /integration/capabilities` |
-| is it usable in *this* deployment right now? | `GET /health/ready`, `GET /ops`, and the supportability block on the response itself |
+| question | ask | caveat |
+|---|---|---|
+| is this workflow supported by the implementation at all? | `GET /integration/capabilities` | static; identical in every deployment |
+| is this deployment configured for its upstreams? | `GET /health/ready`, `GET /ops` | **configured-only** — see below |
+| did *this* call actually get a usable answer? | the supportability block on the response | the only surface derived from a real attempt |
+
+`/health/ready` and `/ops` resolve dependency views from configuration plus optional status
+overrides; **neither performs a live probe.** A configured but unreachable `lotus-core` or
+`lotus-performance` still reports `ready` unless an override says otherwise. Treat them as
+configuration diagnostics, not reachability checks.
+
+That leaves the response's own supportability block as the only surface derived from an actual
+attempt — which is why reason codes such as `stale_source_observations` and `benchmark_unavailable`
+matter more here than a green readiness probe.
 
 The operating rule for downstream teams, stated in [Home](./Home.md#current-posture) and repeated
 here because it is the one most often broken:
@@ -60,8 +70,8 @@ here because it is the one most often broken:
 
 An endpoint returning `200` proves that one request shape was serviceable. It does not prove the
 workflow behind it is supported for your portfolio, your metric, or your mode. Equally, a capability
-entry does not prove the deployment can serve it today — for that, read readiness and the response's
-own supportability state.
+entry does not prove the deployment can serve it today — and readiness will not tell you either.
+Read the supportability block on the response.
 
 ## The metric vocabulary
 
