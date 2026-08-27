@@ -85,7 +85,8 @@ branched on mechanically — branch on the one belonging to the endpoint you cal
 | term | meaning |
 |---|---|
 | **supportability state** | risk calculation family: `ready`, `stale`, `degraded`, `empty`, `error`, `permission_blocked`, `unsupported` |
-| **`pending_review` / `blocked`** | scenario-pack and risk-event approval states — an evaluation can be computationally fine and still not releasable |
+| **`pending_review`** | scenario pack: a breach was detected, or applicability is pending. Risk-event cohorts: **no portfolio met the impact threshold** — an empty cohort, not an approval step. |
+| **`blocked`** | scenario pack: CIO approval not confirmed, or the pack is not applicable to the portfolio. Not emitted by the risk-event engine. |
 | **`attention`** | mandate health: the mandate warrants a look. A business signal, not a service degradation. |
 | **`empty` vs `error`** | `empty` — the calculation ran and had nothing to work on. `error` — it could not run. |
 | **`insufficient_observations`** | not enough history |
@@ -102,7 +103,7 @@ branched on mechanically — branch on the one belonging to the endpoint you cal
 | **capability publication** | `GET /integration/capabilities`, the implementation support contract. Static — identical in every deployment, so it says what exists, not what is usable right now. |
 | **endpoint matrix** | the per-endpoint support table read alongside capability publication; together they are the support contract |
 | **canonical portfolio** | `PB_SG_GLOBAL_BAL_001`, the default subject of live validation |
-| **trusted ingress** | the `X-Lotus-Trusted-Ingress` marker injected by the approved gateway; required for protected operator endpoints and writes, not for health probes |
+| **trusted ingress** | the `X-Lotus-Trusted-Ingress` marker injected by the approved gateway. Gates writes and `/ops`, `/ops/trust-telemetry`, `/metrics` — but only when `ENTERPRISE_TRUSTED_INGRESS_SECRET` is set; unset, requests are permitted without it. Never required for health probes. |
 | **draining** | the shutdown posture entered before downstream connection pools are closed |
 | **report-only gate** | a quality gate that produces evidence without failing the build. Evidence for prioritisation, not proof of readiness. |
 

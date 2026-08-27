@@ -78,12 +78,19 @@ are authored per metric under
 that directory is the authority for *how* a number is produced, and this page only says which names
 the API accepts.
 
-Three metrics require benchmark inputs — **`BETA`, `TRACKING_ERROR` and `INFORMATION_RATIO`**.
-`VAR` does not: it is computed from the portfolio series alone. Likewise, requesting `ACTIVE_RISK`
-or `TRACKING_ERROR` attribution requires benchmark returns on the stateless path and benchmark
-exposure history on the exposure-driven path. Each requirement is enforced at validation, so a
-benchmark-dependent metric cannot be computed from portfolio data alone and reported as though it
-were.
+Three metrics depend on benchmark inputs — **`BETA`, `TRACKING_ERROR` and `INFORMATION_RATIO`**.
+`VAR` does not: it is computed from the portfolio series alone.
+
+**The two surfaces handle a missing benchmark differently, and the difference is the HTTP contract:**
+
+| surface | behaviour without benchmark data |
+|---|---|
+| `POST /analytics/risk/calculate` | the request is **valid**. `benchmark_returns` defaults to empty, and each benchmark-dependent metric comes back with `degraded` supportability and reason `benchmark_unavailable` |
+| `POST /analytics/risk/historical-attribution` | requesting `ACTIVE_RISK` or `TRACKING_ERROR` attribution without benchmark returns (stateless) or benchmark exposure history (exposure-driven) is a **validation failure** |
+
+So a client calling `calculate` must read per-metric supportability rather than relying on a `4xx`
+to tell it something was missing. Neither surface computes a benchmark-dependent metric from
+portfolio data alone and reports it as though it were sound.
 
 ## Supportability vocabularies
 
@@ -107,15 +114,36 @@ portfolio and benchmark history did not overlap enough — a different fix, and 
 conversation with the data owner. `empty` and `error` differ too: `empty` means the calculation ran
 and had nothing to work on; `error` means it could not run.
 
-### Scenario pack and risk-event cohorts
+### Scenario pack
 
-`regime-scenario-pack/evaluate` and `risk-event-cohorts/evaluate` use a governance-shaped set, and
-**do not carry the reason/freshness pair above**:
+`regime-scenario-pack/evaluate` uses a governance-shaped set, and **does not carry the
+reason/freshness pair above**:
 
-`ready` · `degraded` · `pending_review` · `blocked`
+| state | emitted when |
+|---|---|
+| `ready` | evaluated with no breach and no governance obstacle |
+| `pending_review` | an otherwise-ready evaluation detected a breach, or pack applicability is pending |
+| `degraded` | evaluated with reduced confidence |
+| `blocked` | CIO approval is not confirmed, or the pack is not applicable to the portfolio |
 
-`pending_review` and `blocked` are approval states, not data-quality states — an evaluation can be
-computationally fine and still not releasable.
+Severity ordering used when aggregating is `ready` < `pending_review` < `degraded` < `blocked` —
+note that `degraded` outranks `pending_review`.
+
+### Risk-event cohorts
+
+`risk-event-cohorts/evaluate` uses the same state *type* but different semantics. Reading it as a
+governance state is the mistake to avoid:
+
+| state | emitted when | reason code |
+|---|---|---|
+| `ready` | at least one affected portfolio was identified | `RISK_EVENT_AFFECTED_COHORT_READY` |
+| `degraded` | some candidate exposure buckets were unsupported | `RISK_EVENT_PARTIAL_UNSUPPORTED_EXPOSURE_BUCKETS` |
+| `pending_review` | **no portfolio met the impact threshold** — an empty cohort | `RISK_EVENT_NO_AFFECTED_PORTFOLIOS` |
+
+`pending_review` here is not an approval step and this endpoint creates no approvals. Treat it as
+"nothing was affected, have a look at whether that is expected", and handle it as an empty result
+rather than routing it into a review workflow. `blocked` is declared by the type but is not emitted
+by the cohort engine.
 
 ### Mandate health
 
@@ -134,9 +162,12 @@ Write requests are bounded by `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES`, with
 `ENTERPRISE_INGRESS_MAX_BODY_BYTES` and `ENTERPRISE_ASGI_MAX_BODY_BYTES` required at enterprise
 startup to prove the effective external limits exist and are no larger than the in-process limit.
 
-Protected operator endpoints and write requests require the trusted-ingress marker
-(`X-Lotus-Trusted-Ingress`) injected by the approved gateway or ingress; health probes remain
-available without it. See
+The trusted-ingress marker (`X-Lotus-Trusted-Ingress`) gates write requests and the protected
+operational paths `/ops`, `/ops/trust-telemetry` and `/metrics` — **but only when
+`ENTERPRISE_TRUSTED_INGRESS_SECRET` is configured.** With the secret unset, as in default and local
+deployments, `trusted_ingress_authorized` permits the request and no marker is needed. Enterprise
+bank mode is what makes the marker mandatory, by requiring the secret. Health probes never need it.
+See
 [Security and Governance](./Security-and-Governance.md) and
 [`docs/configuration.md`](https://github.com/sgajbi/lotus-risk/blob/main/docs/configuration.md).
 
