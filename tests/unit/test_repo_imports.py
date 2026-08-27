@@ -24,7 +24,7 @@ ABSOLUTE_USER_HOME = re.compile(
     r"oot(?=/+[^/\s\"']+))"
 )
 EXACT_POSIX_USER_HOME = re.compile(
-    r"(?:/ho" r"me/+[^/\s\"']+|/Us" r"ers/+[^/\s\"']+|/r" r"oot)/?(?=$|[\s\"'])"
+    r"(?:/ho" r"me/+[^/\s\"']+|/Us" r"ers/+[^/\s\"']+|/r" r"oot)/*(?=$|[\s\"'])"
 )
 FILESYSTEM_LITERAL_PREFIX = re.compile(
     r"(?:\b(?:Path|PurePath|PurePosixPath)\s*\(\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"'][\\/]*"
@@ -122,14 +122,18 @@ def _balanced_parentheses(text: str) -> bool:
     return depth == 0 and not quote
 
 
-def _has_inline_test_client_route_context(preceding_text: str) -> bool:
+def _has_inline_http_client_route_context(preceding_text: str) -> bool:
     suffix = INLINE_TEST_CLIENT_ROUTE_SUFFIX.search(preceding_text)
     if suffix is None:
         return False
-    receiver_start = preceding_text.rfind("TestClient", 0, suffix.start())
+    receiver_candidates = [
+        (preceding_text.rfind(constructor, 0, suffix.start()), constructor)
+        for constructor in ("TestClient", "httpx.Client", "httpx.AsyncClient")
+    ]
+    receiver_start, constructor = max(receiver_candidates)
     if receiver_start < 0:
         return False
-    receiver = preceding_text[receiver_start + len("TestClient") : suffix.start() + 1]
+    receiver = preceding_text[receiver_start + len(constructor) : suffix.start() + 1]
     return receiver.startswith("(") and _balanced_parentheses(receiver)
 
 
@@ -393,7 +397,7 @@ def _absolute_user_home_references(text: str) -> list[str]:
             or ROUTE_CONSTRUCTOR_PREFIX.search(preceding_text)
             or ROUTER_PREFIX_ROUTE_PREFIX.search(preceding_text)
             or ASGI_SCOPE_ROUTE_PREFIX.search(preceding_text)
-            or _has_inline_test_client_route_context(preceding_text)
+            or _has_inline_http_client_route_context(preceding_text)
             or _has_balanced_named_route_call_context(text, match.start())
             or _has_balanced_request_scope_context(text, match.start())
             or _has_balanced_asgi_scope_context(text, match.start())
@@ -473,6 +477,7 @@ def test_absolute_user_home_guard_detects_exact_posix_home_in_path_context() -> 
     assert _absolute_user_home_references(f'os.chdir(path="{exact_home}")') == [exact_home]
     assert _absolute_user_home_references(f'os.path.exists("{exact_home}")') == [exact_home]
     assert _absolute_user_home_references(f'Path("{exact_home}/")') == [f"{exact_home}/"]
+    assert _absolute_user_home_references(f'Path("{exact_home}//")') == [f"{exact_home}//"]
     assert _absolute_user_home_references(f'Path("{doubled_path}")') == [exact_home]
     assert _absolute_user_home_references(f'open("{doubled_path}")') == [exact_home]
 
@@ -509,6 +514,8 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             'TestClient(app).get("/home/dashboard/stats")',
             'TestClient(create_app()).get("/home/dashboard/stats")',
             'TestClient(create_app(Settings())).get("/home/dashboard/stats")',
+            f'httpx.Client().get("{nested_route}")',
+            f'httpx.AsyncClient().get("{nested_route}")',
             'client.request("GET", "/home/dashboard/stats")',
             'client.request("GET", headers=HEADERS, url="/home/dashboard/stats")',
             'client.request(method="GET", url="/home/dashboard/stats")',
