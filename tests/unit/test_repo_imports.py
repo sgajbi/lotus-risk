@@ -360,11 +360,6 @@ def _has_balanced_filesystem_call_context(text: str, position: int) -> bool:
     containing_calls = [pair for pair in _parenthesis_pairs(text) if pair[0] < position < pair[1]]
     if not containing_calls:
         return False
-    opening, _ = max(containing_calls, key=lambda pair: pair[0])
-    callee = re.search(r"(?P<name>[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\s*$", text[:opening])
-    if callee is None:
-        return False
-    qualified_name = callee.group("name")
     filesystem_calls = {
         "open",
         "io.open",
@@ -378,11 +373,18 @@ def _has_balanced_filesystem_call_context(text: str, position: int) -> bool:
         "os.stat",
         "os.unlink",
     }
-    return (
-        qualified_name in filesystem_calls
-        or qualified_name.startswith("os.path.")
-        or qualified_name.startswith("shutil.")
-    )
+    for opening, _ in sorted(containing_calls, reverse=True):
+        callee = re.search(r"(?P<name>[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\s*$", text[:opening])
+        if callee is None:
+            continue
+        qualified_name = callee.group("name")
+        if (
+            qualified_name in filesystem_calls
+            or qualified_name.startswith("os.path.")
+            or qualified_name.startswith("shutil.")
+        ):
+            return True
+    return False
 
 
 def _web_url_spans(text: str) -> list[tuple[int, int]]:
@@ -514,6 +516,10 @@ def test_absolute_user_home_guard_detects_exact_posix_home_in_path_context() -> 
     assert _absolute_user_home_references(f'shutil.rmtree("{exact_home}")') == [exact_home]
     assert _absolute_user_home_references(f'shutil.copy("input", "{exact_home}")') == [exact_home]
     assert _absolute_user_home_references(f'shutil.copy(src="input", dst="{exact_home}")') == [
+        exact_home
+    ]
+    assert _absolute_user_home_references(f'open(("{exact_home}"))') == [exact_home]
+    assert _absolute_user_home_references(f'shutil.copy(src="input", dst=("{exact_home}"))') == [
         exact_home
     ]
     assert _absolute_user_home_references(f'Path("{exact_home}/")') == [f"{exact_home}/"]
