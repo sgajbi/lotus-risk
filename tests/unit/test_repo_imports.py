@@ -17,23 +17,24 @@ ABSOLUTE_USER_HOME = re.compile(
     r"(?:(?i:(?:[\\/]{2}[^:\\/\s\"']+[\\/]+(?:[^:\\/\s\"']+[\\/]+)?|[a-z]:[\\/]+)"
     r"(?:users|documents and settings)[\\/]+(?:\.[\\/]+)*"
     r"(?!\.\.(?:[\\/]+|[\s\"']))[^\\/\s\"']+)"
-    r"|/ho"
+    r"|/+ho"
     r"me/+(?:\./+)*(?!\.\.(?:/+|[\s\"']))[^/\s\"']+(?=/+[^/\s\"']+)"
-    r"|/Us"
+    r"|/+Us"
     r"ers/+(?:\./+)*(?!\.\.(?:/+|[\s\"']))[^/\s\"']+(?=/+[^/\s\"']+)"
-    r"|/r"
+    r"|/+r"
     r"oot(?=/+(?:\./+)*(?!\.\.(?:/+|[\s\"']))[^/\s\"']+))"
 )
 EXACT_POSIX_USER_HOME = re.compile(
-    r"(?:/ho"
+    r"(?:/+ho"
     r"me/+(?:\./+)*(?!\.\.(?:/+|[\s\"']))[^/\s\"']+"
-    r"|/Us"
+    r"|/+Us"
     r"ers/+(?:\./+)*(?!\.\.(?:/+|[\s\"']))[^/\s\"']+"
-    r"|/r"
+    r"|/+r"
     r"oot)/*(?=$|[\s\"'])"
 )
 FILESYSTEM_LITERAL_PREFIX = re.compile(
-    r"(?:\b(?:Path|PurePath|PurePosixPath)\s*\(\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"'][\\/]*"
+    r"(?:\b(?:(?:pathlib\.)?(?:Path|PurePath|PurePosixPath|PureWindowsPath|PosixPath|WindowsPath))"
+    r"\s*\(\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"'][\\/]*"
     r"|\b(?:open|shutil\.\w+|os\.path\.\w+|os\.(?:chdir|listdir|scandir|stat|remove|unlink|rmdir|mkdir|makedirs))"
     r"\s*\(\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"'][\\/]*"
     r"|file://)$"
@@ -369,8 +370,17 @@ def _has_balanced_filesystem_call_context(text: str, position: int) -> bool:
     filesystem_calls = {
         "open",
         "Path",
+        "PosixPath",
         "PurePath",
         "PurePosixPath",
+        "PureWindowsPath",
+        "WindowsPath",
+        "pathlib.Path",
+        "pathlib.PosixPath",
+        "pathlib.PurePath",
+        "pathlib.PurePosixPath",
+        "pathlib.PureWindowsPath",
+        "pathlib.WindowsPath",
         "io.open",
         "os.chdir",
         "os.listdir",
@@ -414,6 +424,14 @@ def _web_url_spans(text: str) -> list[tuple[int, int]]:
     return spans
 
 
+def _has_absolute_path_boundary(text: str, start: int) -> bool:
+    if start == 0 or text[start - 2 : start] in {"\\n", "\\r", "\\t"}:
+        return True
+    return (
+        text[start - 1] not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_./-"
+    )
+
+
 def _absolute_user_home_references(text: str) -> list[str]:
     references: list[str] = []
     url_spans = _web_url_spans(text)
@@ -422,6 +440,8 @@ def _absolute_user_home_references(text: str) -> list[str]:
         *((match, True) for match in EXACT_POSIX_USER_HOME.finditer(text)),
     ]
     for match, requires_filesystem_context in sorted(candidates, key=lambda item: item[0].start()):
+        if match.group(0).startswith("/") and not _has_absolute_path_boundary(text, match.start()):
+            continue
         preceding_text = text[: match.start()]
         filesystem_context = bool(
             FILESYSTEM_LITERAL_PREFIX.search(preceding_text)
@@ -518,6 +538,7 @@ def test_absolute_user_home_guard_detects_exact_posix_home_in_path_context() -> 
     single_dot_path = "/" + "/".join(["home", ".", "alice", "project"])
     root_parent_path = "/" + "/".join(["root", "..", "tmp", "data"])
     windows_parent_path = "C:" + "\\" + "\\".join(["Users", "..", "Public", "data"])
+    relative_home_path = "/".join(["fixtures", "home", "alice", "project"])
 
     assert _absolute_user_home_references(f'Path("{exact_home}")') == [exact_home]
     assert _absolute_user_home_references(f'open("{exact_home}")') == [exact_home]
@@ -532,19 +553,23 @@ def test_absolute_user_home_guard_detects_exact_posix_home_in_path_context() -> 
     ]
     assert _absolute_user_home_references(f'open(("{exact_home}"))') == [exact_home]
     assert _absolute_user_home_references(f'Path(("{exact_home}"))') == [exact_home]
+    assert _absolute_user_home_references(f'pathlib.Path(("{exact_home}"))') == [exact_home]
+    assert _absolute_user_home_references(f'PosixPath(("{exact_home}"))') == [exact_home]
     assert _absolute_user_home_references(f'shutil.copy(src="input", dst=("{exact_home}"))') == [
         exact_home
     ]
     assert _absolute_user_home_references(f'Path("{exact_home}/")') == [f"{exact_home}/"]
     assert _absolute_user_home_references(f'Path("{exact_home}//")') == [f"{exact_home}//"]
-    assert _absolute_user_home_references(f'Path("{doubled_path}")') == [exact_home]
-    assert _absolute_user_home_references(f'open("{doubled_path}")') == [exact_home]
+    doubled_home = "//" + "/".join(["home", "alice"])
+    assert _absolute_user_home_references(f'Path("{doubled_path}")') == [doubled_home]
+    assert _absolute_user_home_references(f'open("{doubled_path}")') == [doubled_home]
     assert _absolute_user_home_references(f'Path("{dot_segment_path}")') == []
     assert _absolute_user_home_references(f'Path("{single_dot_path}")') == [
         "/" + "/".join(["home", ".", "alice"])
     ]
     assert _absolute_user_home_references(f'Path("{root_parent_path}")') == []
     assert _absolute_user_home_references(f'Path(r"{windows_parent_path}")') == []
+    assert _absolute_user_home_references(f'Path("{relative_home_path}")') == []
 
 
 def test_absolute_user_home_guard_ignores_web_routes() -> None:
@@ -677,12 +702,14 @@ def test_absolute_user_home_guard_detects_file_uris() -> None:
     windows_uri = "file://" + "/" + "/".join(["C:", "Users", "alice", "project"])
 
     assert _absolute_user_home_references(f"{linux_uri} {windows_uri}") == [
-        "/" + "/".join(["home", "alice"]),
+        "///" + "/".join(["home", "alice"]),
         "/".join(["C:", "Users", "alice"]),
     ]
 
     redundant_slashes = "//" + linux_uri.removeprefix("file://")
-    assert _absolute_user_home_references(redundant_slashes) == ["/" + "/".join(["home", "alice"])]
+    assert _absolute_user_home_references(redundant_slashes) == [
+        "///" + "/".join(["home", "alice"])
+    ]
 
 
 def test_python_test_sources_use_their_declared_encoding(tmp_path: Path) -> None:
