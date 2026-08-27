@@ -15,19 +15,20 @@ ROOT = Path(__file__).resolve().parents[2]
 TESTS_ROOT = ROOT / "tests"
 ABSOLUTE_USER_HOME = re.compile(
     r"(?:(?i:(?:[\\/]{2}[^:\\/\s\"']+[\\/]+|[a-z]:[\\/]+)"
-    r"(?:users|documents and settings)[\\/]+[^\\/\s\"']+)"
+    r"(?:users|documents and settings)[\\/]+(?:\.[\\/]+)*"
+    r"(?!\.\.(?:[\\/]+|[\s\"']))[^\\/\s\"']+)"
     r"|/ho"
-    r"me/+(?!\.{1,2}(?:/+|[\s\"']))[^/\s\"']+(?=/+[^/\s\"']+)"
+    r"me/+(?:\./+)*(?!\.\.(?:/+|[\s\"']))[^/\s\"']+(?=/+[^/\s\"']+)"
     r"|/Us"
-    r"ers/+(?!\.{1,2}(?:/+|[\s\"']))[^/\s\"']+(?=/+[^/\s\"']+)"
+    r"ers/+(?:\./+)*(?!\.\.(?:/+|[\s\"']))[^/\s\"']+(?=/+[^/\s\"']+)"
     r"|/r"
-    r"oot(?=/+[^/\s\"']+))"
+    r"oot(?=/+(?:\./+)*(?!\.\.(?:/+|[\s\"']))[^/\s\"']+))"
 )
 EXACT_POSIX_USER_HOME = re.compile(
     r"(?:/ho"
-    r"me/+(?!\.{1,2}(?:/+|[\s\"']))[^/\s\"']+"
+    r"me/+(?:\./+)*(?!\.\.(?:/+|[\s\"']))[^/\s\"']+"
     r"|/Us"
-    r"ers/+(?!\.{1,2}(?:/+|[\s\"']))[^/\s\"']+"
+    r"ers/+(?:\./+)*(?!\.\.(?:/+|[\s\"']))[^/\s\"']+"
     r"|/r"
     r"oot)/*(?=$|[\s\"'])"
 )
@@ -493,6 +494,9 @@ def test_absolute_user_home_guard_detects_exact_posix_home_in_path_context() -> 
     exact_home = "/" + "/".join(["home", "alice"])
     doubled_path = "//" + "/".join(["home", "alice", "project"])
     dot_segment_path = "/" + "/".join(["home", "..", "tmp", "data"])
+    single_dot_path = "/" + "/".join(["home", ".", "alice", "project"])
+    root_parent_path = "/" + "/".join(["root", "..", "tmp", "data"])
+    windows_parent_path = "C:" + "\\" + "\\".join(["Users", "..", "Public", "data"])
 
     assert _absolute_user_home_references(f'Path("{exact_home}")') == [exact_home]
     assert _absolute_user_home_references(f'open("{exact_home}")') == [exact_home]
@@ -505,6 +509,11 @@ def test_absolute_user_home_guard_detects_exact_posix_home_in_path_context() -> 
     assert _absolute_user_home_references(f'Path("{doubled_path}")') == [exact_home]
     assert _absolute_user_home_references(f'open("{doubled_path}")') == [exact_home]
     assert _absolute_user_home_references(f'Path("{dot_segment_path}")') == []
+    assert _absolute_user_home_references(f'Path("{single_dot_path}")') == [
+        "/" + "/".join(["home", ".", "alice"])
+    ]
+    assert _absolute_user_home_references(f'Path("{root_parent_path}")') == []
+    assert _absolute_user_home_references(f'Path(r"{windows_parent_path}")') == []
 
 
 def test_absolute_user_home_guard_ignores_web_routes() -> None:
