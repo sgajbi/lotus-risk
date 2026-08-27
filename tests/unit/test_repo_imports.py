@@ -83,10 +83,6 @@ ROUTER_PREFIX_ROUTE_PREFIX = re.compile(
     r"\b(?:APIRouter|\w+(?:\.\w+)*\.include_router)\s*\("
     r"(?:[^()]|\([^()]*\))*\bprefix\s*=\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
 )
-REQUEST_SCOPE_ROUTE_PREFIX = re.compile(
-    r"\bRequest\s*\((?:[^()]|\([^()]*\))*[\"']path[\"']\s*:\s*"
-    r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
-)
 ASGI_SCOPE_ROUTE_PREFIX = re.compile(
     r"\b(?:scope|request_scope)\s*=\s*"
     r"\{(?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*[\"']path[\"']\s*:\s*"
@@ -390,14 +386,12 @@ def _absolute_user_home_references(text: str) -> list[str]:
         inside_url = not filesystem_context and any(
             start <= match.start() < end for start, end in url_spans
         )
-        request_scope_route = REQUEST_SCOPE_ROUTE_PREFIX.search(preceding_text)
         if (
             inside_url
             or HTTP_ROUTE_PREFIX.search(preceding_text)
             or ROUTE_LITERAL_PREFIX.search(preceding_text)
             or ROUTE_CONSTRUCTOR_PREFIX.search(preceding_text)
             or ROUTER_PREFIX_ROUTE_PREFIX.search(preceding_text)
-            or request_scope_route
             or ASGI_SCOPE_ROUTE_PREFIX.search(preceding_text)
             or _has_inline_test_client_route_context(preceding_text)
             or _has_balanced_named_route_call_context(text, match.start())
