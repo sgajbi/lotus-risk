@@ -47,6 +47,6 @@ Use these sources when a support claim is questioned:
 
 ## Read Next
 
-1. [Integrations](./Integrations.md) for downstream preservation rules.
-2. [Operations Runbook](./Operations-Runbook.md) for support and readiness checks.
-3. [Roadmap](./Roadmap.md) for planned work and known evidence gaps.
+1. [Integrations](Integrations) for downstream preservation rules.
+2. [Operations Runbook](Operations-Runbook) for support and readiness checks.
+3. [Roadmap](Roadmap) for planned work and known evidence gaps.

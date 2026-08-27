@@ -108,6 +108,6 @@ semantic preservation:
 
 ## Read Next
 
-1. use [Integrations](./Integrations.md) for the downstream contract view,
-2. use [Operations Runbook](./Operations-Runbook.md) for runtime behavior,
-3. use [Security and Governance](./Security-and-Governance.md) for why these boundaries are strict.
+1. use [Integrations](Integrations) for the downstream contract view,
+2. use [Operations Runbook](Operations-Runbook) for runtime behavior,
+3. use [Security and Governance](Security-and-Governance) for why these boundaries are strict.

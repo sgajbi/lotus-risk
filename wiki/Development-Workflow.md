@@ -103,6 +103,6 @@ Update docs in the same slice when:
 
 ## Read Next
 
-1. use [Validation and CI](./Validation-and-CI.md) for the gate details,
-2. use [RFC Index](./RFC-Index.md) when work maps to a local RFC family,
-3. use [Integrations](./Integrations.md) when downstream contract semantics are involved.
+1. use [Validation and CI](Validation-and-CI) for the gate details,
+2. use [RFC Index](RFC-Index) when work maps to a local RFC family,
+3. use [Integrations](Integrations) when downstream contract semantics are involved.

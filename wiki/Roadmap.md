@@ -90,6 +90,6 @@ truthfully say about enterprise readiness.
 
 ## Read Next
 
-1. use [RFC Index](./RFC-Index.md) for the local decision inventory,
-2. use [Integrations](./Integrations.md) to see how roadmap gaps affect downstream consumers,
-3. use [Security and Governance](./Security-and-Governance.md) for why these limits stay explicit.
+1. use [RFC Index](RFC-Index) for the local decision inventory,
+2. use [Integrations](Integrations) to see how roadmap gaps affect downstream consumers,
+3. use [Security and Governance](Security-and-Governance) for why these limits stay explicit.

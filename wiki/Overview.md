@@ -98,7 +98,7 @@ That is the pattern this repo should keep following:
 
 ## Read Next
 
-1. use [Architecture](./Architecture.md) for code and endpoint shape,
-2. use [Integrations](./Integrations.md) for downstream contract rules,
-3. use [Supported Features](./Supported-Features.md) for current support and limitations,
-4. use [Roadmap](./Roadmap.md) for remaining rollout and evidence gaps.
+1. use [Architecture](Architecture) for code and endpoint shape,
+2. use [Integrations](Integrations) for downstream contract rules,
+3. use [Supported Features](Supported-Features) for current support and limitations,
+4. use [Roadmap](Roadmap) for remaining rollout and evidence gaps.

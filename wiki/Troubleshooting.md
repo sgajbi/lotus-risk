@@ -84,6 +84,6 @@ style rule.
 
 ## Read Next
 
-1. use [Validation and CI](./Validation-and-CI.md) for the gate meanings,
-2. use [Operations Runbook](./Operations-Runbook.md) for runtime and upstream checks,
-3. use [Integrations](./Integrations.md) when the failure is really a downstream contract issue.
+1. use [Validation and CI](Validation-and-CI) for the gate meanings,
+2. use [Operations Runbook](Operations-Runbook) for runtime and upstream checks,
+3. use [Integrations](Integrations) when the failure is really a downstream contract issue.

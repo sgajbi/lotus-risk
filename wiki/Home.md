@@ -6,12 +6,12 @@
 
 Read in this order:
 
-1. [Overview](./Overview.md)
-2. [Architecture](./Architecture.md)
-3. [API Surface](./API-Surface.md)
-4. [Getting Started](./Getting-Started.md)
-5. [Validation and CI](./Validation-and-CI.md)
-6. [Integrations](./Integrations.md)
+1. [Overview](Overview)
+2. [Architecture](Architecture)
+3. [API Surface](API-Surface)
+4. [Getting Started](Getting-Started)
+5. [Validation and CI](Validation-and-CI)
+6. [Integrations](Integrations)
 
 ## Current Posture
 
@@ -62,17 +62,17 @@ It does not own:
 
 Use:
 
-1. [Getting Started](./Getting-Started.md) for local bring-up,
-2. [Development Workflow](./Development-Workflow.md) for the repo working loop,
-3. [Validation and CI](./Validation-and-CI.md) for gate meanings,
-4. [Operations Runbook](./Operations-Runbook.md) for health, readiness, and local upstreams,
-5. [Integrations](./Integrations.md) for gateway/downstream contract rules,
-6. [Security and Governance](./Security-and-Governance.md) for contract and supportability discipline,
-7. [Supported Features](./Supported-Features.md) for implementation-backed support and limits,
-8. [RFC Index](./RFC-Index.md) for local decision history,
-9. [Roadmap](./Roadmap.md) for remaining gaps and rollout posture,
-10. [API Surface](./API-Surface.md) for the published operations and the supportability vocabulary,
-11. [Glossary](./Glossary.md) for the risk terminology and where each metric's methodology lives.
+1. [Getting Started](Getting-Started) for local bring-up,
+2. [Development Workflow](Development-Workflow) for the repo working loop,
+3. [Validation and CI](Validation-and-CI) for gate meanings,
+4. [Operations Runbook](Operations-Runbook) for health, readiness, and local upstreams,
+5. [Integrations](Integrations) for gateway/downstream contract rules,
+6. [Security and Governance](Security-and-Governance) for contract and supportability discipline,
+7. [Supported Features](Supported-Features) for implementation-backed support and limits,
+8. [RFC Index](RFC-Index) for local decision history,
+9. [Roadmap](Roadmap) for remaining gaps and rollout posture,
+10. [API Surface](API-Surface) for the published operations and the supportability vocabulary,
+11. [Glossary](Glossary) for the risk terminology and where each metric's methodology lives.
 
 ## Core Commands
 

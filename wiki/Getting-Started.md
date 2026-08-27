@@ -78,6 +78,6 @@ real seeded archetype IDs and attached evidence.
 
 ## Read Next
 
-1. use [Validation and CI](./Validation-and-CI.md) for gate meanings,
-2. use [Operations Runbook](./Operations-Runbook.md) for runtime and upstream checks,
-3. use [Troubleshooting](./Troubleshooting.md) when local startup or stateful workflows misbehave.
+1. use [Validation and CI](Validation-and-CI) for gate meanings,
+2. use [Operations Runbook](Operations-Runbook) for runtime and upstream checks,
+3. use [Troubleshooting](Troubleshooting) when local startup or stateful workflows misbehave.

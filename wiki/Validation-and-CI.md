@@ -175,6 +175,6 @@ Releasability lanes.
 
 ## Read Next
 
-1. use [Development Workflow](./Development-Workflow.md) for the repo loop,
-2. use [Troubleshooting](./Troubleshooting.md) when a gate fails for a non-obvious reason,
-3. use [Operations Runbook](./Operations-Runbook.md) when the failure is really an upstream/runtime issue.
+1. use [Development Workflow](Development-Workflow) for the repo loop,
+2. use [Troubleshooting](Troubleshooting) when a gate fails for a non-obvious reason,
+3. use [Operations Runbook](Operations-Runbook) when the failure is really an upstream/runtime issue.

@@ -25,7 +25,7 @@ treating it as benchmark-dependent would make callers reject valid requests.
 
 What happens when the benchmark is missing depends on the surface: `/calculate` accepts the request
 and degrades, while historical attribution rejects it at validation. See
-[API Surface](./API-Surface.md#the-metric-vocabulary).
+[API Surface](API-Surface#the-metric-vocabulary).
 
 ## Drawdown family
 
@@ -66,7 +66,7 @@ Each has its own methodology document under `docs/methodologies/metrics/`.
 
 Stateful `ACTIVE_RISK` attribution supports `POSITION`, `SECTOR`, `ASSET_CLASS` and `ISSUER`.
 **`CUSTOM` is the one rejected dimension** on the stateful path, with an explicit validation error.
-See [API Surface](./API-Surface.md#current-limits).
+See [API Surface](API-Surface#current-limits).
 
 ## Evaluation surfaces
 
@@ -82,7 +82,7 @@ The words that say whether a number can be relied on. The risk calculation famil
 below; the scenario-pack and risk-event endpoints use `ready`/`degraded`/`pending_review`/`blocked`,
 and mandate health uses `ready`/`attention`/`unavailable`. Every set is closed, so each can be
 branched on mechanically — branch on the one belonging to the endpoint you called. See
-[API Surface](./API-Surface.md#supportability-vocabularies).
+[API Surface](API-Surface#supportability-vocabularies).
 
 | term | meaning |
 |---|---|
@@ -111,6 +111,6 @@ branched on mechanically — branch on the one belonging to the endpoint you cal
 
 ## Read next
 
-1. [API Surface](./API-Surface.md) — where these names appear in the contract
-2. [Overview](./Overview.md) — what the service owns
-3. [Mesh Data Products](./Mesh-Data-Products.md) — how risk output is published
+1. [API Surface](API-Surface) — where these names appear in the contract
+2. [Overview](Overview) — what the service owns
+3. [Mesh Data Products](Mesh-Data-Products) — how risk output is published
