@@ -37,7 +37,7 @@ FILESYSTEM_LITERAL_PREFIX = re.compile(
     r"\s*\(\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"'][\\/]*"
     r"|\b(?:open|shutil\.\w+|os\.path\.\w+|os\.(?:chdir|listdir|scandir|stat|remove|unlink|rmdir|mkdir|makedirs))"
     r"\s*\(\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"'][\\/]*"
-    r"|file://)$"
+    r"|file:)$"
 )
 IGNORED_GENERATED_TEST_DIRS = {"__pycache__", ".pytest_cache"}
 HTTP_ROUTE_PREFIX = re.compile(
@@ -321,6 +321,68 @@ def _has_balanced_named_route_call_context(text: str, position: int) -> bool:
     }
 
 
+def _has_grouped_positional_route_call_context(text: str, position: int) -> bool:
+    route_methods = {
+        "delete",
+        "get",
+        "head",
+        "options",
+        "patch",
+        "post",
+        "put",
+        "trace",
+        "websocket_connect",
+    }
+    client_receivers = {
+        "api_client",
+        "async_client",
+        "client",
+        "http_client",
+        "response_client",
+        "test_client",
+    }
+    containing_calls = [pair for pair in _parenthesis_pairs(text) if pair[0] < position < pair[1]]
+    for opening, closing in sorted(containing_calls, reverse=True):
+        callee = re.search(r"(?P<name>[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\s*$", text[:opening])
+        if callee is None:
+            continue
+        qualified_name = callee.group("name")
+        receiver, _, method = qualified_name.rpartition(".")
+        method = method.lower()
+        receiver_leaf = receiver.rpartition(".")[2].lower()
+        callee_leaf = qualified_name.rpartition(".")[2].lower()
+        if method in route_methods:
+            line_prefix = text[text.rfind("\n", 0, callee.start()) + 1 : callee.start()]
+            if (
+                receiver_leaf in client_receivers | {"httpx", "requests"}
+                or "@" in line_prefix
+                or _has_inline_http_client_receiver(text, opening, method)
+            ):
+                return True
+        if callee_leaf in {"route", "websocketroute"}:
+            return True
+        if callee_leaf == "mount" and (
+            qualified_name == "Mount" or qualified_name.lower() == "starlette.routing.mount"
+        ):
+            return True
+        if method in {
+            "add_api_route",
+            "add_api_websocket_route",
+            "add_route",
+            "add_websocket_route",
+        }:
+            return True
+        if method == "request" and receiver_leaf in client_receivers:
+            argument_text = text[opening + 1 : closing]
+            if re.search(
+                r"^\s*[\"'](?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE)[\"']",
+                argument_text,
+                re.IGNORECASE,
+            ):
+                return True
+    return False
+
+
 def _has_balanced_request_scope_context(text: str, position: int) -> bool:
     if not re.search(
         r"[\"']path[\"']\s*:\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$",
@@ -431,6 +493,12 @@ def _has_absolute_path_boundary(text: str, start: int) -> bool:
         or re.search(r"(?i:(?<![A-Za-z0-9+.:-])file:/*)$", text[:start])
     ):
         return True
+    quote = _active_quote_before(text, start)
+    if quote:
+        opening = text.rfind(quote, 0, start)
+        prefix = text[opening + len(quote) : start]
+        if prefix.startswith("/") and ".." in prefix.split("/"):
+            return True
     return (
         text[start - 1] not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_./:-"
     )
@@ -465,6 +533,7 @@ def _absolute_user_home_references(text: str) -> list[str]:
             or ASGI_SCOPE_ROUTE_PREFIX.search(preceding_text)
             or _has_inline_http_client_route_context(preceding_text)
             or _has_balanced_named_route_call_context(text, match.start())
+            or _has_grouped_positional_route_call_context(text, match.start())
             or _has_balanced_request_scope_context(text, match.start())
             or _has_balanced_asgi_scope_context(text, match.start())
         ):
@@ -544,6 +613,7 @@ def test_absolute_user_home_guard_detects_exact_posix_home_in_path_context() -> 
     windows_parent_path = "C:" + "\\" + "\\".join(["Users", "..", "Public", "data"])
     relative_home_path = "/".join(["fixtures", "home", "alice", "project"])
     relative_windows_home = "/".join(["fixtures", "C:", "Users", "alice", "project"])
+    normalized_home_path = "/" + "/".join(["tmp", "..", "home", "alice", "project"])
 
     assert _absolute_user_home_references(f'Path("{exact_home}")') == [exact_home]
     assert _absolute_user_home_references(f'open("{exact_home}")') == [exact_home]
@@ -576,6 +646,7 @@ def test_absolute_user_home_guard_detects_exact_posix_home_in_path_context() -> 
     assert _absolute_user_home_references(f'Path(r"{windows_parent_path}")') == []
     assert _absolute_user_home_references(f'Path("{relative_home_path}")') == []
     assert _absolute_user_home_references(f'Path("{relative_windows_home}")') == []
+    assert _absolute_user_home_references(f'Path("{normalized_home_path}")') == [exact_home]
 
 
 def test_absolute_user_home_guard_ignores_web_routes() -> None:
@@ -615,6 +686,8 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             f'httpx.AsyncClient().get("{nested_route}")',
             f'httpx.Client().get(headers=HEADERS, url="{nested_route}")',
             f'client.get(url=("{nested_route}"))',
+            f'client.get(("{nested_route}"))',
+            f'@app.get(("{nested_route}"))',
             'client.request("GET", "/home/dashboard/stats")',
             'client.request("GET", headers=HEADERS, url="/home/dashboard/stats")',
             'client.request(method="GET", url="/home/dashboard/stats")',
@@ -628,6 +701,7 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             f'Request({{"state": build_state(Settings()), "path": "{nested_route}"}})',
             'Route("/home/dashboard/stats", endpoint)',
             f'Route(endpoint=handler, path="{nested_route}")',
+            f'Route(("{nested_route}"), handler)',
             f'starlette.routing.Route(endpoint=handler, path="{nested_route}")',
             f'app.mount(path="{nested_route}", app=static_app)',
             f'Mount(app=static_app, path="{nested_route}")',
@@ -707,11 +781,13 @@ def test_absolute_user_home_guard_does_not_let_an_adjacent_url_hide_a_path() -> 
 def test_absolute_user_home_guard_detects_file_uris() -> None:
     linux_uri = "file://" + "/" + "/".join(["home", "alice", "project"])
     windows_uri = "file://" + "/" + "/".join(["C:", "Users", "alice", "project"])
+    exact_linux_uri = "file://" + "/" + "/".join(["home", "alice"])
 
     assert _absolute_user_home_references(f"{linux_uri} {windows_uri}") == [
         "///" + "/".join(["home", "alice"]),
         "/".join(["C:", "Users", "alice"]),
     ]
+    assert _absolute_user_home_references(exact_linux_uri) == ["///" + "/".join(["home", "alice"])]
 
     redundant_slashes = "//" + linux_uri.removeprefix("file://")
     assert _absolute_user_home_references(redundant_slashes) == [
