@@ -301,8 +301,10 @@ def _web_url_spans(text: str) -> list[tuple[int, int]]:
         quote = _active_quote_before(text, match.start())
         end = match.end()
         while end < len(text):
+            if quote and text.startswith(quote, end):
+                break
             character = text[end]
-            if character.isspace() or character == "\\" or (quote and character == quote):
+            if character.isspace() or character == "\\":
                 break
             if not quote and character in {'"', "'", ";", ",", ")", "]", "}"}:
                 break
@@ -507,6 +509,9 @@ def test_absolute_user_home_guard_does_not_let_an_adjacent_url_hide_a_path() -> 
 
     comment_apostrophe = "# don" + "'t\n" + f'values = ("https://example.test/api","{linux}")'
     assert _absolute_user_home_references(comment_apostrophe) == ["/" + "/".join(["home", "alice"])]
+
+    triple_quoted_url = 'value = """https://example.test/api""";' + f'path="{linux}"'
+    assert _absolute_user_home_references(triple_quoted_url) == ["/" + "/".join(["home", "alice"])]
 
 
 def test_absolute_user_home_guard_detects_file_uris() -> None:
