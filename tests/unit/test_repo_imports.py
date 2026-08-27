@@ -17,14 +17,19 @@ ABSOLUTE_USER_HOME = re.compile(
     r"(?:(?i:(?:[\\/]{2}[^:\\/\s\"']+[\\/]+|[a-z]:[\\/]+)"
     r"(?:users|documents and settings)[\\/]+[^\\/\s\"']+)"
     r"|/ho"
-    r"me/+[^/\s\"']+(?=/+[^/\s\"']+)"
+    r"me/+(?!\.{1,2}(?:/+|[\s\"']))[^/\s\"']+(?=/+[^/\s\"']+)"
     r"|/Us"
-    r"ers/+[^/\s\"']+(?=/+[^/\s\"']+)"
+    r"ers/+(?!\.{1,2}(?:/+|[\s\"']))[^/\s\"']+(?=/+[^/\s\"']+)"
     r"|/r"
     r"oot(?=/+[^/\s\"']+))"
 )
 EXACT_POSIX_USER_HOME = re.compile(
-    r"(?:/ho" r"me/+[^/\s\"']+|/Us" r"ers/+[^/\s\"']+|/r" r"oot)/*(?=$|[\s\"'])"
+    r"(?:/ho"
+    r"me/+(?!\.{1,2}(?:/+|[\s\"']))[^/\s\"']+"
+    r"|/Us"
+    r"ers/+(?!\.{1,2}(?:/+|[\s\"']))[^/\s\"']+"
+    r"|/r"
+    r"oot)/*(?=$|[\s\"'])"
 )
 FILESYSTEM_LITERAL_PREFIX = re.compile(
     r"(?:\b(?:Path|PurePath|PurePosixPath)\s*\(\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"'][\\/]*"
@@ -135,6 +140,20 @@ def _has_inline_http_client_route_context(preceding_text: str) -> bool:
         return False
     receiver = preceding_text[receiver_start + len(constructor) : suffix.start() + 1]
     return receiver.startswith("(") and _balanced_parentheses(receiver)
+
+
+def _has_inline_http_client_receiver(text: str, call_opening: int, method: str) -> bool:
+    method_suffix = re.search(rf"\.{re.escape(method)}\s*$", text[:call_opening])
+    if method_suffix is None:
+        return False
+    receiver_end = method_suffix.start()
+    pairs = set(_parenthesis_pairs(text))
+    for constructor in ("TestClient", "httpx.Client", "httpx.AsyncClient"):
+        constructor_start = text.rfind(constructor, 0, receiver_end)
+        constructor_opening = constructor_start + len(constructor)
+        if constructor_start >= 0 and (constructor_opening, receiver_end - 1) in pairs:
+            return True
+    return False
 
 
 def _active_quote_before(text: str, end: int) -> str:
@@ -250,7 +269,11 @@ def _has_balanced_named_route_call_context(text: str, position: int) -> bool:
         return callee_leaf == "apirouter" or method == "include_router"
 
     if named_value.group("name").lower() == "url":
-        if method in route_methods and (client_receiver or receiver_leaf in {"requests", "httpx"}):
+        if method in route_methods and (
+            client_receiver
+            or receiver_leaf in {"requests", "httpx"}
+            or _has_inline_http_client_receiver(text, opening, method)
+        ):
             return True
         if method == "request" and (client_receiver or receiver_leaf in {"", "httpx"}):
             http_method = r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE)"
@@ -469,6 +492,7 @@ def test_absolute_user_home_guard_detects_cross_platform_paths() -> None:
 def test_absolute_user_home_guard_detects_exact_posix_home_in_path_context() -> None:
     exact_home = "/" + "/".join(["home", "alice"])
     doubled_path = "//" + "/".join(["home", "alice", "project"])
+    dot_segment_path = "/" + "/".join(["home", "..", "tmp", "data"])
 
     assert _absolute_user_home_references(f'Path("{exact_home}")') == [exact_home]
     assert _absolute_user_home_references(f'open("{exact_home}")') == [exact_home]
@@ -480,6 +504,7 @@ def test_absolute_user_home_guard_detects_exact_posix_home_in_path_context() -> 
     assert _absolute_user_home_references(f'Path("{exact_home}//")') == [f"{exact_home}//"]
     assert _absolute_user_home_references(f'Path("{doubled_path}")') == [exact_home]
     assert _absolute_user_home_references(f'open("{doubled_path}")') == [exact_home]
+    assert _absolute_user_home_references(f'Path("{dot_segment_path}")') == []
 
 
 def test_absolute_user_home_guard_ignores_web_routes() -> None:
@@ -516,6 +541,7 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             'TestClient(create_app(Settings())).get("/home/dashboard/stats")',
             f'httpx.Client().get("{nested_route}")',
             f'httpx.AsyncClient().get("{nested_route}")',
+            f'httpx.Client().get(headers=HEADERS, url="{nested_route}")',
             'client.request("GET", "/home/dashboard/stats")',
             'client.request("GET", headers=HEADERS, url="/home/dashboard/stats")',
             'client.request(method="GET", url="/home/dashboard/stats")',
