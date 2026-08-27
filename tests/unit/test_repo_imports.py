@@ -14,7 +14,8 @@ pytestmark = pytest.mark.governance
 ROOT = Path(__file__).resolve().parents[2]
 TESTS_ROOT = ROOT / "tests"
 ABSOLUTE_USER_HOME = re.compile(
-    r"(?:(?i:[a-z]:[\\/]+(?:[^\\/\s\"']+[\\/]+)*\.\.[\\/]+"
+    r"(?:(?i:(?:[a-z]:|[\\/]{2}[^:\\/\s\"']+[\\/]+[^:\\/\s\"']+)[\\/]+"
+    r"(?:[^\\/\s\"']+[\\/]+)*\.\.[\\/]+"
     r"(?:users|documents and settings)[\\/]+[^\\/\s\"']+)"
     r"|(?i:(?:[\\/]{2}[^:\\/\s\"']+[\\/]+(?:[^:\\/\s\"']+[\\/]+)?|[a-z]:[\\/]+)"
     r"(?:users|documents and settings)[\\/]+(?:\.[\\/]+)*"
@@ -566,7 +567,9 @@ def _quoted_path_normalizes_to_personal_home(text: str, start: int) -> bool | No
     literal = text[opening + len(quote) : closing]
     normalized_separators = literal.replace("\\", "/")
     is_drive_path = bool(re.match(r"^[A-Za-z]:/+", normalized_separators))
-    is_unc_path = normalized_separators.startswith("//")
+    is_unc_path = normalized_separators.startswith("//") and not normalized_separators.startswith(
+        "///"
+    )
     if not (normalized_separators.startswith("/") or is_drive_path):
         return None
 
@@ -733,6 +736,7 @@ def test_absolute_user_home_guard_detects_exact_posix_home_in_path_context() -> 
     relative_home_path = "/".join(["fixtures", "home", "alice", "project"])
     relative_windows_home = "/".join(["fixtures", "C:", "Users", "alice", "project"])
     normalized_home_path = "/" + "/".join(["tmp", "..", "home", "alice", "project"])
+    repeated_root_normalized_home = "///" + "/".join(["tmp", "..", "home", "alice", "project"])
     non_home_normalized_path = "/" + "/".join(["tmp", "foo", "..", "home", "alice", "project"])
     traversed_home_path = "/" + "/".join(["home", "alice", "..", "..", "tmp", "data"])
     traversed_mac_home = "/" + "/".join(["Users", "alice", "..", "..", "tmp", "data"])
@@ -740,6 +744,9 @@ def test_absolute_user_home_guard_detects_exact_posix_home_in_path_context() -> 
     shared_mac_path = "/" + "/".join(["Users", "Shared", "test-data"])
     normalized_windows_home = "C:" + "\\" + "\\".join(["tmp", "..", "Users", "alice", "project"])
     normalized_windows_home_forward = "/".join(["C:", "tmp", "..", "Users", "alice", "project"])
+    normalized_unc_home = "\\\\" + "\\".join(
+        ["server", "c$", "tmp", "..", "Users", "alice", "project"]
+    )
     traversed_windows_home = (
         "C:" + "\\" + "\\".join(["Users", "alice", "project", "..", "..", "..", "Windows"])
     )
@@ -785,6 +792,9 @@ def test_absolute_user_home_guard_detects_exact_posix_home_in_path_context() -> 
     assert _absolute_user_home_references(f'Path("{relative_home_path}")') == []
     assert _absolute_user_home_references(f'Path("{relative_windows_home}")') == []
     assert _absolute_user_home_references(f'Path("{normalized_home_path}")') == [exact_home]
+    assert _absolute_user_home_references(f'Path("{repeated_root_normalized_home}")') == [
+        exact_home
+    ]
     assert _absolute_user_home_references(f'Path("{non_home_normalized_path}")') == []
     assert _absolute_user_home_references(f'Path("{traversed_home_path}")') == []
     assert _absolute_user_home_references(f'Path("{traversed_mac_home}")') == []
@@ -819,6 +829,9 @@ def test_absolute_user_home_guard_detects_exact_posix_home_in_path_context() -> 
     ]
     assert _absolute_user_home_references(f'Path("{normalized_windows_home_forward}")') == [
         "/".join(["C:", "tmp", "..", "Users", "alice"])
+    ]
+    assert _absolute_user_home_references(f'Path(r"{normalized_unc_home}")') == [
+        "\\\\" + "\\".join(["server", "c$", "tmp", "..", "Users", "alice"])
     ]
 
 
