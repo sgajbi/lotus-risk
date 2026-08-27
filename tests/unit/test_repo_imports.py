@@ -351,6 +351,12 @@ def _has_grouped_positional_route_call_context(text: str, position: int) -> bool
         method = method.lower()
         receiver_leaf = receiver.rpartition(".")[2].lower()
         callee_leaf = qualified_name.rpartition(".")[2].lower()
+        positional_prefix = text[opening + 1 : position]
+        if not re.fullmatch(
+            r"\s*(?:\(\s*)*(?i:(?:r[fb]?|[fb]r?|u)?)[\"']",
+            positional_prefix,
+        ):
+            continue
         if method in route_methods:
             line_prefix = text[text.rfind("\n", 0, callee.start()) + 1 : callee.start()]
             if (
@@ -770,6 +776,9 @@ def test_absolute_user_home_guard_does_not_let_an_adjacent_url_hide_a_path() -> 
         f'httpx.Request("POST", "https://example.test/upload", json={{"path": "{linux}"}})'
     )
     assert _absolute_user_home_references(request_body_path) == ["/" + "/".join(["home", "alice"])]
+
+    client_body_path = f'client.post(json={{"path": "{linux}"}})'
+    assert _absolute_user_home_references(client_body_path) == ["/" + "/".join(["home", "alice"])]
 
     comment_apostrophe = "# don" + "'t\n" + f'values = ("https://example.test/api","{linux}")'
     assert _absolute_user_home_references(comment_apostrophe) == ["/" + "/".join(["home", "alice"])]
