@@ -14,7 +14,9 @@ pytestmark = pytest.mark.governance
 ROOT = Path(__file__).resolve().parents[2]
 TESTS_ROOT = ROOT / "tests"
 ABSOLUTE_USER_HOME = re.compile(
-    r"(?:(?i:(?:[\\/]{2}[^:\\/\s\"']+[\\/]+(?:[^:\\/\s\"']+[\\/]+)?|[a-z]:[\\/]+)"
+    r"(?:(?i:[a-z]:[\\/]+(?:[^\\/\s\"']+[\\/]+)*\.\.[\\/]+"
+    r"(?:users|documents and settings)[\\/]+[^\\/\s\"']+)"
+    r"|(?i:(?:[\\/]{2}[^:\\/\s\"']+[\\/]+(?:[^:\\/\s\"']+[\\/]+)?|[a-z]:[\\/]+)"
     r"(?:users|documents and settings)[\\/]+(?:\.[\\/]+)*"
     r"(?!\.\.(?:[\\/]+|[\s\"']))[^\\/\s\"']+)"
     r"|/+ho"
@@ -491,7 +493,8 @@ def _has_environment_home_context(text: str, position: int) -> bool:
         argument_prefix = text[opening + 1 : position]
         return bool(
             re.fullmatch(
-                r"\s*[\"'](?:HOME|USERPROFILE)[\"']\s*,\s*"
+                r"\s*(?:name\s*=\s*)?[\"'](?:HOME|USERPROFILE)[\"']\s*,\s*"
+                r"(?:value\s*=\s*)?"
                 r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']",
                 argument_prefix,
             )
@@ -646,6 +649,8 @@ def test_absolute_user_home_guard_detects_exact_posix_home_in_path_context() -> 
     relative_home_path = "/".join(["fixtures", "home", "alice", "project"])
     relative_windows_home = "/".join(["fixtures", "C:", "Users", "alice", "project"])
     normalized_home_path = "/" + "/".join(["tmp", "..", "home", "alice", "project"])
+    normalized_windows_home = "C:" + "\\" + "\\".join(["tmp", "..", "Users", "alice", "project"])
+    normalized_windows_home_forward = "/".join(["C:", "tmp", "..", "Users", "alice", "project"])
 
     assert _absolute_user_home_references(f'Path("{exact_home}")') == [exact_home]
     assert _absolute_user_home_references(f'open("{exact_home}")') == [exact_home]
@@ -683,8 +688,20 @@ def test_absolute_user_home_guard_detects_exact_posix_home_in_path_context() -> 
     assert _absolute_user_home_references(f'monkeypatch.setenv("HOME", "{exact_home}")') == [
         exact_home
     ]
+    assert _absolute_user_home_references(
+        f'monkeypatch.setenv(name="HOME", value="{exact_home}")'
+    ) == [exact_home]
+    assert _absolute_user_home_references(f'monkeypatch.setenv("HOME", value="{exact_home}")') == [
+        exact_home
+    ]
     assert _absolute_user_home_references(f'subprocess.run(command, cwd="{exact_home}")') == [
         exact_home
+    ]
+    assert _absolute_user_home_references(f'Path(r"{normalized_windows_home}")') == [
+        "C:" + "\\" + "\\".join(["tmp", "..", "Users", "alice"])
+    ]
+    assert _absolute_user_home_references(f'Path("{normalized_windows_home_forward}")') == [
+        "/".join(["C:", "tmp", "..", "Users", "alice"])
     ]
 
 
