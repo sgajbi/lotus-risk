@@ -16,14 +16,14 @@ TESTS_ROOT = ROOT / "tests"
 ABSOLUTE_USER_HOME = re.compile(
     r"(?:(?i:[a-z]:[\\/]+(?:users|documents and settings)[\\/]+[^\\/\s\"']+)"
     r"|/ho"
-    r"me/[^/\s\"']+(?=/+[^/\s\"']+)"
+    r"me/+[^/\s\"']+(?=/+[^/\s\"']+)"
     r"|/Us"
-    r"ers/[^/\s\"']+(?=/+[^/\s\"']+)"
+    r"ers/+[^/\s\"']+(?=/+[^/\s\"']+)"
     r"|/r"
     r"oot(?=/+[^/\s\"']+))"
 )
 EXACT_POSIX_USER_HOME = re.compile(
-    r"(?:/ho" r"me/[^/\s\"']+|/Us" r"ers/[^/\s\"']+|/r" r"oot)/?(?=$|[\s\"'])"
+    r"(?:/ho" r"me/+[^/\s\"']+|/Us" r"ers/+[^/\s\"']+|/r" r"oot)/?(?=$|[\s\"'])"
 )
 FILESYSTEM_LITERAL_PREFIX = re.compile(
     r"(?:\b(?:Path|PurePath|PurePosixPath)\s*\(\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"'][\\/]*"
@@ -244,6 +244,20 @@ def _has_balanced_named_route_call_context(text: str, position: int) -> bool:
     }
 
 
+def _has_balanced_request_scope_context(text: str, position: int) -> bool:
+    if not re.search(
+        r"[\"']path[\"']\s*:\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$",
+        text[:position],
+    ):
+        return False
+    containing_calls = [pair for pair in _parenthesis_pairs(text) if pair[0] < position < pair[1]]
+    if not containing_calls:
+        return False
+    opening, _ = max(containing_calls, key=lambda pair: pair[0])
+    callee = re.search(r"(?P<name>[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\s*$", text[:opening])
+    return callee is not None and callee.group("name").rpartition(".")[2] == "Request"
+
+
 def _web_url_spans(text: str) -> list[tuple[int, int]]:
     spans: list[tuple[int, int]] = []
     for match in WEB_URL_START.finditer(text):
@@ -286,6 +300,7 @@ def _absolute_user_home_references(text: str) -> list[str]:
             or ASGI_SCOPE_ROUTE_PREFIX.search(preceding_text)
             or _has_inline_test_client_route_context(preceding_text)
             or _has_balanced_named_route_call_context(text, match.start())
+            or _has_balanced_request_scope_context(text, match.start())
         ):
             continue
         references.append(match.group(0))
@@ -330,11 +345,12 @@ def test_absolute_user_home_guard_detects_cross_platform_paths() -> None:
     escaped_windows = "D:" + "\\\\" + "Users" + "\\\\" + "example" + "\\\\" + "project"
     linux = "/" + "/".join(["home", "example", "project"])
     repeated_linux = "/" + "/".join(["home", "example", "", "project"])
+    repeated_home_root = "/" + "/".join(["home", "", "example", "project"])
     mac = "/" + "/".join(["Users", "example", "project"])
     root = "/" + "/".join(["root", "project"])
     references = _absolute_user_home_references(
         f"windows={windows} escaped={escaped_windows} linux={linux} "
-        f"repeated={repeated_linux} mac={mac} root={root}"
+        f"repeated={repeated_linux} root_repeat={repeated_home_root} mac={mac} root={root}"
     )
 
     assert references == [
@@ -342,6 +358,7 @@ def test_absolute_user_home_guard_detects_cross_platform_paths() -> None:
         "D:" + "\\\\" + "Users" + "\\\\" + "example",
         "/" + "/".join(["home", "example"]),
         "/" + "/".join(["home", "example"]),
+        "/" + "/".join(["home", "", "example"]),
         "/" + "/".join(["Users", "example"]),
         "/" + "root",
     ]
@@ -397,6 +414,7 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             'httpx.Request("GET", "/home/dashboard/stats")',
             'Request({"type": "http", "path": "/home/dashboard/stats"})',
             'Request({"client": ("127.0.0.1", 80), "path": "/home/dashboard/stats"})',
+            f'Request({{"state": build_state(Settings()), "path": "{nested_route}"}})',
             'Route("/home/dashboard/stats", endpoint)',
             f'Route(endpoint=handler, path="{nested_route}")',
             'WebSocketRoute(path="/home/dashboard/stats", endpoint=handler)',
