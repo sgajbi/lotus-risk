@@ -43,7 +43,7 @@ FILESYSTEM_LITERAL_PREFIX = re.compile(
 )
 IGNORED_GENERATED_TEST_DIRS = {"__pycache__", ".pytest_cache"}
 HTTP_ROUTE_PREFIX = re.compile(
-    r"(?:^|[\s\"'])(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE|CONNECT)\s+$",
+    r"(?:^|[\r\n]|[\"'])\s*(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE|CONNECT)\s+$",
     re.IGNORECASE,
 )
 ROUTE_LITERAL_PREFIX = re.compile(
@@ -571,11 +571,12 @@ def _quoted_path_normalizes_to_personal_home(text: str, start: int) -> bool | No
         return None
 
     normalized_components: list[str] = []
+    root_depth = 1 if is_drive_path else 2 if is_unc_path else 0
     for component in normalized_separators.split("/"):
         if component in {"", "."}:
             continue
         if component == "..":
-            if normalized_components:
+            if len(normalized_components) > root_depth:
                 normalized_components.pop()
         else:
             normalized_components.append(component)
@@ -746,10 +747,11 @@ def test_absolute_user_home_guard_detects_exact_posix_home_in_path_context() -> 
         ["C:", "Users", "alice", "project", "..", "..", "..", "Windows"]
     )
     traversed_unc_home = "\\\\" + "\\".join(
-        ["server", "Users", "alice", "project", "..", "..", "..", "share"]
+        ["server", "c$", "Users", "alice", "project", "..", "..", "..", "Windows"]
     )
     public_windows_path = "C:" + "\\" + "\\".join(["Users", "Public", "test-data"])
     public_unc_path = "\\\\" + "\\".join(["server", "Users", "Public", "test-data"])
+    root_clamped_windows_home = "C:" + "\\" + "\\".join(["..", "Users", "alice", "project"])
 
     assert _absolute_user_home_references(f'Path("{exact_home}")') == [exact_home]
     assert _absolute_user_home_references(f'open("{exact_home}")') == [exact_home]
@@ -793,6 +795,9 @@ def test_absolute_user_home_guard_detects_exact_posix_home_in_path_context() -> 
     assert _absolute_user_home_references(f'Path(r"{traversed_unc_home}")') == []
     assert _absolute_user_home_references(f'Path(r"{public_windows_path}")') == []
     assert _absolute_user_home_references(f'Path(r"{public_unc_path}")') == []
+    assert _absolute_user_home_references(f'Path(r"{root_clamped_windows_home}")') == [
+        "C:" + "\\" + "\\".join(["..", "Users", "alice"])
+    ]
     assert _absolute_user_home_references(f'HOME = "{exact_home}"') == [exact_home]
     assert _absolute_user_home_references(f'monkeypatch.setenv("HOME", "{exact_home}")') == [
         exact_home
@@ -945,6 +950,9 @@ def test_absolute_user_home_guard_does_not_let_an_adjacent_url_hide_a_path() -> 
 
     email_then_cache = f'owner="a@b"; cache.get(path="{linux}")'
     assert _absolute_user_home_references(email_then_cache) == ["/" + "/".join(["home", "alice"])]
+
+    prose_method = f'note = "please delete {linux}"'
+    assert _absolute_user_home_references(prose_method) == ["/" + "/".join(["home", "alice"])]
 
     comment_apostrophe = "# don" + "'t\n" + f'values = ("https://example.test/api","{linux}")'
     assert _absolute_user_home_references(comment_apostrophe) == ["/" + "/".join(["home", "alice"])]
