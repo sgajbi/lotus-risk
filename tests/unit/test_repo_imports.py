@@ -5,9 +5,9 @@ import sys
 import tokenize
 from pathlib import Path
 
-from scripts._repo_imports import force_repo_src_first
-
 import pytest
+
+from scripts._repo_imports import force_repo_src_first
 
 pytestmark = pytest.mark.governance
 
@@ -137,8 +137,12 @@ def _has_inline_test_client_route_context(preceding_text: str) -> bool:
 def _active_quote_before(text: str, end: int) -> str:
     quote = ""
     escaped = False
+    comment = False
     for character in text[:end]:
-        if escaped:
+        if comment:
+            if character == "\n":
+                comment = False
+        elif escaped:
             escaped = False
         elif character == "\\":
             escaped = True
@@ -147,7 +151,91 @@ def _active_quote_before(text: str, end: int) -> str:
                 quote = ""
         elif character in {'"', "'"}:
             quote = character
+        elif character == "#":
+            comment = True
     return quote
+
+
+def _parenthesis_pairs(text: str) -> list[tuple[int, int]]:
+    stack: list[int] = []
+    pairs: list[tuple[int, int]] = []
+    quote = ""
+    escaped = False
+    comment = False
+    for index, character in enumerate(text):
+        if comment:
+            if character == "\n":
+                comment = False
+        elif escaped:
+            escaped = False
+        elif character == "\\":
+            escaped = True
+        elif quote:
+            if character == quote:
+                quote = ""
+        elif character in {'"', "'"}:
+            quote = character
+        elif character == "#":
+            comment = True
+        elif character == "(":
+            stack.append(index)
+        elif character == ")" and stack:
+            pairs.append((stack.pop(), index))
+    return pairs
+
+
+def _has_balanced_named_route_call_context(text: str, position: int) -> bool:
+    named_value = re.search(
+        r"\b(?P<name>url|path)\s*=\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$",
+        text[:position],
+    )
+    if named_value is None:
+        return False
+
+    containing_calls = [pair for pair in _parenthesis_pairs(text) if pair[0] < position < pair[1]]
+    if not containing_calls:
+        return False
+    opening, closing = max(containing_calls, key=lambda pair: pair[0])
+    callee = re.search(r"(?P<name>[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\s*$", text[:opening])
+    if callee is None:
+        return False
+
+    qualified_name = callee.group("name")
+    receiver, _, method = qualified_name.rpartition(".")
+    method = method.lower()
+    receiver_leaf = receiver.rpartition(".")[2].lower()
+    argument_text = text[opening + 1 : closing]
+    client_receiver = receiver_leaf == "client" or receiver_leaf.endswith("_client")
+    route_methods = {
+        "get",
+        "head",
+        "post",
+        "put",
+        "patch",
+        "delete",
+        "options",
+        "websocket_connect",
+    }
+
+    if named_value.group("name").lower() == "url":
+        if method in route_methods and (client_receiver or receiver_leaf in {"requests", "httpx"}):
+            return True
+        if method == "request" and client_receiver:
+            http_method = r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)"
+            return bool(
+                re.search(rf"^\s*[\"']{http_method}[\"']", argument_text, re.IGNORECASE)
+                or re.search(
+                    rf"\bmethod\s*=\s*[\"']{http_method}[\"']",
+                    argument_text,
+                    re.IGNORECASE,
+                )
+            )
+        return False
+
+    if method in {"route", "api_route", "websocket"}:
+        line_prefix = text[text.rfind("\n", 0, callee.start()) + 1 : callee.start()]
+        return "@" in line_prefix
+    return method in {"add_api_route", "add_route", "add_websocket_route"}
 
 
 def _web_url_spans(text: str) -> list[tuple[int, int]]:
@@ -188,6 +276,7 @@ def _absolute_user_home_references(text: str) -> list[str]:
             or request_scope_route
             or ASGI_SCOPE_ROUTE_PREFIX.search(preceding_text)
             or _has_inline_test_client_route_context(preceding_text)
+            or _has_balanced_named_route_call_context(text, match.start())
         ):
             continue
         references.append(match.group(0))
@@ -259,6 +348,7 @@ def test_absolute_user_home_guard_detects_exact_posix_home_in_path_context() -> 
 
 
 def test_absolute_user_home_guard_ignores_web_routes() -> None:
+    nested_route = "/" + "/".join(["home", "dashboard", "stats"])
     routes = " ".join(
         [
             "https://example.test/users/123",
@@ -273,10 +363,12 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             '@router.get("/home/dashboard/stats")',
             '@app.api_route("/home/dashboard/stats", methods=["GET"])',
             '@app.api_route(path="/home/dashboard/stats", methods=["GET"])',
+            f'@app.api_route(methods=["GET"], path="{nested_route}")',
             'client.get("/home/dashboard/stats")',
             'client.get(url="/home/dashboard/stats")',
             'client.get(headers=HEADERS, url="/home/dashboard/stats")',
             'client.get(headers=build_headers(), url="/home/dashboard/stats")',
+            f'client.get(headers=build_headers(Settings()), url="{nested_route}")',
             'client.get(\n headers=HEADERS,\n url="/home/dashboard/stats")',
             'client.get(f"/home/dashboard/{section}")',
             'client.get(r"/home/dashboard/stats")',
@@ -288,6 +380,7 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             'client.request("GET", headers=HEADERS, url="/home/dashboard/stats")',
             'client.request(method="GET", url="/home/dashboard/stats")',
             'client.request(method="GET", headers=HEADERS, url="/home/dashboard/stats")',
+            f'client.request(url="{nested_route}", method="GET")',
             'client.websocket_connect("/home/dashboard/stats")',
             'httpx.Request("GET", "/home/dashboard/stats")',
             'Request({"type": "http", "path": "/home/dashboard/stats"})',
@@ -332,6 +425,9 @@ def test_absolute_user_home_guard_does_not_let_an_adjacent_url_hide_a_path() -> 
 
     data_decorator = f'@data_file("{linux}/input.json")'
     assert _absolute_user_home_references(data_decorator) == ["/" + "/".join(["home", "alice"])]
+
+    comment_apostrophe = "# don" + "'t\n" + f'values = ("https://example.test/api","{linux}")'
+    assert _absolute_user_home_references(comment_apostrophe) == ["/" + "/".join(["home", "alice"])]
 
 
 def test_absolute_user_home_guard_detects_file_uris() -> None:
