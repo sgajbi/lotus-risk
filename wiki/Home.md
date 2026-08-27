@@ -32,7 +32,7 @@ small but important:
 The most important current limits are:
 
 1. simulation is supported only for concentration,
-2. stateful historical attribution supports `ACTIVE_RISK + ISSUER` through lotus-performance benchmark exposure context issuer groups,
+2. stateful `ACTIVE_RISK` attribution supports `POSITION`, `SECTOR`, `ASSET_CLASS`, and `ISSUER` grouping dimensions; `CUSTOM` grouping and attribution simulation remain unsupported,
 3. live validation defaults to canonical portfolio `PB_SG_GLOBAL_BAL_001`,
 4. broader enterprise claims require more seeded archetypes and evidence.
 

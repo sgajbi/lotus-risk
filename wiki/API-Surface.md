@@ -66,10 +66,12 @@ are authored per metric under
 that directory is the authority for *how* a number is produced, and this page only says which names
 the API accepts.
 
-Requesting `ACTIVE_RISK` or `TRACKING_ERROR` attribution requires benchmark inputs — benchmark
-returns for the stateless path, benchmark exposure history for the exposure-driven path. The
-requirement is enforced at validation, so a benchmark-dependent metric cannot be computed from
-portfolio data alone and reported as though it were.
+Three metrics require benchmark inputs — **`BETA`, `TRACKING_ERROR` and `INFORMATION_RATIO`**.
+`VAR` does not: it is computed from the portfolio series alone. Likewise, requesting `ACTIVE_RISK`
+or `TRACKING_ERROR` attribution requires benchmark returns on the stateless path and benchmark
+exposure history on the exposure-driven path. Each requirement is enforced at validation, so a
+benchmark-dependent metric cannot be computed from portfolio data alone and reported as though it
+were.
 
 ## Supportability is part of every answer
 
@@ -107,8 +109,10 @@ available without it. See
 Documented so that a `200` is not read as broader support than exists:
 
 1. simulation is supported only for **concentration**
-2. stateful historical attribution supports `ACTIVE_RISK + ISSUER`, through `lotus-performance`
-   benchmark exposure context issuer groups
+2. stateful `ACTIVE_RISK` attribution supports the `POSITION`, `SECTOR`, `ASSET_CLASS` and
+   `ISSUER` grouping dimensions; **`CUSTOM` is rejected** on the stateful path. The `ISSUER`
+   dimension draws on `lotus-performance` benchmark exposure context issuer groups.
+   Simulation is not supported for attribution.
 3. live validation defaults to the canonical portfolio `PB_SG_GLOBAL_BAL_001`
 4. broader enterprise claims need more seeded archetypes and evidence
 

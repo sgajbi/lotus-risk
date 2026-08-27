@@ -19,8 +19,11 @@ authority lives.
 | **`INFORMATION_RATIO`** | active return per unit of tracking error | `risk-information-ratio.md` |
 | **`VAR`** | value at risk over the configured horizon and confidence | `risk-var.md` |
 
-The last four require benchmark inputs. Requesting them without benchmark returns or benchmark
-exposure history is a validation failure, not a silently portfolio-only answer.
+**Three of these require benchmark inputs — `BETA`, `TRACKING_ERROR` and `INFORMATION_RATIO`.**
+Requesting one without benchmark returns or benchmark exposure history is a validation failure, not
+a silently portfolio-only answer. `VAR` is deliberately **not** among them: it is computed from the
+portfolio series alone, and treating it as benchmark-dependent would make callers reject valid
+requests.
 
 ## Drawdown family
 
@@ -30,7 +33,7 @@ Realized drawdown analytics go beyond the single `DRAWDOWN` metric:
 |---|---|
 | **maximum drawdown** | the worst peak-to-trough decline in the window |
 | **relative maximum drawdown** | the same, measured against the benchmark |
-| **average drawdown** | the mean of observed drawdown episodes |
+| **average drawdown** | the mean of every strictly underwater observation — not a mean of episode-level values, so a long episode weighs proportionally more |
 | **time under water** | how long the portfolio spent below its prior peak |
 | **Ulcer index** | depth *and* duration of drawdown in a single number |
 | **DaR / CDaR** | drawdown at risk and conditional drawdown at risk |
@@ -56,10 +59,12 @@ Each has its own methodology document under `docs/methodologies/metrics/`.
 | **active risk** | risk taken relative to the benchmark, as opposed to total risk |
 | **stateless path** | the caller supplies the full history in the request |
 | **stateful path** | the service assembles history from upstream sources |
-| **issuer group** | the benchmark exposure grouping the stateful `ACTIVE_RISK + ISSUER` path uses, sourced from `lotus-performance` |
+| **grouping dimension** | how attribution is decomposed: `POSITION`, `ISSUER`, `SECTOR`, `ASSET_CLASS` or `CUSTOM` |
+| **issuer group** | the benchmark exposure grouping the `ISSUER` dimension uses, sourced from `lotus-performance` |
 
-Stateful historical attribution currently supports `ACTIVE_RISK + ISSUER` only — see
-[API Surface](./API-Surface.md#current-limits).
+Stateful `ACTIVE_RISK` attribution supports `POSITION`, `SECTOR`, `ASSET_CLASS` and `ISSUER`.
+**`CUSTOM` is the one rejected dimension** on the stateful path, with an explicit validation error.
+See [API Surface](./API-Surface.md#current-limits).
 
 ## Evaluation surfaces
 
