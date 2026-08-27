@@ -474,6 +474,31 @@ def _has_balanced_filesystem_call_context(text: str, position: int) -> bool:
     return False
 
 
+def _has_environment_home_context(text: str, position: int) -> bool:
+    preceding_text = text[:position]
+    if re.search(
+        r"(?:\b(?:HOME|USERPROFILE|cwd|workdir|working_directory)\s*=\s*"
+        r"|\bos\.environ\s*\[\s*[\"'](?:HOME|USERPROFILE)[\"']\s*\]\s*=\s*)"
+        r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$",
+        preceding_text,
+    ):
+        return True
+    containing_calls = [pair for pair in _parenthesis_pairs(text) if pair[0] < position < pair[1]]
+    for opening, _ in sorted(containing_calls, reverse=True):
+        callee = re.search(r"(?P<name>[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\s*$", text[:opening])
+        if callee is None or callee.group("name").lower() != "monkeypatch.setenv":
+            continue
+        argument_prefix = text[opening + 1 : position]
+        return bool(
+            re.fullmatch(
+                r"\s*[\"'](?:HOME|USERPROFILE)[\"']\s*,\s*"
+                r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']",
+                argument_prefix,
+            )
+        )
+    return False
+
+
 def _web_url_spans(text: str) -> list[tuple[int, int]]:
     spans: list[tuple[int, int]] = []
     for match in WEB_URL_START.finditer(text):
@@ -524,6 +549,7 @@ def _absolute_user_home_references(text: str) -> list[str]:
         filesystem_context = bool(
             FILESYSTEM_LITERAL_PREFIX.search(preceding_text)
             or _has_balanced_filesystem_call_context(text, match.start())
+            or _has_environment_home_context(text, match.start())
         )
         if requires_filesystem_context and not filesystem_context:
             continue
@@ -653,6 +679,13 @@ def test_absolute_user_home_guard_detects_exact_posix_home_in_path_context() -> 
     assert _absolute_user_home_references(f'Path("{relative_home_path}")') == []
     assert _absolute_user_home_references(f'Path("{relative_windows_home}")') == []
     assert _absolute_user_home_references(f'Path("{normalized_home_path}")') == [exact_home]
+    assert _absolute_user_home_references(f'HOME = "{exact_home}"') == [exact_home]
+    assert _absolute_user_home_references(f'monkeypatch.setenv("HOME", "{exact_home}")') == [
+        exact_home
+    ]
+    assert _absolute_user_home_references(f'subprocess.run(command, cwd="{exact_home}")') == [
+        exact_home
+    ]
 
 
 def test_absolute_user_home_guard_ignores_web_routes() -> None:
