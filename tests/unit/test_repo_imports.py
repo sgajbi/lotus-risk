@@ -34,7 +34,7 @@ EXACT_POSIX_USER_HOME = re.compile(
 )
 FILESYSTEM_LITERAL_PREFIX = re.compile(
     r"(?:\b(?:Path|PurePath|PurePosixPath)\s*\(\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"'][\\/]*"
-    r"|\b(?:open|os\.path\.\w+|os\.(?:chdir|listdir|scandir|stat|remove|unlink|rmdir|mkdir|makedirs))"
+    r"|\b(?:open|shutil\.\w+|os\.path\.\w+|os\.(?:chdir|listdir|scandir|stat|remove|unlink|rmdir|mkdir|makedirs))"
     r"\s*\(\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"'][\\/]*"
     r"|file://)$"
 )
@@ -46,29 +46,29 @@ ROUTE_LITERAL_PREFIX = re.compile(
     r"(?:\b(?:route|endpoint)(?:_path)?\s*=\s*"
     r"|@\w+(?:\.\w+)*\.(?:get|head|post|put|patch|delete|options|trace|route|api_route|websocket)"
     r"\s*\(\s*(?:path\s*=\s*)?"
-    r"|\b(?:[a-z_]\w*_client|client|requests?|httpx)(?:\.\w+)*"
+    r"|\b(?:client|test_client|http_client|api_client|response_client|async_client|requests?|httpx)(?:\.\w+)*"
     r"\.(?:get|head|post|put|patch|delete|options|websocket_connect)"
     r"\s*\(\s*(?:url\s*=\s*)?)(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
-    r"|\b(?:[a-z_]\w*_client|client|requests?|httpx)(?:\.\w+)*"
+    r"|\b(?:client|test_client|http_client|api_client|response_client|async_client|requests?|httpx)(?:\.\w+)*"
     r"\.(?:get|head|post|put|patch|delete|options|websocket_connect)"
     r"\s*\((?:[^()]|\([^()]*\))*\burl\s*=\s*"
     r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
-    r"|\b(?:[a-z_]\w*_client|client)\.request\s*\(\s*[\"']"
+    r"|\b(?:client|test_client|http_client|api_client|response_client|async_client)\.request\s*\(\s*[\"']"
     r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE)[\"']\s*,\s*(?:url\s*=\s*)?"
     r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
-    r"|\b(?:[a-z_]\w*_client|client)\.request\s*\(\s*[\"']"
+    r"|\b(?:client|test_client|http_client|api_client|response_client|async_client)\.request\s*\(\s*[\"']"
     r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE)[\"']\s*,"
     r"(?:[^()]|\([^()]*\))*\burl\s*=\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
-    r"|\b(?:[a-z_]\w*_client|client)\.request\s*\(\s*method\s*=\s*[\"']"
+    r"|\b(?:client|test_client|http_client|api_client|response_client|async_client)\.request\s*\(\s*method\s*=\s*[\"']"
     r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE)[\"']\s*,\s*url\s*=\s*"
     r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
-    r"|\b(?:[a-z_]\w*_client|client)\.request\s*\("
+    r"|\b(?:client|test_client|http_client|api_client|response_client|async_client)\.request\s*\("
     r"(?:[^()]|\([^()]*\))*\bmethod\s*=\s*[\"']"
     r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE)[\"']"
     r"(?:[^()]|\([^()]*\))*\burl\s*=\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
-    r"|\b\w+(?:\.\w+)*\.(?:add_api_route|add_route|add_websocket_route)"
+    r"|\b\w+(?:\.\w+)*\.(?:add_api_route|add_api_websocket_route|add_route|add_websocket_route)"
     r"\s*\(\s*(?:path\s*=\s*)?(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
-    r"|\b\w+(?:\.\w+)*\.(?:add_api_route|add_route|add_websocket_route)"
+    r"|\b\w+(?:\.\w+)*\.(?:add_api_route|add_api_websocket_route|add_route|add_websocket_route)"
     r"\s*\((?:[^()]|\([^()]*\))*\bpath\s*=\s*"
     r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
     r"|\b(?:httpx\.)?Request\s*\(\s*[\"']"
@@ -252,7 +252,14 @@ def _has_balanced_named_route_call_context(text: str, position: int) -> bool:
     method = method.lower()
     receiver_leaf = receiver.rpartition(".")[2].lower()
     argument_text = text[opening + 1 : closing]
-    client_receiver = receiver_leaf == "client" or receiver_leaf.endswith("_client")
+    client_receiver = receiver_leaf in {
+        "api_client",
+        "async_client",
+        "client",
+        "http_client",
+        "response_client",
+        "test_client",
+    }
     route_methods = {
         "get",
         "head",
@@ -301,6 +308,7 @@ def _has_balanced_named_route_call_context(text: str, position: int) -> bool:
         return receiver_leaf == "app" or receiver_leaf.endswith("_app")
     return method in {
         "add_api_route",
+        "add_api_websocket_route",
         "add_route",
         "add_websocket_route",
     }
@@ -375,7 +383,11 @@ def _has_balanced_filesystem_call_context(text: str, position: int) -> bool:
         "os.stat",
         "os.unlink",
     }
-    return qualified_name in filesystem_calls or qualified_name.startswith("os.path.")
+    return (
+        qualified_name in filesystem_calls
+        or qualified_name.startswith("os.path.")
+        or qualified_name.startswith("shutil.")
+    )
 
 
 def _web_url_spans(text: str) -> list[tuple[int, int]]:
@@ -504,6 +516,7 @@ def test_absolute_user_home_guard_detects_exact_posix_home_in_path_context() -> 
     assert _absolute_user_home_references(f'os.chdir("{exact_home}")') == [exact_home]
     assert _absolute_user_home_references(f'os.chdir(path="{exact_home}")') == [exact_home]
     assert _absolute_user_home_references(f'os.path.exists("{exact_home}")') == [exact_home]
+    assert _absolute_user_home_references(f'shutil.rmtree("{exact_home}")') == [exact_home]
     assert _absolute_user_home_references(f'Path("{exact_home}/")') == [f"{exact_home}/"]
     assert _absolute_user_home_references(f'Path("{exact_home}//")') == [f"{exact_home}//"]
     assert _absolute_user_home_references(f'Path("{doubled_path}")') == [exact_home]
@@ -576,6 +589,7 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             'app.add_api_route("/home/dashboard/stats", handler)',
             'app.add_api_route(path="/home/dashboard/stats", endpoint=handler)',
             'app.add_api_route(endpoint=handler, path="/home/dashboard/stats")',
+            f'app.add_api_websocket_route(endpoint=handler, path="{nested_route}")',
             'app.add_route("/home/dashboard/stats", handler)',
             'router.add_websocket_route("/home/dashboard/stats", handler)',
             'APIRouter(prefix="/home/dashboard/stats")',
@@ -618,6 +632,9 @@ def test_absolute_user_home_guard_does_not_let_an_adjacent_url_hide_a_path() -> 
 
     unrelated_mount = f'volume.mount(source=device, path="{linux}")'
     assert _absolute_user_home_references(unrelated_mount) == ["/" + "/".join(["home", "alice"])]
+
+    unrelated_client = f'db_client.get("{linux}")'
+    assert _absolute_user_home_references(unrelated_client) == ["/" + "/".join(["home", "alice"])]
 
     unrelated_annotated_mapping = f'scope: Scope; payload = {{"path": "{linux}"}}'
     assert _absolute_user_home_references(unrelated_annotated_mapping) == [
