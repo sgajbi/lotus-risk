@@ -486,7 +486,7 @@ def _has_environment_home_context(text: str, position: int) -> bool:
     ):
         return True
     containing_calls = [pair for pair in _parenthesis_pairs(text) if pair[0] < position < pair[1]]
-    for opening, _ in sorted(containing_calls, reverse=True):
+    for opening, closing in sorted(containing_calls, reverse=True):
         callee = re.search(r"(?P<name>[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\s*$", text[:opening])
         if callee is None or callee.group("name").lower() != "monkeypatch.setenv":
             continue
