@@ -43,6 +43,7 @@ ANY_ACTION_USE_PATTERN = re.compile(
     \buses\s*:\s*
     (?P<quote>["']?)
     (?P<slug>[A-Za-z0-9][A-Za-z0-9_.-]*/[A-Za-z0-9][A-Za-z0-9_.-]*)
+    (?:/[A-Za-z0-9][A-Za-z0-9_.-]*)*
     @
     (?P<ref>[A-Za-z0-9_./-]+)
     (?P=quote)

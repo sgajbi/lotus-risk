@@ -42,7 +42,7 @@ def test_a_well_formed_but_nonexistent_tag_is_missing() -> None:
     client = StubClient(
         {
             "repos/actions/checkout": ApiResponse(200),
-            "repos/actions/checkout/git/ref/tags/v9.99.0": ApiResponse(404, "HTTP 404"),
+            "repos/actions/checkout/git/ref/tags/v9.99.0": ApiResponse(404, detail="HTTP 404"),
         }
     )
 
@@ -52,14 +52,14 @@ def test_a_well_formed_but_nonexistent_tag_is_missing() -> None:
     assert overall_outcome(references, resolutions) == "missing"
 
 
-def test_a_missing_repository_is_distinct_from_a_missing_tag() -> None:
+def test_an_absent_or_inaccessible_repository_is_inconclusive() -> None:
     references = [_reference()]
     resolutions = resolve_references(
-        references, StubClient({"repos/actions/checkout": ApiResponse(404, "HTTP 404")})
+        references, StubClient({"repos/actions/checkout": ApiResponse(404, detail="HTTP 404")})
     )
 
-    assert resolutions[0].status == "missing_repository"
-    assert overall_outcome(references, resolutions) == "missing"
+    assert resolutions[0].status == "inconclusive"
+    assert overall_outcome(references, resolutions) == "inconclusive"
 
 
 def test_rate_limiting_is_inconclusive_not_green_or_missing() -> None:
@@ -67,7 +67,7 @@ def test_rate_limiting_is_inconclusive_not_green_or_missing() -> None:
     resolutions = resolve_references(
         references,
         StubClient(
-            {"repos/actions/checkout": ApiResponse(403, "HTTP 403; rate-limit remaining=0")}
+            {"repos/actions/checkout": ApiResponse(403, detail="HTTP 403; rate-limit remaining=0")}
         ),
     )
 
@@ -112,12 +112,13 @@ def test_full_commit_sha_uses_the_commit_resolution_endpoint() -> None:
         StubClient(
             {
                 "repos/actions/checkout": ApiResponse(200),
-                f"repos/actions/checkout/commits/{sha}": ApiResponse(200),
+                f"repos/actions/checkout/commits/{sha}": ApiResponse(200, {"sha": sha}),
             }
         ),
     )
 
     assert resolutions[0].status == "resolved"
+    assert resolutions[0].resolved_sha == sha
     assert overall_outcome(references, resolutions) == "resolved"
 
 
@@ -126,8 +127,12 @@ def test_repository_existence_is_queried_once_for_multiple_references() -> None:
     client = StubClient(
         {
             "repos/actions/checkout": ApiResponse(200),
-            "repos/actions/checkout/git/ref/tags/v5": ApiResponse(200),
-            "repos/actions/checkout/git/ref/tags/v6": ApiResponse(200),
+            "repos/actions/checkout/git/ref/tags/v5": ApiResponse(
+                200, {"object": {"type": "commit", "sha": "5" * 40}}
+            ),
+            "repos/actions/checkout/git/ref/tags/v6": ApiResponse(
+                200, {"object": {"type": "commit", "sha": "6" * 40}}
+            ),
         }
     )
 
@@ -141,6 +146,39 @@ def test_the_real_workflow_inventory_is_nonempty_and_includes_the_resolver() -> 
 
     assert len(references) >= 10
     assert any(item.path.endswith("action-reference-resolution.yml") for item in references)
+    assert any(item.slug == "github/codeql-action" and item.ref == "v4" for item in references)
+
+
+def test_action_subpaths_are_collected_under_the_base_repository(tmp_path: Path) -> None:
+    workflow = tmp_path / "workflow.yml"
+    workflow.write_text(
+        "steps:\n  - uses: github/codeql-action/upload-sarif@v4\n", encoding="utf-8"
+    )
+
+    references = collect_references(tmp_path)
+
+    assert [(item.slug, item.ref) for item in references] == [("github/codeql-action", "v4")]
+
+
+def test_annotated_tags_are_peeled_to_the_commit_sha() -> None:
+    commit_sha = "c" * 40
+    tag_sha = "d" * 40
+    client = StubClient(
+        {
+            "repos/actions/checkout": ApiResponse(200),
+            "repos/actions/checkout/git/ref/tags/v6": ApiResponse(
+                200, {"object": {"type": "tag", "sha": tag_sha}}
+            ),
+            f"repos/actions/checkout/git/tags/{tag_sha}": ApiResponse(
+                200, {"object": {"type": "commit", "sha": commit_sha}}
+            ),
+        }
+    )
+
+    resolution = resolve_references([_reference()], client)[0]
+
+    assert resolution.status == "resolved"
+    assert resolution.resolved_sha == commit_sha
 
 
 def test_cli_without_a_token_is_explicitly_inconclusive(tmp_path: Path) -> None:
@@ -192,7 +230,9 @@ def test_report_schema_records_counts_and_resolution_statuses(tmp_path: Path) ->
         StubClient(
             {
                 "repos/actions/checkout": ApiResponse(200),
-                "repos/actions/checkout/git/ref/tags/v6": ApiResponse(200),
+                "repos/actions/checkout/git/ref/tags/v6": ApiResponse(
+                    200, {"object": {"type": "commit", "sha": "6" * 40}}
+                ),
             }
         ),
     )
@@ -203,3 +243,4 @@ def test_report_schema_records_counts_and_resolution_statuses(tmp_path: Path) ->
     assert payload["reference_occurrence_count"] == 1
     assert payload["unique_reference_count"] == 1
     assert payload["resolutions"][0]["status"] == "resolved"
+    assert payload["resolutions"][0]["resolved_sha"] == "6" * 40

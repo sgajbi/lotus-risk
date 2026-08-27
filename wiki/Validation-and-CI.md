@@ -37,8 +37,10 @@ The repo-native commands are designed to map to those lanes directly.
 
 `Action Reference Resolution` is a separate daily and manually dispatchable network check. It
 enumerates every external `uses:` reference and asks the GitHub API whether its repository and
-pinned tag or commit still exist. A missing repository/reference or an empty inventory fails; an
-API outage or rate limit cancels the run so it is visibly inconclusive rather than falsely green.
+pinned tag or commit still exist. A missing reference in an accessible repository or an empty
+inventory fails; an inaccessible repository, API outage, or rate limit cancels the run so it is
+visibly inconclusive rather than falsely green. Its evidence records the immutable commit SHA
+behind each tag and includes actions selected through repository subpaths.
 This complements the offline form check in `make github-actions-runtime-gate`, which remains fast
 and deterministic for local and protected lanes.
 
