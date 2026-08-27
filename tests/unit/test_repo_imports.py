@@ -27,7 +27,7 @@ EXACT_POSIX_USER_HOME = re.compile(
 )
 FILESYSTEM_LITERAL_PREFIX = re.compile(
     r"(?:\b(?:Path|PurePath|PurePosixPath)\s*\(\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"'][\\/]*"
-    r"|\b(?:open|os\.(?:chdir|listdir|scandir|stat|remove|unlink|rmdir|mkdir|makedirs))"
+    r"|\b(?:open|os\.path\.\w+|os\.(?:chdir|listdir|scandir|stat|remove|unlink|rmdir|mkdir|makedirs))"
     r"\s*\(\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"'][\\/]*"
     r"|file://)$"
 )
@@ -156,7 +156,7 @@ def _active_quote_before(text: str, end: int) -> str:
     return quote
 
 
-def _parenthesis_pairs(text: str) -> list[tuple[int, int]]:
+def _delimiter_pairs(text: str, opening: str, closing: str) -> list[tuple[int, int]]:
     stack: list[int] = []
     pairs: list[tuple[int, int]] = []
     quote = ""
@@ -177,11 +177,19 @@ def _parenthesis_pairs(text: str) -> list[tuple[int, int]]:
             quote = character
         elif character == "#":
             comment = True
-        elif character == "(":
+        elif character == opening:
             stack.append(index)
-        elif character == ")" and stack:
+        elif character == closing and stack:
             pairs.append((stack.pop(), index))
     return pairs
+
+
+def _parenthesis_pairs(text: str) -> list[tuple[int, int]]:
+    return _delimiter_pairs(text, "(", ")")
+
+
+def _brace_pairs(text: str) -> list[tuple[int, int]]:
+    return _delimiter_pairs(text, "{", "}")
 
 
 def _has_balanced_named_route_call_context(text: str, position: int) -> bool:
@@ -220,7 +228,7 @@ def _has_balanced_named_route_call_context(text: str, position: int) -> bool:
     if named_value.group("name").lower() == "url":
         if method in route_methods and (client_receiver or receiver_leaf in {"requests", "httpx"}):
             return True
-        if method == "request" and client_receiver:
+        if method == "request" and (client_receiver or receiver_leaf in {"", "httpx"}):
             http_method = r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)"
             return bool(
                 re.search(rf"^\s*[\"']{http_method}[\"']", argument_text, re.IGNORECASE)
@@ -256,6 +264,19 @@ def _has_balanced_request_scope_context(text: str, position: int) -> bool:
     opening, _ = max(containing_calls, key=lambda pair: pair[0])
     callee = re.search(r"(?P<name>[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\s*$", text[:opening])
     return callee is not None and callee.group("name").rpartition(".")[2] == "Request"
+
+
+def _has_balanced_asgi_scope_context(text: str, position: int) -> bool:
+    if not re.search(
+        r"[\"']path[\"']\s*:\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$",
+        text[:position],
+    ):
+        return False
+    containing_mappings = [pair for pair in _brace_pairs(text) if pair[0] < position < pair[1]]
+    if not containing_mappings:
+        return False
+    opening, _ = max(containing_mappings, key=lambda pair: pair[0])
+    return bool(re.search(r"\b(?:scope|request_scope)\s*=\s*$", text[:opening]))
 
 
 def _web_url_spans(text: str) -> list[tuple[int, int]]:
@@ -301,6 +322,7 @@ def _absolute_user_home_references(text: str) -> list[str]:
             or _has_inline_test_client_route_context(preceding_text)
             or _has_balanced_named_route_call_context(text, match.start())
             or _has_balanced_request_scope_context(text, match.start())
+            or _has_balanced_asgi_scope_context(text, match.start())
         ):
             continue
         references.append(match.group(0))
@@ -371,6 +393,7 @@ def test_absolute_user_home_guard_detects_exact_posix_home_in_path_context() -> 
     assert _absolute_user_home_references(f'Path("{exact_home}")') == [exact_home]
     assert _absolute_user_home_references(f'open("{exact_home}")') == [exact_home]
     assert _absolute_user_home_references(f'os.chdir("{exact_home}")') == [exact_home]
+    assert _absolute_user_home_references(f'os.path.exists("{exact_home}")') == [exact_home]
     assert _absolute_user_home_references(f'Path("{exact_home}/")') == [f"{exact_home}/"]
     assert _absolute_user_home_references(f'Path("{doubled_path}")') == [exact_home]
     assert _absolute_user_home_references(f'open("{doubled_path}")') == [exact_home]
@@ -412,6 +435,7 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             f'client.request(url="{nested_route}", method="GET")',
             'client.websocket_connect("/home/dashboard/stats")',
             'httpx.Request("GET", "/home/dashboard/stats")',
+            f'httpx.Request(headers=HEADERS, method="GET", url="{nested_route}")',
             'Request({"type": "http", "path": "/home/dashboard/stats"})',
             'Request({"client": ("127.0.0.1", 80), "path": "/home/dashboard/stats"})',
             f'Request({{"state": build_state(Settings()), "path": "{nested_route}"}})',
@@ -421,6 +445,7 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             f'WebSocketRoute(endpoint=handler, path="{nested_route}")',
             'scope = {"type": "http", "path": "/home/dashboard/stats"}',
             'scope = {"extensions": {"http.response.debug": {}}, "path": "/home/dashboard/stats"}',
+            f'scope = {{"extensions": {{"a": {{"b": {{}}}}}}, "path": "{nested_route}"}}',
             'app.add_api_route("/home/dashboard/stats", handler)',
             'app.add_api_route(path="/home/dashboard/stats", endpoint=handler)',
             'app.add_api_route(endpoint=handler, path="/home/dashboard/stats")',
