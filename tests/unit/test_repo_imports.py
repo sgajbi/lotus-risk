@@ -555,7 +555,7 @@ def _has_absolute_path_boundary(text: str, start: int) -> bool:
     )
 
 
-def _quoted_posix_path_normalizes_to_personal_home(text: str, start: int) -> bool | None:
+def _quoted_path_normalizes_to_personal_home(text: str, start: int) -> bool | None:
     quote = _active_quote_before(text, start)
     if not quote:
         return None
@@ -564,11 +564,14 @@ def _quoted_posix_path_normalizes_to_personal_home(text: str, start: int) -> boo
     if closing < 0:
         return None
     literal = text[opening + len(quote) : closing]
-    if not literal.startswith("/"):
+    normalized_separators = literal.replace("\\", "/")
+    is_drive_path = bool(re.match(r"^[A-Za-z]:/+", normalized_separators))
+    is_unc_path = normalized_separators.startswith("//")
+    if not (normalized_separators.startswith("/") or is_drive_path):
         return None
 
     normalized_components: list[str] = []
-    for component in literal.split("/"):
+    for component in normalized_separators.split("/"):
         if component in {"", "."}:
             continue
         if component == "..":
@@ -576,14 +579,43 @@ def _quoted_posix_path_normalizes_to_personal_home(text: str, start: int) -> boo
                 normalized_components.pop()
         else:
             normalized_components.append(component)
-    normalized = "/" + "/".join(normalized_components)
-    return bool(
-        re.match(
-            r"^/(?:home/[^/]+|Users/(?!Shared(?:/|$))[^/]+|root)(?:/|$)",
-            normalized,
-            re.IGNORECASE,
+    if is_drive_path:
+        return bool(
+            len(normalized_components) >= 3
+            and re.fullmatch(r"[A-Za-z]:", normalized_components[0])
+            and normalized_components[1].casefold() in {"users", "documents and settings"}
+            and normalized_components[2].casefold() != "public"
         )
-    )
+    if normalized_components and normalized_components[0].casefold() in {
+        "home",
+        "users",
+        "root",
+    }:
+        return bool(
+            (normalized_components[0].casefold() == "home" and len(normalized_components) >= 2)
+            or (
+                normalized_components[0].casefold() == "users"
+                and len(normalized_components) >= 2
+                and normalized_components[1].casefold() != "shared"
+            )
+            or normalized_components[0].casefold() == "root"
+        )
+    if is_unc_path:
+        profile_root = next(
+            (
+                index
+                for index in (1, 2)
+                if len(normalized_components) > index
+                and normalized_components[index].casefold() in {"users", "documents and settings"}
+            ),
+            None,
+        )
+        return bool(
+            profile_root is not None
+            and len(normalized_components) > profile_root + 1
+            and normalized_components[profile_root + 1].casefold() != "public"
+        )
+    return False
 
 
 def _absolute_user_home_references(text: str) -> list[str]:
@@ -596,9 +628,7 @@ def _absolute_user_home_references(text: str) -> list[str]:
     for match, requires_filesystem_context in sorted(candidates, key=lambda item: item[0].start()):
         if not _has_absolute_path_boundary(text, match.start()):
             continue
-        normalized_personal_home = _quoted_posix_path_normalizes_to_personal_home(
-            text, match.start()
-        )
+        normalized_personal_home = _quoted_path_normalizes_to_personal_home(text, match.start())
         if normalized_personal_home is False:
             continue
         preceding_text = text[: match.start()]
@@ -709,6 +739,17 @@ def test_absolute_user_home_guard_detects_exact_posix_home_in_path_context() -> 
     shared_mac_path = "/" + "/".join(["Users", "Shared", "test-data"])
     normalized_windows_home = "C:" + "\\" + "\\".join(["tmp", "..", "Users", "alice", "project"])
     normalized_windows_home_forward = "/".join(["C:", "tmp", "..", "Users", "alice", "project"])
+    traversed_windows_home = (
+        "C:" + "\\" + "\\".join(["Users", "alice", "project", "..", "..", "..", "Windows"])
+    )
+    traversed_windows_home_forward = "/".join(
+        ["C:", "Users", "alice", "project", "..", "..", "..", "Windows"]
+    )
+    traversed_unc_home = "\\\\" + "\\".join(
+        ["server", "Users", "alice", "project", "..", "..", "..", "share"]
+    )
+    public_windows_path = "C:" + "\\" + "\\".join(["Users", "Public", "test-data"])
+    public_unc_path = "\\\\" + "\\".join(["server", "Users", "Public", "test-data"])
 
     assert _absolute_user_home_references(f'Path("{exact_home}")') == [exact_home]
     assert _absolute_user_home_references(f'open("{exact_home}")') == [exact_home]
@@ -747,6 +788,11 @@ def test_absolute_user_home_guard_detects_exact_posix_home_in_path_context() -> 
     assert _absolute_user_home_references(f'Path("{traversed_mac_home}")') == []
     assert _absolute_user_home_references(f'Path("{traversed_root_home}")') == []
     assert _absolute_user_home_references(f'Path("{shared_mac_path}")') == []
+    assert _absolute_user_home_references(f'Path(r"{traversed_windows_home}")') == []
+    assert _absolute_user_home_references(f'Path("{traversed_windows_home_forward}")') == []
+    assert _absolute_user_home_references(f'Path(r"{traversed_unc_home}")') == []
+    assert _absolute_user_home_references(f'Path(r"{public_windows_path}")') == []
+    assert _absolute_user_home_references(f'Path(r"{public_unc_path}")') == []
     assert _absolute_user_home_references(f'HOME = "{exact_home}"') == [exact_home]
     assert _absolute_user_home_references(f'monkeypatch.setenv("HOME", "{exact_home}")') == [
         exact_home
