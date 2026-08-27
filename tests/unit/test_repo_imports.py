@@ -14,7 +14,7 @@ pytestmark = pytest.mark.governance
 ROOT = Path(__file__).resolve().parents[2]
 TESTS_ROOT = ROOT / "tests"
 ABSOLUTE_USER_HOME = re.compile(
-    r"(?:(?i:(?:[\\/]{2}[^:\\/\s\"']+[\\/]+|[a-z]:[\\/]+)"
+    r"(?:(?i:(?:[\\/]{2}[^:\\/\s\"']+[\\/]+(?:[^:\\/\s\"']+[\\/]+)?|[a-z]:[\\/]+)"
     r"(?:users|documents and settings)[\\/]+(?:\.[\\/]+)*"
     r"(?!\.\.(?:[\\/]+|[\s\"']))[^\\/\s\"']+)"
     r"|/ho"
@@ -233,7 +233,8 @@ def _brace_pairs(text: str) -> list[tuple[int, int]]:
 
 def _has_balanced_named_route_call_context(text: str, position: int) -> bool:
     named_value = re.search(
-        r"\b(?P<name>url|path|prefix)\s*=\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$",
+        r"\b(?P<name>url|path|prefix)\s*=\s*(?:\(\s*)*"
+        r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$",
         text[:position],
     )
     if named_value is None:
@@ -242,10 +243,15 @@ def _has_balanced_named_route_call_context(text: str, position: int) -> bool:
     containing_calls = [pair for pair in _parenthesis_pairs(text) if pair[0] < position < pair[1]]
     if not containing_calls:
         return False
-    opening, closing = max(containing_calls, key=lambda pair: pair[0])
-    callee = re.search(r"(?P<name>[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\s*$", text[:opening])
-    if callee is None:
+    call_context = None
+    for opening, closing in sorted(containing_calls, reverse=True):
+        callee = re.search(r"(?P<name>[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\s*$", text[:opening])
+        if callee is not None:
+            call_context = opening, closing, callee
+            break
+    if call_context is None:
         return False
+    opening, closing, callee = call_context
 
     qualified_name = callee.group("name")
     receiver, _, method = qualified_name.rpartition(".")
@@ -362,6 +368,9 @@ def _has_balanced_filesystem_call_context(text: str, position: int) -> bool:
         return False
     filesystem_calls = {
         "open",
+        "Path",
+        "PurePath",
+        "PurePosixPath",
         "io.open",
         "os.chdir",
         "os.listdir",
@@ -477,13 +486,15 @@ def test_absolute_user_home_guard_detects_cross_platform_paths() -> None:
     windows = "/".join(["D:", "Users", "example", "project"])
     escaped_windows = "D:" + "\\\\" + "Users" + "\\\\" + "example" + "\\\\" + "project"
     unc_windows = "\\\\" + "\\".join(["server", "Users", "alice", "project"])
+    shared_unc_windows = "\\\\" + "\\".join(["server", "c$", "Users", "alice", "project"])
     linux = "/" + "/".join(["home", "example", "project"])
     repeated_linux = "/" + "/".join(["home", "example", "", "project"])
     repeated_home_root = "/" + "/".join(["home", "", "example", "project"])
     mac = "/" + "/".join(["Users", "example", "project"])
     root = "/" + "/".join(["root", "project"])
     references = _absolute_user_home_references(
-        f"windows={windows} escaped={escaped_windows} unc={unc_windows} linux={linux} "
+        f"windows={windows} escaped={escaped_windows} unc={unc_windows} "
+        f"shared_unc={shared_unc_windows} linux={linux} "
         f"repeated={repeated_linux} root_repeat={repeated_home_root} mac={mac} root={root}"
     )
 
@@ -491,6 +502,7 @@ def test_absolute_user_home_guard_detects_cross_platform_paths() -> None:
         "/".join(["D:", "Users", "example"]),
         "D:" + "\\\\" + "Users" + "\\\\" + "example",
         "\\\\" + "\\".join(["server", "Users", "alice"]),
+        "\\\\" + "\\".join(["server", "c$", "Users", "alice"]),
         "/" + "/".join(["home", "example"]),
         "/" + "/".join(["home", "example"]),
         "/" + "/".join(["home", "", "example"]),
@@ -519,6 +531,7 @@ def test_absolute_user_home_guard_detects_exact_posix_home_in_path_context() -> 
         exact_home
     ]
     assert _absolute_user_home_references(f'open(("{exact_home}"))') == [exact_home]
+    assert _absolute_user_home_references(f'Path(("{exact_home}"))') == [exact_home]
     assert _absolute_user_home_references(f'shutil.copy(src="input", dst=("{exact_home}"))') == [
         exact_home
     ]
@@ -569,6 +582,7 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             f'httpx.Client().get("{nested_route}")',
             f'httpx.AsyncClient().get("{nested_route}")',
             f'httpx.Client().get(headers=HEADERS, url="{nested_route}")',
+            f'client.get(url=("{nested_route}"))',
             'client.request("GET", "/home/dashboard/stats")',
             'client.request("GET", headers=HEADERS, url="/home/dashboard/stats")',
             'client.request(method="GET", url="/home/dashboard/stats")',
