@@ -49,6 +49,9 @@ ROUTE_LITERAL_PREFIX = re.compile(
     r"|\b(?:[a-z_]\w*_client|client)\.request\s*\(\s*[\"']"
     r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)[\"']\s*,\s*(?:url\s*=\s*)?"
     r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
+    r"|\b(?:[a-z_]\w*_client|client)\.request\s*\(\s*[\"']"
+    r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)[\"']\s*,"
+    r"(?:[^()]|\([^()]*\))*\burl\s*=\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
     r"|\b(?:[a-z_]\w*_client|client)\.request\s*\(\s*method\s*=\s*[\"']"
     r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)[\"']\s*,\s*url\s*=\s*"
     r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
@@ -282,6 +285,7 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             'TestClient(create_app()).get("/home/dashboard/stats")',
             'TestClient(create_app(Settings())).get("/home/dashboard/stats")',
             'client.request("GET", "/home/dashboard/stats")',
+            'client.request("GET", headers=HEADERS, url="/home/dashboard/stats")',
             'client.request(method="GET", url="/home/dashboard/stats")',
             'client.request(method="GET", headers=HEADERS, url="/home/dashboard/stats")',
             'client.websocket_connect("/home/dashboard/stats")',
