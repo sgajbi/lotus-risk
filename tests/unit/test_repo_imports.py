@@ -357,11 +357,6 @@ def _has_balanced_asgi_scope_context(text: str, position: int) -> bool:
 
 
 def _has_balanced_filesystem_call_context(text: str, position: int) -> bool:
-    if not re.search(
-        r"\b(?:file|filename|name|path)\s*=\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$",
-        text[:position],
-    ):
-        return False
     containing_calls = [pair for pair in _parenthesis_pairs(text) if pair[0] < position < pair[1]]
     if not containing_calls:
         return False
@@ -517,6 +512,10 @@ def test_absolute_user_home_guard_detects_exact_posix_home_in_path_context() -> 
     assert _absolute_user_home_references(f'os.chdir(path="{exact_home}")') == [exact_home]
     assert _absolute_user_home_references(f'os.path.exists("{exact_home}")') == [exact_home]
     assert _absolute_user_home_references(f'shutil.rmtree("{exact_home}")') == [exact_home]
+    assert _absolute_user_home_references(f'shutil.copy("input", "{exact_home}")') == [exact_home]
+    assert _absolute_user_home_references(f'shutil.copy(src="input", dst="{exact_home}")') == [
+        exact_home
+    ]
     assert _absolute_user_home_references(f'Path("{exact_home}/")') == [f"{exact_home}/"]
     assert _absolute_user_home_references(f'Path("{exact_home}//")') == [f"{exact_home}//"]
     assert _absolute_user_home_references(f'Path("{doubled_path}")') == [exact_home]
