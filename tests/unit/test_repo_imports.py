@@ -213,7 +213,7 @@ def _brace_pairs(text: str) -> list[tuple[int, int]]:
 
 def _has_balanced_named_route_call_context(text: str, position: int) -> bool:
     named_value = re.search(
-        r"\b(?P<name>url|path)\s*=\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$",
+        r"\b(?P<name>url|path|prefix)\s*=\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$",
         text[:position],
     )
     if named_value is None:
@@ -244,6 +244,10 @@ def _has_balanced_named_route_call_context(text: str, position: int) -> bool:
         "websocket_connect",
     }
 
+    callee_leaf = qualified_name.rpartition(".")[2].lower()
+    if named_value.group("name").lower() == "prefix":
+        return callee_leaf == "apirouter" or method == "include_router"
+
     if named_value.group("name").lower() == "url":
         if method in route_methods and (client_receiver or receiver_leaf in {"requests", "httpx"}):
             return True
@@ -259,14 +263,13 @@ def _has_balanced_named_route_call_context(text: str, position: int) -> bool:
             )
         return False
 
-    callee_leaf = qualified_name.rpartition(".")[2].lower()
     if callee_leaf in {"route", "websocketroute"}:
         return True
     if callee_leaf == "mount" and (
         qualified_name == "Mount" or qualified_name.lower() == "starlette.routing.mount"
     ):
         return True
-    if method in {"route", "api_route", "websocket"}:
+    if method in route_methods | {"api_route", "route", "websocket"}:
         line_prefix = text[text.rfind("\n", 0, callee.start()) + 1 : callee.start()]
         return "@" in line_prefix
     if method == "mount":
@@ -302,7 +305,12 @@ def _has_balanced_asgi_scope_context(text: str, position: int) -> bool:
     if not containing_mappings:
         return False
     opening, _ = max(containing_mappings, key=lambda pair: pair[0])
-    return bool(re.search(r"\b(?:scope|request_scope)\s*=\s*$", text[:opening]))
+    return bool(
+        re.search(
+            r"\b(?:scope|request_scope)\s*(?::[^\n=]+)?=\s*$",
+            text[:opening],
+        )
+    )
 
 
 def _has_balanced_filesystem_call_context(text: str, position: int) -> bool:
@@ -481,6 +489,7 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             '@app.api_route("/home/dashboard/stats", methods=["GET"])',
             '@app.api_route(path="/home/dashboard/stats", methods=["GET"])',
             f'@app.api_route(methods=["GET"], path="{nested_route}")',
+            f'@app.get(response_model=Payload, path="{nested_route}")',
             'client.get("/home/dashboard/stats")',
             'client.get(url="/home/dashboard/stats")',
             'client.get(headers=HEADERS, url="/home/dashboard/stats")',
@@ -514,12 +523,14 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             'scope = {"type": "http", "path": "/home/dashboard/stats"}',
             'scope = {"extensions": {"http.response.debug": {}}, "path": "/home/dashboard/stats"}',
             f'scope = {{"extensions": {{"a": {{"b": {{}}}}}}, "path": "{nested_route}"}}',
+            f'scope: Scope = {{"type": "http", "path": "{nested_route}"}}',
             'app.add_api_route("/home/dashboard/stats", handler)',
             'app.add_api_route(path="/home/dashboard/stats", endpoint=handler)',
             'app.add_api_route(endpoint=handler, path="/home/dashboard/stats")',
             'app.add_route("/home/dashboard/stats", handler)',
             'router.add_websocket_route("/home/dashboard/stats", handler)',
             'APIRouter(prefix="/home/dashboard/stats")',
+            f'APIRouter(dependencies=[Depends(build_dep(Settings()))], prefix="{nested_route}")',
             'app.include_router(router, prefix="/home/dashboard/stats")',
         ]
     )
