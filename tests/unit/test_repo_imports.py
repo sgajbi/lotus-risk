@@ -45,7 +45,7 @@ HTTP_ROUTE_PREFIX = re.compile(
 )
 ROUTE_LITERAL_PREFIX = re.compile(
     r"(?:\b(?:route|endpoint)(?:_path)?\s*=\s*"
-    r"|@\w+(?:\.\w+)*\.(?:get|head|post|put|patch|delete|options|trace|route|api_route|websocket)"
+    r"|@\w+(?:\.\w+)*\.(?:get|head|post|put|patch|delete|options|trace|route|api_route|websocket|websocket_route)"
     r"\s*\(\s*(?:path\s*=\s*)?"
     r"|\b(?:client|test_client|http_client|api_client|response_client|async_client|requests?|httpx)(?:\.\w+)*"
     r"\.(?:get|head|post|put|patch|delete|options|websocket_connect)"
@@ -308,7 +308,7 @@ def _has_balanced_named_route_call_context(text: str, position: int) -> bool:
         qualified_name == "Mount" or qualified_name.lower() == "starlette.routing.mount"
     ):
         return True
-    if method in route_methods | {"api_route", "route", "websocket"}:
+    if method in route_methods | {"api_route", "route", "websocket", "websocket_route"}:
         line_prefix = text[text.rfind("\n", 0, callee.start()) + 1 : callee.start()]
         return "@" in line_prefix
     if method == "mount":
@@ -428,11 +428,11 @@ def _has_absolute_path_boundary(text: str, start: int) -> bool:
     if (
         start == 0
         or text[start - 2 : start] in {"\\n", "\\r", "\\t"}
-        or re.search(r"(?i:(?<![A-Za-z0-9+.:-])file:/+)$", text[:start])
+        or re.search(r"(?i:(?<![A-Za-z0-9+.:-])file:/*)$", text[:start])
     ):
         return True
     return (
-        text[start - 1] not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_./-"
+        text[start - 1] not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_./:-"
     )
 
 
@@ -593,6 +593,7 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             'route = "/home/dashboard/stats"',
             '@router.get("/home/dashboard/stats")',
             '@app.trace("/home/dashboard/stats")',
+            '@app.websocket_route("/home/dashboard/stats")',
             '@app.api_route("/home/dashboard/stats", methods=["GET"])',
             '@app.api_route(path="/home/dashboard/stats", methods=["GET"])',
             f'@app.api_route(methods=["GET"], path="{nested_route}")',
@@ -721,6 +722,9 @@ def test_absolute_user_home_guard_detects_file_uris() -> None:
     assert _absolute_user_home_references(non_file_uri) == []
     nested_file_uri = "urn:file:///" + "/".join(["C:", "Users", "alice", "project"])
     assert _absolute_user_home_references(nested_file_uri) == []
+
+    nested_posix_file_uri = "urn:file://" + "/" + "/".join(["home", "alice", "project"])
+    assert _absolute_user_home_references(nested_posix_file_uri) == []
 
 
 def test_python_test_sources_use_their_declared_encoding(tmp_path: Path) -> None:
