@@ -38,7 +38,7 @@ HTTP_ROUTE_PREFIX = re.compile(
 )
 ROUTE_LITERAL_PREFIX = re.compile(
     r"(?:\b(?:route|endpoint)(?:_path)?\s*=\s*"
-    r"|@\w+(?:\.\w+)*\.(?:get|head|post|put|patch|delete|options|route|api_route|websocket)"
+    r"|@\w+(?:\.\w+)*\.(?:get|head|post|put|patch|delete|options|trace|route|api_route|websocket)"
     r"\s*\(\s*(?:path\s*=\s*)?"
     r"|\b(?:[a-z_]\w*_client|client|requests?|httpx)(?:\.\w+)*"
     r"\.(?:get|head|post|put|patch|delete|options|websocket_connect)"
@@ -293,7 +293,17 @@ def _has_balanced_request_scope_context(text: str, position: int) -> bool:
         return False
     opening, _ = max(containing_calls, key=lambda pair: pair[0])
     callee = re.search(r"(?P<name>[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\s*$", text[:opening])
-    return callee is not None and callee.group("name").rpartition(".")[2] == "Request"
+    if callee is None or callee.group("name") not in {
+        "Request",
+        "fastapi.Request",
+        "starlette.requests.Request",
+    }:
+        return False
+    containing_mappings = [pair for pair in _brace_pairs(text) if pair[0] < position < pair[1]]
+    if not containing_mappings:
+        return False
+    mapping_opening, _ = max(containing_mappings, key=lambda pair: pair[0])
+    return not text[opening + 1 : mapping_opening].strip()
 
 
 def _has_balanced_asgi_scope_context(text: str, position: int) -> bool:
@@ -487,6 +497,7 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             "//example.test/home/dashboard/stats",
             'route = "/home/dashboard/stats"',
             '@router.get("/home/dashboard/stats")',
+            '@app.trace("/home/dashboard/stats")',
             '@app.api_route("/home/dashboard/stats", methods=["GET"])',
             '@app.api_route(path="/home/dashboard/stats", methods=["GET"])',
             f'@app.api_route(methods=["GET"], path="{nested_route}")',
@@ -576,6 +587,11 @@ def test_absolute_user_home_guard_does_not_let_an_adjacent_url_hide_a_path() -> 
     assert _absolute_user_home_references(unrelated_annotated_mapping) == [
         "/" + "/".join(["home", "alice"])
     ]
+
+    request_body_path = (
+        f'httpx.Request("POST", "https://example.test/upload", json={{"path": "{linux}"}})'
+    )
+    assert _absolute_user_home_references(request_body_path) == ["/" + "/".join(["home", "alice"])]
 
     comment_apostrophe = "# don" + "'t\n" + f'values = ("https://example.test/api","{linux}")'
     assert _absolute_user_home_references(comment_apostrophe) == ["/" + "/".join(["home", "alice"])]
