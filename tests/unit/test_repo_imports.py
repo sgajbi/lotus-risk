@@ -71,7 +71,7 @@ ROUTE_LITERAL_PREFIX = re.compile(
     r"|\b(?:httpx\.)?Request\s*\(\s*method\s*=\s*[\"']"
     r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)[\"']\s*,\s*url\s*=\s*"
     r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
-    r"|\b\w+(?:\.\w+)*\.mount\s*\(\s*(?:path\s*=\s*)?"
+    r"|\b(?:\w+\.)*(?:app|[a-z_]\w*_app)\.mount\s*\(\s*(?:path\s*=\s*)?"
     r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$",
     re.IGNORECASE,
 )
@@ -259,16 +259,22 @@ def _has_balanced_named_route_call_context(text: str, position: int) -> bool:
             )
         return False
 
-    if qualified_name.rpartition(".")[2].lower() in {"mount", "route", "websocketroute"}:
+    callee_leaf = qualified_name.rpartition(".")[2].lower()
+    if callee_leaf in {"route", "websocketroute"}:
+        return True
+    if callee_leaf == "mount" and (
+        qualified_name == "Mount" or qualified_name.lower() == "starlette.routing.mount"
+    ):
         return True
     if method in {"route", "api_route", "websocket"}:
         line_prefix = text[text.rfind("\n", 0, callee.start()) + 1 : callee.start()]
         return "@" in line_prefix
+    if method == "mount":
+        return receiver_leaf == "app" or receiver_leaf.endswith("_app")
     return method in {
         "add_api_route",
         "add_route",
         "add_websocket_route",
-        "mount",
     }
 
 
@@ -514,6 +520,9 @@ def test_absolute_user_home_guard_does_not_let_an_adjacent_url_hide_a_path() -> 
 
     data_decorator = f'@data_file("{linux}/input.json")'
     assert _absolute_user_home_references(data_decorator) == ["/" + "/".join(["home", "alice"])]
+
+    unrelated_mount = f'volume.mount(source=device, path="{linux}")'
+    assert _absolute_user_home_references(unrelated_mount) == ["/" + "/".join(["home", "alice"])]
 
     comment_apostrophe = "# don" + "'t\n" + f'values = ("https://example.test/api","{linux}")'
     assert _absolute_user_home_references(comment_apostrophe) == ["/" + "/".join(["home", "alice"])]
