@@ -96,6 +96,6 @@ Use `lotus-risk` directly or through gateway with these rules:
 
 ## Read Next
 
-1. use [Security and Governance](./Security-and-Governance.md) for the contract-discipline view,
-2. use [Operations Runbook](./Operations-Runbook.md) when stateful integration failures may be upstream/runtime issues,
-3. use [Troubleshooting](./Troubleshooting.md) when downstream behavior does not match declared capability support.
+1. use [Security and Governance](Security-and-Governance) for the contract-discipline view,
+2. use [Operations Runbook](Operations-Runbook) when stateful integration failures may be upstream/runtime issues,
+3. use [Troubleshooting](Troubleshooting) when downstream behavior does not match declared capability support.

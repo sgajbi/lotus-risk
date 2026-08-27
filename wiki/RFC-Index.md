@@ -68,6 +68,6 @@ Do not load all RFCs unless the task is genuinely governance-heavy.
 
 ## Read Next
 
-1. use [Roadmap](./Roadmap.md) for remaining gaps and rollout shape,
-2. use [Security and Governance](./Security-and-Governance.md) for the practical contract rules,
-3. use [Development Workflow](./Development-Workflow.md) when RFC work implies code and docs in the same slice.
+1. use [Roadmap](Roadmap) for remaining gaps and rollout shape,
+2. use [Security and Governance](Security-and-Governance) for the practical contract rules,
+3. use [Development Workflow](Development-Workflow) when RFC work implies code and docs in the same slice.

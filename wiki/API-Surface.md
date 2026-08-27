@@ -62,7 +62,7 @@ That leaves the response's own supportability block as the only surface derived 
 attempt — which is why reason codes such as `stale_source_observations` and `benchmark_unavailable`
 matter more here than a green readiness probe.
 
-The operating rule for downstream teams, stated in [Home](./Home.md#current-posture) and repeated
+The operating rule for downstream teams, stated in [Home](Home#current-posture) and repeated
 here because it is the one most often broken:
 
 > Use `/integration/capabilities` and the endpoint matrix as the support contract. **Do not infer
@@ -180,7 +180,7 @@ operational paths `/ops`, `/ops/trust-telemetry` and `/metrics` — **but only w
 deployments, `trusted_ingress_authorized` permits the request and no marker is needed. Enterprise
 bank mode is what makes the marker mandatory, by requiring the secret. Health probes never need it.
 See
-[Security and Governance](./Security-and-Governance.md) and
+[Security and Governance](Security-and-Governance) and
 [`docs/configuration.md`](https://github.com/sgajbi/lotus-risk/blob/main/docs/configuration.md).
 
 ## Current limits
@@ -197,7 +197,7 @@ Documented so that a `200` is not read as broader support than exists:
 
 ## Read next
 
-1. [Overview](./Overview.md) — what the service owns
-2. [Architecture](./Architecture.md) — stateless and stateful execution paths
-3. [Integrations](./Integrations.md) — upstream dependencies and consumer expectations
-4. [Glossary](./Glossary.md) — the risk vocabulary
+1. [Overview](Overview) — what the service owns
+2. [Architecture](Architecture) — stateless and stateful execution paths
+3. [Integrations](Integrations) — upstream dependencies and consumer expectations
+4. [Glossary](Glossary) — the risk vocabulary

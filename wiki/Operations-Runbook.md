@@ -166,6 +166,6 @@ mode or workflow is intentionally unsupported versus operationally failing.
 
 ## Read Next
 
-1. use [Troubleshooting](./Troubleshooting.md) for common failure patterns,
-2. use [Integrations](./Integrations.md) when the issue is really a downstream contract interpretation problem,
-3. use [Security and Governance](./Security-and-Governance.md) when supportability claims are at stake.
+1. use [Troubleshooting](Troubleshooting) for common failure patterns,
+2. use [Integrations](Integrations) when the issue is really a downstream contract interpretation problem,
+3. use [Security and Governance](Security-and-Governance) when supportability claims are at stake.

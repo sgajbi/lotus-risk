@@ -146,6 +146,6 @@ Current examples:
 
 ## Read Next
 
-1. use [Integrations](./Integrations.md) for the downstream contract view,
-2. use [RFC Index](./RFC-Index.md) for the local decision trail,
-3. use [Roadmap](./Roadmap.md) for the remaining supportability gaps.
+1. use [Integrations](Integrations) for the downstream contract view,
+2. use [RFC Index](RFC-Index) for the local decision trail,
+3. use [Roadmap](Roadmap) for the remaining supportability gaps.
