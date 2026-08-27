@@ -425,7 +425,11 @@ def _web_url_spans(text: str) -> list[tuple[int, int]]:
 
 
 def _has_absolute_path_boundary(text: str, start: int) -> bool:
-    if start == 0 or text[start - 2 : start] in {"\\n", "\\r", "\\t"}:
+    if (
+        start == 0
+        or text[start - 2 : start] in {"\\n", "\\r", "\\t"}
+        or re.search(r"(?i:file:/+)$", text[:start])
+    ):
         return True
     return (
         text[start - 1] not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_./-"
