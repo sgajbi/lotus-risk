@@ -76,12 +76,17 @@ See [API Surface](./API-Surface.md#current-limits).
 
 ## Answer quality
 
-The words that say whether a number can be relied on. All three sets are closed, so a consumer can
-branch on them mechanically.
+The words that say whether a number can be relied on. The risk calculation family uses the set
+below; the scenario-pack and risk-event endpoints use `ready`/`degraded`/`pending_review`/`blocked`,
+and mandate health uses `ready`/`attention`/`unavailable`. Every set is closed, so each can be
+branched on mechanically — branch on the one belonging to the endpoint you called. See
+[API Surface](./API-Surface.md#supportability-vocabularies).
 
 | term | meaning |
 |---|---|
-| **supportability state** | `ready`, `stale`, `degraded`, `empty`, `error`, `permission_blocked`, `unsupported` |
+| **supportability state** | risk calculation family: `ready`, `stale`, `degraded`, `empty`, `error`, `permission_blocked`, `unsupported` |
+| **`pending_review` / `blocked`** | scenario-pack and risk-event approval states — an evaluation can be computationally fine and still not releasable |
+| **`attention`** | mandate health: the mandate warrants a look. A business signal, not a service degradation. |
 | **`empty` vs `error`** | `empty` — the calculation ran and had nothing to work on. `error` — it could not run. |
 | **`insufficient_observations`** | not enough history |
 | **`insufficient_aligned_observations`** | portfolio and benchmark history did not overlap enough. A different problem, and a different fix. |
@@ -94,7 +99,7 @@ branch on them mechanically.
 
 | term | meaning |
 |---|---|
-| **capability publication** | `GET /integration/capabilities`, the authoritative statement of what this deployment supports |
+| **capability publication** | `GET /integration/capabilities`, the implementation support contract. Static — identical in every deployment, so it says what exists, not what is usable right now. |
 | **endpoint matrix** | the per-endpoint support table read alongside capability publication; together they are the support contract |
 | **canonical portfolio** | `PB_SG_GLOBAL_BAL_001`, the default subject of live validation |
 | **trusted ingress** | the `X-Lotus-Trusted-Ingress` marker injected by the approved gateway; required for protected operator endpoints and writes, not for health probes |
