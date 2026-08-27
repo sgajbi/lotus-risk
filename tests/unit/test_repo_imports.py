@@ -462,7 +462,7 @@ def _has_balanced_filesystem_call_context(text: str, position: int) -> bool:
         "os.stat",
         "os.unlink",
     }
-    for opening, _ in sorted(containing_calls, reverse=True):
+    for opening, closing in sorted(containing_calls, reverse=True):
         callee = re.search(r"(?P<name>[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\s*$", text[:opening])
         if callee is None:
             continue
@@ -491,14 +491,20 @@ def _has_environment_home_context(text: str, position: int) -> bool:
         if callee is None or callee.group("name").lower() != "monkeypatch.setenv":
             continue
         argument_prefix = text[opening + 1 : position]
-        return bool(
-            re.fullmatch(
-                r"\s*(?:name\s*=\s*)?[\"'](?:HOME|USERPROFILE)[\"']\s*,\s*"
-                r"(?:value\s*=\s*)?"
-                r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']",
-                argument_prefix,
-            )
+        positional_value = re.fullmatch(
+            r"\s*(?:name\s*=\s*)?[\"'](?:HOME|USERPROFILE)[\"']\s*,\s*"
+            r"(?:value\s*=\s*)?(?i:(?:r[fb]?|[fb]r?|u)?)[\"']",
+            argument_prefix,
         )
+        named_value = re.search(
+            r"\bvalue\s*=\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$",
+            argument_prefix,
+        )
+        named_home = re.search(
+            r"\bname\s*=\s*[\"'](?:HOME|USERPROFILE)[\"']",
+            text[opening + 1 : closing],
+        )
+        return bool(positional_value or (named_value and named_home))
     return False
 
 
@@ -694,6 +700,9 @@ def test_absolute_user_home_guard_detects_exact_posix_home_in_path_context() -> 
     assert _absolute_user_home_references(f'monkeypatch.setenv("HOME", value="{exact_home}")') == [
         exact_home
     ]
+    assert _absolute_user_home_references(
+        f'monkeypatch.setenv(value="{exact_home}", name="HOME")'
+    ) == [exact_home]
     assert _absolute_user_home_references(f'subprocess.run(command, cwd="{exact_home}")') == [
         exact_home
     ]
