@@ -26,9 +26,9 @@ EXACT_POSIX_USER_HOME = re.compile(
     r"(?:/ho" r"me/[^/\s\"']+|/Us" r"ers/[^/\s\"']+|/r" r"oot)/?(?=$|[\s\"'])"
 )
 FILESYSTEM_LITERAL_PREFIX = re.compile(
-    r"(?:\b(?:Path|PurePath|PurePosixPath)\s*\(\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"']"
+    r"(?:\b(?:Path|PurePath|PurePosixPath)\s*\(\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"'][\\/]*"
     r"|\b(?:open|os\.(?:chdir|listdir|scandir|stat|remove|unlink|rmdir|mkdir|makedirs))"
-    r"\s*\(\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"']"
+    r"\s*\(\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"'][\\/]*"
     r"|file://)$"
 )
 IGNORED_GENERATED_TEST_DIRS = {"__pycache__", ".pytest_cache"}
@@ -232,10 +232,16 @@ def _has_balanced_named_route_call_context(text: str, position: int) -> bool:
             )
         return False
 
+    if qualified_name.lower() in {"route", "websocketroute"}:
+        return True
     if method in {"route", "api_route", "websocket"}:
         line_prefix = text[text.rfind("\n", 0, callee.start()) + 1 : callee.start()]
         return "@" in line_prefix
-    return method in {"add_api_route", "add_route", "add_websocket_route"}
+    return method in {
+        "add_api_route",
+        "add_route",
+        "add_websocket_route",
+    }
 
 
 def _web_url_spans(text: str) -> list[tuple[int, int]]:
@@ -263,9 +269,12 @@ def _absolute_user_home_references(text: str) -> list[str]:
     ]
     for match, requires_filesystem_context in sorted(candidates, key=lambda item: item[0].start()):
         preceding_text = text[: match.start()]
-        if requires_filesystem_context and not FILESYSTEM_LITERAL_PREFIX.search(preceding_text):
+        filesystem_context = bool(FILESYSTEM_LITERAL_PREFIX.search(preceding_text))
+        if requires_filesystem_context and not filesystem_context:
             continue
-        inside_url = any(start <= match.start() < end for start, end in url_spans)
+        inside_url = not filesystem_context and any(
+            start <= match.start() < end for start, end in url_spans
+        )
         request_scope_route = REQUEST_SCOPE_ROUTE_PREFIX.search(preceding_text)
         if (
             inside_url
@@ -340,11 +349,14 @@ def test_absolute_user_home_guard_detects_cross_platform_paths() -> None:
 
 def test_absolute_user_home_guard_detects_exact_posix_home_in_path_context() -> None:
     exact_home = "/" + "/".join(["home", "alice"])
+    doubled_path = "//" + "/".join(["home", "alice", "project"])
 
     assert _absolute_user_home_references(f'Path("{exact_home}")') == [exact_home]
     assert _absolute_user_home_references(f'open("{exact_home}")') == [exact_home]
     assert _absolute_user_home_references(f'os.chdir("{exact_home}")') == [exact_home]
     assert _absolute_user_home_references(f'Path("{exact_home}/")') == [f"{exact_home}/"]
+    assert _absolute_user_home_references(f'Path("{doubled_path}")') == [exact_home]
+    assert _absolute_user_home_references(f'open("{doubled_path}")') == [exact_home]
 
 
 def test_absolute_user_home_guard_ignores_web_routes() -> None:
@@ -386,7 +398,9 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             'Request({"type": "http", "path": "/home/dashboard/stats"})',
             'Request({"client": ("127.0.0.1", 80), "path": "/home/dashboard/stats"})',
             'Route("/home/dashboard/stats", endpoint)',
+            f'Route(endpoint=handler, path="{nested_route}")',
             'WebSocketRoute(path="/home/dashboard/stats", endpoint=handler)',
+            f'WebSocketRoute(endpoint=handler, path="{nested_route}")',
             'scope = {"type": "http", "path": "/home/dashboard/stats"}',
             'scope = {"extensions": {"http.response.debug": {}}, "path": "/home/dashboard/stats"}',
             'app.add_api_route("/home/dashboard/stats", handler)',
