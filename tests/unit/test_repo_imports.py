@@ -43,7 +43,8 @@ FILESYSTEM_LITERAL_PREFIX = re.compile(
 )
 IGNORED_GENERATED_TEST_DIRS = {"__pycache__", ".pytest_cache"}
 HTTP_ROUTE_PREFIX = re.compile(
-    r"(?:^|[\s\"'])(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE)\s+$", re.IGNORECASE
+    r"(?:^|[\s\"'])(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE|CONNECT)\s+$",
+    re.IGNORECASE,
 )
 ROUTE_LITERAL_PREFIX = re.compile(
     r"(?:\b(?:route|endpoint)(?:_path)?\s*=\s*"
@@ -57,17 +58,17 @@ ROUTE_LITERAL_PREFIX = re.compile(
     r"\s*\((?:[^()]|\([^()]*\))*\burl\s*=\s*"
     r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
     r"|\b(?:client|test_client|http_client|api_client|response_client|async_client)\.request\s*\(\s*[\"']"
-    r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE)[\"']\s*,\s*(?:url\s*=\s*)?"
+    r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE|CONNECT)[\"']\s*,\s*(?:url\s*=\s*)?"
     r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
     r"|\b(?:client|test_client|http_client|api_client|response_client|async_client)\.request\s*\(\s*[\"']"
-    r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE)[\"']\s*,"
+    r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE|CONNECT)[\"']\s*,"
     r"(?:[^()]|\([^()]*\))*\burl\s*=\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
     r"|\b(?:client|test_client|http_client|api_client|response_client|async_client)\.request\s*\(\s*method\s*=\s*[\"']"
-    r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE)[\"']\s*,\s*url\s*=\s*"
+    r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE|CONNECT)[\"']\s*,\s*url\s*=\s*"
     r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
     r"|\b(?:client|test_client|http_client|api_client|response_client|async_client)\.request\s*\("
     r"(?:[^()]|\([^()]*\))*\bmethod\s*=\s*[\"']"
-    r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE)[\"']"
+    r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE|CONNECT)[\"']"
     r"(?:[^()]|\([^()]*\))*\burl\s*=\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
     r"|\b\w+(?:\.\w+)*\.(?:add_api_route|add_api_websocket_route|add_route|add_websocket_route)"
     r"\s*\(\s*(?:path\s*=\s*)?(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
@@ -75,10 +76,10 @@ ROUTE_LITERAL_PREFIX = re.compile(
     r"\s*\((?:[^()]|\([^()]*\))*\bpath\s*=\s*"
     r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
     r"|\b(?:httpx\.)?Request\s*\(\s*[\"']"
-    r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE)[\"']\s*,\s*(?:url\s*=\s*)?"
+    r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE|CONNECT)[\"']\s*,\s*(?:url\s*=\s*)?"
     r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
     r"|\b(?:httpx\.)?Request\s*\(\s*method\s*=\s*[\"']"
-    r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE)[\"']\s*,\s*url\s*=\s*"
+    r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE|CONNECT)[\"']\s*,\s*url\s*=\s*"
     r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
     r"|\b(?:\w+\.)*(?:app|[a-z_]\w*_app)\.mount\s*\(\s*(?:path\s*=\s*)?"
     r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$",
@@ -293,7 +294,7 @@ def _has_balanced_named_route_call_context(text: str, position: int) -> bool:
         ):
             return True
         if method == "request" and (client_receiver or receiver_leaf in {"", "httpx"}):
-            http_method = r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE)"
+            http_method = r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE|CONNECT)"
             return bool(
                 re.search(rf"^\s*[\"']{http_method}[\"']", argument_text, re.IGNORECASE)
                 or re.search(
@@ -312,7 +313,7 @@ def _has_balanced_named_route_call_context(text: str, position: int) -> bool:
         return True
     if method in route_methods | {"api_route", "route", "websocket", "websocket_route"}:
         line_prefix = text[text.rfind("\n", 0, callee.start()) + 1 : callee.start()]
-        return "@" in line_prefix
+        return bool(re.fullmatch(r"\s*@", line_prefix))
     if method == "mount":
         return receiver_leaf == "app" or receiver_leaf.endswith("_app")
     return method in {
@@ -363,7 +364,7 @@ def _has_grouped_positional_route_call_context(text: str, position: int) -> bool
             line_prefix = text[text.rfind("\n", 0, callee.start()) + 1 : callee.start()]
             if (
                 receiver_leaf in client_receivers | {"httpx", "requests"}
-                or "@" in line_prefix
+                or re.fullmatch(r"\s*@", line_prefix)
                 or _has_inline_http_client_receiver(text, opening, method)
             ):
                 return True
@@ -383,7 +384,7 @@ def _has_grouped_positional_route_call_context(text: str, position: int) -> bool
         if method == "request" and receiver_leaf in client_receivers:
             argument_text = text[opening + 1 : closing]
             if re.search(
-                r"^\s*[\"'](?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE)[\"']",
+                r"^\s*[\"'](?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE|CONNECT)[\"']",
                 argument_text,
                 re.IGNORECASE,
             ):
@@ -537,8 +538,18 @@ def _has_absolute_path_boundary(text: str, start: int) -> bool:
     if quote:
         opening = text.rfind(quote, 0, start)
         prefix = text[opening + len(quote) : start]
-        if prefix.startswith("/") and ".." in prefix.split("/"):
-            return True
+        if prefix.startswith("/"):
+            normalized_components: list[str] = []
+            for component in prefix.split("/"):
+                if component in {"", "."}:
+                    continue
+                if component == "..":
+                    if normalized_components:
+                        normalized_components.pop()
+                else:
+                    normalized_components.append(component)
+            if not normalized_components:
+                return True
     return (
         text[start - 1] not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_./:-"
     )
@@ -655,6 +666,7 @@ def test_absolute_user_home_guard_detects_exact_posix_home_in_path_context() -> 
     relative_home_path = "/".join(["fixtures", "home", "alice", "project"])
     relative_windows_home = "/".join(["fixtures", "C:", "Users", "alice", "project"])
     normalized_home_path = "/" + "/".join(["tmp", "..", "home", "alice", "project"])
+    non_home_normalized_path = "/" + "/".join(["tmp", "foo", "..", "home", "alice", "project"])
     normalized_windows_home = "C:" + "\\" + "\\".join(["tmp", "..", "Users", "alice", "project"])
     normalized_windows_home_forward = "/".join(["C:", "tmp", "..", "Users", "alice", "project"])
 
@@ -690,6 +702,7 @@ def test_absolute_user_home_guard_detects_exact_posix_home_in_path_context() -> 
     assert _absolute_user_home_references(f'Path("{relative_home_path}")') == []
     assert _absolute_user_home_references(f'Path("{relative_windows_home}")') == []
     assert _absolute_user_home_references(f'Path("{normalized_home_path}")') == [exact_home]
+    assert _absolute_user_home_references(f'Path("{non_home_normalized_path}")') == []
     assert _absolute_user_home_references(f'HOME = "{exact_home}"') == [exact_home]
     assert _absolute_user_home_references(f'monkeypatch.setenv("HOME", "{exact_home}")') == [
         exact_home
@@ -716,7 +729,7 @@ def test_absolute_user_home_guard_detects_exact_posix_home_in_path_context() -> 
 
 def test_absolute_user_home_guard_ignores_web_routes() -> None:
     nested_route = "/" + "/".join(["home", "dashboard", "stats"])
-    routes = " ".join(
+    routes = "\n".join(
         [
             "https://example.test/users/123",
             "GET /users/alice",
@@ -754,6 +767,7 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             f'client.get(("{nested_route}"))',
             f'@app.get(("{nested_route}"))',
             'client.request("GET", "/home/dashboard/stats")',
+            f'client.request("CONNECT", "{nested_route}")',
             'client.request("GET", headers=HEADERS, url="/home/dashboard/stats")',
             'client.request(method="GET", url="/home/dashboard/stats")',
             'client.request(method="GET", headers=HEADERS, url="/home/dashboard/stats")',
@@ -838,6 +852,9 @@ def test_absolute_user_home_guard_does_not_let_an_adjacent_url_hide_a_path() -> 
 
     client_body_path = f'client.post(json={{"path": "{linux}"}})'
     assert _absolute_user_home_references(client_body_path) == ["/" + "/".join(["home", "alice"])]
+
+    email_then_cache = f'owner="a@b"; cache.get(path="{linux}")'
+    assert _absolute_user_home_references(email_then_cache) == ["/" + "/".join(["home", "alice"])]
 
     comment_apostrophe = "# don" + "'t\n" + f'values = ("https://example.test/api","{linux}")'
     assert _absolute_user_home_references(comment_apostrophe) == ["/" + "/".join(["home", "alice"])]
