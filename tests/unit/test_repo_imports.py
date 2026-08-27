@@ -138,7 +138,9 @@ def _active_quote_before(text: str, end: int) -> str:
     quote = ""
     escaped = False
     comment = False
-    for character in text[:end]:
+    index = 0
+    while index < end:
+        character = text[index]
         if comment:
             if character == "\n":
                 comment = False
@@ -147,12 +149,18 @@ def _active_quote_before(text: str, end: int) -> str:
         elif character == "\\":
             escaped = True
         elif quote:
-            if character == quote:
+            if len(quote) == 3 and text.startswith(quote, index):
+                quote = ""
+                index += 2
+            elif len(quote) == 1 and character == quote:
                 quote = ""
         elif character in {'"', "'"}:
-            quote = character
+            quote = character * 3 if text.startswith(character * 3, index) else character
+            if len(quote) == 3:
+                index += 2
         elif character == "#":
             comment = True
+        index += 1
     return quote
 
 
@@ -162,7 +170,9 @@ def _delimiter_pairs(text: str, opening: str, closing: str) -> list[tuple[int, i
     quote = ""
     escaped = False
     comment = False
-    for index, character in enumerate(text):
+    index = 0
+    while index < len(text):
+        character = text[index]
         if comment:
             if character == "\n":
                 comment = False
@@ -171,16 +181,22 @@ def _delimiter_pairs(text: str, opening: str, closing: str) -> list[tuple[int, i
         elif character == "\\":
             escaped = True
         elif quote:
-            if character == quote:
+            if len(quote) == 3 and text.startswith(quote, index):
+                quote = ""
+                index += 2
+            elif len(quote) == 1 and character == quote:
                 quote = ""
         elif character in {'"', "'"}:
-            quote = character
+            quote = character * 3 if text.startswith(character * 3, index) else character
+            if len(quote) == 3:
+                index += 2
         elif character == "#":
             comment = True
         elif character == opening:
             stack.append(index)
         elif character == closing and stack:
             pairs.append((stack.pop(), index))
+        index += 1
     return pairs
 
 
@@ -240,7 +256,7 @@ def _has_balanced_named_route_call_context(text: str, position: int) -> bool:
             )
         return False
 
-    if qualified_name.lower() in {"route", "websocketroute"}:
+    if qualified_name.rpartition(".")[2].lower() in {"route", "websocketroute"}:
         return True
     if method in {"route", "api_route", "websocket"}:
         line_prefix = text[text.rfind("\n", 0, callee.start()) + 1 : callee.start()]
@@ -441,6 +457,7 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             f'Request({{"state": build_state(Settings()), "path": "{nested_route}"}})',
             'Route("/home/dashboard/stats", endpoint)',
             f'Route(endpoint=handler, path="{nested_route}")',
+            f'starlette.routing.Route(endpoint=handler, path="{nested_route}")',
             'WebSocketRoute(path="/home/dashboard/stats", endpoint=handler)',
             f'WebSocketRoute(endpoint=handler, path="{nested_route}")',
             'scope = {"type": "http", "path": "/home/dashboard/stats"}',
@@ -457,6 +474,11 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
     )
 
     assert _absolute_user_home_references(routes) == []
+
+    triple_quoted_source = '"""Mention a " quote."""\n' + (
+        f'client.get(headers=build_headers(Settings()), url="{nested_route}")'
+    )
+    assert _absolute_user_home_references(triple_quoted_source) == []
 
 
 def test_absolute_user_home_guard_does_not_let_an_adjacent_url_hide_a_path() -> None:
