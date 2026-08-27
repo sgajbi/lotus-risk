@@ -305,6 +305,36 @@ def _has_balanced_asgi_scope_context(text: str, position: int) -> bool:
     return bool(re.search(r"\b(?:scope|request_scope)\s*=\s*$", text[:opening]))
 
 
+def _has_balanced_filesystem_call_context(text: str, position: int) -> bool:
+    if not re.search(
+        r"\b(?:file|filename|name|path)\s*=\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$",
+        text[:position],
+    ):
+        return False
+    containing_calls = [pair for pair in _parenthesis_pairs(text) if pair[0] < position < pair[1]]
+    if not containing_calls:
+        return False
+    opening, _ = max(containing_calls, key=lambda pair: pair[0])
+    callee = re.search(r"(?P<name>[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\s*$", text[:opening])
+    if callee is None:
+        return False
+    qualified_name = callee.group("name")
+    filesystem_calls = {
+        "open",
+        "io.open",
+        "os.chdir",
+        "os.listdir",
+        "os.makedirs",
+        "os.mkdir",
+        "os.remove",
+        "os.rmdir",
+        "os.scandir",
+        "os.stat",
+        "os.unlink",
+    }
+    return qualified_name in filesystem_calls or qualified_name.startswith("os.path.")
+
+
 def _web_url_spans(text: str) -> list[tuple[int, int]]:
     spans: list[tuple[int, int]] = []
     for match in WEB_URL_START.finditer(text):
@@ -332,7 +362,10 @@ def _absolute_user_home_references(text: str) -> list[str]:
     ]
     for match, requires_filesystem_context in sorted(candidates, key=lambda item: item[0].start()):
         preceding_text = text[: match.start()]
-        filesystem_context = bool(FILESYSTEM_LITERAL_PREFIX.search(preceding_text))
+        filesystem_context = bool(
+            FILESYSTEM_LITERAL_PREFIX.search(preceding_text)
+            or _has_balanced_filesystem_call_context(text, match.start())
+        )
         if requires_filesystem_context and not filesystem_context:
             continue
         inside_url = not filesystem_context and any(
@@ -422,7 +455,9 @@ def test_absolute_user_home_guard_detects_exact_posix_home_in_path_context() -> 
 
     assert _absolute_user_home_references(f'Path("{exact_home}")') == [exact_home]
     assert _absolute_user_home_references(f'open("{exact_home}")') == [exact_home]
+    assert _absolute_user_home_references(f'open(file="{exact_home}")') == [exact_home]
     assert _absolute_user_home_references(f'os.chdir("{exact_home}")') == [exact_home]
+    assert _absolute_user_home_references(f'os.chdir(path="{exact_home}")') == [exact_home]
     assert _absolute_user_home_references(f'os.path.exists("{exact_home}")') == [exact_home]
     assert _absolute_user_home_references(f'Path("{exact_home}/")') == [f"{exact_home}/"]
     assert _absolute_user_home_references(f'Path("{doubled_path}")') == [exact_home]
