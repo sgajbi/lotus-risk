@@ -428,7 +428,7 @@ def _has_absolute_path_boundary(text: str, start: int) -> bool:
     if (
         start == 0
         or text[start - 2 : start] in {"\\n", "\\r", "\\t"}
-        or re.search(r"(?i:file:/+)$", text[:start])
+        or re.search(r"(?i:(?<![A-Za-z0-9+.-])file:/+)$", text[:start])
     ):
         return True
     return (
@@ -716,6 +716,9 @@ def test_absolute_user_home_guard_detects_file_uris() -> None:
     assert _absolute_user_home_references(redundant_slashes) == [
         "///" + "/".join(["home", "alice"])
     ]
+
+    non_file_uri = "myfile:/" + "/".join(["C:", "Users", "alice", "project"])
+    assert _absolute_user_home_references(non_file_uri) == []
 
 
 def test_python_test_sources_use_their_declared_encoding(tmp_path: Path) -> None:
