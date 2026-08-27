@@ -42,6 +42,10 @@ FILESYSTEM_LITERAL_PREFIX = re.compile(
     r"\s*\(\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"'][\\/]*"
     r"|file:)$"
 )
+FILESYSTEM_ASSIGNMENT_PREFIX = re.compile(
+    r"\b(?:[A-Za-z_]\w*_(?:PATH|DIR)|PATH|HOME|USERPROFILE)\s*=\s*"
+    r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
+)
 IGNORED_GENERATED_TEST_DIRS = {"__pycache__", ".pytest_cache"}
 HTTP_ROUTE_PREFIX = re.compile(
     r"(?:^|[\r\n]|[\"'])\s*(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE|CONNECT)\s+$",
@@ -533,6 +537,10 @@ def _has_absolute_path_boundary(text: str, start: int) -> bool:
         start == 0
         or text[start - 2 : start] in {"\\n", "\\r", "\\t"}
         or re.search(r"(?i:(?<![A-Za-z0-9+.:-])file:/*)$", text[:start])
+        or re.search(
+            r"(?i:(?<![A-Za-z0-9+.:-])file://[^/\s\"']+)$",
+            text[:start],
+        )
     ):
         return True
     quote = _active_quote_before(text, start)
@@ -638,6 +646,7 @@ def _absolute_user_home_references(text: str) -> list[str]:
         preceding_text = text[: match.start()]
         filesystem_context = bool(
             FILESYSTEM_LITERAL_PREFIX.search(preceding_text)
+            or FILESYSTEM_ASSIGNMENT_PREFIX.search(preceding_text)
             or _has_balanced_filesystem_call_context(text, match.start())
             or _has_environment_home_context(text, match.start())
         )
@@ -671,7 +680,7 @@ def _read_scannable_test_text(path: Path) -> str | None:
     try:
         return path.read_text(encoding="utf-8")
     except UnicodeDecodeError:
-        return None
+        return path.read_bytes().decode("utf-8", errors="surrogateescape")
 
 
 def test_force_repo_src_first_moves_repo_src_ahead_of_other_lotus_apps(
@@ -967,6 +976,12 @@ def test_absolute_user_home_guard_does_not_let_an_adjacent_url_hide_a_path() -> 
     prose_method = f'note = "please delete {linux}"'
     assert _absolute_user_home_references(prose_method) == ["/" + "/".join(["home", "alice"])]
 
+    forward_unc = "//" + "/".join(["server", "c$", "Users", "alice", "project"])
+    unc_assignment = f'UNC_PATH = "{forward_unc}"'
+    assert _absolute_user_home_references(unc_assignment) == [
+        "//" + "/".join(["server", "c$", "Users", "alice"])
+    ]
+
     comment_apostrophe = "# don" + "'t\n" + f'values = ("https://example.test/api","{linux}")'
     assert _absolute_user_home_references(comment_apostrophe) == ["/" + "/".join(["home", "alice"])]
 
@@ -978,12 +993,16 @@ def test_absolute_user_home_guard_detects_file_uris() -> None:
     linux_uri = "file://" + "/" + "/".join(["home", "alice", "project"])
     windows_uri = "file://" + "/" + "/".join(["C:", "Users", "alice", "project"])
     exact_linux_uri = "file://" + "/" + "/".join(["home", "alice"])
+    authority_linux_uri = "file://localhost" + "/" + "/".join(["home", "alice", "project"])
 
     assert _absolute_user_home_references(f"{linux_uri} {windows_uri}") == [
         "///" + "/".join(["home", "alice"]),
         "/".join(["C:", "Users", "alice"]),
     ]
     assert _absolute_user_home_references(exact_linux_uri) == ["///" + "/".join(["home", "alice"])]
+    assert _absolute_user_home_references(authority_linux_uri) == [
+        "/" + "/".join(["home", "alice"])
+    ]
 
     redundant_slashes = "//" + linux_uri.removeprefix("file://")
     assert _absolute_user_home_references(redundant_slashes) == [
@@ -1003,6 +1022,17 @@ def test_python_test_sources_use_their_declared_encoding(tmp_path: Path) -> None
     linux = "/" + "/".join(["home", "alice", "project"])
     source = tmp_path / "test_latin1.py"
     source.write_bytes(f"# -*- coding: latin-1 -*-\nPATH = '{linux}/café'\n".encode("latin-1"))
+
+    text = _read_scannable_test_text(source)
+
+    assert text is not None
+    assert _absolute_user_home_references(text) == ["/" + "/".join(["home", "alice"])]
+
+
+def test_non_utf8_text_fixtures_remain_scannable(tmp_path: Path) -> None:
+    linux = "/" + "/".join(["home", "alice", "project"])
+    source = tmp_path / "fixture.txt"
+    source.write_bytes(f"PATH = '{linux}/café'\n".encode("latin-1"))
 
     text = _read_scannable_test_text(source)
 
