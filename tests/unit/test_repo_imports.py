@@ -14,7 +14,8 @@ pytestmark = pytest.mark.governance
 ROOT = Path(__file__).resolve().parents[2]
 TESTS_ROOT = ROOT / "tests"
 ABSOLUTE_USER_HOME = re.compile(
-    r"(?:(?i:[a-z]:[\\/]+(?:users|documents and settings)[\\/]+[^\\/\s\"']+)"
+    r"(?:(?i:(?:[\\/]{2}[^:\\/\s\"']+[\\/]+|[a-z]:[\\/]+)"
+    r"(?:users|documents and settings)[\\/]+[^\\/\s\"']+)"
     r"|/ho"
     r"me/+[^/\s\"']+(?=/+[^/\s\"']+)"
     r"|/Us"
@@ -69,11 +70,13 @@ ROUTE_LITERAL_PREFIX = re.compile(
     r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
     r"|\b(?:httpx\.)?Request\s*\(\s*method\s*=\s*[\"']"
     r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)[\"']\s*,\s*url\s*=\s*"
+    r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
+    r"|\b\w+(?:\.\w+)*\.mount\s*\(\s*(?:path\s*=\s*)?"
     r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$",
     re.IGNORECASE,
 )
 ROUTE_CONSTRUCTOR_PREFIX = re.compile(
-    r"\b(?:Route|WebSocketRoute)\s*\(\s*(?:path\s*=\s*)?"
+    r"\b(?:Route|WebSocketRoute|Mount)\s*\(\s*(?:path\s*=\s*)?"
     r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
 )
 ROUTER_PREFIX_ROUTE_PREFIX = re.compile(
@@ -256,7 +259,7 @@ def _has_balanced_named_route_call_context(text: str, position: int) -> bool:
             )
         return False
 
-    if qualified_name.rpartition(".")[2].lower() in {"route", "websocketroute"}:
+    if qualified_name.rpartition(".")[2].lower() in {"mount", "route", "websocketroute"}:
         return True
     if method in {"route", "api_route", "websocket"}:
         line_prefix = text[text.rfind("\n", 0, callee.start()) + 1 : callee.start()]
@@ -265,6 +268,7 @@ def _has_balanced_named_route_call_context(text: str, position: int) -> bool:
         "add_api_route",
         "add_route",
         "add_websocket_route",
+        "mount",
     }
 
 
@@ -383,19 +387,21 @@ def test_force_repo_src_first_moves_repo_src_ahead_of_other_lotus_apps(
 def test_absolute_user_home_guard_detects_cross_platform_paths() -> None:
     windows = "/".join(["D:", "Users", "example", "project"])
     escaped_windows = "D:" + "\\\\" + "Users" + "\\\\" + "example" + "\\\\" + "project"
+    unc_windows = "\\\\" + "\\".join(["server", "Users", "alice", "project"])
     linux = "/" + "/".join(["home", "example", "project"])
     repeated_linux = "/" + "/".join(["home", "example", "", "project"])
     repeated_home_root = "/" + "/".join(["home", "", "example", "project"])
     mac = "/" + "/".join(["Users", "example", "project"])
     root = "/" + "/".join(["root", "project"])
     references = _absolute_user_home_references(
-        f"windows={windows} escaped={escaped_windows} linux={linux} "
+        f"windows={windows} escaped={escaped_windows} unc={unc_windows} linux={linux} "
         f"repeated={repeated_linux} root_repeat={repeated_home_root} mac={mac} root={root}"
     )
 
     assert references == [
         "/".join(["D:", "Users", "example"]),
         "D:" + "\\\\" + "Users" + "\\\\" + "example",
+        "\\\\" + "\\".join(["server", "Users", "alice"]),
         "/" + "/".join(["home", "example"]),
         "/" + "/".join(["home", "example"]),
         "/" + "/".join(["home", "", "example"]),
@@ -460,6 +466,8 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             'Route("/home/dashboard/stats", endpoint)',
             f'Route(endpoint=handler, path="{nested_route}")',
             f'starlette.routing.Route(endpoint=handler, path="{nested_route}")',
+            f'app.mount(path="{nested_route}", app=static_app)',
+            f'Mount(app=static_app, path="{nested_route}")',
             'WebSocketRoute(path="/home/dashboard/stats", endpoint=handler)',
             f'WebSocketRoute(endpoint=handler, path="{nested_route}")',
             'scope = {"type": "http", "path": "/home/dashboard/stats"}',
