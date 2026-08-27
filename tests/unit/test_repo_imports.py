@@ -34,7 +34,7 @@ FILESYSTEM_LITERAL_PREFIX = re.compile(
 )
 IGNORED_GENERATED_TEST_DIRS = {"__pycache__", ".pytest_cache"}
 HTTP_ROUTE_PREFIX = re.compile(
-    r"(?:^|[\s\"'])(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)\s+$", re.IGNORECASE
+    r"(?:^|[\s\"'])(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE)\s+$", re.IGNORECASE
 )
 ROUTE_LITERAL_PREFIX = re.compile(
     r"(?:\b(?:route|endpoint)(?:_path)?\s*=\s*"
@@ -48,17 +48,17 @@ ROUTE_LITERAL_PREFIX = re.compile(
     r"\s*\((?:[^()]|\([^()]*\))*\burl\s*=\s*"
     r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
     r"|\b(?:[a-z_]\w*_client|client)\.request\s*\(\s*[\"']"
-    r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)[\"']\s*,\s*(?:url\s*=\s*)?"
+    r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE)[\"']\s*,\s*(?:url\s*=\s*)?"
     r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
     r"|\b(?:[a-z_]\w*_client|client)\.request\s*\(\s*[\"']"
-    r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)[\"']\s*,"
+    r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE)[\"']\s*,"
     r"(?:[^()]|\([^()]*\))*\burl\s*=\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
     r"|\b(?:[a-z_]\w*_client|client)\.request\s*\(\s*method\s*=\s*[\"']"
-    r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)[\"']\s*,\s*url\s*=\s*"
+    r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE)[\"']\s*,\s*url\s*=\s*"
     r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
     r"|\b(?:[a-z_]\w*_client|client)\.request\s*\("
     r"(?:[^()]|\([^()]*\))*\bmethod\s*=\s*[\"']"
-    r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)[\"']"
+    r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE)[\"']"
     r"(?:[^()]|\([^()]*\))*\burl\s*=\s*(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
     r"|\b\w+(?:\.\w+)*\.(?:add_api_route|add_route|add_websocket_route)"
     r"\s*\(\s*(?:path\s*=\s*)?(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
@@ -66,10 +66,10 @@ ROUTE_LITERAL_PREFIX = re.compile(
     r"\s*\((?:[^()]|\([^()]*\))*\bpath\s*=\s*"
     r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
     r"|\b(?:httpx\.)?Request\s*\(\s*[\"']"
-    r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)[\"']\s*,\s*(?:url\s*=\s*)?"
+    r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE)[\"']\s*,\s*(?:url\s*=\s*)?"
     r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
     r"|\b(?:httpx\.)?Request\s*\(\s*method\s*=\s*[\"']"
-    r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)[\"']\s*,\s*url\s*=\s*"
+    r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE)[\"']\s*,\s*url\s*=\s*"
     r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$"
     r"|\b(?:\w+\.)*(?:app|[a-z_]\w*_app)\.mount\s*\(\s*(?:path\s*=\s*)?"
     r"(?i:(?:r[fb]?|[fb]r?|u)?)[\"']$",
@@ -241,6 +241,7 @@ def _has_balanced_named_route_call_context(text: str, position: int) -> bool:
         "patch",
         "delete",
         "options",
+        "trace",
         "websocket_connect",
     }
 
@@ -252,7 +253,7 @@ def _has_balanced_named_route_call_context(text: str, position: int) -> bool:
         if method in route_methods and (client_receiver or receiver_leaf in {"requests", "httpx"}):
             return True
         if method == "request" and (client_receiver or receiver_leaf in {"", "httpx"}):
-            http_method = r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)"
+            http_method = r"(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE)"
             return bool(
                 re.search(rf"^\s*[\"']{http_method}[\"']", argument_text, re.IGNORECASE)
                 or re.search(
@@ -307,7 +308,7 @@ def _has_balanced_asgi_scope_context(text: str, position: int) -> bool:
     opening, _ = max(containing_mappings, key=lambda pair: pair[0])
     return bool(
         re.search(
-            r"\b(?:scope|request_scope)\s*(?::[^\n=]+)?=\s*$",
+            r"\b(?:scope|request_scope)\s*(?::[^;\n=]+)?=\s*$",
             text[:opening],
         )
     )
@@ -490,6 +491,7 @@ def test_absolute_user_home_guard_ignores_web_routes() -> None:
             '@app.api_route(path="/home/dashboard/stats", methods=["GET"])',
             f'@app.api_route(methods=["GET"], path="{nested_route}")',
             f'@app.get(response_model=Payload, path="{nested_route}")',
+            f'@app.trace(response_model=Payload, path="{nested_route}")',
             'client.get("/home/dashboard/stats")',
             'client.get(url="/home/dashboard/stats")',
             'client.get(headers=HEADERS, url="/home/dashboard/stats")',
@@ -569,6 +571,11 @@ def test_absolute_user_home_guard_does_not_let_an_adjacent_url_hide_a_path() -> 
 
     unrelated_mount = f'volume.mount(source=device, path="{linux}")'
     assert _absolute_user_home_references(unrelated_mount) == ["/" + "/".join(["home", "alice"])]
+
+    unrelated_annotated_mapping = f'scope: Scope; payload = {{"path": "{linux}"}}'
+    assert _absolute_user_home_references(unrelated_annotated_mapping) == [
+        "/" + "/".join(["home", "alice"])
+    ]
 
     comment_apostrophe = "# don" + "'t\n" + f'values = ("https://example.test/api","{linux}")'
     assert _absolute_user_home_references(comment_apostrophe) == ["/" + "/".join(["home", "alice"])]
