@@ -440,7 +440,7 @@ def _absolute_user_home_references(text: str) -> list[str]:
         *((match, True) for match in EXACT_POSIX_USER_HOME.finditer(text)),
     ]
     for match, requires_filesystem_context in sorted(candidates, key=lambda item: item[0].start()):
-        if match.group(0).startswith("/") and not _has_absolute_path_boundary(text, match.start()):
+        if not _has_absolute_path_boundary(text, match.start()):
             continue
         preceding_text = text[: match.start()]
         filesystem_context = bool(
@@ -539,6 +539,7 @@ def test_absolute_user_home_guard_detects_exact_posix_home_in_path_context() -> 
     root_parent_path = "/" + "/".join(["root", "..", "tmp", "data"])
     windows_parent_path = "C:" + "\\" + "\\".join(["Users", "..", "Public", "data"])
     relative_home_path = "/".join(["fixtures", "home", "alice", "project"])
+    relative_windows_home = "/".join(["fixtures", "C:", "Users", "alice", "project"])
 
     assert _absolute_user_home_references(f'Path("{exact_home}")') == [exact_home]
     assert _absolute_user_home_references(f'open("{exact_home}")') == [exact_home]
@@ -570,6 +571,7 @@ def test_absolute_user_home_guard_detects_exact_posix_home_in_path_context() -> 
     assert _absolute_user_home_references(f'Path("{root_parent_path}")') == []
     assert _absolute_user_home_references(f'Path(r"{windows_parent_path}")') == []
     assert _absolute_user_home_references(f'Path("{relative_home_path}")') == []
+    assert _absolute_user_home_references(f'Path("{relative_windows_home}")') == []
 
 
 def test_absolute_user_home_guard_ignores_web_routes() -> None:
