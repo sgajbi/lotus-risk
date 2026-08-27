@@ -19,11 +19,13 @@ authority lives.
 | **`INFORMATION_RATIO`** | active return per unit of tracking error | `risk-information-ratio.md` |
 | **`VAR`** | value at risk over the configured horizon and confidence | `risk-var.md` |
 
-**Three of these require benchmark inputs — `BETA`, `TRACKING_ERROR` and `INFORMATION_RATIO`.**
-Requesting one without benchmark returns or benchmark exposure history is a validation failure, not
-a silently portfolio-only answer. `VAR` is deliberately **not** among them: it is computed from the
-portfolio series alone, and treating it as benchmark-dependent would make callers reject valid
-requests.
+**Three of these depend on benchmark inputs — `BETA`, `TRACKING_ERROR` and `INFORMATION_RATIO`.**
+`VAR` is deliberately **not** among them: it is computed from the portfolio series alone, and
+treating it as benchmark-dependent would make callers reject valid requests.
+
+What happens when the benchmark is missing depends on the surface: `/calculate` accepts the request
+and degrades, while historical attribution rejects it at validation. See
+[API Surface](./API-Surface.md#the-metric-vocabulary).
 
 ## Drawdown family
 
@@ -34,7 +36,7 @@ Realized drawdown analytics go beyond the single `DRAWDOWN` metric:
 | **maximum drawdown** | the worst peak-to-trough decline in the window |
 | **relative maximum drawdown** | the same, measured against the benchmark |
 | **average drawdown** | the mean of every strictly underwater observation — not a mean of episode-level values, so a long episode weighs proportionally more |
-| **time under water** | how long the portfolio spent below its prior peak |
+| **time under water** | the **count of underwater observations**, not elapsed time. Despite the `_days` suffix on `summary.time_under_water_days`, three underwater observations are three observations — not three days. |
 | **Ulcer index** | depth *and* duration of drawdown in a single number |
 | **DaR / CDaR** | drawdown at risk and conditional drawdown at risk |
 

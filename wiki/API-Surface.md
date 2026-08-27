@@ -85,12 +85,14 @@ Three metrics depend on benchmark inputs — **`BETA`, `TRACKING_ERROR` and `INF
 
 | surface | behaviour without benchmark data |
 |---|---|
-| `POST /analytics/risk/calculate` | the request is **valid**. `benchmark_returns` defaults to empty, and each benchmark-dependent metric comes back with `degraded` supportability and reason `benchmark_unavailable` |
+| `POST /analytics/risk/calculate` | the request is **valid**. `benchmark_returns` defaults to empty; the affected metrics carry a deterministic error payload in their `details`, and the `degraded` / `benchmark_unavailable` posture is emitted **once, response-level**, in `metadata.calculation_supportability` |
 | `POST /analytics/risk/historical-attribution` | requesting `ACTIVE_RISK` or `TRACKING_ERROR` attribution without benchmark returns (stateless) or benchmark exposure history (exposure-driven) is a **validation failure** |
 
-So a client calling `calculate` must read per-metric supportability rather than relying on a `4xx`
-to tell it something was missing. Neither surface computes a benchmark-dependent metric from
-portfolio data alone and reports it as though it were sound.
+A client calling `calculate` must therefore read two different places, and neither is a status
+code: `metadata.calculation_supportability` for the response-level posture, and each metric's
+`details` for what went wrong with that metric. A `RiskValue` carries only `value` and `details` —
+there is no per-metric supportability field to read. Neither surface computes a benchmark-dependent
+metric from portfolio data alone and reports it as though it were sound.
 
 ## Supportability vocabularies
 
