@@ -30,7 +30,7 @@ jobs:
           name: action-reference-resolution
           path: action-reference-resolution.json
           if-no-files-found: warn
-      - name: Fail on missing repositories, references, or an empty scan
+      - name: Fail on missing references or an empty scan
         if: steps.resolver.outputs.outcome == 'missing'
         run: exit 1
       - name: Mark an inconclusive registry check as cancelled

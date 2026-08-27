@@ -43,6 +43,7 @@ class Resolution:
     slug: str
     ref: str
     status: str
+    resolved_sha: str | None
     detail: str
     occurrences: tuple[str, ...]
 
@@ -50,6 +51,7 @@ class Resolution:
 @dataclass(frozen=True)
 class ApiResponse:
     status: int
+    payload: object | None = None
     detail: str = ""
 
 
@@ -74,15 +76,16 @@ class GitHubApiClient:
         )
         try:
             with urllib.request.urlopen(request, timeout=20) as response:  # noqa: S310
-                return ApiResponse(status=response.status)
+                return ApiResponse(status=response.status, payload=json.load(response))
         except urllib.error.HTTPError as error:
             remaining = error.headers.get("x-ratelimit-remaining", "unknown")
             return ApiResponse(
                 status=error.code,
+                payload=None,
                 detail=f"HTTP {error.code}; rate-limit remaining={remaining}",
             )
         except (urllib.error.URLError, TimeoutError, OSError) as error:
-            return ApiResponse(status=0, detail=f"network error: {error}")
+            return ApiResponse(status=0, payload=None, detail=f"network error: {error}")
 
 
 def collect_references(workflows_dir: Path) -> list[ActionReference]:
@@ -114,6 +117,48 @@ def _reference_api_path(slug: str, ref: str) -> str:
     return f"repos/{escaped_slug}/git/ref/tags/{urllib.parse.quote(ref, safe='')}"
 
 
+def _payload_dict(response: ApiResponse) -> dict[str, object]:
+    return response.payload if isinstance(response.payload, dict) else {}
+
+
+def _resolved_sha(
+    slug: str, ref: str, response: ApiResponse, client: ApiClient
+) -> tuple[str | None, str]:
+    """Return the immutable commit SHA behind a commit or lightweight/annotated tag."""
+    payload = _payload_dict(response)
+    if len(ref) == 40 and all(character in "0123456789abcdef" for character in ref):
+        sha = payload.get("sha")
+        return (sha if isinstance(sha, str) else ref), response.detail
+
+    target = payload.get("object")
+    if not isinstance(target, dict):
+        return None, "GitHub returned a tag reference without an object target"
+    target_type = target.get("type")
+    target_sha = target.get("sha")
+    if not isinstance(target_type, str) or not isinstance(target_sha, str):
+        return None, "GitHub returned an incomplete tag object target"
+
+    escaped_slug = "/".join(urllib.parse.quote(part, safe="") for part in slug.split("/"))
+    for _ in range(10):
+        if target_type == "commit":
+            return target_sha, response.detail
+        if target_type != "tag":
+            return None, f"GitHub tag resolved to unsupported object type {target_type!r}"
+        peeled = client.get(
+            f"repos/{escaped_slug}/git/tags/{urllib.parse.quote(target_sha, safe='')}"
+        )
+        if peeled.status != 200:
+            return None, peeled.detail or f"HTTP {peeled.status} while peeling annotated tag"
+        peeled_object = _payload_dict(peeled).get("object")
+        if not isinstance(peeled_object, dict):
+            return None, "GitHub returned an annotated tag without an object target"
+        target_type = peeled_object.get("type")
+        target_sha = peeled_object.get("sha")
+        if not isinstance(target_type, str) or not isinstance(target_sha, str):
+            return None, "GitHub returned an incomplete annotated-tag target"
+    return None, "GitHub tag nesting exceeded the resolver safety limit"
+
+
 def resolve_references(references: list[ActionReference], client: ApiClient) -> list[Resolution]:
     grouped: dict[tuple[str, str], list[ActionReference]] = {}
     for reference in references:
@@ -128,30 +173,42 @@ def resolve_references(references: list[ActionReference], client: ApiClient) -> 
         repo_response = repository_status[slug]
         if repo_response.status == 404:
             resolutions.append(
-                Resolution(slug, ref, "missing_repository", repo_response.detail, locations)
+                Resolution(
+                    slug,
+                    ref,
+                    "inconclusive",
+                    None,
+                    f"repository absent or inaccessible; {repo_response.detail}",
+                    locations,
+                )
             )
             continue
         if repo_response.status != 200:
             resolutions.append(
-                Resolution(slug, ref, "inconclusive", repo_response.detail, locations)
+                Resolution(slug, ref, "inconclusive", None, repo_response.detail, locations)
             )
             continue
 
         response = client.get(_reference_api_path(slug, ref))
         if response.status == 200:
-            status = "resolved"
+            resolved_sha, detail = _resolved_sha(slug, ref, response, client)
+            status = "resolved" if resolved_sha is not None else "inconclusive"
         elif response.status == 404:
             status = "missing_ref"
+            resolved_sha = None
+            detail = response.detail
         else:
             status = "inconclusive"
-        resolutions.append(Resolution(slug, ref, status, response.detail, locations))
+            resolved_sha = None
+            detail = response.detail
+        resolutions.append(Resolution(slug, ref, status, resolved_sha, detail, locations))
     return resolutions
 
 
 def overall_outcome(references: list[ActionReference], resolutions: list[Resolution]) -> str:
     if not references:
         return "missing"
-    if any(item.status in {"missing_ref", "missing_repository"} for item in resolutions):
+    if any(item.status == "missing_ref" for item in resolutions):
         return "missing"
     if any(item.status == "inconclusive" for item in resolutions):
         return "inconclusive"

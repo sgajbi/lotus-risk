@@ -394,8 +394,11 @@ Important validation expectations:
    current CI dependency posture (`actions/upload-artifact@v6`, `actions/download-artifact@v7`).
    Do not downgrade these to Node 20-era majors to clear a transient workflow issue. The separate
    daily `Action Reference Resolution` workflow verifies every external action tag or commit
-   against GitHub: missing references fail, an empty inventory fails, and network/rate-limit
-   answers cancel the run as visibly inconclusive rather than producing false-green evidence.
+   against GitHub: missing references in accessible repositories fail, an empty inventory fails,
+   and inaccessible repositories or network/rate-limit answers cancel the run as visibly
+   inconclusive rather than producing false-green evidence. Resolution evidence records the
+   immutable commit SHA behind each tag, including action references that select a repository
+   subpath.
 8. Release image posture is governed by `make image-supply-chain-gate`: images are built locally,
    tagged by Git SHA, labeled with source/build/version/CI metadata, accompanied by an SBOM, and
     fully inventoried, scanned unconditionally for application-library HIGH/CRITICAL findings, and
