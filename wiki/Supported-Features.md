@@ -8,7 +8,7 @@
 | Drawdown analytics | `/analytics/risk/drawdown` | full for stateless and stateful modes | Realized drawdown, underwater period, and recovery analysis. |
 | Rolling risk metrics | `/analytics/risk/rolling-metrics` | full for stateless and stateful modes | Rolling historical risk diagnostics for front-office review. |
 | Concentration risk | `/analytics/risk/concentration` | full for stateless, stateful, and simulation modes | Position, issuer, and HHI concentration review, including what-if simulation support; non-empty simulation changes require `Idempotency-Key` for lotus-core replay/conflict enforcement. |
-| Historical attribution | `/analytics/risk/historical-attribution` | partial | Historical total-risk and active-risk decomposition; stateful `ACTIVE_RISK + ISSUER` is supported. |
+| Historical attribution | `/analytics/risk/historical-attribution` | partial | Historical total-risk and active-risk decomposition; stateful `ACTIVE_RISK` supports `POSITION`, `SECTOR`, `ASSET_CLASS`, and `ISSUER`. `CUSTOM` grouping and simulation remain unsupported. |
 | Regime scenario pack | `/analytics/risk/regime-scenario-pack/evaluate` | full stateless | CIO-governed scenario-pack evaluation with threshold posture and optional per-security contribution evidence. |
 | Risk-event affected cohort | `/analytics/risk/risk-event-cohorts/evaluate` | partial stateless first-wave product | Source-owned portfolio membership and impact scores for governed risk events. |
 | Mandate risk health | `/analytics/risk/mandate-health-context` | partial stateless first-wave product | Tracking-error health posture for downstream mandate-management consumption. |
