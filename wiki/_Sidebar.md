@@ -1,17 +1,32 @@
 # Navigation
 
+## Start here
+
 * [Home](Home)
 * [Overview](Overview)
 * [Architecture](Architecture)
-* [Getting Started](Getting-Started)
-* [Development Workflow](Development-Workflow)
-* [Validation and CI](Validation-and-CI)
-* [Operations Runbook](Operations-Runbook)
-* [Integrations](Integrations)
+
+## Contracts
+
+* [API Surface](API-Surface)
 * [Supported Features](Supported-Features)
+* [Integrations](Integrations)
+* [Mesh Data Products](Mesh-Data-Products)
+
+## Run and operate
+
+* [Getting Started](Getting-Started)
+* [Operations Runbook](Operations-Runbook)
 * [Security and Governance](Security-and-Governance)
-* [RFC Index](RFC-Index)
-* [Roadmap](Roadmap)
 * [Troubleshooting](Troubleshooting)
 
-- [Mesh Data Products](Mesh-Data-Products)
+## Build
+
+* [Development Workflow](Development-Workflow)
+* [Validation and CI](Validation-and-CI)
+
+## Reference
+
+* [Glossary](Glossary)
+* [RFC Index](RFC-Index)
+* [Roadmap](Roadmap)
