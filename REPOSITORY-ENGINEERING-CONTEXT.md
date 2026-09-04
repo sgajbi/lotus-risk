@@ -177,7 +177,7 @@ Boundary rules:
 2. gateway and UI should not duplicate risk logic or narrative improperly,
 3. monetary-float governance applies only where money-bearing identifiers require it, not generic analytics terms,
 4. supportability and evidence posture should remain truthful and data-backed,
-5. downstream consumers must preserve signed VaR semantics, attribution reconciliation fields, issuer active-risk support metadata, concentration-only simulation support, and audit lineage metadata as documented in `docs/domain-apis/risk-product-surface-alignment.md`,
+5. downstream consumers must preserve signed VaR semantics, attribution reconciliation fields together with `metadata.metric_unit_semantics` (rolling and attribution responses state source-owned units per requested metric -- `decimal_ratio` values are decimal fractions of one, so `0.1253` means 12.53%, and the values are unreadable without their stated units), issuer active-risk support metadata, concentration-only simulation support, and audit lineage metadata as documented in `docs/domain-apis/risk-product-surface-alignment.md`,
 6. `lotus-core` must be consumed as a governed source-data, analytics-input, snapshot/simulation, and support-metadata authority, while `lotus-performance` remains the authority for performance return and benchmark exposure context inputs.
 7. production ASGI runtimes must keep lifespan support enabled so downstream connection pooling and
    shutdown cleanup remain effective; explicitly injected clients are preserved for controlled
