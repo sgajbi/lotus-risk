@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.contracts.attribution import (
+    ATTRIBUTION_METRIC_UNIT_SEMANTICS,
     AttributionInputMode,
     AttributionOptions,
     HistoricalAttributionMetadata,
@@ -30,6 +31,10 @@ def _historical_attribution_metadata(
         request_fingerprint=fingerprint_model(request),
         covariance_method=options.covariance_method,
         annualization_basis=options.annualization_basis,
+        metric_unit_semantics={
+            str(metric): ATTRIBUTION_METRIC_UNIT_SEMANTICS[str(metric)]
+            for metric in options.metrics
+        },
         requested_attribution_types=list(options.attribution_types),
         requested_metrics=list(options.metrics),
         requested_grouping_dimensions=list(options.grouping_dimensions),

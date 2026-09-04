@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-09-04T08:55:52.955131+00:00",
+  "generatedAt": "2026-09-04T14:02:12.752047+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.affected_portfolios",
@@ -8568,6 +8568,14 @@
             "type": "integer",
             "semanticId": "lotus.annualization_basis",
             "attributeRef": "#/attributeCatalog/lotus.annualization_basis"
+          },
+          {
+            "name": "metadata.metric_unit_semantics",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.metric_unit_semantics",
+            "attributeRef": "#/attributeCatalog/lotus.metric_unit_semantics"
           },
           {
             "name": "metadata.requested_attribution_types",

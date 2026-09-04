@@ -260,3 +260,29 @@ def test_attribution_engine_sets_quality_flag_for_missing_grouping_data() -> Non
     assert response.metadata.calculation_supportability.state == "degraded"
     assert response.metadata.calculation_supportability.reason == "calculation_quality_issue"
     assert response.metadata.calculation_supportability.degraded_metric_count == 1
+
+
+def test_every_attribution_metric_states_its_unit_semantics() -> None:
+    from typing import get_args
+
+    from app.contracts.attribution import ATTRIBUTION_METRIC_UNIT_SEMANTICS
+    from app.contracts.attribution_common_inputs import AttributionMetric
+
+    stated = set(ATTRIBUTION_METRIC_UNIT_SEMANTICS)
+    vocabulary = set(get_args(AttributionMetric))
+    assert stated == vocabulary, (
+        "An attributed value without stated unit semantics is unreadable downstream; "
+        f"missing={sorted(vocabulary - stated)}, orphaned={sorted(stated - vocabulary)}"
+    )
+    assert set(ATTRIBUTION_METRIC_UNIT_SEMANTICS.values()) <= {"decimal_ratio", "unitless"}
+
+
+def test_attribution_response_metadata_states_unit_semantics_for_requested_metrics() -> None:
+    response = calculate_historical_attribution(
+        _request(), input_mode=AttributionInputMode.STATELESS
+    )
+
+    assert response.metadata.metric_unit_semantics == {
+        "VOLATILITY": "decimal_ratio",
+        "TRACKING_ERROR": "decimal_ratio",
+    }

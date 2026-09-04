@@ -50,6 +50,20 @@ class HistoricalAttributionMetadata(AuditMetadataFields):
         description="Annualization basis used for annualized metrics.",
         json_schema_extra={"example": 252},
     )
+    metric_unit_semantics: dict[str, str] = Field(
+        default_factory=dict,
+        description=(
+            "Unit semantics per requested attribution metric, covering total_value, "
+            "reconciled_sum, residual, and marginal/component contributions: "
+            "decimal_ratio values are decimal fractions of one (0.1253 means 12.53%). "
+            "weight_average and percent_contribution are always decimal fractions of "
+            "one by field contract. Annualization is stated separately by "
+            "annualization_basis and does not change how a value is read."
+        ),
+        json_schema_extra={
+            "example": {"VOLATILITY": "decimal_ratio", "TRACKING_ERROR": "decimal_ratio"}
+        },
+    )
     requested_attribution_types: list[AttributionType] = Field(
         default_factory=list,
         description="Requested attribution decomposition types in canonical execution order.",
