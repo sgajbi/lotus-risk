@@ -38,8 +38,13 @@ LEGACY_TERM_MAP: dict[str, str] = {
     "cif_id": "client_id",
     "booking_center": "booking_center_code",
 }
-AMBIGUOUS_LEAF_TERMS = {"state", "status", "reason", "type"}
+AMBIGUOUS_LEAF_TERMS = {"state", "status", "reason", "type", "metric_unit_semantics"}
 CONTEXTUAL_TERM_BY_SCHEMA_AND_LEAF: dict[tuple[str, str], str] = {
+    ("RollingMetadata", "metric_unit_semantics"): "rolling_metric_unit_semantics",
+    (
+        "HistoricalAttributionMetadata",
+        "metric_unit_semantics",
+    ): "attribution_metric_unit_semantics",
     ("HealthResponse", "status"): "health_status",
     ("LivenessResponse", "status"): "liveness_status",
     ("ReadinessResponse", "status"): "readiness_status",

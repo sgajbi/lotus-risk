@@ -32,8 +32,7 @@ def _historical_attribution_metadata(
         covariance_method=options.covariance_method,
         annualization_basis=options.annualization_basis,
         metric_unit_semantics={
-            str(metric): ATTRIBUTION_METRIC_UNIT_SEMANTICS[str(metric)]
-            for metric in options.metrics
+            metric: ATTRIBUTION_METRIC_UNIT_SEMANTICS[metric] for metric in options.metrics
         },
         requested_attribution_types=list(options.attribution_types),
         requested_metrics=list(options.metrics),

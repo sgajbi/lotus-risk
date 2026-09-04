@@ -26,7 +26,7 @@ AttributionValueUnit = Literal["decimal_ratio", "unitless"]
 #: fractions of one by field contract and are not repeated here. Every
 #: AttributionMetric MUST have an entry: an attributed value without stated
 #: unit semantics is unreadable downstream.
-ATTRIBUTION_METRIC_UNIT_SEMANTICS: dict[str, AttributionValueUnit] = {
+ATTRIBUTION_METRIC_UNIT_SEMANTICS: dict[AttributionMetric, AttributionValueUnit] = {
     "VOLATILITY": "decimal_ratio",
     "TRACKING_ERROR": "decimal_ratio",
 }

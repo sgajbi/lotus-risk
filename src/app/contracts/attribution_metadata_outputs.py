@@ -7,6 +7,7 @@ from pydantic import Field
 from app.contracts.attribution_inputs import (
     AttributionMetric,
     AttributionType,
+    AttributionValueUnit,
     GroupingDimension,
 )
 from app.contracts.audit import AuditMetadataFields
@@ -50,8 +51,7 @@ class HistoricalAttributionMetadata(AuditMetadataFields):
         description="Annualization basis used for annualized metrics.",
         json_schema_extra={"example": 252},
     )
-    metric_unit_semantics: dict[str, str] = Field(
-        default_factory=dict,
+    metric_unit_semantics: dict[AttributionMetric, AttributionValueUnit] = Field(
         description=(
             "Unit semantics per requested attribution metric, covering total_value, "
             "reconciled_sum, residual, and marginal/component contributions: "
