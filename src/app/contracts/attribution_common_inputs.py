@@ -16,6 +16,20 @@ class AttributionInputMode(str, Enum):
 
 AttributionType = Literal["TOTAL_RISK", "ACTIVE_RISK"]
 AttributionMetric = Literal["VOLATILITY", "TRACKING_ERROR"]
+
+AttributionValueUnit = Literal["decimal_ratio", "unitless"]
+
+#: Source-owned unit semantics per attributed metric, covering total_value,
+#: reconciled_sum, residual, and marginal/component contributions ("metric
+#: units"). decimal_ratio values are decimal fractions of one (0.1253 means
+#: 12.53%). weight_average and percent_contribution are ALWAYS decimal
+#: fractions of one by field contract and are not repeated here. Every
+#: AttributionMetric MUST have an entry: an attributed value without stated
+#: unit semantics is unreadable downstream.
+ATTRIBUTION_METRIC_UNIT_SEMANTICS: dict[str, AttributionValueUnit] = {
+    "VOLATILITY": "decimal_ratio",
+    "TRACKING_ERROR": "decimal_ratio",
+}
 GroupingDimension = Literal["POSITION", "ISSUER", "SECTOR", "ASSET_CLASS", "CUSTOM"]
 
 

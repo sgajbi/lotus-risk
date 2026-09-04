@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.contracts.attribution_inputs import (
+    ATTRIBUTION_METRIC_UNIT_SEMANTICS,
     AttributionInputMode,
     AttributionMetric,
     AttributionOptions,
@@ -20,6 +21,7 @@ from app.contracts.attribution_outputs import (
 )
 
 __all__ = [
+    "ATTRIBUTION_METRIC_UNIT_SEMANTICS",
     "AttributionContributor",
     "AttributionInputMode",
     "AttributionMetric",
