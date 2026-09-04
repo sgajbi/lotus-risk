@@ -77,6 +77,27 @@ def test_api_vocabulary_disambiguates_status_state_reason_and_type_fields() -> N
     )
 
 
+def test_api_vocabulary_keeps_the_two_unit_maps_contextually_distinct() -> None:
+    """The rolling and attribution unit maps cover different metric vocabularies
+    and value fields: a generator change collapsing both back to one generic ID
+    would merge two incompatible unit contracts and the inventory would keep
+    whichever description it met first."""
+
+    inventory = build_inventory()
+
+    rolling = _endpoint(inventory, method="POST", path="/analytics/risk/rolling-metrics")
+    attribution = _endpoint(inventory, method="POST", path="/analytics/risk/historical-attribution")
+
+    assert (
+        _field_semantic_id(rolling, section="response", name="metadata.metric_unit_semantics")
+        == "lotus.rolling_metric_unit_semantics"
+    )
+    assert (
+        _field_semantic_id(attribution, section="response", name="metadata.metric_unit_semantics")
+        == "lotus.attribution_metric_unit_semantics"
+    )
+
+
 def test_api_vocabulary_rejects_ambiguous_generic_semantic_id_collisions() -> None:
     inventory = {
         "attributeCatalog": [
