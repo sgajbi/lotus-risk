@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-09-04T22:38:57.867146+00:00",
+  "generatedAt": "2026-09-04T23:22:42.093716+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.affected_portfolios",
@@ -8600,7 +8600,7 @@
           {
             "name": "metadata.requested_attribution_types",
             "location": "body",
-            "required": false,
+            "required": true,
             "type": "array",
             "semanticId": "lotus.requested_attribution_types",
             "attributeRef": "#/attributeCatalog/lotus.requested_attribution_types"
@@ -8608,7 +8608,7 @@
           {
             "name": "metadata.requested_metrics",
             "location": "body",
-            "required": false,
+            "required": true,
             "type": "array",
             "semanticId": "lotus.requested_metrics",
             "attributeRef": "#/attributeCatalog/lotus.requested_metrics"
@@ -8616,7 +8616,7 @@
           {
             "name": "metadata.requested_grouping_dimensions",
             "location": "body",
-            "required": false,
+            "required": true,
             "type": "array",
             "semanticId": "lotus.requested_grouping_dimensions",
             "attributeRef": "#/attributeCatalog/lotus.requested_grouping_dimensions"

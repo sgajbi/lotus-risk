@@ -321,8 +321,14 @@ def test_metadata_refuses_a_unit_map_that_does_not_match_requested_metrics() -> 
 
     assert metadata().metric_unit_semantics == {"TRACKING_ERROR": "decimal_ratio"}
 
-    with pytest.raises(ValueError, match="missing=..TRACKING_ERROR"):
+    # An empty map is refused by the schema bound before the equality check runs.
+    with pytest.raises(ValueError, match="at least 1 item"):
         metadata(metric_unit_semantics={})
+
+    # A non-empty map for the wrong metric hits the equality check: both the
+    # missing and the surplus side are named.
+    with pytest.raises(ValueError, match="missing=..TRACKING_ERROR"):
+        metadata(metric_unit_semantics={"VOLATILITY": "decimal_ratio"})
 
     with pytest.raises(ValueError, match="surplus=..VOLATILITY"):
         metadata(
@@ -337,3 +343,9 @@ def test_metadata_refuses_a_unit_map_that_does_not_match_requested_metrics() -> 
 
     with pytest.raises(ValueError, match="contradicts the canonical source-owned units"):
         metadata(metric_unit_semantics={"TRACKING_ERROR": "unitless"})
+
+    # Requesting nothing is not a valid emission at all: every valid request
+    # selects at least one metric, so an empty requested list cannot slip an
+    # empty unit map past the equality check.
+    with pytest.raises(ValueError, match="at least 1 item"):
+        metadata(metric_unit_semantics={}, requested_metrics=[])
