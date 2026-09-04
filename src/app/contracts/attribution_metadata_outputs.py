@@ -53,6 +53,7 @@ class HistoricalAttributionMetadata(AuditMetadataFields):
         json_schema_extra={"example": 252},
     )
     metric_unit_semantics: dict[AttributionMetric, AttributionValueUnit] = Field(
+        min_length=1,
         description=(
             "Unit semantics per requested attribution metric, covering total_value, "
             "reconciled_sum, residual, and marginal/component contributions: "
@@ -66,17 +67,17 @@ class HistoricalAttributionMetadata(AuditMetadataFields):
         },
     )
     requested_attribution_types: list[AttributionType] = Field(
-        default_factory=list,
+        min_length=1,
         description="Requested attribution decomposition types in canonical execution order.",
         json_schema_extra={"example": ["TOTAL_RISK", "ACTIVE_RISK"]},
     )
     requested_metrics: list[AttributionMetric] = Field(
-        default_factory=list,
+        min_length=1,
         description="Requested attribution metrics in canonical execution order.",
         json_schema_extra={"example": ["VOLATILITY", "TRACKING_ERROR"]},
     )
     requested_grouping_dimensions: list[GroupingDimension] = Field(
-        default_factory=list,
+        min_length=1,
         description="Requested grouping dimensions in canonical execution order.",
         json_schema_extra={"example": ["POSITION", "SECTOR"]},
     )
