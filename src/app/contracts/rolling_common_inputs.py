@@ -36,6 +36,24 @@ ROLLING_BENCHMARK_METRICS: set[str] = {
 }
 
 
+RollingMetricUnit = Literal["decimal_ratio", "unitless"]
+
+#: Source-owned unit semantics per rolling metric. ``decimal_ratio`` values
+#: are decimal fractions of one (0.1374 means 13.74%); ``unitless`` values
+#: are pure ratios read at face value. Annualization is methodology, stated
+#: separately by ``annualization_basis`` - it does not change how a value is
+#: read. Every ``RollingMetric`` MUST have an entry: a metric without stated
+#: unit semantics is unreadable downstream.
+ROLLING_METRIC_UNIT_SEMANTICS: dict[str, RollingMetricUnit] = {
+    "ROLLING_VOLATILITY": "decimal_ratio",
+    "ROLLING_SHARPE": "unitless",
+    "ROLLING_BETA": "unitless",
+    "ROLLING_TRACKING_ERROR": "decimal_ratio",
+    "ROLLING_INFORMATION_RATIO": "unitless",
+    "ROLLING_MAX_DRAWDOWN": "decimal_ratio",
+}
+
+
 def _default_rolling_metrics() -> list[RollingMetric]:
     return [
         "ROLLING_VOLATILITY",

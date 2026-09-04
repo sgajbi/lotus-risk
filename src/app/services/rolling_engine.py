@@ -5,6 +5,7 @@ from collections.abc import Sequence
 from app.contracts.risk import RiskCalculationSupportability
 from app.contracts.rolling import (
     ROLLING_BENCHMARK_METRICS,
+    ROLLING_METRIC_UNIT_SEMANTICS,
     RollingInputMode,
     RollingMetadata,
     RollingRequestDependencyContext,
@@ -41,6 +42,9 @@ def _response_metadata(
     return RollingMetadata(
         request_fingerprint=fingerprint_model(request),
         annualization_basis=options.annualization_basis,
+        metric_unit_semantics={
+            str(metric): ROLLING_METRIC_UNIT_SEMANTICS[str(metric)] for metric in requested_metrics
+        },
         requested_metrics=[str(metric) for metric in requested_metrics],
         window_lengths_requested=list(options.window_lengths),
         window_count_requested=len(options.window_lengths),

@@ -71,6 +71,11 @@ ROLLING_RESPONSE_METADATA_EXAMPLE: dict[str, Any] = {
     "contract_version": "v1",
     "methodology_version": "rolling_metrics.v1",
     "annualization_basis": 252,
+    "metric_unit_semantics": {
+        "ROLLING_VOLATILITY": "decimal_ratio",
+        "ROLLING_BETA": "unitless",
+        "ROLLING_TRACKING_ERROR": "decimal_ratio",
+    },
     "requested_metrics": [
         "ROLLING_VOLATILITY",
         "ROLLING_BETA",
