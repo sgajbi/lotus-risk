@@ -7,8 +7,10 @@ from app.contracts.rolling_common_inputs import (
     ROLLING_MAX_TIME_SERIES_POINTS,
     ROLLING_MAX_WINDOW_COUNT,
     ROLLING_MAX_WINDOW_LENGTH,
+    ROLLING_METRIC_UNIT_SEMANTICS,
     RollingInputMode,
     RollingMetric,
+    RollingMetricUnit,
     RollingOptions,
 )
 from app.contracts.rolling_request_inputs import RollingAnalyticsRequest
@@ -22,9 +24,11 @@ __all__ = [
     "ROLLING_MAX_TIME_SERIES_POINTS",
     "ROLLING_MAX_WINDOW_COUNT",
     "ROLLING_MAX_WINDOW_LENGTH",
+    "ROLLING_METRIC_UNIT_SEMANTICS",
     "RollingAnalyticsRequest",
     "RollingInputMode",
     "RollingMetric",
+    "RollingMetricUnit",
     "RollingOptions",
     "RollingStatefulInput",
     "RollingStatelessInput",

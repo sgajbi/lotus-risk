@@ -439,3 +439,30 @@ def test_rolling_engine_emits_quality_flag_for_zero_benchmark_variance() -> None
     response = calculate_rolling_metrics(request, input_mode=RollingInputMode.STATELESS)
     period = response.results["YTD"]
     assert "metric:ROLLING_BETA:benchmark_variance_zero" in period.quality_flags
+
+
+def test_every_rolling_metric_states_its_unit_semantics() -> None:
+    from typing import get_args
+
+    from app.contracts.rolling import ROLLING_METRIC_UNIT_SEMANTICS, RollingMetric
+
+    stated = set(ROLLING_METRIC_UNIT_SEMANTICS)
+    vocabulary = set(get_args(RollingMetric))
+    assert stated == vocabulary, (
+        "A rolling metric without stated unit semantics is unreadable downstream; "
+        f"missing={sorted(vocabulary - stated)}, orphaned={sorted(stated - vocabulary)}"
+    )
+    assert set(ROLLING_METRIC_UNIT_SEMANTICS.values()) <= {"decimal_ratio", "unitless"}
+
+
+def test_rolling_response_metadata_states_unit_semantics_for_requested_metrics() -> None:
+    response = calculate_rolling_metrics(_base_input(), input_mode=RollingInputMode.STATELESS)
+
+    assert response.metadata.metric_unit_semantics == {
+        "ROLLING_VOLATILITY": "decimal_ratio",
+        "ROLLING_SHARPE": "unitless",
+        "ROLLING_BETA": "unitless",
+        "ROLLING_TRACKING_ERROR": "decimal_ratio",
+        "ROLLING_INFORMATION_RATIO": "unitless",
+        "ROLLING_MAX_DRAWDOWN": "decimal_ratio",
+    }

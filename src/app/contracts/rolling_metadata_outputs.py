@@ -51,6 +51,21 @@ class RollingMetadata(AuditMetadataFields):
         description="Annualization basis used for annualized rolling metrics.",
         json_schema_extra={"example": 252},
     )
+    metric_unit_semantics: dict[str, str] = Field(
+        description=(
+            "Unit semantics per requested rolling metric. decimal_ratio values are "
+            "decimal fractions of one (0.1374 means 13.74%); unitless values are pure "
+            "ratios read at face value. Annualization is stated separately by "
+            "annualization_basis and does not change how a value is read."
+        ),
+        json_schema_extra={
+            "example": {
+                "ROLLING_VOLATILITY": "decimal_ratio",
+                "ROLLING_BETA": "unitless",
+                "ROLLING_TRACKING_ERROR": "decimal_ratio",
+            }
+        },
+    )
     requested_metrics: list[str] = Field(
         default_factory=list,
         description="Requested rolling metrics in canonical execution order.",

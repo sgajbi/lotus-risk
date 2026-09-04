@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-07-13T21:18:01.593030+00:00",
+  "generatedAt": "2026-09-04T08:55:52.955131+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.affected_portfolios",
@@ -2262,6 +2262,27 @@
       ],
       "fieldPaths": [
         "source_metric.metric_name"
+      ]
+    },
+    {
+      "semanticId": "lotus.metric_unit_semantics",
+      "canonicalTerm": "metric_unit_semantics",
+      "preferredName": "metric_unit_semantics",
+      "description": "Unit semantics per requested rolling metric. decimal_ratio values are decimal fractions of one (0.1374 means 13.74%); unitless values are pure ratios read at face value. Annualization is stated separately by annualization_basis and does not change how a value is read.",
+      "example": {
+        "ROLLING_BETA": "unitless",
+        "ROLLING_TRACKING_ERROR": "decimal_ratio",
+        "ROLLING_VOLATILITY": "decimal_ratio"
+      },
+      "type": "object",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "object"
+      ],
+      "fieldPaths": [
+        "metadata.metric_unit_semantics"
       ]
     },
     {
@@ -7725,6 +7746,14 @@
             "type": "integer",
             "semanticId": "lotus.annualization_basis",
             "attributeRef": "#/attributeCatalog/lotus.annualization_basis"
+          },
+          {
+            "name": "metadata.metric_unit_semantics",
+            "location": "body",
+            "required": true,
+            "type": "object",
+            "semanticId": "lotus.metric_unit_semantics",
+            "attributeRef": "#/attributeCatalog/lotus.metric_unit_semantics"
           },
           {
             "name": "metadata.requested_metrics",
