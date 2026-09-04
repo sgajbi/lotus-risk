@@ -69,7 +69,7 @@ _CAPABILITY_WORKFLOW_SPECS: tuple[_CapabilityWorkflowSpec, ...] = (
             "stateful active-risk supports POSITION, SECTOR, ASSET_CLASS, and ISSUER",
             "issuer active-risk consumes lotus-performance benchmark exposure context issuer groups",
             "historical-attribution response metadata is the authoritative active-risk support contract",
-            "attribution residual and reconciled_sum must be preserved with contributors",
+            "attribution residual, reconciled_sum, and metadata.metric_unit_semantics must be preserved with contributors",
         ],
     ),
     _CapabilityWorkflowSpec(

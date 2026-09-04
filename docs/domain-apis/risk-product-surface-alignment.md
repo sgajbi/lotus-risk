@@ -55,6 +55,7 @@ partition of the total metric. Downstream surfaces must display or preserve thes
 - `grouping_dimension`
 - `attribution_type`
 - `metric`
+- `metadata.metric_unit_semantics` (the values above are unreadable without their stated units)
 
 If a compact UI cannot render all fields, it must preserve them in the backing API payload or detail
 drawer. Hiding `residual` while showing only contributors can mislead users into believing the

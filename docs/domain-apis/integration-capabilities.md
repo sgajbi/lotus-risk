@@ -66,7 +66,7 @@ This allows consumers to discover that:
 - historical attribution supports stateful active-risk `ISSUER` through lotus-performance benchmark exposure context issuer groups
 - historical-attribution response metadata is the authoritative active-risk support contract
 - risk snapshot VaR and expected shortfall are signed return-threshold metrics
-- historical attribution residual and `reconciled_sum` must be preserved with contributors
+- historical attribution residual, `reconciled_sum`, and `metadata.metric_unit_semantics` must be preserved with contributors
 - mandate risk health context is a stateless source-owned workflow that derives bounded
   tracking-error health posture from lotus-risk methodology and returns threshold posture,
   lineage, and non-claim reason codes for Manage consumption
