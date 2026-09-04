@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from app.contracts.attribution_inputs import (
     AttributionMetric,
@@ -109,6 +109,21 @@ class HistoricalAttributionMetadata(AuditMetadataFields):
             }
         },
     )
+
+    @model_validator(mode="after")
+    def validate_unit_semantics_cover_requested_metrics(self) -> HistoricalAttributionMetadata:
+        # The field's promise is per REQUESTED metric, exactly: a subset would
+        # leave a requested metric's values unreadable downstream, and a
+        # superset would state units for values this response does not carry.
+        stated = set(self.metric_unit_semantics)
+        requested = set(self.requested_metrics)
+        if stated != requested:
+            raise ValueError(
+                "metric_unit_semantics must state exactly the requested metrics; "
+                f"missing={sorted(requested - stated)}, surplus={sorted(stated - requested)}"
+            )
+        return self
+
     calculation_supportability: RiskCalculationSupportability = Field(
         default_factory=lambda: RiskCalculationSupportability(
             state="ready",

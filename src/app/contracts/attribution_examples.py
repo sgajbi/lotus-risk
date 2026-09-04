@@ -69,10 +69,7 @@ HISTORICAL_ATTRIBUTION_RESPONSE_EXAMPLE: dict[str, object] = {
         "methodology_version": "historical_attribution.v1",
         "covariance_method": "EMPIRICAL",
         "annualization_basis": 252,
-        "metric_unit_semantics": {
-            "VOLATILITY": "decimal_ratio",
-            "TRACKING_ERROR": "decimal_ratio",
-        },
+        "metric_unit_semantics": {"TRACKING_ERROR": "decimal_ratio"},
         "requested_attribution_types": ["ACTIVE_RISK"],
         "requested_metrics": ["TRACKING_ERROR"],
         "requested_grouping_dimensions": ["SECTOR"],

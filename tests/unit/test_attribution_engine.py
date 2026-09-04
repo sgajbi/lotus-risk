@@ -286,3 +286,44 @@ def test_attribution_response_metadata_states_unit_semantics_for_requested_metri
         "VOLATILITY": "decimal_ratio",
         "TRACKING_ERROR": "decimal_ratio",
     }
+
+
+def test_metadata_refuses_a_unit_map_that_does_not_match_requested_metrics() -> None:
+    """The unit map's promise is per requested metric, exactly: a subset leaves
+    a requested value unreadable, a superset states units for values the
+    response does not carry, and empty-while-requesting is the mock drift the
+    review flagged."""
+
+    import pytest
+
+    from app.contracts.attribution_metadata_outputs import HistoricalAttributionMetadata
+
+    def metadata(**overrides: object) -> HistoricalAttributionMetadata:
+        fields: dict[str, object] = {
+            "request_fingerprint": "fp",
+            "covariance_method": "EMPIRICAL",
+            "annualization_basis": 252,
+            "metric_unit_semantics": {"TRACKING_ERROR": "decimal_ratio"},
+            "requested_attribution_types": ["ACTIVE_RISK"],
+            "requested_metrics": ["TRACKING_ERROR"],
+            "requested_grouping_dimensions": ["SECTOR"],
+            "min_observations_policy": "STRICT",
+        }
+        fields.update(overrides)
+        return HistoricalAttributionMetadata(**fields)  # type: ignore[arg-type]
+
+    assert metadata().metric_unit_semantics == {"TRACKING_ERROR": "decimal_ratio"}
+
+    with pytest.raises(ValueError, match="missing=..TRACKING_ERROR"):
+        metadata(metric_unit_semantics={})
+
+    with pytest.raises(ValueError, match="surplus=..VOLATILITY"):
+        metadata(
+            metric_unit_semantics={
+                "VOLATILITY": "decimal_ratio",
+                "TRACKING_ERROR": "decimal_ratio",
+            }
+        )
+
+    with pytest.raises(ValueError, match="missing=..VOLATILITY"):
+        metadata(requested_metrics=["VOLATILITY", "TRACKING_ERROR"])
