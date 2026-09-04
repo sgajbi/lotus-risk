@@ -52,6 +52,10 @@ class HistoricalAttributionResponse(BaseModel):
                 "methodology_version": "historical_attribution.v1",
                 "covariance_method": "EMPIRICAL",
                 "annualization_basis": 252,
+                "metric_unit_semantics": {
+                    "VOLATILITY": "decimal_ratio",
+                    "TRACKING_ERROR": "decimal_ratio",
+                },
                 "requested_attribution_types": ["TOTAL_RISK", "ACTIVE_RISK"],
                 "requested_metrics": ["VOLATILITY", "TRACKING_ERROR"],
                 "requested_grouping_dimensions": ["SECTOR"],

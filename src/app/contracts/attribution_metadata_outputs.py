@@ -5,6 +5,7 @@ from typing import Literal
 from pydantic import Field, model_validator
 
 from app.contracts.attribution_inputs import (
+    ATTRIBUTION_METRIC_UNIT_SEMANTICS,
     AttributionMetric,
     AttributionType,
     AttributionValueUnit,
@@ -121,6 +122,22 @@ class HistoricalAttributionMetadata(AuditMetadataFields):
             raise ValueError(
                 "metric_unit_semantics must state exactly the requested metrics; "
                 f"missing={sorted(requested - stated)}, surplus={sorted(stated - requested)}"
+            )
+        # The unit for each metric is a source-owned FACT, not a per-response
+        # choice: a mock stating VOLATILITY as unitless would make a downstream
+        # formatter read 0.1253 at face value instead of as 12.53%.
+        contradictions = {
+            metric: unit
+            for metric, unit in self.metric_unit_semantics.items()
+            if unit != ATTRIBUTION_METRIC_UNIT_SEMANTICS[metric]
+        }
+        if contradictions:
+            raise ValueError(
+                "metric_unit_semantics contradicts the canonical source-owned units: "
+                + ", ".join(
+                    f"{metric}={unit} (canonical {ATTRIBUTION_METRIC_UNIT_SEMANTICS[metric]})"
+                    for metric, unit in sorted(contradictions.items())
+                )
             )
         return self
 

@@ -52,6 +52,7 @@ Gateway, Workbench, reporting, and AI consumers must preserve:
 
 1. signed VaR semantics,
 2. attribution `total_value`, `reconciled_sum`, `residual`, and contributor fields,
+   together with `metadata.metric_unit_semantics` -- the values are unreadable without their stated units,
 3. issuer active-risk support metadata,
 4. concentration-only simulation support,
 5. regime scenario-pack evaluation reason codes and threshold-breach posture,

@@ -334,3 +334,6 @@ def test_metadata_refuses_a_unit_map_that_does_not_match_requested_metrics() -> 
 
     with pytest.raises(ValueError, match="missing=..VOLATILITY"):
         metadata(requested_metrics=["VOLATILITY", "TRACKING_ERROR"])
+
+    with pytest.raises(ValueError, match="contradicts the canonical source-owned units"):
+        metadata(metric_unit_semantics={"TRACKING_ERROR": "unitless"})
