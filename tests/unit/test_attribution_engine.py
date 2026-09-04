@@ -1,3 +1,5 @@
+import pytest
+
 from app.contracts.attribution import AttributionInputMode, HistoricalAttributionStatelessInput
 from app.services.attribution_engine import calculate_historical_attribution
 
@@ -193,6 +195,13 @@ def test_attribution_engine_returns_reconciled_sets() -> None:
     assert total_risk.reconciled_sum is not None
     assert total_risk.residual is not None
     assert len(total_risk.contributors) == 2
+    # The magnitude IS the unit statement made executable: the metadata declares
+    # decimal_ratio, and this fixture's annualized volatility is ~9.09% -- so
+    # the emitted value must be ~0.0909, never 9.09. The percentage-point frame
+    # convention is divided back to decimals in period_returns_series before
+    # any risk math; this pins that a future path cannot skip it silently.
+    assert total_risk.total_value == pytest.approx(0.0909153452394039, rel=1e-9)
+    assert 0.0 < total_risk.total_value < 1.0
 
     active_risk = next(
         s
@@ -293,8 +302,6 @@ def test_metadata_refuses_a_unit_map_that_does_not_match_requested_metrics() -> 
     a requested value unreadable, a superset states units for values the
     response does not carry, and empty-while-requesting is the mock drift the
     review flagged."""
-
-    import pytest
 
     from app.contracts.attribution_metadata_outputs import HistoricalAttributionMetadata
 
