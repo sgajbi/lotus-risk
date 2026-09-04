@@ -261,7 +261,7 @@ def test_e2e_capabilities_expose_product_surface_safety_notes() -> None:
         in workflow_by_key["risk_snapshot"]["notes"]
     )
     assert (
-        "attribution residual and reconciled_sum must be preserved with contributors"
+        "attribution residual, reconciled_sum, and metadata.metric_unit_semantics must be preserved with contributors"
         in workflow_by_key["historical_risk_attribution"]["notes"]
     )
     assert (

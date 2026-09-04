@@ -63,7 +63,7 @@ def test_product_surface_contract_supports_issuer_active_risk() -> None:
         in attribution["notes"]
     )
     assert (
-        "attribution residual and reconciled_sum must be preserved with contributors"
+        "attribution residual, reconciled_sum, and metadata.metric_unit_semantics must be preserved with contributors"
         in attribution["notes"]
     )
 
@@ -106,4 +106,7 @@ def test_endpoint_docs_link_product_surface_alignment_contract() -> None:
     assert "derive simulation and issuer active-risk affordances" in capabilities
     assert "authoritative active-risk support contract" in capabilities
     assert "signed return-threshold metrics" in capabilities
-    assert "residual and `reconciled_sum` must be preserved" in capabilities
+    assert (
+        "residual, `reconciled_sum`, and `metadata.metric_unit_semantics` "
+        "must be preserved" in capabilities
+    )
