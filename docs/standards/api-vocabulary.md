@@ -10,8 +10,8 @@ python scripts/api_vocabulary_inventory.py --output docs/standards/api-vocabular
 
 ## Context-Aware Semantic IDs
 
-Semantic IDs are not leaf-name aliases. Fields such as `status`, `state`, `reason`, and `type`
-must use the domain context carried by their schema and field path.
+Semantic IDs are not leaf-name aliases. Fields such as `status`, `state`, `reason`, `type`,
+and `metric_unit_semantics` must use the domain context carried by their schema and field path.
 
 Examples:
 
@@ -22,7 +22,12 @@ Examples:
 5. calculation supportability `state` is `lotus.calculation_supportability_state`,
 6. calculation supportability `reason` is `lotus.calculation_supportability_reason`,
 7. risk-free context `reason` is `lotus.risk_free_context_reason`,
-8. period `type` is `lotus.period_type`.
+8. period `type` is `lotus.period_type`,
+9. rolling metadata `metric_unit_semantics` is `lotus.rolling_metric_unit_semantics`,
+10. historical attribution metadata `metric_unit_semantics` is
+    `lotus.attribution_metric_unit_semantics` (the rolling and attribution unit maps cover
+    different metric vocabularies and value fields, so a shared generic ID would collapse
+    two incompatible unit contracts).
 
 The old generic IDs `lotus.status`, `lotus.state`, `lotus.reason`, and `lotus.type` are intentionally
 not used for multiple incompatible concepts. If a new API field has one of those leaf names, update
