@@ -98,6 +98,13 @@ Provide decomposition of historical realized risk and active risk into transpare
   - `error`
 - `metadata`
   - methodology, covariance, annualization, and requested execution scope
+  - `metric_unit_semantics` - REQUIRED unit statement per requested metric
+    (`VOLATILITY` and `TRACKING_ERROR` are `decimal_ratio`: decimal fractions
+    of one, so `0.1253` means 12.53%). Governs `total_value`,
+    `reconciled_sum`, `residual`, and marginal/component contributions;
+    `weight_average` and `percent_contribution` are always decimal fractions
+    of one by field contract. Annualization is stated separately by
+    `annualization_basis` and does not change how a value is read.
   - `requested_attribution_types`
   - `requested_metrics`
   - `requested_grouping_dimensions`

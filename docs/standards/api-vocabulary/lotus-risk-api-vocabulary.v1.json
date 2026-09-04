@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-09-04T14:02:12.752047+00:00",
+  "generatedAt": "2026-09-04T22:38:57.867146+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.affected_portfolios",
@@ -270,6 +270,26 @@
       "fieldPaths": [
         "scope.as_of_date",
         "as_of_date"
+      ]
+    },
+    {
+      "semanticId": "lotus.attribution_metric_unit_semantics",
+      "canonicalTerm": "attribution_metric_unit_semantics",
+      "preferredName": "attribution_metric_unit_semantics",
+      "description": "Unit semantics per requested attribution metric, covering total_value, reconciled_sum, residual, and marginal/component contributions: decimal_ratio values are decimal fractions of one (0.1253 means 12.53%). weight_average and percent_contribution are always decimal fractions of one by field contract. Annualization is stated separately by annualization_basis and does not change how a value is read.",
+      "example": {
+        "TRACKING_ERROR": "decimal_ratio",
+        "VOLATILITY": "decimal_ratio"
+      },
+      "type": "object",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "object"
+      ],
+      "fieldPaths": [
+        "metadata.metric_unit_semantics"
       ]
     },
     {
@@ -2265,27 +2285,6 @@
       ]
     },
     {
-      "semanticId": "lotus.metric_unit_semantics",
-      "canonicalTerm": "metric_unit_semantics",
-      "preferredName": "metric_unit_semantics",
-      "description": "Unit semantics per requested rolling metric. decimal_ratio values are decimal fractions of one (0.1374 means 13.74%); unitless values are pure ratios read at face value. Annualization is stated separately by annualization_basis and does not change how a value is read.",
-      "example": {
-        "ROLLING_BETA": "unitless",
-        "ROLLING_TRACKING_ERROR": "decimal_ratio",
-        "ROLLING_VOLATILITY": "decimal_ratio"
-      },
-      "type": "object",
-      "locations": [
-        "body"
-      ],
-      "observedTypes": [
-        "object"
-      ],
-      "fieldPaths": [
-        "metadata.metric_unit_semantics"
-      ]
-    },
-    {
       "semanticId": "lotus.min_observations_policy",
       "canonicalTerm": "min_observations_policy",
       "preferredName": "min_observations_policy",
@@ -3227,6 +3226,27 @@
       ],
       "fieldPaths": [
         "risk_proxy"
+      ]
+    },
+    {
+      "semanticId": "lotus.rolling_metric_unit_semantics",
+      "canonicalTerm": "rolling_metric_unit_semantics",
+      "preferredName": "rolling_metric_unit_semantics",
+      "description": "Unit semantics per requested rolling metric. decimal_ratio values are decimal fractions of one (0.1374 means 13.74%); unitless values are pure ratios read at face value. Annualization is stated separately by annualization_basis and does not change how a value is read.",
+      "example": {
+        "ROLLING_BETA": "unitless",
+        "ROLLING_TRACKING_ERROR": "decimal_ratio",
+        "ROLLING_VOLATILITY": "decimal_ratio"
+      },
+      "type": "object",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "object"
+      ],
+      "fieldPaths": [
+        "metadata.metric_unit_semantics"
       ]
     },
     {
@@ -7752,8 +7772,8 @@
             "location": "body",
             "required": true,
             "type": "object",
-            "semanticId": "lotus.metric_unit_semantics",
-            "attributeRef": "#/attributeCatalog/lotus.metric_unit_semantics"
+            "semanticId": "lotus.rolling_metric_unit_semantics",
+            "attributeRef": "#/attributeCatalog/lotus.rolling_metric_unit_semantics"
           },
           {
             "name": "metadata.requested_metrics",
@@ -8572,10 +8592,10 @@
           {
             "name": "metadata.metric_unit_semantics",
             "location": "body",
-            "required": false,
+            "required": true,
             "type": "object",
-            "semanticId": "lotus.metric_unit_semantics",
-            "attributeRef": "#/attributeCatalog/lotus.metric_unit_semantics"
+            "semanticId": "lotus.attribution_metric_unit_semantics",
+            "attributeRef": "#/attributeCatalog/lotus.attribution_metric_unit_semantics"
           },
           {
             "name": "metadata.requested_attribution_types",
