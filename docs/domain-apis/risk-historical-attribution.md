@@ -98,7 +98,8 @@ Provide decomposition of historical realized risk and active risk into transpare
   - `error`
 - `metadata`
   - methodology, covariance, annualization, and requested execution scope
-  - `metric_unit_semantics` - REQUIRED unit statement per requested metric
+  - `metric_unit_semantics` - REQUIRED unit statement covering exactly the
+    requested metrics (key set equals `requested_metrics`, model-enforced)
     (`VOLATILITY` and `TRACKING_ERROR` are `decimal_ratio`: decimal fractions
     of one, so `0.1253` means 12.53%). Governs `total_value`,
     `reconciled_sum`, `residual`, and marginal/component contributions;
