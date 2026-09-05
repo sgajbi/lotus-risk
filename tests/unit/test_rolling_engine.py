@@ -466,3 +466,58 @@ def test_rolling_response_metadata_states_unit_semantics_for_requested_metrics()
         "ROLLING_INFORMATION_RATIO": "unitless",
         "ROLLING_MAX_DRAWDOWN": "decimal_ratio",
     }
+
+
+def test_metadata_refuses_a_unit_map_that_does_not_match_requested_metrics() -> None:
+    """The rolling twin of the attribution equality guard (#263): a subset
+    leaves a requested value unreadable, a superset states units for values
+    the response does not carry, empty-while-requesting is the mock drift
+    the #262 review flagged, and a contradicted unit is a 100x lie."""
+
+    from app.contracts.rolling_metadata_outputs import RollingMetadata
+
+    def metadata(**overrides: object) -> RollingMetadata:
+        fields: dict[str, object] = {
+            "request_fingerprint": "fp",
+            "annualization_basis": 252,
+            "metric_unit_semantics": {"ROLLING_VOLATILITY": "decimal_ratio"},
+            "requested_metrics": ["ROLLING_VOLATILITY"],
+            "alignment_policy": "INNER_JOIN",
+            "min_observations_policy": "STRICT",
+            "include_time_series": False,
+            "benchmark_context": {"requested": False, "requested_metrics": []},
+            "risk_free_context": {"requested": False, "requested_metrics": []},
+        }
+        fields.update(overrides)
+        return RollingMetadata(**fields)  # type: ignore[arg-type]
+
+    assert metadata().metric_unit_semantics == {"ROLLING_VOLATILITY": "decimal_ratio"}
+
+    # An empty map is refused by the schema bound before the equality check runs.
+    with pytest.raises(ValueError, match="at least 1 item"):
+        metadata(metric_unit_semantics={})
+
+    # A non-empty map for the wrong metric hits the equality check: both the
+    # missing and the surplus side are named.
+    with pytest.raises(ValueError, match="missing=..ROLLING_VOLATILITY"):
+        metadata(metric_unit_semantics={"ROLLING_BETA": "unitless"})
+
+    with pytest.raises(ValueError, match="surplus=..ROLLING_BETA"):
+        metadata(
+            metric_unit_semantics={
+                "ROLLING_VOLATILITY": "decimal_ratio",
+                "ROLLING_BETA": "unitless",
+            }
+        )
+
+    # A unit that contradicts the canonical source-owned map is refused even
+    # when the key set matches exactly.
+    with pytest.raises(ValueError, match="contradicts the canonical source-owned units"):
+        metadata(metric_unit_semantics={"ROLLING_VOLATILITY": "unitless"})
+
+    # And an unbounded key never enters: the typed key refuses it at the schema.
+    with pytest.raises(ValueError, match="ROLLING_FICTIONAL"):
+        metadata(
+            metric_unit_semantics={"ROLLING_FICTIONAL": "decimal_ratio"},
+            requested_metrics=["ROLLING_FICTIONAL"],
+        )

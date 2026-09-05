@@ -8,6 +8,7 @@ from app.contracts.rolling import (
     ROLLING_METRIC_UNIT_SEMANTICS,
     RollingInputMode,
     RollingMetadata,
+    RollingMetric,
     RollingRequestDependencyContext,
     RollingResponse,
     RollingStatelessInput,
@@ -23,7 +24,7 @@ from app.services.rolling_period_series import build_rolling_input_frames
 
 
 def _request_dependency_context(
-    requested_metrics: Sequence[str], dependency_metrics: set[str]
+    requested_metrics: Sequence[RollingMetric], dependency_metrics: set[RollingMetric]
 ) -> RollingRequestDependencyContext:
     requested = [metric for metric in requested_metrics if metric in dependency_metrics]
     return RollingRequestDependencyContext(
@@ -35,7 +36,7 @@ def _request_dependency_context(
 def _response_metadata(
     request: RollingStatelessInput,
     *,
-    requested_metrics: Sequence[str],
+    requested_metrics: Sequence[RollingMetric],
     calculation_supportability: RiskCalculationSupportability,
 ) -> RollingMetadata:
     options = request.rolling_options
@@ -43,9 +44,9 @@ def _response_metadata(
         request_fingerprint=fingerprint_model(request),
         annualization_basis=options.annualization_basis,
         metric_unit_semantics={
-            str(metric): ROLLING_METRIC_UNIT_SEMANTICS[str(metric)] for metric in requested_metrics
+            metric: ROLLING_METRIC_UNIT_SEMANTICS[metric] for metric in requested_metrics
         },
-        requested_metrics=[str(metric) for metric in requested_metrics],
+        requested_metrics=list(requested_metrics),
         window_lengths_requested=list(options.window_lengths),
         window_count_requested=len(options.window_lengths),
         alignment_policy=options.alignment_policy,
@@ -77,7 +78,7 @@ def _empty_response(
         operation="risk/rolling-metrics",
         supportability=calculation_supportability,
     )
-    requested_metrics = [str(metric) for metric in request.rolling_options.metrics]
+    requested_metrics = list(request.rolling_options.metrics)
     return RollingResponse(
         input_mode=input_mode,
         scope=request.scope,
@@ -100,7 +101,7 @@ def calculate_rolling_metrics(
         return _empty_response(request, input_mode=input_mode)
 
     options = request.rolling_options
-    requested_metrics = [str(metric) for metric in options.metrics]
+    requested_metrics = list(options.metrics)
     results = rolling_period_results(
         request,
         frames=frames,

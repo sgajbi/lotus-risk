@@ -119,6 +119,10 @@ materialized.
   - `error`
 - `metadata`
   - methodology and request execution references
+  - `metric_unit_semantics` - REQUIRED unit statement covering exactly the
+    requested metrics (key set equals `requested_metrics`, model-enforced,
+    values pinned to the canonical source-owned units; `decimal_ratio`
+    values are decimal fractions of one, so `0.1374` means 13.74%)
   - `requested_metrics`
   - `window_lengths_requested`
   - `window_count_requested`

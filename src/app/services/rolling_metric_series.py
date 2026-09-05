@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from app.contracts.rolling import (
+    RollingMetric,
     ROLLING_BENCHMARK_METRICS,
 )
 from app.services.rolling_benchmark_metric_series import (
@@ -26,7 +27,7 @@ from app.services.rolling_metric_outputs import (
     rolling_metric_summary as rolling_metric_summary,  # noqa: PLC0414
 )
 
-ROLLING_SHARPE_METRIC = "ROLLING_SHARPE"
+ROLLING_SHARPE_METRIC: RollingMetric = "ROLLING_SHARPE"
 ROLLING_MAX_DRAWDOWN_METRIC = "ROLLING_MAX_DRAWDOWN"
 
 
