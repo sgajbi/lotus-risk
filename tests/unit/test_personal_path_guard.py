@@ -42,6 +42,15 @@ def _write(tmp_path: Path, name: str, value: str) -> None:
         _SEP + _SEP.join(["home", "alice", "project"]),
         _windows_home("alice", "project"),
         "file://" + _posix_home("alice", "project"),
+        # The shapes the replaced guard caught and a start-anchored
+        # matcher would lose: a path EMBEDDED in a larger literal, a root
+        # home, a UNC server share, and the standard Windows file URI
+        # whose path part normalises to /C:/Users/...
+        '{"path":"' + _posix_home("alice", "project") + '"}',
+        "snapshot written to " + _SEP + _SEP.join(["home", "alice", "out.json"]),
+        _SEP + _SEP.join(["root", "project"]),
+        _WIN_SEP * 2 + _WIN_SEP.join(["server", "Users", "alice", "project"]),
+        "file:///C:" + _posix_home("alice", "project"),
     ],
 )
 def test_the_guard_rejects_absolute_user_home_paths(tmp_path: Path, value: str) -> None:
@@ -58,8 +67,9 @@ def test_the_guard_rejects_absolute_user_home_paths(tmp_path: Path, value: str) 
     [
         "https://example.test" + _SEP + _SEP.join(["home", "alice", "stats"]),
         _SEP + _SEP.join(["home", "dashboard"]),  # a route, not a home
-        "GET " + _SEP + _SEP.join(["home", "alice", "stats"]),
         _SEP + _SEP.join(["srv", "data", "reports"]),
+        # A URL span inside a larger literal is still excluded...
+        "see https://example.test" + _SEP + _SEP.join(["home", "a", "b"]) + " for detail",
     ],
 )
 def test_the_guard_accepts_urls_routes_and_service_paths(tmp_path: Path, value: str) -> None:
@@ -113,3 +123,20 @@ def test_the_real_tests_tree_is_scanned_and_clean() -> None:
 
     assert scanned > 0, "the guard inspected nothing; that is a failure, not a pass"
     assert findings == {}, f"Test sources contain absolute user-home paths: {findings}"
+
+
+def test_a_url_span_does_not_hide_a_real_path_beside_it(tmp_path: Path) -> None:
+    """...but a URL cannot shelter a genuine path sharing the literal -
+    the exclusion is per SPAN, not per literal."""
+
+    leak = _SEP + _SEP.join(["home", "alice", "project"])
+    _write(
+        tmp_path,
+        "test_mixed.py",
+        "see https://example.test" + _SEP + _SEP.join(["home", "a", "b"]) + " then " + leak,
+    )
+
+    findings, scanned = guard.scan(tmp_path)
+
+    assert scanned == 1
+    assert [hit for hits in findings.values() for hit in hits] == [leak]
