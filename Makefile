@@ -1,7 +1,8 @@
-.PHONY: architecture-gate complexity-gate source-size-gate dead-code-gate dependency-hygiene-gate github-actions-runtime-gate install install-ci check check-all test test-unit test-integration test-e2e test-all test-coverage test-fast test-all-fast test-all-no-cov test-all-parallel ci ci-local ci-local-docker ci-local-docker-down typecheck typecheck-tests-critical lint monetary-float-guard domain-product-validate domain-data-product-gate trust-telemetry-validate observability-contract-validate mesh-contract-validate idea-opportunity-evidence-gate idea-opportunity-runtime-evidence image-supply-chain-gate no-alias-gate openapi-gate openapi-artifact-gate api-vocabulary-gate format clean run check-deps security-audit migration-smoke migration-apply pre-commit docker-build docker-up docker-down test-pyramid-gate quality-baseline maintainability-report
+.PHONY: architecture-gate complexity-gate source-size-gate personal-path-gate dead-code-gate dependency-hygiene-gate github-actions-runtime-gate install install-ci check check-all test test-unit test-integration test-e2e test-all test-coverage test-fast test-all-fast test-all-no-cov test-all-parallel ci ci-local ci-local-docker ci-local-docker-down typecheck typecheck-tests-critical lint monetary-float-guard domain-product-validate domain-data-product-gate trust-telemetry-validate observability-contract-validate mesh-contract-validate idea-opportunity-evidence-gate idea-opportunity-runtime-evidence image-supply-chain-gate no-alias-gate openapi-gate openapi-artifact-gate api-vocabulary-gate format clean run check-deps security-audit migration-smoke migration-apply pre-commit docker-build docker-up docker-down test-pyramid-gate quality-baseline maintainability-report
 
 COVERAGE_FAIL_UNDER ?= 98
 SOURCE_FILE_MAX_LINES ?= 450
+TEST_FILE_MAX_LINES ?= 1044
 GIT_COMMIT_SHA ?= $(if $(GITHUB_SHA),$(GITHUB_SHA),$(shell git rev-parse HEAD 2>/dev/null || echo unknown))
 GIT_BRANCH ?= $(if $(GITHUB_HEAD_REF),$(GITHUB_HEAD_REF),$(if $(GITHUB_REF_NAME),$(GITHUB_REF_NAME),$(shell git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)))
 SERVICE_VERSION ?= 0.1.0
@@ -27,7 +28,7 @@ install-ci:
 pre-commit:
 	pre-commit run --all-files
 
-check: github-actions-runtime-gate lint no-alias-gate typecheck openapi-gate openapi-artifact-gate api-vocabulary-gate mesh-contract-validate domain-data-product-gate idea-opportunity-evidence-gate image-supply-chain-gate source-size-gate test
+check: github-actions-runtime-gate lint no-alias-gate personal-path-gate typecheck openapi-gate openapi-artifact-gate api-vocabulary-gate mesh-contract-validate domain-data-product-gate idea-opportunity-evidence-gate image-supply-chain-gate source-size-gate test
 
 ci: github-actions-runtime-gate lint check-deps architecture-gate no-alias-gate typecheck openapi-gate openapi-artifact-gate api-vocabulary-gate mesh-contract-validate domain-data-product-gate idea-opportunity-evidence-gate image-supply-chain-gate complexity-gate source-size-gate dependency-hygiene-gate dead-code-gate migration-smoke test-pyramid-gate test-all security-audit docker-build
 
@@ -132,7 +133,10 @@ maintainability-report:
 	python -m radon mi src -s
 
 source-size-gate:
-	python scripts/source_size_gate.py --max-lines=$(SOURCE_FILE_MAX_LINES)
+	python scripts/source_size_gate.py --max-lines=$(SOURCE_FILE_MAX_LINES) --test-max-lines=$(TEST_FILE_MAX_LINES)
+
+personal-path-gate:
+	python scripts/personal_path_guard.py
 
 dependency-hygiene-gate:
 	python -m deptry .
