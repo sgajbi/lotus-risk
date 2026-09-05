@@ -55,21 +55,32 @@ def _resolved_make_database(makefile: str) -> str:
 
 
 def _target_dependencies(makefile: str) -> dict[str, list[str]]:
+    """Rules from GNU Make's own database, distinguished by Make's markers.
+
+    In the `-p` Files section a target-specific variable assignment is
+    printed immediately below its provenance comment - `# makefile (from
+    '...', line N)`, or `# 'override' directive (from ...)` and kin - while
+    rule lines are not. Reading Make's marker replaces the re-derived
+    assignment-name grammar that #255 defeated with a hyphenated variable
+    name - Make's variable names allow almost any character, and every
+    re-implementation of its grammar in a regex has eventually diverged
+    from it.
+    """
+
     dependencies: dict[str, list[str]] = {}
+    previous_line = ""
     for database_line in _resolved_make_database(makefile).splitlines():
+        provenance_comment = re.match(r"^# .*\(from ", previous_line) is not None
+        previous_line = database_line
         rule_match = re.match(
             r"^(?P<targets>[^:#][^:]*):[ \t]*(?P<prerequisites>.*)$", database_line
         )
         if rule_match is None:
             continue
+        if provenance_comment:
+            continue  # Make's own marker for a target-specific variable assignment.
         targets = rule_match.group("targets").split()
         prerequisite_text = rule_match.group("prerequisites")
-        if re.match(
-            r"^(?:(?:override|private|export|unexport)[ \t]+)?"
-            r"[A-Za-z_][A-Za-z0-9_]*[ \t]*[?+:!]?=",
-            prerequisite_text,
-        ):
-            continue  # GNU Make database record for a target-specific variable assignment.
         prerequisites = [
             prerequisite for prerequisite in prerequisite_text.split() if prerequisite != "|"
         ]
@@ -178,6 +189,26 @@ def test_reachability_excludes_target_specific_variable_values(prefix: str) -> N
 
     assert "visible-gate" in reachable
     assert "disabled-gate" not in reachable
+
+
+def test_reachability_excludes_hyphenated_variable_assignments() -> None:
+    """GNU Make variable names legally contain hyphens (#255): the
+    assignment must be recognised by Make's OWN database marker, never by
+    a re-derived name grammar - or the fabricated value lands in the
+    reachable set and the reverse wiki guard documents a dead gate as
+    enforced."""
+
+    makefile = "check: visible-gate\ncheck: SOME-VAR = fake-gate\nci: visible-gate\nvisible-gate:"
+
+    reachable = _reachable_targets(makefile)
+
+    assert "visible-gate" in reachable
+    assert "fake-gate" not in reachable
+    assert "SOME-VAR" not in reachable
+    assert "=" not in reachable
+
+    wiki = "`make visible-gate`\n`make fake-gate`\n"
+    assert _stale_wiki_gates(wiki, makefile) == ["fake-gate"]
 
 
 def test_reverse_wiki_guard_rejects_fabricated_gate_without_exemptions() -> None:
