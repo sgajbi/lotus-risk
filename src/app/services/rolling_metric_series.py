@@ -7,8 +7,8 @@ import numpy as np
 import pandas as pd
 
 from app.contracts.rolling import (
-    RollingMetric,
     ROLLING_BENCHMARK_METRICS,
+    RollingMetric,
 )
 from app.services.rolling_benchmark_metric_series import (
     calculate_rolling_benchmark_metric_values,
