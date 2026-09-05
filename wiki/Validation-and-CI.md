@@ -82,6 +82,9 @@ and deterministic for local and protected lanes.
   `aquasecurity/trivy-action@0.32.0` - a tag that does not exist - sat in `image-release.yml` and
   broke the release supply chain before any step ran; see issue #227. The daily online resolver
   catches a well-formed tag such as `v9.99.0` that does not actually exist; see issue #231
+- `make personal-path-gate` - fails when any test source states an absolute user-home path in a
+  string literal (a `tokenize` pass over evaluated literals, so a URL containing `/home/` is not a
+  finding), and fails closed when the scan inspects nothing or cannot read a Python source.
 - `make source-size-gate` - fails when any module grows past the governed line count or when the
   source scan inspects zero files; successful output names the inspected file count
 - `make complexity-gate` - **blocking** cyclomatic complexity ratchet. Fails when the maximum rises
