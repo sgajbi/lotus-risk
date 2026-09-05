@@ -68,6 +68,13 @@ def test_the_guard_rejects_absolute_user_home_paths(tmp_path: Path, value: str) 
         "https://example.test" + _SEP + _SEP.join(["home", "alice", "stats"]),
         _SEP + _SEP.join(["home", "dashboard"]),  # a route, not a home
         _SEP + _SEP.join(["srv", "data", "reports"]),
+        # Shared locations are not personal disclosures, and an HTTP
+        # method prefix makes the token a route - both exempted by the
+        # guard this replaced, both relied on by cross-platform fixtures.
+        _windows_home("Public", "test-data"),
+        _WIN_SEP * 2 + _WIN_SEP.join(["server", "Users", "Public", "test-data"]),
+        _posix_home("Shared", "test-data"),
+        "GET " + _SEP + _SEP.join(["home", "alice", "stats"]),
         # A URL span inside a larger literal is still excluded...
         "see https://example.test" + _SEP + _SEP.join(["home", "a", "b"]) + " for detail",
     ],
@@ -115,7 +122,7 @@ def test_an_unscannable_python_source_is_itself_a_finding(tmp_path: Path) -> Non
     findings, scanned = guard.scan(tmp_path)
 
     assert scanned == 1
-    assert any("unscannable python source" in hit for hits in findings.values() for hit in hits)
+    assert any("unscannable source" in hit for hits in findings.values() for hit in hits)
 
 
 def test_the_real_tests_tree_is_scanned_and_clean() -> None:
@@ -140,3 +147,41 @@ def test_a_url_span_does_not_hide_a_real_path_beside_it(tmp_path: Path) -> None:
 
     assert scanned == 1
     assert [hit for hits in findings.values() for hit in hits] == [leak]
+
+
+def test_a_url_span_stops_at_a_delimiter_before_a_real_path(tmp_path: Path) -> None:
+    """The excluded span is the URL itself: a path after a separator the
+    URL cannot contain is still found."""
+
+    leak = _SEP + _SEP.join(["home", "alice", "project"])
+    _write(tmp_path, "test_delimited.py", "entry=https://example.test/api;" + leak)
+
+    findings, scanned = guard.scan(tmp_path)
+
+    assert scanned == 1
+    assert [hit for hits in findings.values() for hit in hits] == [leak]
+
+
+def test_a_bytes_literal_path_is_judged_by_its_decoded_value(tmp_path: Path) -> None:
+    leak = _SEP + _SEP.join(["home", "alice", "project"])
+    (tmp_path / "test_bytes.py").write_text(f"PATH = b{leak!r}\n", encoding="utf-8")
+
+    findings, scanned = guard.scan(tmp_path)
+
+    assert scanned == 1
+    assert [hit for hits in findings.values() for hit in hits] == [leak]
+
+
+def test_non_python_fixtures_are_scanned_too(tmp_path: Path) -> None:
+    """A home path leaks the same way from a JSON or text fixture, and a
+    non-UTF-8 fixture is still read rather than skipped."""
+
+    leak = _SEP + _SEP.join(["home", "alice", "project"])
+    (tmp_path / "fixture.json").write_text('{"path": "' + leak + '"}', encoding="utf-8")
+    (tmp_path / "latin.txt").write_bytes((leak + "/caf\xe9").encode("latin-1"))
+    (tmp_path / "test_clean.py").write_text("VALUE = 1\n", encoding="utf-8")
+
+    findings, scanned = guard.scan(tmp_path)
+
+    assert scanned == 3
+    assert sorted(Path(key).name for key in findings) == ["fixture.json", "latin.txt"]
