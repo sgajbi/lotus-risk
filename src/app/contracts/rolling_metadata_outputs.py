@@ -2,10 +2,15 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.contracts.audit import AuditMetadataFields
 from app.contracts.risk import RiskCalculationSupportability
+from app.contracts.rolling_common_inputs import (
+    ROLLING_METRIC_UNIT_SEMANTICS,
+    RollingMetric,
+    RollingMetricUnit,
+)
 from app.contracts.rolling_response_field_examples import (
     ROLLING_BENCHMARK_CONTEXT_EXAMPLE,
     ROLLING_CALCULATION_SUPPORTABILITY_EXAMPLE,
@@ -19,7 +24,7 @@ class RollingRequestDependencyContext(BaseModel):
         description="Whether this dependency family is required by any requested rolling metric.",
         json_schema_extra={"example": True},
     )
-    requested_metrics: list[str] = Field(
+    requested_metrics: list[RollingMetric] = Field(
         default_factory=list,
         description="Requested rolling metrics that depend on this family.",
         json_schema_extra={"example": ["ROLLING_BETA", "ROLLING_TRACKING_ERROR"]},
@@ -51,7 +56,8 @@ class RollingMetadata(AuditMetadataFields):
         description="Annualization basis used for annualized rolling metrics.",
         json_schema_extra={"example": 252},
     )
-    metric_unit_semantics: dict[str, str] = Field(
+    metric_unit_semantics: dict[RollingMetric, RollingMetricUnit] = Field(
+        min_length=1,
         description=(
             "Unit semantics per requested rolling metric. decimal_ratio values are "
             "decimal fractions of one (0.1374 means 13.74%); unitless values are pure "
@@ -66,7 +72,7 @@ class RollingMetadata(AuditMetadataFields):
             }
         },
     )
-    requested_metrics: list[str] = Field(
+    requested_metrics: list[RollingMetric] = Field(
         default_factory=list,
         description="Requested rolling metrics in canonical execution order.",
         json_schema_extra={"example": ROLLING_REQUESTED_METRICS_EXAMPLE},
@@ -110,6 +116,36 @@ class RollingMetadata(AuditMetadataFields):
         description="Source-backed supportability posture for UI and operator consumption.",
         json_schema_extra={"example": ROLLING_CALCULATION_SUPPORTABILITY_EXAMPLE},
     )
+
+    @model_validator(mode="after")
+    def validate_unit_semantics_cover_requested_metrics(self) -> RollingMetadata:
+        # The field's promise is per REQUESTED metric, exactly: a subset would
+        # leave a requested metric's values unreadable downstream, and a
+        # superset would state units for values this response does not carry.
+        stated = set(self.metric_unit_semantics)
+        requested = set(self.requested_metrics)
+        if stated != requested:
+            raise ValueError(
+                "metric_unit_semantics must state exactly the requested metrics; "
+                f"missing={sorted(requested - stated)}, surplus={sorted(stated - requested)}"
+            )
+        # The unit for each metric is a source-owned FACT, not a per-response
+        # choice: a mock stating ROLLING_VOLATILITY as unitless would make a
+        # downstream formatter read 0.1374 at face value instead of as 13.74%.
+        contradictions = {
+            metric: unit
+            for metric, unit in self.metric_unit_semantics.items()
+            if unit != ROLLING_METRIC_UNIT_SEMANTICS[metric]
+        }
+        if contradictions:
+            raise ValueError(
+                "metric_unit_semantics contradicts the canonical source-owned units: "
+                + ", ".join(
+                    f"{metric}={unit} (canonical {ROLLING_METRIC_UNIT_SEMANTICS[metric]})"
+                    for metric, unit in sorted(contradictions.items())
+                )
+            )
+        return self
 
 
 __all__ = [

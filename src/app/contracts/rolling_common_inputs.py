@@ -29,7 +29,7 @@ RollingMetric = Literal[
 ]
 
 
-ROLLING_BENCHMARK_METRICS: set[str] = {
+ROLLING_BENCHMARK_METRICS: set[RollingMetric] = {
     "ROLLING_BETA",
     "ROLLING_TRACKING_ERROR",
     "ROLLING_INFORMATION_RATIO",
@@ -44,7 +44,7 @@ RollingMetricUnit = Literal["decimal_ratio", "unitless"]
 #: separately by ``annualization_basis`` - it does not change how a value is
 #: read. Every ``RollingMetric`` MUST have an entry: a metric without stated
 #: unit semantics is unreadable downstream.
-ROLLING_METRIC_UNIT_SEMANTICS: dict[str, RollingMetricUnit] = {
+ROLLING_METRIC_UNIT_SEMANTICS: dict[RollingMetric, RollingMetricUnit] = {
     "ROLLING_VOLATILITY": "decimal_ratio",
     "ROLLING_SHARPE": "unitless",
     "ROLLING_BETA": "unitless",
