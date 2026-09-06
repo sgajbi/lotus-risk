@@ -7,14 +7,8 @@ while the configuration stays weak.
 """
 
 import copy
-
-import pytest
-
-# The ONLY divergences from the canonical lift, both this repository's own
-# conventions rather than changes to the control: a governance marker on
-# unit modules that do not import product code, and the narrow typing
-# overrides recorded in mypy.ini beside them.
-pytestmark = pytest.mark.governance
+from pathlib import Path
+from typing import Any
 
 from scripts.check_branch_protection_policy import (
     compare_live_to_policy,
@@ -24,7 +18,7 @@ from scripts.check_branch_protection_policy import (
 )
 
 
-def _live_matching_policy(policy: dict) -> dict:
+def _live_matching_policy(policy: dict[str, Any]) -> dict[str, Any]:
     expected = policy["expected"]
     return {
         "enforce_admins": {"enabled": expected["enforce_admins"]},
@@ -98,7 +92,7 @@ def test_absent_reviews_block_is_distinguished_from_zero_count() -> None:
     assert any("ABSENT" in issue for issue in issues)
 
 
-def test_codeowners_resolution_follows_github_precedence(tmp_path):
+def test_codeowners_resolution_follows_github_precedence(tmp_path: Path) -> None:
     """A .github/ file wins over root and docs/, as GitHub resolves it."""
     for location in (".github", "docs"):
         (tmp_path / location).mkdir()
@@ -110,17 +104,18 @@ def test_codeowners_resolution_follows_github_precedence(tmp_path):
     (tmp_path / ".github" / "CODEOWNERS").write_text("", encoding="utf-8")
     effective = resolve_effective_codeowners(tmp_path)
     assert effective == tmp_path / ".github" / "CODEOWNERS"
+    assert effective is not None  # equality above guarantees this; mypy cannot narrow it
     assert effective.read_text(encoding="utf-8") == "", (
         "an empty higher-precedence file must shadow the valid lower ones, "
         "because that is the posture GitHub applies"
     )
 
 
-def test_codeowners_resolution_reports_absence(tmp_path):
+def test_codeowners_resolution_reports_absence(tmp_path: Path) -> None:
     assert resolve_effective_codeowners(tmp_path) is None
 
 
-def test_offline_validation_rejects_a_policy_missing_expected_fields():
+def test_offline_validation_rejects_a_policy_missing_expected_fields() -> None:
     """--offline is the only PR-time gate; it must not accept a gutted policy."""
     policy = load_policy()
     for field in ("enforce_admins", "required_status_checks", "required_pull_request_reviews"):
@@ -132,14 +127,14 @@ def test_offline_validation_rejects_a_policy_missing_expected_fields():
         )
 
 
-def test_offline_validation_rejects_an_empty_required_context_list():
+def test_offline_validation_rejects_an_empty_required_context_list() -> None:
     policy = copy.deepcopy(load_policy())
     policy["expected"]["required_status_checks"]["contexts"] = []
     issues = validate_policy_document(policy)
     assert any("contexts is empty" in issue for issue in issues)
 
 
-def test_offline_validation_rejects_missing_nested_fields():
+def test_offline_validation_rejects_missing_nested_fields() -> None:
     """Deleting a nested field must not pass offline and crash the live run."""
     policy = load_policy()
     cases = [
@@ -167,7 +162,7 @@ def test_offline_validation_rejects_missing_nested_fields():
         )
 
 
-def test_offline_validation_requires_each_bypass_category():
+def test_offline_validation_requires_each_bypass_category() -> None:
     """The live comparison builds all three categories; offline must demand them."""
     policy = load_policy()
     for category in ("users", "teams", "apps"):
@@ -182,7 +177,7 @@ def test_offline_validation_requires_each_bypass_category():
         ), f"removing bypass_pull_request_allowances.{category} passed the offline gate"
 
 
-def test_offline_validation_rejects_wrong_value_types():
+def test_offline_validation_rejects_wrong_value_types() -> None:
     """A bare string would be compared character by character after merge."""
     policy = copy.deepcopy(load_policy())
     policy["expected"]["required_status_checks"]["contexts"] = "PR Merge Gate / Coverage"
@@ -203,7 +198,7 @@ def test_offline_validation_rejects_wrong_value_types():
     )
 
 
-def test_offline_validation_rejects_wrong_review_value_types():
+def test_offline_validation_rejects_wrong_review_value_types() -> None:
     """A string "true" or "0" would merge and mismatch only in the live run."""
     base = load_policy()
 

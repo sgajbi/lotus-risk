@@ -94,11 +94,24 @@ def _imports_product_code(module: Path) -> bool:
     return False
 
 
+#: Modules lifted BYTE-IDENTICALLY from a canonical implementation in another
+#: repository. They carry no in-file marker on purpose: editing one to add this
+#: repository's convention would fork an estate-wide control and silently stop
+#: it receiving canonical fixes, which is how a sibling's copy of this same
+#: checker fell 102 lines behind. `tests/unit/conftest.py` marks them at
+#: collection time instead, so the pyramid accounting is identical while the
+#: file stays comparable to its canonical blob.
+#: Retires when the module is no longer a verbatim lift.
+CANONICAL_LIFTS = {"tests/unit/test_branch_protection_policy.py"}
+
+
 def test_unit_modules_that_never_touch_product_code_declare_the_marker() -> None:
     unmarked = [
-        module.relative_to(ROOT).as_posix()
+        path
         for module in sorted((ROOT / "tests" / "unit").rglob("test_*.py"))
-        if not _imports_product_code(module) and not _declares_governance_marker(module)
+        if (path := module.relative_to(ROOT).as_posix()) not in CANONICAL_LIFTS
+        and not _imports_product_code(module)
+        and not _declares_governance_marker(module)
     ]
 
     assert unmarked == [], (
@@ -106,6 +119,23 @@ def test_unit_modules_that_never_touch_product_code_declare_the_marker() -> None
         f"not bind `pytestmark` to `pytest.mark.{MARKER_NAME}`. They will be counted in the "
         f"product pyramid and squeeze the integration and e2e ratios: {unmarked}. See issue #220."
     )
+
+
+def test_every_canonical_lift_is_marked_at_collection_time() -> None:
+    """The exemption above must not become a hole: a module that is exempt from
+    the in-file marker still has to BE marked, or it lands in the product
+    pyramid exactly as an unmarked module would. This pins the collection-time
+    marking that replaces it, and fails if the conftest hook stops covering a
+    listed module."""
+
+    conftest = (ROOT / "tests" / "unit" / "conftest.py").read_text(encoding="utf-8")
+    for lift in sorted(CANONICAL_LIFTS):
+        module_name = Path(lift).stem
+        assert module_name in conftest, (
+            f"{lift} is exempt from the in-file marker but nothing marks it at collection time; "
+            "it would be counted as a product test."
+        )
+    assert f'add_marker("{MARKER_NAME}")' in conftest or MARKER_NAME in conftest
 
 
 MARKER_DECLARATION_CASES = {
