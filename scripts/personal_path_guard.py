@@ -57,6 +57,20 @@ _ROUTE_PREFIX = re.compile(
 _STRING_TOKENS = {tokenize.STRING, getattr(tokenize, "FSTRING_MIDDLE", tokenize.STRING)}
 
 
+#: Accounts written as a substitution rather than a name: ``<user>``,
+#: ``${USER}``, ``%USERNAME%``, ``{user}``. These show a path's SHAPE without
+#: naming anyone - the platform onboarding guide documents the Codex profile
+#: location this way - so they disclose nothing in prose OR in a test literal.
+#: Matched whole, so a real account cannot become impersonal by accident.
+_PLACEHOLDER_ACCOUNT = re.compile(
+    r"^(?:<[^<>]+>|\$\{[^{}]+\}|%[^%]+%|\{[^{}]+\})$",
+)
+
+
+def _is_placeholder(account: str) -> bool:
+    return bool(_PLACEHOLDER_ACCOUNT.match(account))
+
+
 def _account(match: re.Match[str]) -> str:
     groups = match.groupdict()
     for name in ("drive_account", "unc_account", "posix_account"):
@@ -81,14 +95,32 @@ def _findings(text: str, *, context: str = "unknown") -> list[str]:
         match.group(0)
         for match in PERSONAL_HOME.finditer(text)
         if _account(match) not in SHARED_PROFILES
+        and not _is_placeholder(_account(match))
         and not _ROUTE_PREFIX.search(text[: match.start()])
     ]
     if hits or context != "filesystem":
         return hits
     exact = EXACT_POSIX_HOME.match(text)
-    if exact and exact.group("exact_account").casefold() not in SHARED_PROFILES:
+    if (
+        exact
+        and exact.group("exact_account").casefold() not in SHARED_PROFILES
+        and not _is_placeholder(exact.group("exact_account"))
+    ):
         return [exact.group(0)]
     return []
+
+
+def findings_in_text(text: str) -> list[str]:
+    """Every personal-home span in free text, with no source context available.
+
+    Prose - Markdown, commit messages, diagnostics - carries no AST to say how
+    a path is used, so the default context applies: web-URL spans are excluded,
+    drive, UNC, POSIX-with-child and root forms are found case-insensitively,
+    and an exact POSIX home with no child stays ambiguous rather than becoming
+    a finding. Callers outside this module should use this rather than the
+    private matcher, so there is one definition of what a personal path is.
+    """
+    return _findings(text)
 
 
 def _literal(token_text: str) -> str:
