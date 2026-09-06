@@ -101,9 +101,10 @@ def _literal(token_text: str) -> str:
     return value if isinstance(value, str) else ""
 
 
-#: Callables whose string arguments are ROUTES, not filesystem paths: HTTP
-#: client verbs and the framework route decorators/registrars.
-_ROUTE_CALLS = frozenset(
+#: Method names that address a route WHEN the receiver is an HTTP client,
+#: application or router - never on their own, because `config.get(...)`
+#: and `mapping.get(...)` share the name and carry no route.
+_ROUTE_METHODS = frozenset(
     {
         "get",
         "post",
@@ -121,8 +122,38 @@ _ROUTE_CALLS = frozenset(
         "add_api_route",
         "add_route",
         "add_websocket_route",
-        "include_router",
     }
+)
+#: Receiver identifiers that make those methods routes. A decorator call is
+#: route context regardless of receiver, since only routing frameworks use
+#: that form.
+_ROUTE_RECEIVERS = frozenset(
+    {
+        "app",
+        "api",
+        "client",
+        "router",
+        "sub_router",
+        "subrouter",
+        "test_client",
+        "testclient",
+        "session",
+        "http",
+        "httpx",
+        "requests",
+        "server",
+        "asgi",
+        "web",
+        "service",
+        "gateway",
+    }
+)
+#: Argument names that carry the route itself. Any OTHER argument of a route
+#: call is an ordinary value - `client.get(url, cert="/home/alice/cert.pem")`
+#: passes a real filesystem path.
+_ROUTE_ARGUMENT_KEYWORDS = frozenset({"url", "path", "route", "endpoint"})
+_HTTP_METHOD_LITERALS = frozenset(
+    {"GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "TRACE", "CONNECT"}
 )
 #: Callables whose string arguments ARE filesystem paths, where even a bare
 #: home with no child is a personal disclosure.
@@ -159,36 +190,89 @@ _FILESYSTEM_CALLS = frozenset(
 )
 
 
-def _call_name(node: ast.AST) -> str:
-    func = getattr(node, "func", None)
+def _receiver_root(node: ast.expr) -> str:
+    while isinstance(node, ast.Attribute):
+        node = node.value
+    return node.id.casefold() if isinstance(node, ast.Name) else ""
+
+
+def _route_arguments(call: ast.Call, *, is_decorator: bool) -> list[ast.expr]:
+    """The argument(s) of a route call that carry the route, or none.
+
+    Only the route-bearing argument is exempt: a route call's other
+    arguments are ordinary values, and a filesystem path among them - a
+    client certificate, say - is a real disclosure.
+    """
+
+    func = call.func
     if isinstance(func, ast.Attribute):
-        return func.attr
-    if isinstance(func, ast.Name):
-        return func.id
-    return ""
+        name = func.attr
+        receiver_ok = is_decorator or _receiver_root(func.value) in _ROUTE_RECEIVERS
+    elif isinstance(func, ast.Name):
+        name = func.id
+        receiver_ok = is_decorator
+    else:
+        return []
+    if name not in _ROUTE_METHODS or not receiver_ok:
+        return []
+    arguments: list[ast.expr] = []
+    for argument in call.args:
+        # `client.request("GET", url)` puts the method first.
+        if (
+            isinstance(argument, ast.Constant)
+            and isinstance(argument.value, str)
+            and argument.value.upper() in _HTTP_METHOD_LITERALS
+        ):
+            continue
+        arguments.append(argument)
+        break
+    arguments += [kw.value for kw in call.keywords if kw.arg in _ROUTE_ARGUMENT_KEYWORDS]
+    return arguments
 
 
-def _literal_contexts(tree: ast.AST) -> dict[tuple[int, int], str]:
-    """Where each string literal sits: route argument, filesystem argument,
-    or neither. Python's own parser answers this - no lexer needed."""
+def _filesystem_arguments(call: ast.Call) -> list[ast.expr]:
+    func = call.func
+    name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", "")
+    if name not in _FILESYSTEM_CALLS:
+        return []
+    return list(call.args) + [kw.value for kw in call.keywords]
 
-    contexts: dict[tuple[int, int], str] = {}
+
+def _span(node: ast.expr) -> tuple[int, int, int, int] | None:
+    """The source rectangle a whole argument occupies, so every token inside
+    it inherits that argument's context - an f-string is a JoinedStr whose
+    FSTRING_MIDDLE tokens would otherwise be scanned context-free."""
+
+    if node.end_lineno is None or node.end_col_offset is None:
+        return None
+    return (node.lineno, node.col_offset, node.end_lineno, node.end_col_offset)
+
+
+def _literal_contexts(tree: ast.AST) -> list[tuple[tuple[int, int, int, int], str]]:
+    """Source spans and the context each carries. Python's own parser answers
+    what a literal is USED as; no lexer reconstruction needed."""
+
+    spans: list[tuple[tuple[int, int, int, int], str]] = []
     for node in ast.walk(tree):
-        calls = [node] if isinstance(node, ast.Call) else []
-        calls += [d for d in getattr(node, "decorator_list", []) if isinstance(d, ast.Call)]
-        for call in calls:
-            name = _call_name(call)
-            if name in _ROUTE_CALLS:
-                context = "route"
-            elif name in _FILESYSTEM_CALLS:
-                context = "filesystem"
-            else:
-                continue
-            arguments = list(call.args) + [kw.value for kw in call.keywords]
-            for argument in arguments:
-                if isinstance(argument, ast.Constant) and isinstance(argument.value, str):
-                    contexts[(argument.lineno, argument.col_offset)] = context
-    return contexts
+        pairs: list[tuple[ast.Call, bool]] = []
+        if isinstance(node, ast.Call):
+            pairs.append((node, False))
+        pairs += [(d, True) for d in getattr(node, "decorator_list", []) if isinstance(d, ast.Call)]
+        for call, is_decorator in pairs:
+            for argument in _route_arguments(call, is_decorator=is_decorator):
+                if (span := _span(argument)) is not None:
+                    spans.append((span, "route"))
+            for argument in _filesystem_arguments(call):
+                if (span := _span(argument)) is not None:
+                    spans.append((span, "filesystem"))
+    return spans
+
+
+def _context_at(spans: list[tuple[tuple[int, int, int, int], str]], line: int, col: int) -> str:
+    for (start_line, start_col, end_line, end_col), context in spans:
+        if (start_line, start_col) <= (line, col) <= (end_line, end_col):
+            return context
+    return "unknown"
 
 
 def _python_literals(source: Path) -> list[tuple[str, str]]:
@@ -199,13 +283,13 @@ def _python_literals(source: Path) -> list[tuple[str, str]]:
         tree = ast.parse(raw)
     except (SyntaxError, ValueError):
         tree = None
-    contexts = _literal_contexts(tree) if tree is not None else {}
+    spans = _literal_contexts(tree) if tree is not None else []
     with source.open("rb") as stream:
         tokens = [
             token for token in tokenize.tokenize(stream.readline) if token.type in _STRING_TOKENS
         ]
     return [
-        (_literal(token.string), contexts.get((token.start[0], token.start[1]), "unknown"))
+        (_literal(token.string), _context_at(spans, token.start[0], token.start[1]))
         for token in tokens
     ]
 
