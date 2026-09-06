@@ -39,9 +39,11 @@ Three causes escalate differently, so establish which one applies **against Core
 on failure. Core owns the underlying products, but Performance is the dependency that failed — go
 there first, and to Core only once Performance identifies an upstream gap.
 
-**Risk answers case 3, but only when it is the first thing wrong.** `stale` is checked *after*
-degraded results and empty periods, so a stale series that is also degraded reports `degraded`
-instead. A stale reading is a positive signal; its absence does not mean the data is fresh. An
+**Risk answers case 3 — but in `freshness_bucket`, not `state`.** `state` follows a precedence
+chain (degraded, then empty, then stale, then ready), so a stale series that is also degraded
+reports `state="degraded"`. `freshness_bucket` is computed separately and carried regardless, so
+`freshness_bucket="stale"` is still present alongside it. A degraded state does not hide
+staleness; check `freshness_bucket` for freshness and `state` for what stopped the calculation. An
 absent or empty series raises a dependency failure before any
 `metadata.calculation_supportability` exists, so an unknown portfolio and an unmaterialized range
 look identical from Risk.

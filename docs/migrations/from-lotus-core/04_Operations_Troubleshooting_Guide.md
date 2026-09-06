@@ -25,11 +25,16 @@ The Risk Analytics feature is a read-only process that relies entirely on data a
   the underlying timeseries products, but the dependency that failed is Performance — go there
   first, and to Core only once Performance identifies an upstream gap.
 
-  *Case 3 (stale) is reported, but only when it is the FIRST thing wrong.*
-  `_period_supportability_outcome` checks `degraded_result_count`, then `empty_period_count`,
-  and only then `freshness_bucket == "stale"`. So a stale series that is also degraded, or has
-  empty periods, reports `degraded` or `empty` instead — a stale reading is a positive signal, but
-  its absence does not mean the data is fresh.
+  *Case 3 (stale) is always visible — but read `freshness_bucket`, not `state`.* Two fields, two
+  behaviours, and conflating them is the mistake to avoid here. `state` and `reason` follow a
+  precedence chain in `_period_supportability_outcome`: degraded, then empty, then stale, then
+  ready — so a stale series that is also degraded reports `state="degraded"`. But
+  `freshness_bucket` is computed separately and carried on the response regardless, so
+  `freshness_bucket="stale"` is still there alongside it.
+
+  So a degraded state does not hide staleness; it just is not what `state` names. Check
+  `freshness_bucket` to answer the freshness question, and `state` to answer what stopped the
+  calculation. They can both be informative at once.
 
   *Cases 1 and 2 are NOT distinguishable.* An absent or empty series is a dependency failure:
   `extract_required_portfolio_returns` raises as soon as `portfolio_returns` yields no points, so
