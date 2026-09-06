@@ -407,7 +407,31 @@ Important validation expectations:
    inconclusive rather than producing false-green evidence. Resolution evidence records the
    immutable commit SHA behind each tag, including action references that select a repository
    subpath.
-8. Release image posture is governed by `make image-supply-chain-gate`: images are built locally,
+8. Branch protection is asserted, not assumed. `quality/branch_protection_policy.v1.json`
+   records every protection field this repository claims - the required contexts, posture flags,
+   bypass allowances, CODEOWNERS posture, the review authority, and `documented_exceptions` each
+   carrying the condition that retires it. `scripts/check_branch_protection_policy.py` compares
+   live protection against it field by field and fails in BOTH drift directions: when protection
+   weakens, and when an exception's text is removed without the configuration strengthening.
+   Absent settings compare as ABSENT, never coerced to false. The checker is lifted
+   BYTE-IDENTICALLY from the canonical implementation (`lotus-gateway` at `main`) and must stay
+   that way: that identity is how a canonical fix reaches every adopter instead of forking an
+   estate-wide control, so repository-specific needs go in the policy table or in adopter-side
+   configuration (this repository's narrow `mypy.ini` overrides and the governance marker on the
+   lifted test module), never in the script. Offline document-shape checks run blocking in the
+   unit gate so the table cannot rot; the live comparison runs daily in its own job in
+   `Main Gate Coverage Audit` - a separate job, because sharing the coverage audit's job would
+   let that job's timeout cancel the protection evidence exactly when it is most useful.
+   OPERATOR REQUIREMENT: the live comparison needs a repository Actions secret
+   (`LOTUS_AUTOMERGE_TOKEN`) carrying `administration: read`, which `github.token` cannot carry.
+   No Lotus repository held such a secret when this landed, so the live step FAILS CLOSED on the
+   missing token rather than passing silently, and the gate's own context is deliberately not yet
+   self-anchored in the required list - requiring it would block every merge on an operator
+   action rather than assert a control. Two comparison gaps are stated in the table rather than
+   implied: source `app_id` bindings (lotus-gateway#740) and four protection controls the API
+   returns but the checker's hard-coded allowlist ignores (lotus-gateway#742). Both are canonical
+   gaps; neither is closable from the table side.
+9. Release image posture is governed by `make image-supply-chain-gate`: images are built locally,
    tagged by Git SHA, labeled with source/build/version/CI metadata, accompanied by an SBOM, and
     fully inventoried, scanned unconditionally for application-library HIGH/CRITICAL findings, and
     scanned for fixable OS HIGH/CRITICAL findings before registry authentication or publication.
@@ -421,7 +445,7 @@ Important validation expectations:
    its builder, applies current operating-system security updates, runs as `lotus` UID/GID `10001`,
    excludes repository scripts, copies the governed domain-data-product declarations beneath
    `LOTUS_REPO_ROOT=/app`, and healthchecks `/health/ready`.
-9. When a PR branch is refreshed, verify both the remote branch SHA and the PR-reported head SHA
+10. When a PR branch is refreshed, verify both the remote branch SHA and the PR-reported head SHA
    before trusting branch protection state. RFC-0002 PR #212 exposed stale `pull_request` check
    contexts after branch pushes and close/reopen refreshes; if `git ls-remote --heads origin
    <branch>` and `gh pr view --json headRefOid,statusCheckRollup` disagree, file or update the
