@@ -109,9 +109,25 @@ Execution model:
 
 ## Quick Start
 
+You need, before anything else:
+
+- **Python 3.12 or newer** — `pyproject.toml` requires `>=3.12` and CI pins 3.12
+- **`make`** — every documented command uses it; not a default on Windows
+- **Docker** — only for the prod-shaped stack below; the direct local run does not need it
+- **A virtual environment, activated before `make install`.** `make install` installs into
+  whichever interpreter is on `PATH`; it does not create one. On a PEP 668 distribution
+  (Debian/Ubuntu, Fedora, Homebrew Python) installing into the system interpreter is refused
+  with `externally-managed-environment`. CI does not see this because `actions/setup-python`
+  supplies an isolated interpreter.
+
+  ```shell
+  python -m venv .venv
+  source .venv/bin/activate        # Windows PowerShell: .venv\Scripts\Activate.ps1
+  ```
+
 Install dependencies and run the fast local gate:
 
-```powershell
+```shell
 make install
 make check
 ```
