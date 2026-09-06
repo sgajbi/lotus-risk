@@ -114,6 +114,10 @@ You need, before anything else:
 - **Python 3.12 or newer** — `pyproject.toml` requires `>=3.12` and CI pins 3.12
 - **`make`** — every documented command uses it; not a default on Windows
 - **Docker** — only for the prod-shaped stack below; the direct local run does not need it
+- **A `lotus-platform` checkout.** `make check` runs `mesh-contract-validate`, which loads a
+  validator from lotus-platform and fails with `FileNotFoundError` without it. It is resolved
+  from `LOTUS_PLATFORM_ROOT` if set, otherwise `../lotus-platform`, `./.lotus-platform` or
+  `./lotus-platform` — so a sibling checkout beside this repository needs no configuration
 - **A virtual environment, activated before `make install`.** `make install` installs into
   whichever interpreter is on `PATH`; it does not create one. On a PEP 668 distribution
   (Debian/Ubuntu, Fedora, Homebrew Python) installing into the system interpreter is refused
