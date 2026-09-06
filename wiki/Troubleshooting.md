@@ -34,13 +34,20 @@ Three causes escalate differently, so establish which one applies **against Core
 2. the portfolio is known but has no timeseries for the requested range — a materialization gap;
 3. timeseries exist but are stale relative to the requested as-of date — a freshness gap.
 
-**Risk will not tell you which.** An absent or empty upstream series raises a dependency failure
-before any `metadata.calculation_supportability` is produced, and an upstream 4xx surfaces the
-generic `rejected_request` category. The finer reasons — `insufficient_observations`,
-`insufficient_aligned_observations`, `benchmark_unavailable`, `calculation_quality_issue`,
-`stale_source_observations` — describe a series that exists but is insufficient, which is a
-different situation. `source_product_unavailable` belongs to the separate source-observation
-path, not to risk calculation supportability. Risk's response tells you the dependency failed, not why.
+**Risk answers case 3 but not cases 1 and 2.** A nonempty but stale series reports
+`state="stale"` with `reason="stale_source_observations"` — check that first. An absent or empty
+series raises a dependency failure before any `metadata.calculation_supportability` is produced,
+so an unknown portfolio and an unmaterialized range look identical from Risk; establish which
+against Core.
+
+A throttled upstream is **not** a rejection: HTTP 429 becomes HTTP 503 with
+`code="UPSTREAM_THROTTLED"`, `category="throttled"` and `retryable=true`, which is actionable and
+worth retrying.
+
+The finer reasons — `insufficient_observations`, `insufficient_aligned_observations`,
+`benchmark_unavailable`, `calculation_quality_issue`, `stale_source_observations` — describe a
+series that exists but is insufficient. `source_product_unavailable` belongs to the separate
+source-observation path, not to risk calculation supportability. Risk's response tells you the dependency failed, not why.
 
 Missing data here is a Core-side gap, not a Risk fault, and Risk must not infer a value for it.
 

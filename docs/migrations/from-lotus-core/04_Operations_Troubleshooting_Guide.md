@@ -17,19 +17,28 @@ The Risk Analytics feature is a read-only process that relies entirely on data a
   * *portfolio known, no timeseries for the requested range* — a materialization gap;
   * *timeseries present but stale relative to the requested as-of date* — a freshness gap.
 
-  **What Risk reports, precisely.** An absent or empty upstream series is a dependency failure:
-  `extract_required_portfolio_returns` raises as soon as `portfolio_returns` yields no points, so
-  no `metadata.calculation_supportability` is produced for that request, and an upstream 4xx
-  surfaces the generic `rejected_request` category. Risk therefore does **not** tell you which of
-  the three cases above you are in — do not go looking for a field that distinguishes them.
+  **What Risk reports, precisely.**
 
-  The finer supportability reasons apply where a series **exists but is insufficient**, which is
-  a different situation from an absent one. Risk calculation supportability emits, from
-  `supportability_periods.py`: `insufficient_observations`, `insufficient_aligned_observations`,
-  `benchmark_unavailable`, `calculation_quality_issue` and `stale_source_observations`.
-  `source_product_unavailable` is **not** one of them — it belongs to the separate
-  source-observation path (`source_product_observation.py`), and `stale` is a freshness-bucket
-  value, not a supportability reason. Do not look for either on a risk calculation response.
+  *Case 3 (stale) IS reported.* A nonempty but stale series yields `state="stale"` with
+  `reason="stale_source_observations"` and `freshness_bucket="stale"` from
+  `supportability_periods.py`. Check that before escalating a freshness gap — it is the one case
+  Risk answers directly.
+
+  *Cases 1 and 2 are NOT distinguishable.* An absent or empty series is a dependency failure:
+  `extract_required_portfolio_returns` raises as soon as `portfolio_returns` yields no points, so
+  no `metadata.calculation_supportability` is produced. An unknown portfolio and a known
+  portfolio with no materialized range look identical from here — establish which against Core.
+
+  *A throttled upstream is not a rejection.* HTTP 429 maps to HTTP 503 with
+  `code="UPSTREAM_THROTTLED"`, `category="throttled"` and `retryable=true`. That is actionable
+  and worth retrying; do not read it as a refused request.
+
+  The finer supportability reasons apply where a series **exists but is insufficient**. Risk
+  calculation supportability emits, from `supportability_periods.py`:
+  `insufficient_observations`, `insufficient_aligned_observations`, `benchmark_unavailable`,
+  `calculation_quality_issue` and `stale_source_observations`. `source_product_unavailable` is
+  **not** one of them — it belongs to the separate source-observation path
+  (`source_product_observation.py`).
 
   So establish the case against Core — is the portfolio known, is the range materialized, is the
   data fresh for the as-of date — and quote that in the escalation. Risk's response tells you the
