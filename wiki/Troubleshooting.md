@@ -43,7 +43,13 @@ there first, and to Core only once Performance identifies an upstream gap.
 chain (degraded, then empty, then stale, then ready), so a stale series that is also degraded
 reports `state="degraded"`. `freshness_bucket` is computed separately and carried regardless, so
 `freshness_bucket="stale"` is still present alongside it. A degraded state does not hide
-staleness; check `freshness_bucket` for freshness and `state` for what stopped the calculation. An
+staleness; check `freshness_bucket` for freshness and `state` for what stopped the calculation.
+
+**A stale bucket is not by itself a Core gap.** The series drops non-trading days, but freshness
+is measured in calendar days, so an as-of Sunday against a healthy Friday observation reports
+`stale` — as does a Monday as-of. Check whether the interval contains only non-trading days
+before escalating; if it does, the data is current and the bucket is a calendar-arithmetic
+artefact. An
 absent or empty series raises a dependency failure before any
 `metadata.calculation_supportability` exists, so an unknown portfolio and an unmaterialized range
 look identical from Risk.

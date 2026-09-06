@@ -33,8 +33,19 @@ The Risk Analytics feature is a read-only process that relies entirely on data a
   `freshness_bucket="stale"` is still there alongside it.
 
   So a degraded state does not hide staleness; it just is not what `state` names. Check
-  `freshness_bucket` to answer the freshness question, and `state` to answer what stopped the
-  calculation. They can both be informative at once.
+  `freshness_bucket` for freshness and `state` for what stopped the calculation — they can both
+  be informative at once.
+
+  **But `freshness_bucket="stale"` is not by itself a Core gap.** `to_return_points` drops
+  non-trading days (`is_trading_day` rejects weekday >= 5), while `freshness_bucket_from_returns`
+  computes `age_days` in **calendar** days and calls anything over one day stale. So an as-of
+  Sunday against a healthy Friday observation is two calendar days old and reports `stale`, and a
+  Monday as-of reports three. Every weekend, and every holiday, on data with nothing wrong with
+  it.
+
+  Before escalating a freshness gap, check whether the interval between the latest observation
+  and the as-of date contains only non-trading days. If it does, the series is current and the
+  bucket is an artefact of calendar arithmetic over a trading-day series.
 
   *Cases 1 and 2 are NOT distinguishable.* An absent or empty series is a dependency failure:
   `extract_required_portfolio_returns` raises as soon as `portfolio_returns` yields no points, so
