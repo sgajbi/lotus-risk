@@ -23,9 +23,13 @@ The Risk Analytics feature is a read-only process that relies entirely on data a
   surfaces the generic `rejected_request` category. Risk therefore does **not** tell you which of
   the three cases above you are in — do not go looking for a field that distinguishes them.
 
-  The finer supportability categories (`source_product_unavailable`, `stale`,
-  `insufficient_observations`, `insufficient_aligned_observations`) apply where a series exists
-  but is insufficient, which is a different situation from an absent one.
+  The finer supportability reasons apply where a series **exists but is insufficient**, which is
+  a different situation from an absent one. Risk calculation supportability emits, from
+  `supportability_periods.py`: `insufficient_observations`, `insufficient_aligned_observations`,
+  `benchmark_unavailable`, `calculation_quality_issue` and `stale_source_observations`.
+  `source_product_unavailable` is **not** one of them — it belongs to the separate
+  source-observation path (`source_product_observation.py`), and `stale` is a freshness-bucket
+  value, not a supportability reason. Do not look for either on a risk calculation response.
 
   So establish the case against Core — is the portfolio known, is the range materialized, is the
   data fresh for the as-of date — and quote that in the escalation. Risk's response tells you the
