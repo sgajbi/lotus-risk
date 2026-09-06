@@ -411,9 +411,11 @@ Important validation expectations:
    records every protection field this repository claims - the required contexts, posture flags,
    bypass allowances, CODEOWNERS posture, the review authority, and `documented_exceptions` each
    carrying the condition that retires it. `scripts/check_branch_protection_policy.py` compares
-   live protection against it field by field and fails in BOTH drift directions: when protection
-   weakens, and when an exception's text is removed without the configuration strengthening.
-   Absent settings compare as ABSENT, never coerced to false. The checker is lifted
+   live protection against it field by field, comparing for EQUALITY rather than as a floor, so
+   protection that weakens OR strengthens away from the table fails and must be re-declared.
+   Absent settings compare as ABSENT, never coerced to false. Only the zero-approval exception
+   is bound to the weakness it documents (lotus-gateway#743), so an exception the offline
+   validation does not name can be deleted while the weakness it excused persists. The checker is lifted
    BYTE-IDENTICALLY from the canonical implementation (`lotus-gateway` at `main`) and must stay
    that way: that identity is how a canonical fix reaches every adopter instead of forking an
    estate-wide control, so repository-specific needs go in the policy table or in adopter-side
