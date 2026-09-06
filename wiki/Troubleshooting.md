@@ -36,9 +36,11 @@ Three causes escalate differently, so establish which one applies **against Core
 
 **Risk will not tell you which.** An absent or empty upstream series raises a dependency failure
 before any `metadata.calculation_supportability` is produced, and an upstream 4xx surfaces the
-generic `rejected_request` category. The finer categories — `source_product_unavailable`,
-`stale`, `insufficient_observations` — describe a series that exists but is insufficient, which
-is a different situation. Risk's response tells you the dependency failed, not why.
+generic `rejected_request` category. The finer reasons — `insufficient_observations`,
+`insufficient_aligned_observations`, `benchmark_unavailable`, `calculation_quality_issue`,
+`stale_source_observations` — describe a series that exists but is insufficient, which is a
+different situation. `source_product_unavailable` belongs to the separate source-observation
+path, not to risk calculation supportability. Risk's response tells you the dependency failed, not why.
 
 Missing data here is a Core-side gap, not a Risk fault, and Risk must not infer a value for it.
 
