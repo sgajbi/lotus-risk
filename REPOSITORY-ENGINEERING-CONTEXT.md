@@ -417,8 +417,15 @@ Important validation expectations:
    BYTE-IDENTICALLY from the canonical implementation (`lotus-gateway` at `main`) and must stay
    that way: that identity is how a canonical fix reaches every adopter instead of forking an
    estate-wide control, so repository-specific needs go in the policy table or in adopter-side
-   configuration (this repository's narrow `mypy.ini` overrides and the governance marker on the
-   lifted test module), never in the script. Offline document-shape checks run blocking in the
+   configuration, never in the lifted files themselves. Both objects are the canonical typed pair
+   from merged `lotus-gateway#741`, verified by BLOB identity - `git rev-parse <ref>:<path>`
+   against gateway's `origin/main` on the COMMITTED ref, because a blob SHA hashes what git
+   actually stored and a working-tree check proves nothing about what landed. No typing exemption
+   remains: the canonical version passes this repository's strict mypy unmodified. The
+   governance-marker requirement is met OUTSIDE the lifted test module, by collection-time marking
+   in `tests/unit/conftest.py` with an explicit exemption in the pyramid gate and a test proving
+   that marking actually covers it - an in-file marker would fork the lift and silently stop it
+   receiving canonical fixes. Offline document-shape checks run blocking in the
    unit gate so the table cannot rot; the live comparison runs daily in its own job in
    `Main Gate Coverage Audit` - a separate job, because sharing the coverage audit's job would
    let that job's timeout cancel the protection evidence exactly when it is most useful.
@@ -428,9 +435,10 @@ Important validation expectations:
    missing token rather than passing silently, and the gate's own context is deliberately not yet
    self-anchored in the required list - requiring it would block every merge on an operator
    action rather than assert a control. Two comparison gaps are stated in the table rather than
-   implied: source `app_id` bindings (lotus-gateway#740) and four protection controls the API
-   returns but the checker's hard-coded allowlist ignores (lotus-gateway#742). Both are canonical
-   gaps; neither is closable from the table side.
+   implied: source `app_id` bindings (lotus-gateway#740), four protection controls the API
+   returns but the checker's hard-coded allowlist ignores (lotus-gateway#742), and only the
+   zero-approval exception being bound to the weakness it documents (lotus-gateway#743). All
+   three are canonical gaps; none is closable from the table side.
 9. Release image posture is governed by `make image-supply-chain-gate`: images are built locally,
    tagged by Git SHA, labeled with source/build/version/CI metadata, accompanied by an SBOM, and
     fully inventoried, scanned unconditionally for application-library HIGH/CRITICAL findings, and

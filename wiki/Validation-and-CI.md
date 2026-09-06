@@ -83,8 +83,13 @@ and deterministic for local and protected lanes.
   broke the release supply chain before any step ran; see issue #227. The daily online resolver
   catches a well-formed tag such as `v9.99.0` that does not actually exist; see issue #231
 - `make personal-path-gate` - fails when any test source states an absolute user-home path in a
-  string literal (a `tokenize` pass over evaluated literals, so a URL containing `/home/` is not a
-  finding), and fails closed when the scan inspects nothing or cannot read a Python source.
+  string literal. It reads Python sources through `tokenize` and judges each literal by the
+  context Python's own parser reports: a home-shaped string handed to a route call or route
+  decorator is a ROUTE and never a finding, while an exact home with no child (`/home/alice`)
+  is a finding when it sits in a filesystem call and stays ambiguous outside one. URLs are
+  excluded per span, shared profiles (Public, Shared) are locations rather than disclosures,
+  and non-Python fixtures are scanned as text. Fails closed when the scan inspects nothing or
+  cannot read a source.
 - `make source-size-gate` - fails when any module grows past the governed line count or when the
   source scan inspects zero files; successful output names the inspected file count
 - `make complexity-gate` - **blocking** cyclomatic complexity ratchet. Fails when the maximum rises
