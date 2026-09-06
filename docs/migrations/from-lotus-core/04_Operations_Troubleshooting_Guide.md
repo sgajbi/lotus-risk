@@ -17,7 +17,19 @@ The Risk Analytics feature is a read-only process that relies entirely on data a
   * *portfolio known, no timeseries for the requested range* — a materialization gap;
   * *timeseries present but stale relative to the requested as-of date* — a freshness gap.
 
-  Risk's own supportability surfaces report which of these it observed rather than collapsing them into a single failure; consult those before escalating, and quote the distinction in the escalation.
+  **What Risk reports, precisely.** An absent or empty upstream series is a dependency failure:
+  `extract_required_portfolio_returns` raises as soon as `portfolio_returns` yields no points, so
+  no `metadata.calculation_supportability` is produced for that request, and an upstream 4xx
+  surfaces the generic `rejected_request` category. Risk therefore does **not** tell you which of
+  the three cases above you are in — do not go looking for a field that distinguishes them.
+
+  The finer supportability categories (`source_product_unavailable`, `stale`,
+  `insufficient_observations`, `insufficient_aligned_observations`) apply where a series exists
+  but is insufficient, which is a different situation from an absent one.
+
+  So establish the case against Core — is the portfolio known, is the range materialized, is the
+  data fresh for the as-of date — and quote that in the escalation. Risk's response tells you the
+  dependency failed, not why.
 * **Benchmark Data Source**: The `market_prices` table. This is required **only** when benchmark-relative metrics (Beta, Tracking Error, Information Ratio) are requested.
 * **Foreign Exchange Data**: The `fx_rates` table. This is required **only** when a benchmark's currency differs from the portfolio's reporting currency.
 
