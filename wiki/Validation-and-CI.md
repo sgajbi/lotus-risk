@@ -88,8 +88,15 @@ and deterministic for local and protected lanes.
   decorator is a ROUTE and never a finding, while an exact home with no child (`/home/alice`)
   is a finding when it sits in a filesystem call and stays ambiguous outside one. URLs are
   excluded per span, shared profiles (Public, Shared) are locations rather than disclosures,
-  and non-Python fixtures are scanned as text. Fails closed when the scan inspects nothing or
-  cannot read a source.
+  placeholder accounts written as a substitution (`<user>`, `${USER}`, `%USERNAME%`, `{user}`)
+  name nobody and are not findings, and non-Python fixtures are scanned as text. Fails closed
+  when the scan inspects nothing or cannot read a source.
+- Documentation is covered too, but by the unit lane rather than by this target:
+  `tests/unit/test_personal_path_guard.py` scans every Markdown file under `docs/` and `wiki/`
+  through the guard's own `findings_in_text`, so a personal checkout path in prose fails the
+  build. It uses the guard's matcher rather than a second pattern, so there is one definition of
+  what a personal path is - an earlier duplicate regex drifted immediately, matching inside web
+  URLs the guard excludes and missing lowercase drive paths and UNC shares
 - `make source-size-gate` - fails when any module grows past the governed line count or when the
   source scan inspects zero files; successful output names the inspected file count
 - `make complexity-gate` - **blocking** cyclomatic complexity ratchet. Fails when the maximum rises
