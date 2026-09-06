@@ -8,7 +8,6 @@ string literal.
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 import pytest
@@ -273,31 +272,6 @@ def test_a_shared_profile_stays_exempt_in_filesystem_context(tmp_path: Path) -> 
 
 DOC_ROOTS = ("docs", "wiki")
 
-#: A user-home path that names an actual account. Placeholders such as
-#: ``<user>`` or ``<workspace>`` cannot match: the angle brackets are outside
-#: this character class, so documentation may still show a path's SHAPE.
-PERSONAL_DOC_PATH = re.compile(
-    r"(?:[A-Za-z]:[\\/]|/)(?:Users|home)[\\/]([A-Za-z0-9._-]+)",
-)
-
-#: Accounts that name a machine role rather than a person, plus the
-#: conventional documentation personas. Documentation about a path rule has
-#: to be able to show the shape it forbids: wiki/Validation-and-CI.md cites
-#: an exact home with no child as an example of a finding, and that example
-#: is the documentation working, not a portability defect.
-IMPERSONAL_ACCOUNTS = frozenset(
-    {
-        "runner",
-        "runneradmin",
-        "root",
-        "public",
-        "shared",
-        "alice",
-        "bob",
-        "carol",
-    }
-)
-
 
 def _documentation_sources() -> list[Path]:
     root = Path(__file__).resolve().parents[2]
@@ -308,22 +282,42 @@ def test_documentation_states_no_personal_checkout_paths() -> None:
     """Docs must be readable by someone whose checkout lives elsewhere.
 
     A committed RFC map spelled a drive-rooted home directory belonging to one
-    developer, which the Python-only guard could not see because it scans test
-    sources. Canonical repository links work for a reader with no sibling
-    checkout at all; a personal checkout path works only for its author.
+    developer, which the guard could not see because it scans test sources.
+    Canonical repository links work for a reader with no sibling checkout at
+    all; a personal checkout path works only for its author.
+
+    Uses the guard's own matcher so there is ONE definition of a personal path:
+    a second regex here drifted from it immediately, matching inside web URLs
+    the guard excludes and missing case variants and UNC shares it catches.
     """
     sources = _documentation_sources()
     assert sources, "no documentation sources found to scan"
 
-    offenders: dict[str, list[str]] = {}
     root = Path(__file__).resolve().parents[2]
-    for path in sources:
-        hits = [
-            account
-            for account in PERSONAL_DOC_PATH.findall(path.read_text(encoding="utf-8"))
-            if account.lower() not in IMPERSONAL_ACCOUNTS
-        ]
-        if hits:
-            offenders[path.relative_to(root).as_posix()] = sorted(set(hits))
+    offenders = {
+        path.relative_to(root).as_posix(): hits
+        for path in sources
+        if (hits := guard.findings_in_text(path.read_text(encoding="utf-8")))
+    }
 
     assert not offenders, f"documentation names personal checkout paths: {offenders}"
+
+
+def test_placeholder_accounts_are_not_disclosures_but_real_names_still_are() -> None:
+    """A path shape shown with a placeholder names nobody.
+
+    Documentation has to be able to write the Codex profile location without
+    inventing a developer. Pinned in BOTH directions so the exemption cannot
+    widen into accepting real accounts.
+    """
+    drive = "C:" + chr(92) + "Users" + chr(92)
+
+    for placeholder in ("<user>", "${USER}", "%USERNAME%", "{user}"):
+        assert guard.findings_in_text(drive + placeholder + chr(92) + "AppData") == [], (
+            f"placeholder {placeholder} was reported as a personal path"
+        )
+
+    for account in ("jdoe", "Sandeep", "user1"):
+        assert guard.findings_in_text(drive + account + chr(92) + "AppData"), (
+            f"real account {account} was NOT reported as a personal path"
+        )
