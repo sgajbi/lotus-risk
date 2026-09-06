@@ -8,7 +8,16 @@ This guide provides operational instructions for monitoring, troubleshooting, an
 
 The Risk Analytics feature is a read-only process that relies entirely on data already persisted in the main PostgreSQL database. A failure or lack of data in these upstream tables will directly impact the availability and correctness of the risk calculations.
 
-* **Primary Data Source**: The `portfolio_timeseries` table. If data is missing for a given portfolio and date range, risk calculations cannot be performed. This table is populated by the `timeseries-generator-service`.
+* **Primary Data Source**: The `portfolio_timeseries` table. If data is missing for a given portfolio and date range, risk calculations cannot be performed.
+
+  **Ownership.** `portfolio_timeseries` is a `lotus-core` **source data product**, materialized by Core's derived-state capability — `portfolio_derived_state_service`, which owns both position-level (`position_timeseries`) and portfolio-level (`portfolio_timeseries`) materialization. Do not escalate against `timeseries-generator-service`: that runtime no longer exists in Core, and this guide previously named it. Escalate against the **product** and let Core route it, since Core owns its own topology and has consolidated these services once already.
+
+  **Diagnosing absence.** Missing data here is a Core-side gap, not a Risk fault, and Risk must not infer a value for it. Distinguish, because they escalate differently:
+  * *portfolio unknown to Core* — not a data gap;
+  * *portfolio known, no timeseries for the requested range* — a materialization gap;
+  * *timeseries present but stale relative to the requested as-of date* — a freshness gap.
+
+  Risk's own supportability surfaces report which of these it observed rather than collapsing them into a single failure; consult those before escalating, and quote the distinction in the escalation.
 * **Benchmark Data Source**: The `market_prices` table. This is required **only** when benchmark-relative metrics (Beta, Tracking Error, Information Ratio) are requested.
 * **Foreign Exchange Data**: The `fx_rates` table. This is required **only** when a benchmark's currency differs from the portfolio's reporting currency.
 
