@@ -185,3 +185,86 @@ def test_non_python_fixtures_are_scanned_too(tmp_path: Path) -> None:
 
     assert scanned == 3
     assert sorted(Path(key).name for key in findings) == ["fixture.json", "latin.txt"]
+
+
+def _write_source(tmp_path: Path, name: str, body: str) -> None:
+    (tmp_path / name).write_text(body + "\n", encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    ("name", "body"),
+    [
+        ("test_client_route.py", 'client.get("@ROUTE@")'),
+        ("test_client_kwarg_route.py", 'client.request("GET", url="@ROUTE@")'),
+        ("test_decorator_route.py", '@router.get("@ROUTE@")\ndef handler(): ...'),
+        ("test_app_decorator_route.py", '@app.post("@ROUTE@")\ndef handler(): ...'),
+        ("test_add_route.py", 'app.add_api_route("@ROUTE@", handler)'),
+    ],
+)
+def test_framework_route_literals_are_not_filesystem_paths(
+    tmp_path: Path, name: str, body: str
+) -> None:
+    """A home-shaped string handed to a route call or route decorator is a
+    ROUTE. The replaced guard exempted these through call context; the
+    tokenize guard recovers the same context from Python's own parser rather
+    than reconstructing it, and the decorator forms carry no HTTP-method
+    prefix inside the literal, so the prefix rule cannot cover them."""
+
+    _write_source(
+        tmp_path, name, body.replace("@ROUTE@", _SEP + _SEP.join(["home", "dashboard", "stats"]))
+    )
+
+    findings, scanned = guard.scan(tmp_path)
+
+    assert scanned == 1
+    assert findings == {}
+
+
+def test_an_exact_home_in_filesystem_context_is_rejected(tmp_path: Path) -> None:
+    """ "/home/alice" with no child is the most direct disclosure there is.
+    Bare, it is ambiguous - "/home/dashboard" is as likely a route - so the
+    filesystem call is what settles it, exactly as the replaced guard's
+    filesystem context did."""
+
+    home = _SEP + _SEP.join(["home", "alice"])
+    _write_source(tmp_path, "test_exact_home.py", f'from pathlib import Path\np = Path("{home}")')
+
+    findings, scanned = guard.scan(tmp_path)
+
+    assert scanned == 1
+    assert [hit for hits in findings.values() for hit in hits] == [home]
+
+
+@pytest.mark.parametrize(
+    "call",
+    ['open("@HOME@")', 'os.chdir("@HOME@")', 'shutil.rmtree("@HOME@")'],
+)
+def test_exact_homes_are_rejected_across_filesystem_calls(tmp_path: Path, call: str) -> None:
+    home = _SEP + _SEP.join(["Users", "alice"])
+    _write_source(tmp_path, "test_fs_call.py", call.replace("@HOME@", home))
+
+    findings, _ = guard.scan(tmp_path)
+
+    assert [hit for hits in findings.values() for hit in hits] == [home]
+
+
+def test_a_bare_home_outside_any_call_stays_ambiguous(tmp_path: Path) -> None:
+    """Context is what makes an exact home a finding: the same literal with
+    no filesystem call around it could be a route, and the guard does not
+    guess."""
+
+    _write_source(tmp_path, "test_bare.py", f'VALUE = "{_SEP + _SEP.join(["home", "dashboard"])}"')
+
+    findings, scanned = guard.scan(tmp_path)
+
+    assert scanned == 1
+    assert findings == {}
+
+
+def test_a_shared_profile_stays_exempt_in_filesystem_context(tmp_path: Path) -> None:
+    shared = _SEP + _SEP.join(["Users", "Shared"])
+    _write_source(tmp_path, "test_shared.py", f'from pathlib import Path\np = Path("{shared}")')
+
+    findings, _ = guard.scan(tmp_path)
+
+    assert findings == {}

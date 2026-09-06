@@ -40,6 +40,11 @@ PERSONAL_HOME = re.compile(
     rf"|[\\/]+root[\\/]+{_SEG})",
     re.IGNORECASE,
 )
+#: An exact POSIX home with no child path ("/home/alice"). Alone it is
+#: ambiguous - "/home/dashboard" is as likely a route - so it is a finding
+#: only where the literal sits in filesystem context, which the AST answers
+#: for Python sources.
+EXACT_POSIX_HOME = re.compile(rf"^[\\/]+(?:Users|home)[\\/]+(?P<exact_account>{_SEG})[\\/]*$")
 #: Web-URL spans are excluded wherever they sit inside the text: a URL
 #: containing /home/... is a route. The span stops at characters that
 #: cannot continue a URL, so a path after a delimiter is not swallowed.
@@ -60,16 +65,30 @@ def _account(match: re.Match[str]) -> str:
     return ""
 
 
-def _findings(text: str) -> list[str]:
-    """Every personal-home span in one text, exclusions applied."""
+def _findings(text: str, *, context: str = "unknown") -> list[str]:
+    """Every personal-home span in one literal, context and exclusions applied.
 
+    ``context`` is what the literal is USED as, which the AST supplies for
+    Python sources: a string handed to a route or HTTP-client call is a
+    route however home-shaped it looks, and a string handed to a filesystem
+    call is a path even when it names a bare home with no child.
+    """
+
+    if context == "route":
+        return []
     text = _WEB_URL.sub(lambda match: " " * len(match.group(0)), unquote(text))
-    return [
+    hits = [
         match.group(0)
         for match in PERSONAL_HOME.finditer(text)
         if _account(match) not in SHARED_PROFILES
         and not _ROUTE_PREFIX.search(text[: match.start()])
     ]
+    if hits or context != "filesystem":
+        return hits
+    exact = EXACT_POSIX_HOME.match(text)
+    if exact and exact.group("exact_account").casefold() not in SHARED_PROFILES:
+        return [exact.group(0)]
+    return []
 
 
 def _literal(token_text: str) -> str:
@@ -82,11 +101,113 @@ def _literal(token_text: str) -> str:
     return value if isinstance(value, str) else ""
 
 
-def _python_text(source: Path) -> str:
+#: Callables whose string arguments are ROUTES, not filesystem paths: HTTP
+#: client verbs and the framework route decorators/registrars.
+_ROUTE_CALLS = frozenset(
+    {
+        "get",
+        "post",
+        "put",
+        "patch",
+        "delete",
+        "head",
+        "options",
+        "request",
+        "route",
+        "api_route",
+        "websocket",
+        "websocket_route",
+        "url_for",
+        "add_api_route",
+        "add_route",
+        "add_websocket_route",
+        "include_router",
+    }
+)
+#: Callables whose string arguments ARE filesystem paths, where even a bare
+#: home with no child is a personal disclosure.
+_FILESYSTEM_CALLS = frozenset(
+    {
+        "Path",
+        "PurePath",
+        "open",
+        "chdir",
+        "listdir",
+        "mkdir",
+        "makedirs",
+        "remove",
+        "unlink",
+        "rmdir",
+        "rmtree",
+        "copy",
+        "copy2",
+        "copytree",
+        "move",
+        "exists",
+        "isdir",
+        "isfile",
+        "stat",
+        "glob",
+        "iglob",
+        "walk",
+        "read_text",
+        "write_text",
+        "read_bytes",
+        "write_bytes",
+        "expanduser",
+    }
+)
+
+
+def _call_name(node: ast.AST) -> str:
+    func = getattr(node, "func", None)
+    if isinstance(func, ast.Attribute):
+        return func.attr
+    if isinstance(func, ast.Name):
+        return func.id
+    return ""
+
+
+def _literal_contexts(tree: ast.AST) -> dict[tuple[int, int], str]:
+    """Where each string literal sits: route argument, filesystem argument,
+    or neither. Python's own parser answers this - no lexer needed."""
+
+    contexts: dict[tuple[int, int], str] = {}
+    for node in ast.walk(tree):
+        calls = [node] if isinstance(node, ast.Call) else []
+        calls += [d for d in getattr(node, "decorator_list", []) if isinstance(d, ast.Call)]
+        for call in calls:
+            name = _call_name(call)
+            if name in _ROUTE_CALLS:
+                context = "route"
+            elif name in _FILESYSTEM_CALLS:
+                context = "filesystem"
+            else:
+                continue
+            arguments = list(call.args) + [kw.value for kw in call.keywords]
+            for argument in arguments:
+                if isinstance(argument, ast.Constant) and isinstance(argument.value, str):
+                    contexts[(argument.lineno, argument.col_offset)] = context
+    return contexts
+
+
+def _python_literals(source: Path) -> list[tuple[str, str]]:
+    """Every string literal in a Python source with the context it is used in."""
+
+    raw = source.read_bytes()
+    try:
+        tree = ast.parse(raw)
+    except (SyntaxError, ValueError):
+        tree = None
+    contexts = _literal_contexts(tree) if tree is not None else {}
     with source.open("rb") as stream:
-        tokens = tokenize.tokenize(stream.readline)
-        literals = [token.string for token in tokens if token.type in _STRING_TOKENS]
-    return "\n".join(_literal(literal) for literal in literals)
+        tokens = [
+            token for token in tokenize.tokenize(stream.readline) if token.type in _STRING_TOKENS
+        ]
+    return [
+        (_literal(token.string), contexts.get((token.start[0], token.start[1]), "unknown"))
+        for token in tokens
+    ]
 
 
 def _fixture_text(source: Path) -> str:
@@ -108,11 +229,15 @@ def scan(tests_root: Path) -> tuple[dict[str, list[str]], int]:
         scanned += 1
         key = path.relative_to(ROOT).as_posix() if path.is_relative_to(ROOT) else path.as_posix()
         try:
-            text = _python_text(path) if path.suffix == ".py" else _fixture_text(path)
+            if path.suffix == ".py":
+                pairs = _python_literals(path)
+            else:
+                pairs = [(_fixture_text(path), "unknown")]
         except (SyntaxError, tokenize.TokenError, UnicodeDecodeError, LookupError, OSError) as err:
             findings[key] = [f"unscannable source: {err}"]
             continue
-        if hits := _findings(text):
+        hits = [hit for text, context in pairs for hit in _findings(text, context=context)]
+        if hits:
             findings[key] = hits
     return findings, scanned
 
