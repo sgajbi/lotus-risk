@@ -5,8 +5,12 @@ contracts under platform RFC-0082.
 
 It is consumer-conformance evidence for:
 
-1. `C:/Users/Sandeep/projects/lotus-platform/rfcs/RFC-0082-lotus-core-domain-authority-and-analytics-serving-boundary-hardening.md`
-2. `C:/Users/Sandeep/projects/lotus-core/docs/architecture/RFC-0082-contract-family-inventory.md`
+1. [`lotus-platform` RFC-0082](https://github.com/sgajbi/lotus-platform/blob/main/rfcs/RFC-0082-lotus-core-domain-authority-and-analytics-serving-boundary-hardening.md)
+2. [`lotus-core` RFC-0082 contract family inventory](https://github.com/sgajbi/lotus-core/blob/main/docs/architecture/RFC-0082-contract-family-inventory.md)
+
+With sibling checkouts present these are also readable at
+`<workspace>/lotus-platform/rfcs/` and `<workspace>/lotus-core/docs/architecture/`, where
+`<workspace>` is the directory holding the Lotus repositories.
 
 ## Current Integration Posture
 
