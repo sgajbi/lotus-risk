@@ -45,11 +45,12 @@ reports `state="degraded"`. `freshness_bucket` is computed separately and carrie
 `freshness_bucket="stale"` is still present alongside it. A degraded state does not hide
 staleness; check `freshness_bucket` for freshness and `state` for what stopped the calculation.
 
-**A stale bucket is not by itself a Core gap.** The series drops non-trading days, but freshness
-is measured in calendar days, so an as-of Sunday against a healthy Friday observation reports
-`stale` — as does a Monday as-of. Check whether the interval contains only non-trading days
-before escalating; if it does, the data is current and the bucket is a calendar-arithmetic
-artefact. An
+**A stale bucket is not by itself a Core gap.** Freshness is measured against the **as-of date,
+not the window that was requested**, and in calendar days over a trading-day series. So a
+deliberately historical window — a complete `YEAR` 2024 series requested today — is `stale` by
+construction, and so is any healthy series read on a Sunday. Compare the latest observation with
+the **requested window end** instead, and escalate only when the series falls short of it across
+trading days. An
 absent or empty series raises a dependency failure before any
 `metadata.calculation_supportability` exists, so an unknown portfolio and an unmaterialized range
 look identical from Risk.
