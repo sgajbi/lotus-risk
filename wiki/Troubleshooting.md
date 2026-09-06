@@ -17,6 +17,31 @@ Check:
 
 This is often an upstream configuration or reachability problem, not a risk-engine bug.
 
+## Risk Calculations Fail Because Core Timeseries Are Missing
+
+Symptoms: a stateful risk request fails with a dependency error, and the portfolio and date
+range look correct.
+
+`portfolio_timeseries` is a `lotus-core` **source data product**. Core's
+`portfolio_derived_state_service` materializes it, and also owns position-level
+`position_timeseries`. **Do not escalate against `timeseries-generator-service`** — that runtime
+no longer exists in Core, and older Risk guidance named it. Escalate against the product and let
+Core route it; Core owns its own topology and has consolidated these services once already.
+
+Three causes escalate differently, so establish which one applies **against Core**:
+
+1. the portfolio is unknown to Core — not a data gap;
+2. the portfolio is known but has no timeseries for the requested range — a materialization gap;
+3. timeseries exist but are stale relative to the requested as-of date — a freshness gap.
+
+**Risk will not tell you which.** An absent or empty upstream series raises a dependency failure
+before any `metadata.calculation_supportability` is produced, and an upstream 4xx surfaces the
+generic `rejected_request` category. The finer categories — `source_product_unavailable`,
+`stale`, `insufficient_observations` — describe a series that exists but is insufficient, which
+is a different situation. Risk's response tells you the dependency failed, not why.
+
+Missing data here is a Core-side gap, not a Risk fault, and Risk must not infer a value for it.
+
 ## Wrong Upstream URL Causes Misleading 404s
 
 Symptoms:
