@@ -19,15 +19,22 @@ The Risk Analytics feature is a read-only process that relies entirely on data a
 
   **What Risk reports, precisely.**
 
-  *Case 3 (stale) IS reported.* A nonempty but stale series yields `state="stale"` with
-  `reason="stale_source_observations"` and `freshness_bucket="stale"` from
-  `supportability_periods.py`. Check that before escalating a freshness gap — it is the one case
-  Risk answers directly.
+  *Escalate to the service the response names, not to Core by default.* The stateful series is
+  fetched from `lotus-performance`'s `/integration/returns/series`, and
+  `stateful_returns_series_parser.py` names `service="lotus-performance"` on failure. Core owns
+  the underlying timeseries products, but the dependency that failed is Performance — go there
+  first, and to Core only once Performance identifies an upstream gap.
+
+  *Case 3 (stale) is reported, but only when it is the FIRST thing wrong.*
+  `_period_supportability_outcome` checks `degraded_result_count`, then `empty_period_count`,
+  and only then `freshness_bucket == "stale"`. So a stale series that is also degraded, or has
+  empty periods, reports `degraded` or `empty` instead — a stale reading is a positive signal, but
+  its absence does not mean the data is fresh.
 
   *Cases 1 and 2 are NOT distinguishable.* An absent or empty series is a dependency failure:
   `extract_required_portfolio_returns` raises as soon as `portfolio_returns` yields no points, so
   no `metadata.calculation_supportability` is produced. An unknown portfolio and a known
-  portfolio with no materialized range look identical from here — establish which against Core.
+  portfolio with no materialized range look identical from here.
 
   *A throttled upstream is not a rejection.* HTTP 429 maps to HTTP 503 with
   `code="UPSTREAM_THROTTLED"`, `category="throttled"` and `retryable=true`. That is actionable
