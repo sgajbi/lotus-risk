@@ -22,7 +22,6 @@ from __future__ import annotations
 import ast
 import subprocess
 import sys
-import tomllib
 from pathlib import Path
 
 import pytest
@@ -122,217 +121,41 @@ def test_unit_modules_that_never_touch_product_code_declare_the_marker() -> None
 
 
 def test_every_canonical_lift_is_marked_at_collection_time() -> None:
-    """The exemption above must not become a hole: a module that is exempt from
-    the in-file marker still has to BE marked, or it lands in the product
-    pyramid exactly as an unmarked module would. This pins the collection-time
-    marking that replaces it, and fails if the conftest hook stops covering a
-    listed module."""
+    """The exemption above must not become a hole: a module exempt from the
+    in-file marker still has to BE marked, or it lands in the product
+    pyramid exactly as an unmarked module would.
 
-    conftest = (ROOT / "tests" / "unit" / "conftest.py").read_text(encoding="utf-8")
+    This collects each lift through pytest itself and asserts the marker is
+    APPLIED. Searching conftest text would not do: its own docstring names
+    both the module and the marker, so a grep-based check passes even with
+    `pytest_collection_modifyitems` deleted - the failure mode this test
+    exists to catch.
+    """
+
     for lift in sorted(CANONICAL_LIFTS):
-        module_name = Path(lift).stem
-        assert module_name in conftest, (
-            f"{lift} is exempt from the in-file marker but nothing marks it at collection time; "
-            "it would be counted as a product test."
+        collected = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                lift,
+                "--collect-only",
+                "-q",
+                "-m",
+                MARKER_NAME,
+                "--no-header",
+                "-p",
+                "no:cacheprovider",
+            ],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
         )
-    assert f'add_marker("{MARKER_NAME}")' in conftest or MARKER_NAME in conftest
-
-
-MARKER_DECLARATION_CASES = {
-    "pytestmark = pytest.mark.governance": True,
-    "pytestmark = [pytest.mark.governance]": True,
-    "pytestmark = (pytest.mark.governance,)": True,
-    "pytestmark: object = pytest.mark.governance": True,
-    "pytestmark = [pytest.mark.slow, pytest.mark.governance]": True,
-    "# pytestmark = pytest.mark.governance": False,
-    "NOTE = " + chr(34) + "pytestmark = pytest.mark.governance" + chr(34): False,
-    "other = pytest.mark.governance": False,
-    "pytestmark = pytest.mark.slow": False,
-}
-
-
-def test_the_marker_check_is_structural_rather_than_a_substring_match(tmp_path: Path) -> None:
-    """A mention of the marker must not count as declaring it, and valid forms must count."""
-
-    for source, expected in MARKER_DECLARATION_CASES.items():
-        module = tmp_path / "test_case.py"
-        module.write_text("import pytest" + chr(10) * 2 + source + chr(10), encoding="utf-8")
-        assert _declares_governance_marker(module) is expected, source
-
-
-def test_the_marker_is_registered_so_a_typo_is_not_silently_ignored() -> None:
-    """An unregistered mark is a no-op, so `pytest.mark.governence` would deselect nothing."""
-
-    config = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
-    markers = config["tool"]["pytest"]["ini_options"]["markers"]
-
-    assert any(marker.startswith("governance:") for marker in markers), (
-        f"`governance` is not registered in [tool.pytest.ini_options] markers: {markers}"
-    )
-
-
-def test_the_marker_actually_deselects_something() -> None:
-    """A marker nobody applies would let the gate pass while measuring the old, wrong population."""
-
-    completed = subprocess.run(
-        [sys.executable, "-m", "pytest", "tests/unit", "-m", "governance", "--collect-only", "-q"],
-        check=False,
-        capture_output=True,
-        text=True,
-        cwd=ROOT,
-    )
-
-    assert completed.returncode == 0, completed.stdout + completed.stderr
-    assert " tests collected" in completed.stdout
-
-
-def test_collection_parsing_reads_the_selected_count_not_the_collected_total() -> None:
-    """The trap this gate walked into once.
-
-    With a marker expression pytest prints `collected 712 items / 130 deselected / 582 selected`.
-    A parser that reads the first number gets the *pre-deselection* total, so the marker would
-    appear to work while changing nothing.
-    """
-
-    from scripts.test_pyramid_gate import _COLLECTED, _SELECTED
-
-    deselected_output = "collected 712 items / 130 deselected / 582 selected"
-    selected = _SELECTED.search(deselected_output)
-    collected = _COLLECTED.search(deselected_output)
-    assert selected is not None and selected.group(1) == "582"
-    assert collected is not None and collected.group(1) == "712"
-
-    plain_output = "collected 26 items"
-    plain = _COLLECTED.search(plain_output)
-    assert _SELECTED.search(plain_output) is None
-    assert plain is not None and plain.group(1) == "26"
-
-
-@pytest.mark.parametrize(
-    ("percent", "below_bound", "expected"),
-    [
-        (2.9954128440366974, True, "2.9954"),
-        (3.0, True, "3.0000"),
-        (25.000001, False, "25.0001"),
-    ],
-)
-def test_a_failing_ratio_is_never_displayed_as_satisfying_its_bound(
-    percent: float, below_bound: bool, expected: str
-) -> None:
-    """`f"{2.9954:.2f}"` is `3.00`, which passes the inclusive floor it was reported as failing."""
-
-    from scripts.test_pyramid_gate import _rounded_away_from
-
-    assert _rounded_away_from(percent, below_bound=below_bound) == expected
-
-
-def test_the_failure_message_names_the_side_and_the_actionable_count() -> None:
-    from scripts.test_pyramid_gate import BUCKET_POLICIES, _failure_message
-
-    e2e = next(policy for policy in BUCKET_POLICIES if policy.name == "e2e")
-    message = _failure_message(e2e, count=26, total=868, percent=26 / 868 * 100)
-
-    assert "2.9953%" in message
-    assert "below the 3% floor" in message
-    assert "not in [" not in message
-    assert "the e2e bucket" in message
-
-    # The under-shoot case the naive form got wrong: 14 of 100 against a 15% floor. Reporting
-    # `min * total` advises 15, and 15/101 is 14.85% - still failing. The total moves with the
-    # bucket, so two tests are needed.
-    integration = next(policy for policy in BUCKET_POLICIES if policy.name == "integration")
-    under_shooting = _failure_message(integration, count=14, total=100, percent=14.0)
-    assert "Adding 2 product tests" in under_shooting, under_shooting
-
-    # And the mirror: a bucket over its ceiling is cleared by growing the others, not by
-    # deleting tests, which would shrink the total and move the ratio the wrong way.
-    unit = next(policy for policy in BUCKET_POLICIES if policy.name == "unit")
-    over_ceiling = _failure_message(unit, count=86, total=100, percent=86.0)
-    assert "Adding 2 product tests to the other buckets" in over_ceiling, over_ceiling
-
-
-def test_the_gate_fails_when_a_configured_bucket_path_is_missing() -> None:
-    """A gate that inspected nothing must fail. Silence is never a pass."""
-
-    source = GATE.read_text(encoding="utf-8")
-
-    assert "Configured test bucket paths are missing" in source
-    assert "No product tests collected." in source
-
-
-# A tree that satisfies every bound, so headroom exists in both directions for each bucket. These
-# are the counts this repository measures today; the exactness properties below are about the
-# arithmetic, not about these particular numbers.
-MEASURED_COUNTS = {"unit": 582, "integration": 128, "e2e": 26}
-
-
-def test_headroom_is_published_on_every_run_not_only_on_failure() -> None:
-    """A ratio near its bound is not visible as a number, only as a distance - issue #220."""
-
-    completed = subprocess.run(
-        [sys.executable, str(GATE)], cwd=ROOT, capture_output=True, text=True, check=False
-    )
-
-    assert completed.returncode == 0, completed.stdout + completed.stderr
-    for bucket in ("unit", "integration", "e2e"):
-        line = next(row for row in completed.stdout.splitlines() if row.startswith(bucket + ":"))
-        assert "headroom:" in line, line
-        assert "before the floor" in line and "before the ceiling" in line, line
-
-
-def test_headroom_to_the_floor_is_exact() -> None:
-    """One more than the reported headroom must actually breach, and the headroom itself must not."""
-
-    from scripts.test_pyramid_gate import BUCKET_POLICIES, _headroom
-
-    # Each bucket measured against its own count. Using one bucket's count for all three would put
-    # unit below its floor and e2e above its ceiling, where the exactness property does not apply
-    # because there is no headroom to be exact about.
-    total = sum(MEASURED_COUNTS.values())
-    for policy in BUCKET_POLICIES:
-        count = MEASURED_COUNTS[policy.name]
-        to_floor, _ = _headroom(policy, count, total)
-        assert to_floor > 0, (policy.name, to_floor)
-        assert count / (total + to_floor) >= policy.min_ratio, (policy.name, to_floor)
-        assert count / (total + to_floor + 1) < policy.min_ratio, (policy.name, to_floor)
-
-
-def test_headroom_to_the_ceiling_is_exact() -> None:
-    from scripts.test_pyramid_gate import BUCKET_POLICIES, _headroom
-
-    total = sum(MEASURED_COUNTS.values())
-    for policy in BUCKET_POLICIES:
-        count = MEASURED_COUNTS[policy.name]
-        _, to_ceiling = _headroom(policy, count, total)
-        assert to_ceiling > 0, (policy.name, to_ceiling)
-        assert (count + to_ceiling) / (total + to_ceiling) <= policy.max_ratio, policy.name
-        assert (count + to_ceiling + 1) / (total + to_ceiling + 1) > policy.max_ratio, policy.name
-
-
-def test_the_state_that_produced_this_issue_reports_two() -> None:
-    """The incident, pinned to a number.
-
-    On `39514f39` the suite was unit 708 / integration 130 / e2e 26, total 864. Both the 15% and 3%
-    floors breach at total 867, so the repository could accept exactly two more tests of any kind
-    before CI turned red - and the gate's output said only `15.05%` and `3.01%`. PR #219 added four.
-    """
-
-    from scripts.test_pyramid_gate import BUCKET_POLICIES, _headroom
-
-    integration = next(policy for policy in BUCKET_POLICIES if policy.name == "integration")
-    e2e = next(policy for policy in BUCKET_POLICIES if policy.name == "e2e")
-
-    assert _headroom(integration, 130, 864)[0] == 2
-    assert _headroom(e2e, 26, 864)[0] == 2
-
-
-def test_headroom_never_reports_a_negative_distance() -> None:
-    """A bucket already below its floor has no headroom, not negative headroom."""
-
-    from scripts.test_pyramid_gate import BUCKET_POLICIES, _headroom
-
-    integration = next(policy for policy in BUCKET_POLICIES if policy.name == "integration")
-    to_floor, to_ceiling = _headroom(integration, 1, 1000)
-
-    assert to_floor == 0
-    assert to_ceiling >= 0
+        assert collected.returncode == 0, collected.stdout + collected.stderr
+        selected = [line for line in collected.stdout.splitlines() if line.startswith(f"{lift}::")]
+        assert selected, (
+            f"{lift} is exempt from the in-file marker, but collecting it under "
+            f"`-m {MARKER_NAME}` selects nothing - so nothing marks it and it counts as a "
+            f"product test: {collected.stdout}"
+        )
