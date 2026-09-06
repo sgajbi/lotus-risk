@@ -34,11 +34,17 @@ Three causes escalate differently, so establish which one applies **against Core
 2. the portfolio is known but has no timeseries for the requested range — a materialization gap;
 3. timeseries exist but are stale relative to the requested as-of date — a freshness gap.
 
-**Risk answers case 3 but not cases 1 and 2.** A nonempty but stale series reports
-`state="stale"` with `reason="stale_source_observations"` — check that first. An absent or empty
-series raises a dependency failure before any `metadata.calculation_supportability` is produced,
-so an unknown portfolio and an unmaterialized range look identical from Risk; establish which
-against Core.
+**Escalate to the service the response names.** The stateful series comes from
+`lotus-performance`'s `/integration/returns/series`, and Risk names `service="lotus-performance"`
+on failure. Core owns the underlying products, but Performance is the dependency that failed — go
+there first, and to Core only once Performance identifies an upstream gap.
+
+**Risk answers case 3, but only when it is the first thing wrong.** `stale` is checked *after*
+degraded results and empty periods, so a stale series that is also degraded reports `degraded`
+instead. A stale reading is a positive signal; its absence does not mean the data is fresh. An
+absent or empty series raises a dependency failure before any
+`metadata.calculation_supportability` exists, so an unknown portfolio and an unmaterialized range
+look identical from Risk.
 
 A throttled upstream is **not** a rejection: HTTP 429 becomes HTTP 503 with
 `code="UPSTREAM_THROTTLED"`, `category="throttled"` and `retryable=true`, which is actionable and
