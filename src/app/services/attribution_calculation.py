@@ -159,9 +159,12 @@ def _total_risk_inputs(
     return AttributionCalculationInputs(
         metric_series=metric_series,
         group_matrix=aligned_weights.mul(metric_series, axis=0),
-        # No `fill_value`: an unobserved date is NaN and is skipped by the mean,
-        # rather than a zero holding that drags the average toward nothing.
-        weight_matrix=exposure_weights.reindex(index=metric_series.index),
+        # The windowed exposure frame as observed, not projected onto the return
+        # calendar. `pivot_exposure` has already scoped it to the period, and an
+        # exposure observation on a date carrying no return -- a month-end
+        # falling on a weekend -- is still a weight the portfolio held. Dropping
+        # it would make a descriptive weight depend on the return calendar.
+        weight_matrix=exposure_weights,
         risk_total=float(metric_series.std(ddof=1) * sqrt(annualization_basis)),
     )
 
@@ -188,12 +191,12 @@ def _active_risk_inputs(
     common_cols = sorted(set(exposure_weights.columns).union(set(benchmark_weights.columns)))
     p_w = exposure_weights.reindex(columns=common_cols, fill_value=0.0)
     b_w = benchmark_weights.reindex(columns=common_cols, fill_value=0.0)
-    # Observed dates keep NaN so the average skips them; the zero-filled pair
-    # below is for the covariance, where an absent date contributing nothing is
-    # the intended behaviour.
-    observed_active_w = p_w.reindex(index=metric_series.index) - b_w.reindex(
-        index=metric_series.index
-    )
+    # Active weight on the dates actually observed, before either side is
+    # projected onto the return calendar. Aligning the two frames leaves NaN
+    # where only one side was observed, which is right: an active weight needs
+    # both. The zero-filled pair below is for the covariance, where an absent
+    # date contributing nothing is the intended behaviour.
+    observed_active_w = p_w - b_w
     p_w = p_w.reindex(index=metric_series.index, fill_value=0.0)
     b_w = b_w.reindex(index=metric_series.index, fill_value=0.0)
     active_w = p_w - b_w
