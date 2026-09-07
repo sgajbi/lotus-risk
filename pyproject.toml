@@ -23,6 +23,10 @@ dependencies = [
 dev = [
   "ruff==0.16.4",
   "mypy==2.3.0",
+  # Used by scripts/run_typecheck_hook.py to read this file's own pins with a
+  # standards-aware parser rather than a regex. It arrives transitively today;
+  # declaring it means the pre-commit gate does not depend on that accident.
+  "packaging>=24.0",
   "pytest>=9.0.0",
   "pytest-asyncio>=1.2.0",
   "pytest-cov==7.1.0",
@@ -73,4 +77,9 @@ exclude_dirs = [".venv", "tests"]
 [tool.deptry]
 known_first_party = ["app", "_repo_imports", "scripts"]
 optional_dependencies_dev_groups = ["dev"]
-per_rule_ignores = { DEP002 = ["uvicorn"], DEP004 = ["coverage"] }
+# DEP004 is "a dev dependency imported outside tests", which is normally a
+# misplacement. Two named exceptions, not a widened rule: `coverage` as before,
+# and `packaging`, imported by scripts/run_typecheck_hook.py -- itself dev
+# tooling that runs only from pre-commit and is not shipped -- to read this
+# file's own pins with a standards-aware parser instead of a regex.
+per_rule_ignores = { DEP002 = ["uvicorn"], DEP004 = ["coverage", "packaging"] }

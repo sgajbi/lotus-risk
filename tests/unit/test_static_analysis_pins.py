@@ -74,7 +74,20 @@ GATE_OUTPUT_TOOLS = frozenset(
 #   pytest-     counter-example is pytest-asyncio's asyncio_mode default, which could silently skip
 #   asyncio     unmarked async tests - but all 61 async tests here carry an explicit
 #               @pytest.mark.asyncio, so they are marker-protected rather than mode-dependent.
-DELIBERATELY_FLOORED = frozenset({"pre-commit", "pytest", "pytest-asyncio"})
+DELIBERATELY_FLOORED = frozenset(
+    {
+        "pre-commit",
+        "pytest",
+        "pytest-asyncio",
+        # `packaging` is a parsing library, not a tool whose output is a gate
+        # verdict. It reads this file's own pins for the pre-commit typecheck
+        # guard (#278). A newer release cannot move a bar the way a newer ruff
+        # or coverage can: it either parses PEP 508 correctly or fails loudly,
+        # and its behaviour is pinned by the guard's own tests rather than by
+        # the version.
+        "packaging",
+    }
+)
 
 # Runtimes whose stubs are pinned above. Pinning the stub while the runtime floats would let mypy
 # check against an API the installed package does not have.
