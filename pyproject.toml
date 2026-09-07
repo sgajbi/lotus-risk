@@ -49,6 +49,13 @@ target-version = "py312"
 # This exact Decimal string constructor is part of a monetary-float allowlist signature. Rewriting
 # it is semantically neutral but invalidates independently governed evidence.
 "src/app/services/stateful_returns_series_parser.py" = ["FURB157"]
+# Lifted verbatim from the canonical copy in lotus-gateway and verified by blob SHA, so it is
+# governed there rather than here. This repository's ruff is stricter than the canonical's and
+# flags PLW1510 on a subprocess call whose return code the function already inspects. Editing the
+# lift to satisfy a local rule would break the parity that makes drift detectable, which is the
+# whole point of adopting it -- so the rule is scoped off for this one file and the fix belongs
+# upstream. Raised with the canonical's owner; remove this entry once it lands there.
+"scripts/check_branch_protection_policy.py" = ["PLW1510"]
 # This guard's fixtures assemble forbidden absolute-home paths so those literals do not make the
 # repository source fail the same guard they are designed to exercise.
 
