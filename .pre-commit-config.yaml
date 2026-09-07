@@ -16,9 +16,31 @@ repos:
       - id: ruff
       - id: ruff-format
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.19.1
+  # mypy runs from the PROJECT environment, not an isolated hook environment.
+  # `mirrors-mypy` installs mypy alone, and this repository's mypy.ini is
+  # `strict = True` over `src, tests` with no `ignore_missing_imports`, so that
+  # environment cannot resolve fastapi, pydantic, numpy or pandas. Measured on
+  # an unchanged tree: `make typecheck` reported Success over 385 files while
+  # the hook reported 586 errors in 233, 266 of them import-not-found. A hook
+  # that fails for every contributor on every commit gets skipped with
+  # --no-verify rather than fixed.
+  #
+  # Matching the rev to the pinned version does not fix that: the version was
+  # never the problem, the missing dependency graph was. Listing that graph in
+  # `additional_dependencies` would be a hand-maintained second copy of
+  # pyproject.toml, drifting exactly where drift is undetectable.
+  #
+  # The cost is that this hook needs the project environment on PATH, and
+  # `scripts/run_typecheck_hook.py` refuses by name when it is absent rather
+  # than emitting hundreds of cascading import errors.
+  - repo: local
     hooks:
       - id: mypy
-        args: ["--config-file", "mypy.ini"]
+        name: mypy (project environment)
+        entry: python scripts/run_typecheck_hook.py
+        language: system
         pass_filenames: false
+        # Always, not only when a .py file is staged: the hook checks the whole
+        # tree regardless of what changed, so gating it on file type would mean
+        # a commit editing mypy.ini alone never runs the gate it configures.
+        always_run: true
