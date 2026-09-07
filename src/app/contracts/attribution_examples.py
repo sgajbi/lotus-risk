@@ -37,35 +37,52 @@ HISTORICAL_ATTRIBUTION_RESPONSE_EXAMPLE: dict[str, object] = {
                     "attribution_type": "ACTIVE_RISK",
                     "metric": "TRACKING_ERROR",
                     "grouping_dimension": "SECTOR",
+                    # An ACTIVE_RISK set as the service actually returns one. The
+                    # previous figures here could not occur: `weight_average` carries
+                    # the ACTIVE weight, portfolio minus benchmark, so three positive
+                    # averages totalling 0.841 described a portfolio 84 points
+                    # overweight in aggregate against a fully allocated benchmark.
+                    #
+                    # The residual being the whole metric is not a defect in this
+                    # example -- it is what the decomposition currently produces, and
+                    # it is why `lotus-risk#283` exists. Active weights sum to zero
+                    # for fully allocated histories, so the components do too. An
+                    # example showing a neatly allocated active decomposition would
+                    # teach a contract the service cannot honour, which is the exact
+                    # failure `test_attribution_example_reconciles` was written for.
                     "total_value": 0.0642,
-                    "reconciled_sum": 0.0638,
-                    "residual": 0.0004,
+                    "reconciled_sum": 0.0,
+                    "residual": 0.0642,
                     "contributors": [
                         {
                             "group_key": "SECTOR_TECH",
                             "group_label": "Technology",
-                            "weight_average": 0.245,
-                            "marginal_contribution": 0.0910,
-                            "component_contribution": 0.0223,
-                            "percent_contribution": 0.3474,
+                            # Overweight: +20 points against the benchmark.
+                            "weight_average": 0.2,
+                            "marginal_contribution": 0.0642,
+                            "component_contribution": 0.01284,
+                            "percent_contribution": 0.2,
                         },
                         {
                             "group_key": "SECTOR_HEALTH",
                             "group_label": "Healthcare",
-                            "weight_average": 0.184,
-                            "marginal_contribution": -0.0310,
-                            "component_contribution": -0.0057,
-                            "percent_contribution": -0.0888,
+                            "weight_average": -0.065,
+                            "marginal_contribution": 0.0642,
+                            "component_contribution": -0.004173,
+                            "percent_contribution": -0.065,
                         },
                         {
                             "group_key": "SECTOR_FIN",
                             "group_label": "Financials",
-                            "weight_average": 0.412,
-                            "marginal_contribution": 0.1146,
-                            "component_contribution": 0.0472,
-                            "percent_contribution": 0.7352,
+                            "weight_average": -0.135,
+                            "marginal_contribution": 0.0642,
+                            "component_contribution": -0.008667,
+                            "percent_contribution": -0.135,
                         },
                     ],
+                    # Every marginal is the same 0.0642 -- the portfolio-level
+                    # tracking error -- which is the caveat stated on the field:
+                    # under constant weights it is not group-specific.
                     "quality_flags": [],
                 }
             ],

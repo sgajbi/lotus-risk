@@ -25,10 +25,17 @@ class AttributionCalculationInputs:
     #: with the metric series, and for nothing else -- its column mean is a mean
     #: weighted return, not a weight.
     group_matrix: pd.DataFrame
-    #: The weights themselves, aligned to the same index. Carried separately
+    #: The weights themselves, on the OBSERVED dates only. Carried separately
     #: because `group_matrix` cannot answer "what was this group's weight":
     #: taking its column mean yields `E[w * r]`, which is smaller than the weight
     #: by a factor of the mean return and flips sign with it.
+    #:
+    #: Missing dates are NaN here rather than 0.0. `group_matrix` fills them with
+    #: zero so they contribute nothing to the covariance, which is right for a
+    #: covariance and wrong for an average: exposure history may be sparser than
+    #: the return series, and averaging the synthetic zeros reports a weight the
+    #: portfolio never held. Two 55% and 50% snapshots across three return dates
+    #: average to 35% with the zeros and 52.5% without.
     weight_matrix: pd.DataFrame
     risk_total: float
 
@@ -48,14 +55,15 @@ def component_decomposition(
     if np.isclose(std, 0.0):
         return []
 
-    weight_mean = weight_matrix.mean(axis=0)
+    # skipna is pandas' default: NaN dates are absent observations, not zeros.
+    observed_means = _observed_means(weight_matrix.mean(axis=0))
     decomposition: list[DecompositionRow] = []
     for group_key in group_matrix.columns:
         decomposition.append(
             _component_decomposition_row(
                 group_key=str(group_key),
                 group_series=group_matrix[group_key],
-                group_weight_average=float(weight_mean[group_key]),
+                group_weight_average=observed_means.get(str(group_key)),
                 metric_series=metric_series,
                 contribution_denominator=contribution_denominator,
                 annualization_basis=annualization_basis,
@@ -65,11 +73,24 @@ def component_decomposition(
     return decomposition
 
 
+def _observed_means(weight_mean: pd.Series) -> dict[str, float | None]:
+    """Mean observed weight per group, `None` where there were no observations.
+
+    `None` is distinct from a weight of zero: unknown is not zero, and a mean
+    taken over no observations must not be reported as a number a consumer can
+    divide by.
+    """
+    return {
+        str(group_key): (None if pd.isna(mean_weight) else float(mean_weight))
+        for group_key, mean_weight in weight_mean.items()
+    }
+
+
 def _component_decomposition_row(
     *,
     group_key: str,
     group_series: pd.Series,
-    group_weight_average: float,
+    group_weight_average: float | None,
     metric_series: pd.Series,
     contribution_denominator: float,
     annualization_basis: int,
@@ -77,14 +98,16 @@ def _component_decomposition_row(
 ) -> DecompositionRow:
     cov = float(np.cov(group_series, metric_series, ddof=1)[0, 1])
     component = float((cov / metric_std) * sqrt(annualization_basis))
-    # Marginal contribution to risk is the component divided by the weight that
-    # produced it. `None` rather than an infinity when that weight is zero: for
-    # ACTIVE_RISK the weight is `portfolio - benchmark`, so a group held exactly
-    # at benchmark has no defined marginal, and reporting one would invite a
-    # reader to act on a number produced by dividing by nothing.
+    # The component divided by the average weight that produced it. `None`
+    # rather than an infinity when that average is zero or unobserved. Under
+    # ACTIVE_RISK the weight is `portfolio - benchmark`, so a zero average
+    # covers both a group held at benchmark throughout and one overweight then
+    # equally underweight -- in either case there is no single weight the
+    # component is per unit of, and reporting one invites a reader to act on a
+    # number produced by dividing by nothing.
     marginal = (
         float(component / group_weight_average)
-        if not np.isclose(group_weight_average, 0.0)
+        if group_weight_average is not None and not np.isclose(group_weight_average, 0.0)
         else None
     )
     percent = (
@@ -136,7 +159,9 @@ def _total_risk_inputs(
     return AttributionCalculationInputs(
         metric_series=metric_series,
         group_matrix=aligned_weights.mul(metric_series, axis=0),
-        weight_matrix=aligned_weights,
+        # No `fill_value`: an unobserved date is NaN and is skipped by the mean,
+        # rather than a zero holding that drags the average toward nothing.
+        weight_matrix=exposure_weights.reindex(index=metric_series.index),
         risk_total=float(metric_series.std(ddof=1) * sqrt(annualization_basis)),
     )
 
@@ -163,6 +188,12 @@ def _active_risk_inputs(
     common_cols = sorted(set(exposure_weights.columns).union(set(benchmark_weights.columns)))
     p_w = exposure_weights.reindex(columns=common_cols, fill_value=0.0)
     b_w = benchmark_weights.reindex(columns=common_cols, fill_value=0.0)
+    # Observed dates keep NaN so the average skips them; the zero-filled pair
+    # below is for the covariance, where an absent date contributing nothing is
+    # the intended behaviour.
+    observed_active_w = p_w.reindex(index=metric_series.index) - b_w.reindex(
+        index=metric_series.index
+    )
     p_w = p_w.reindex(index=metric_series.index, fill_value=0.0)
     b_w = b_w.reindex(index=metric_series.index, fill_value=0.0)
     active_w = p_w - b_w
@@ -171,6 +202,6 @@ def _active_risk_inputs(
         group_matrix=active_w.mul(metric_series, axis=0),
         # Active weights, which may be negative or exactly zero -- that is the
         # quantity an active-risk marginal is per unit of.
-        weight_matrix=active_w,
+        weight_matrix=observed_active_w,
         risk_total=float(metric_series.std(ddof=1) * sqrt(annualization_basis)),
     )

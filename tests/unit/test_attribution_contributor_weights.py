@@ -240,3 +240,119 @@ def test_a_group_held_exactly_at_benchmark_reports_no_marginal() -> None:
     assert by_group["FIN"]["marginal_contribution"] is None
     assert by_group["FIN"]["component_contribution"] is not None
     assert by_group["TECH"]["marginal_contribution"] is not None
+
+
+def test_a_sparse_exposure_history_averages_only_observed_dates() -> None:
+    """Exposure may be sparser than the return series, and the gap is not a zero holding.
+
+    `group_matrix` fills missing dates with 0.0 so they contribute nothing to the
+    covariance, which is correct there. Carrying that same frame as the weight
+    matrix averaged the synthetic zeros and reported a weight the portfolio never
+    held: 55% and 50% observed across three return dates came out as 35% rather
+    than 52.5%, and the marginal was distorted with it.
+
+    No quality flag catches this -- `pivot_exposure` checks weight sums before
+    alignment, so the frame it validated is not the frame that was averaged.
+    """
+    dates = pd.date_range("2026-01-01", periods=3, freq="D")
+    returns = pd.Series([0.004, -0.006, 0.002], index=dates)
+    exposure = pd.DataFrame({"TECH": [0.55, 0.50], "FIN": [0.45, 0.50]}, index=dates[:2])
+
+    rows, _ = _rows(returns=returns, exposure=exposure)
+
+    assert _by_group(rows)["TECH"]["weight_average"] == pytest.approx(0.525)
+    assert _by_group(rows)["FIN"]["weight_average"] == pytest.approx(0.475)
+
+
+def test_a_group_with_no_observed_weight_reports_none_rather_than_zero() -> None:
+    """Unknown is not zero, and neither is a number to divide by.
+
+    A mean over no observations has no value. Reporting 0.0 would be a claim the
+    group was held at nothing, and would additionally make the marginal null for
+    a reason that is not true.
+    """
+    dates = pd.date_range("2026-01-01", periods=3, freq="D")
+    returns = pd.Series([0.004, -0.006, 0.002], index=dates)
+    exposure = pd.DataFrame({"TECH": [0.55, 0.50]}, index=dates[:2]).reindex(
+        columns=["TECH", "GHOST"]
+    )
+
+    rows, _ = _rows(returns=returns, exposure=exposure)
+
+    ghost = _by_group(rows)["GHOST"]
+    assert ghost["weight_average"] is None
+    assert ghost["marginal_contribution"] is None
+    assert _by_group(rows)["TECH"]["weight_average"] == pytest.approx(0.525)
+
+
+def test_an_active_weight_that_crosses_zero_reports_no_marginal() -> None:
+    """A zero AVERAGE active weight is not the same as being held at benchmark.
+
+    A group overweight for half the window and equally underweight for the other
+    half averages to zero having never once matched the benchmark. There is still
+    no single weight the component is per unit of, so the marginal is null -- but
+    the reason is the average, not the holding, and a consumer told otherwise
+    would look for a benchmark-matched position that does not exist.
+    """
+    returns = _returns(mean=0.0005)
+    half = OBSERVATIONS // 2
+    crossing = pd.DataFrame(
+        {
+            "TECH": [0.70] * half + [0.30] * (OBSERVATIONS - half),
+            "FIN": [0.30] * half + [0.70] * (OBSERVATIONS - half),
+        },
+        index=returns.index,
+    )
+    benchmark_w = _constant_weights({"TECH": 0.50, "FIN": 0.50}, returns.index)
+
+    rows, _ = _rows(
+        returns=returns,
+        exposure=crossing,
+        benchmark_returns=_returns(mean=0.0004, volatility=0.009, seed=31),
+        benchmark_weights=benchmark_w,
+        attribution_type="ACTIVE_RISK",
+    )
+
+    tech = _by_group(rows)["TECH"]
+    assert tech["weight_average"] == pytest.approx(0.0, abs=1e-12)
+    assert tech["marginal_contribution"] is None
+    assert tech["component_contribution"] is not None
+
+
+def test_active_risk_also_averages_only_observed_exposure_dates() -> None:
+    """The same synthetic-zero defect, on the active-risk path.
+
+    Caught by mutation, not by reading: every other active-risk test here supplies
+    a fully populated weight frame, so zero-filling the missing dates changed
+    nothing and the suite could not tell the two readings apart.
+
+    It matters more here than under TOTAL_RISK. A missing portfolio observation
+    zero-fills to a *zero holding*, and the active weight on that date becomes
+    `0 - benchmark`, a full underweight the portfolio never took. Two dates at
+    +20 active plus one fabricated -40 average to exactly zero -- which would
+    also null the marginal, reporting "held at benchmark" for a position that was
+    overweight throughout.
+    """
+    dates = pd.date_range("2026-01-01", periods=3, freq="D")
+    returns = pd.Series([0.004, -0.006, 0.002], index=dates)
+    benchmark_returns = pd.Series([0.003, -0.004, 0.001], index=dates)
+
+    # Portfolio exposure observed on two of the three dates; benchmark on all three.
+    exposure = pd.DataFrame({"TECH": [0.60, 0.60], "FIN": [0.40, 0.40]}, index=dates[:2])
+    benchmark_w = pd.DataFrame({"TECH": [0.40] * 3, "FIN": [0.60] * 3}, index=dates)
+
+    rows, _ = _rows(
+        returns=returns,
+        exposure=exposure,
+        benchmark_returns=benchmark_returns,
+        benchmark_weights=benchmark_w,
+        attribution_type="ACTIVE_RISK",
+    )
+
+    tech = _by_group(rows)["TECH"]
+    assert tech["weight_average"] == pytest.approx(0.20), (
+        "observed active weight is +0.20 on both observed dates; zero-filling the "
+        "third fabricates a -0.40 and averages to 0.0"
+    )
+    assert tech["marginal_contribution"] is not None
+    assert _by_group(rows)["FIN"]["weight_average"] == pytest.approx(-0.20)
