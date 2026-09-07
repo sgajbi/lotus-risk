@@ -194,6 +194,61 @@ def _analyzer_pins(project: dict[str, Any]) -> dict[str, str]:
     return pins
 
 
+MYPY_INI = ROOT / "mypy.ini"
+
+
+def _mypy_analyses_tests() -> bool:
+    """Whether `mypy.ini` puts the test tree in scope.
+
+    Read rather than assumed, so the requirement below follows the actual
+    configuration: if `tests` is dropped from `files`, the test framework stops
+    being an analysis input and stops being demanded.
+    """
+
+    try:
+        text = MYPY_INI.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("files") and "=" in stripped:
+            return "tests" in {part.strip() for part in stripped.split("=", 1)[1].split(",")}
+    return False
+
+
+def _test_framework_requirements(project: dict[str, Any]) -> list[Requirement]:
+    """Dev dependencies mypy needs because it analyses the test tree.
+
+    `mypy.ini` is `files = src, tests`, and the test tree imports `pytest` 95
+    times. Those imports are analysis inputs exactly as the runtime ones are:
+    without the framework installed, a strict run emits the same
+    `import-not-found` cascade this guard exists to replace, having first
+    reported the environment as fine.
+
+    Identified by the `pytest` naming convention rather than a hand-written
+    list, so a plugin added to `pyproject.toml` is covered without a second
+    edit. Deliberately narrow: `bandit`, `radon` and `vulture` are also dev
+    dependencies and mypy never sees them, so demanding them would refuse
+    environments that are correct for this hook's purpose.
+    """
+
+    if not _mypy_analyses_tests():
+        return []
+    requirements = []
+    for entries in project.get("optional-dependencies", {}).values():
+        for entry in entries:
+            try:
+                requirement = Requirement(entry)
+            except InvalidRequirement:
+                continue
+            if requirement.marker is not None and not requirement.marker.evaluate():
+                continue
+            name = canonicalize_name(requirement.name)
+            if name == "pytest" or name.startswith("pytest-"):
+                requirements.append(requirement)
+    return requirements
+
+
 def _is_installed(distribution: str) -> bool:
     try:
         importlib.metadata.version(distribution)
@@ -242,9 +297,12 @@ def _problems() -> list[str]:
                     f"{pinned_version}; a stub version changes mypy's findings on unchanged code"
                 )
 
-    declared = _runtime_requirements(project)
-    if not declared:
+    runtime = _runtime_requirements(project)
+    if not runtime:
         problems.append("pyproject.toml declares no runtime dependencies for this to check")
+    # Checked for emptiness separately from the combined set: a populated test
+    # framework must not make an empty runtime list look like a satisfied one.
+    declared = runtime + _test_framework_requirements(project)
 
     absent: list[str] = []
     unsatisfied: list[str] = []
