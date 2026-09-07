@@ -19,6 +19,7 @@ negative cases passes just as happily against a guard that refuses everything.
 
 from __future__ import annotations
 
+import subprocess
 import sys
 from pathlib import Path
 
@@ -162,3 +163,90 @@ def test_requires_python_is_read_from_the_specifier(
     declaration: str, expected: tuple[int, ...] | None
 ) -> None:
     assert hook._minimum_python({"requires-python": declaration}) == expected
+
+
+def test_a_stale_pinned_stub_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A stub version changes what mypy reports on unchanged code.
+
+    This repository pins `pandas-stubs` for exactly that reason: floating it
+    from 3.0.3.260530 to 3.0.5.260730 changed mypy's findings. An environment
+    with the correct mypy and a stale stub is therefore not the environment CI
+    type-checks in -- and it is the harder case to notice, because everything
+    the earlier checks look at is right.
+    """
+
+    pins = {**hook._analyzer_pins(hook._project()), "pandas-stubs": "3.0.5.260730"}
+
+    problems = _problems_with_pins(monkeypatch, pins)
+
+    assert len(problems) == 1
+    assert "pandas-stubs" in problems[0]
+    assert "changes mypy's findings" in problems[0]
+
+
+def test_a_pinned_stub_that_is_absent_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
+    problems = _problems_with_pins(
+        monkeypatch, {**hook._analyzer_pins(hook._project()), "types-absent": "1.0.0"}
+    )
+
+    assert len(problems) == 1
+    assert "types-absent is not installed" in problems[0]
+
+
+def test_the_analyzer_pins_are_derived_not_listed() -> None:
+    """mypy plus anything named as a stub, by the packaging convention.
+
+    Derived so a stub added to `pyproject.toml` is covered without a second
+    edit here -- a hand-written list is the shape that silently omits one.
+    """
+
+    pins = hook._analyzer_pins(
+        {
+            "optional-dependencies": {
+                "dev": [
+                    "mypy==2.3.0",
+                    "pandas-stubs==3.0.3.260530",
+                    "types-requests==2.0.0",
+                    "ruff==0.16.4",  # a tool, not an analysis input
+                    "pytest>=9.0.0",  # not an exact pin
+                ]
+            }
+        }
+    )
+
+    assert pins == {
+        "mypy": "2.3.0",
+        "pandas-stubs": "3.0.3.260530",
+        "types-requests": "2.0.0",
+    }
+
+
+def test_the_guard_refuses_without_packaging_instead_of_crashing() -> None:
+    """The guard runs in the environment it exists to diagnose.
+
+    `packaging` is a dev dependency, not stdlib, so a bare interpreter -- the
+    exact case being refused -- raised `ModuleNotFoundError` at import time and
+    printed a traceback where the actionable message belonged. Run as a
+    subprocess with `-S`, because the failure is at import and cannot be
+    observed from inside an already-imported module.
+    """
+
+    completed = subprocess.run(
+        [sys.executable, "-S", str(ROOT / "scripts" / "run_typecheck_hook.py")],
+        capture_output=True,
+        text=True,
+        cwd=ROOT,
+        check=False,  # a non-zero exit is the assertion, not an error
+    )
+
+    assert completed.returncode == 1
+    assert "Traceback" not in completed.stderr
+    assert "packaging" in completed.stderr
+    assert "--no-verify" in completed.stderr
+
+
+def _problems_with_pins(monkeypatch: pytest.MonkeyPatch, pins: dict[str, str]) -> list[str]:
+    """`_problems()` with the analyzer pins replaced for one test."""
+
+    monkeypatch.setattr(hook, "_analyzer_pins", lambda project: pins)
+    return hook._problems()

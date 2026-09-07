@@ -42,10 +42,20 @@ import tomllib
 from pathlib import Path
 from typing import Any, cast
 
-from packaging.requirements import InvalidRequirement, Requirement
-from packaging.specifiers import InvalidSpecifier, SpecifierSet
-from packaging.utils import canonicalize_name
-from packaging.version import InvalidVersion, Version
+# Imported defensively, because this guard runs in the environment it exists to
+# diagnose. `packaging` is a project dev dependency, not stdlib, so a bare or
+# unactivated interpreter -- exactly the case being refused -- would otherwise
+# raise ModuleNotFoundError at import time and print a traceback instead of the
+# actionable message. Reproducible with `python -S scripts/run_typecheck_hook.py`.
+try:
+    from packaging.requirements import InvalidRequirement, Requirement
+    from packaging.specifiers import InvalidSpecifier, SpecifierSet
+    from packaging.utils import canonicalize_name
+    from packaging.version import InvalidVersion, Version
+
+    _PARSER_MISSING = False
+except ModuleNotFoundError:  # pragma: no cover - exercised by a subprocess test
+    _PARSER_MISSING = True
 
 ROOT = Path(__file__).resolve().parent.parent
 PYPROJECT = ROOT / "pyproject.toml"
@@ -129,6 +139,40 @@ def _minimum_python(project: dict[str, Any]) -> tuple[int, ...] | None:
     return tuple(max(versions).release)
 
 
+def _analyzer_pins(project: dict[str, Any]) -> dict[str, str]:
+    """Exactly-pinned dev dependencies that change what mypy reports.
+
+    mypy itself, plus type stubs. Stubs are identified by the packaging naming
+    convention -- a `-stubs` suffix or a `types-` prefix -- rather than by a
+    hand-written list, so a stub added to `pyproject.toml` is covered without a
+    second edit here.
+
+    Stubs belong in this check because they are analysis inputs, not tooling
+    around it. This repository pins `pandas-stubs` for exactly that reason:
+    floating it from 3.0.3.260530 to 3.0.5.260730 changed mypy's findings on
+    unchanged code. An environment with the right mypy and a stale stub is not
+    the environment CI type-checks in, and the hook would disagree with CI
+    while appearing correct.
+    """
+
+    pins: dict[str, str] = {}
+    for entries in project.get("optional-dependencies", {}).values():
+        for entry in entries:
+            try:
+                requirement = Requirement(entry)
+            except InvalidRequirement:
+                continue
+            if requirement.marker is not None and not requirement.marker.evaluate():
+                continue
+            name = canonicalize_name(requirement.name)
+            if not (name == "mypy" or name.endswith("-stubs") or name.startswith("types-")):
+                continue
+            specifiers = list(requirement.specifier)
+            if len(specifiers) == 1 and specifiers[0].operator == "==":
+                pins[requirement.name] = str(specifiers[0].version)
+    return pins
+
+
 def _is_installed(distribution: str) -> bool:
     try:
         importlib.metadata.version(distribution)
@@ -160,6 +204,23 @@ def _problems() -> list[str]:
             if installed != pinned:
                 problems.append(f"mypy {installed} is installed, but pyproject.toml pins {pinned}")
 
+    for distribution, pinned_version in sorted(_analyzer_pins(project).items()):
+        if canonicalize_name(distribution) == "mypy":
+            continue  # already compared above, with its own message
+        try:
+            installed_version = importlib.metadata.version(distribution)
+        except importlib.metadata.PackageNotFoundError:
+            problems.append(
+                f"{distribution} is not installed (pyproject.toml pins {pinned_version}), "
+                "and it changes what mypy reports"
+            )
+        else:
+            if installed_version != pinned_version:
+                problems.append(
+                    f"{distribution} {installed_version} is installed, but pyproject.toml pins "
+                    f"{pinned_version}; a stub version changes mypy's findings on unchanged code"
+                )
+
     declared = _runtime_distributions(project)
     if not declared:
         problems.append("pyproject.toml declares no runtime dependencies for this to check")
@@ -174,6 +235,28 @@ def _problems() -> list[str]:
 
 
 def main() -> int:
+    if _PARSER_MISSING:
+        # Answered before anything that needs a parser. This is the strongest
+        # possible signal that the environment is wrong -- `packaging` is a
+        # declared dev dependency, so its absence means the project was not
+        # installed here at all.
+        print(
+            "This is not the environment CI type-checks in: the project is not "
+            "installed here at all.",
+            file=sys.stderr,
+        )
+        print(f"  interpreter : {sys.executable}", file=sys.stderr)
+        print(
+            "  - `packaging` is missing, and it is a declared dev dependency of this project",
+            file=sys.stderr,
+        )
+        print(
+            "Activate the project environment and commit again. Do not use --no-verify: "
+            "the check being skipped is the one CI will run.",
+            file=sys.stderr,
+        )
+        return 1
+
     problems = _problems()
     if problems:
         print(
