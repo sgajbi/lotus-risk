@@ -76,11 +76,13 @@ def test_losing_the_pin_is_refused_rather_than_skipped(monkeypatch: pytest.Monke
 
 
 def test_a_missing_declared_dependency_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
-    declared = hook._runtime_distributions
+    from packaging.requirements import Requirement
+
+    declared = hook._runtime_requirements
     monkeypatch.setattr(
         hook,
-        "_runtime_distributions",
-        lambda project: [*declared(project), "a-package-no-environment-has"],
+        "_runtime_requirements",
+        lambda project: [*declared(project), Requirement("a-package-no-environment-has")],
     )
 
     problems = hook._problems()
@@ -92,7 +94,7 @@ def test_a_missing_declared_dependency_is_refused(monkeypatch: pytest.MonkeyPatc
 def test_losing_the_dependency_list_is_refused_rather_than_skipped(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(hook, "_runtime_distributions", lambda project: [])
+    monkeypatch.setattr(hook, "_runtime_requirements", lambda project: [])
 
     problems = hook._problems()
 
@@ -114,7 +116,7 @@ def test_every_declared_runtime_dependency_is_checked() -> None:
         for requirement in project["dependencies"]
     }
 
-    assert set(hook._runtime_distributions(project)) == declared
+    assert {r.name for r in hook._runtime_requirements(project)} == declared
 
 
 @pytest.mark.parametrize(
@@ -250,3 +252,73 @@ def _problems_with_pins(monkeypatch: pytest.MonkeyPatch, pins: dict[str, str]) -
 
     monkeypatch.setattr(hook, "_analyzer_pins", lambda project: pins)
     return hook._problems()
+
+
+@pytest.mark.parametrize(
+    ("requirement", "fragment"),
+    [
+        ("numpy==9.9.9", "numpy"),  # the exact-pin case: a stale runtime after a pull
+        ("fastapi>=99.0.0", "fastapi"),  # a floor the installed version does not meet
+    ],
+)
+def test_an_installed_version_outside_the_declared_range_is_refused(
+    monkeypatch: pytest.MonkeyPatch, requirement: str, fragment: str
+) -> None:
+    """Presence is not the question -- mypy checks against installed type information.
+
+    `numpy` is pinned exactly. A contributor who pulls a change to that pin and
+    does not reinstall has every distribution present and the wrong one of them,
+    which a presence-only check accepts while mypy silently checks against a
+    different API than CI.
+    """
+
+    from packaging.requirements import Requirement
+
+    monkeypatch.setattr(hook, "_runtime_requirements", lambda project: [Requirement(requirement)])
+
+    problems = hook._problems()
+
+    assert len(problems) == 1
+    assert fragment in problems[0]
+    assert "different type information" in problems[0]
+
+
+def test_the_guard_refuses_without_tomllib_instead_of_crashing(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`tomllib` is standard library only from Python 3.11.
+
+    An older system interpreter is one of the cases this guard exists to
+    diagnose, and importing `tomllib` at module level crashed before the
+    refusal could be printed -- the same defect as the `packaging` import one
+    line above it, which I had fixed while leaving this one.
+
+    Exercised by setting the flag the import sets, because this environment has
+    no 3.10 interpreter to run. That proves the branch, the exit status and the
+    message. It does not prove behaviour on a real 3.10, and the distinction is
+    worth keeping rather than implying more than was run.
+    """
+
+    monkeypatch.setattr(hook, "_TOML_MISSING", True)
+
+    exit_code = hook.main()
+
+    stderr = capsys.readouterr().err
+    assert exit_code == 1
+    assert "tomllib" in stderr
+    assert "3.11" in stderr
+    assert "--no-verify" in stderr
+
+
+def test_the_guard_refuses_without_packaging_by_the_same_route(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The two preconditions are answered in order, each without the other."""
+
+    monkeypatch.setattr(hook, "_PARSER_MISSING", True)
+
+    exit_code = hook.main()
+
+    stderr = capsys.readouterr().err
+    assert exit_code == 1
+    assert "packaging" in stderr

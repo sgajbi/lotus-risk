@@ -38,9 +38,21 @@ from __future__ import annotations
 import importlib.metadata
 import subprocess
 import sys
-import tomllib
 from pathlib import Path
 from typing import Any, cast
+
+# `tomllib` is stdlib only from Python 3.11. On an older system interpreter --
+# which is one of the cases this guard exists to diagnose -- importing it at
+# module level raised ModuleNotFoundError before the refusal could be printed.
+# Its absence is itself the diagnosis, and it is answerable without reading
+# `pyproject.toml`: an interpreter that cannot parse TOML cannot be the one
+# that satisfies a `requires-python` of 3.12 or later.
+try:
+    import tomllib
+
+    _TOML_MISSING = False
+except ModuleNotFoundError:  # pragma: no cover - exercised by a subprocess test
+    _TOML_MISSING = True
 
 # Imported defensively, because this guard runs in the environment it exists to
 # diagnose. `packaging` is a project dev dependency, not stdlib, so a bare or
@@ -66,20 +78,29 @@ def _project() -> dict[str, Any]:
         return cast(dict[str, Any], tomllib.load(handle)["project"])
 
 
-def _runtime_distributions(project: dict[str, Any]) -> list[str]:
-    """The runtime dependencies `pyproject.toml` declares, as distribution names.
+def _runtime_requirements(project: dict[str, Any]) -> list[Requirement]:
+    """The runtime dependencies `pyproject.toml` declares, fully parsed.
 
-    Derived rather than listed, so a dependency added there extends this check
-    without a second edit and cannot be silently omitted from it.
+    Parsed rather than reduced to names, because the version matters as much as
+    the presence: `numpy==2.5.1` is an exact pin, and mypy checks against the
+    type information of whatever numpy is actually installed. An environment
+    holding a different one is not the environment CI type-checks in, and a
+    presence-only check accepts it.
+
+    Derived rather than listed, so a dependency added to `pyproject.toml`
+    extends this check without a second edit and cannot be silently omitted.
     """
 
-    names = []
+    requirements = []
     for entry in project.get("dependencies", []):
         try:
-            names.append(Requirement(entry).name)
+            requirement = Requirement(entry)
         except InvalidRequirement:
             continue
-    return names
+        if requirement.marker is not None and not requirement.marker.evaluate():
+            continue
+        requirements.append(requirement)
+    return requirements
 
 
 def _pinned_mypy(project: dict[str, Any]) -> str | None:
@@ -221,20 +242,60 @@ def _problems() -> list[str]:
                     f"{pinned_version}; a stub version changes mypy's findings on unchanged code"
                 )
 
-    declared = _runtime_distributions(project)
+    declared = _runtime_requirements(project)
     if not declared:
         problems.append("pyproject.toml declares no runtime dependencies for this to check")
-    missing = [name for name in declared if not _is_installed(name)]
-    if missing:
+
+    absent: list[str] = []
+    unsatisfied: list[str] = []
+    for requirement in declared:
+        try:
+            installed = importlib.metadata.version(requirement.name)
+        except importlib.metadata.PackageNotFoundError:
+            absent.append(requirement.name)
+            continue
+        # `contains` with prereleases=True so a legitimately installed
+        # pre-release is judged by the declared range rather than skipped.
+        if requirement.specifier and not requirement.specifier.contains(
+            installed, prereleases=True
+        ):
+            unsatisfied.append(f"{requirement.name} {installed} (declared {requirement.specifier})")
+
+    if absent:
         problems.append(
             "these declared dependencies are absent, so a strict run would report "
-            f"hundreds of import-not-found errors rather than real findings: {', '.join(missing)}"
+            f"hundreds of import-not-found errors rather than real findings: {', '.join(absent)}"
+        )
+    if unsatisfied:
+        problems.append(
+            "these installed versions do not satisfy pyproject.toml, so mypy would check "
+            f"against different type information than CI: {', '.join(unsatisfied)}"
         )
 
     return problems
 
 
 def main() -> int:
+    if _TOML_MISSING:
+        running = ".".join(str(part) for part in sys.version_info[:3])
+        print(
+            "This is not the environment CI type-checks in: the interpreter is too old "
+            "to read the project's own metadata.",
+            file=sys.stderr,
+        )
+        print(f"  interpreter : {sys.executable}", file=sys.stderr)
+        print(
+            f"  - Python {running} has no `tomllib`, which is standard library from 3.11; "
+            "this project requires 3.12 or later",
+            file=sys.stderr,
+        )
+        print(
+            "Activate the project environment and commit again. Do not use --no-verify: "
+            "the check being skipped is the one CI will run.",
+            file=sys.stderr,
+        )
+        return 1
+
     if _PARSER_MISSING:
         # Answered before anything that needs a parser. This is the strongest
         # possible signal that the environment is wrong -- `packaging` is a
