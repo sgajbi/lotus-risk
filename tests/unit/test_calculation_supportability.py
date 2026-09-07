@@ -117,9 +117,13 @@ def test_attribution_supportability_degrades_when_sets_emit_quality_flags() -> N
     )
 
     assert supportability.state == "degraded"
-    assert supportability.reason == "calculation_quality_issue"
+    # lotus-risk#283: the reason is the missing per-group return series, not a
+    # per-set quality issue. Both sets are counted, including the unflagged one:
+    # a clean-looking decomposition carries exactly the same limitation and is
+    # the one a consumer would be most likely to present as empirical.
+    assert supportability.reason == "group_return_series_unavailable"
     assert supportability.freshness_bucket == "current"
-    assert supportability.degraded_metric_count == 1
+    assert supportability.degraded_metric_count == 2
     assert supportability.evaluated_period_count == 1
 
 
@@ -130,8 +134,35 @@ def test_attribution_supportability_ignores_non_sequence_attribution_sets() -> N
         results={"YTD": SimpleNamespace(portfolio_observation_count=1, attribution_sets=object())},
     )
 
-    assert supportability.state == "ready"
-    assert supportability.reason == "calculation_complete"
+    # Not "ready". There is no per-group return series regardless of what the
+    # attribution sets look like, so a response that reports `calculation_complete`
+    # would assert a measurement this service has not made.
+    assert supportability.state == "degraded"
+    assert supportability.reason == "group_return_series_unavailable"
+
+
+def test_attribution_supportability_is_degraded_even_with_no_quality_flags() -> None:
+    """The load-bearing case, and the one the previous posture got wrong.
+
+    A decomposition with no flags at all is not evidence of a good measurement
+    here -- it is the same weight proxy without anything to complain about. Under
+    constant weights `percent_contribution` reproduces the group weight exactly,
+    and ACTIVE_RISK leaves the whole tracking error as residual. Reporting
+    `ready` invited a consumer to present that as empirical attribution.
+    """
+    supportability = supportability_from_attribution_results(
+        returns=[ReturnPoint(date=dt.date(2026, 1, 5), value=1.2)],
+        as_of_date=dt.date(2026, 1, 5),
+        results={
+            "YTD": _AttributionPeriodResult(
+                attribution_sets=[_AttributionSet(quality_flags=[])],
+            )
+        },
+    )
+
+    assert supportability.state == "degraded"
+    assert supportability.reason == "group_return_series_unavailable"
+    assert supportability.degraded_metric_count == 1
 
 
 def test_risk_metric_supportability_counts_metric_errors_and_empty_periods() -> None:

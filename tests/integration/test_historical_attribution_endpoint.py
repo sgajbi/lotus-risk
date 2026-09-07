@@ -213,10 +213,10 @@ def test_historical_attribution_stateless_happy_path() -> None:
     assert body["metadata"]["stateful_active_risk_gate_reason"] == "none"
     assert body["metadata"]["calculation_supportability"] == {
         "state": "degraded",
-        "reason": "calculation_quality_issue",
+        "reason": "group_return_series_unavailable",
         "freshness_bucket": "current",
         "metric_labels": _EXPECTED_SUPPORTABILITY_METRIC_LABELS,
-        "degraded_metric_count": 2,
+        "degraded_metric_count": 4,
         "empty_period_count": 0,
         "evaluated_period_count": 1,
     }

@@ -100,18 +100,38 @@ def supportability_from_attribution_results(
             if isinstance(quality_flags, Sequence) and quality_flags:
                 degraded_set_count += 1
 
-    if degraded_set_count == 0:
-        return supportability
-
     freshness_bucket = freshness_bucket_from_returns(returns, as_of_date=as_of_date)
+
+    # Unconditional, because the limitation is unconditional (lotus-risk#283).
+    # There is no per-group return series anywhere in this service: every group's
+    # contribution is built from `weight_g x r_portfolio`, the same series for
+    # every group, so all groups are perfectly correlated by construction and the
+    # covariance recovers nothing the weights do not already say. Under constant
+    # weights `percent_contribution` reproduces the weight exactly; under
+    # ACTIVE_RISK the components sum to zero and the residual is the whole metric.
+    #
+    # Reported as `degraded` rather than `ready` on every response, including
+    # responses with no quality flags at all -- a clean-looking decomposition is
+    # precisely the one a consumer would present as empirical. `ready` here would
+    # be the service asserting a measurement it has not made.
     return RiskCalculationSupportability(
         state="degraded",
-        reason="calculation_quality_issue",
+        reason="group_return_series_unavailable",
         freshness_bucket=freshness_bucket,
-        degraded_metric_count=degraded_set_count,
+        degraded_metric_count=max(degraded_set_count, _attribution_set_count(results)),
         empty_period_count=supportability.empty_period_count,
         evaluated_period_count=len(results),
     )
+
+
+def _attribution_set_count(results: Mapping[str, Any]) -> int:
+    """Every attribution set carries the limitation, not only the flagged ones."""
+    total = 0
+    for period_result in results.values():
+        attribution_sets = getattr(period_result, "attribution_sets", ())
+        if isinstance(attribution_sets, Sequence):
+            total += len(attribution_sets)
+    return total
 
 
 def supportability_from_risk_metric_results(

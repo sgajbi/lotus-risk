@@ -267,7 +267,10 @@ def test_attribution_engine_sets_quality_flag_for_missing_grouping_data() -> Non
     attribution_set = response.results["YTD"].attribution_sets[0]
     assert "grouping:SECTOR:no_exposure_data" in attribution_set.quality_flags
     assert response.metadata.calculation_supportability.state == "degraded"
-    assert response.metadata.calculation_supportability.reason == "calculation_quality_issue"
+    # lotus-risk#283: the dominant limitation is the missing per-group return
+    # series, which applies to every set whether or not it also carries a
+    # per-set quality flag. The flag above still reaches the consumer verbatim.
+    assert response.metadata.calculation_supportability.reason == "group_return_series_unavailable"
     assert response.metadata.calculation_supportability.degraded_metric_count == 1
 
 
