@@ -436,11 +436,13 @@ Important validation expectations:
    No Lotus repository held such a secret when this landed, so the live step FAILS CLOSED on the
    missing token rather than passing silently, and the gate's own context is deliberately not yet
    self-anchored in the required list - requiring it would block every merge on an operator
-   action rather than assert a control. Two comparison gaps are stated in the table rather than
-   implied: source `app_id` bindings (lotus-gateway#740), four protection controls the API
-   returns but the checker's hard-coded allowlist ignores (lotus-gateway#742), and only the
-   zero-approval exception being bound to the weakness it documents (lotus-gateway#743). All
-   three are canonical gaps; none is closable from the table side.
+   action rather than assert a control. Two comparison gaps remain stated in the table rather
+   than implied: source `app_id` bindings (lotus-gateway#740) and only the zero-approval
+   exception being bound to the weakness it documents (lotus-gateway#743). Both are canonical
+   gaps; neither is closable from the table side. The third, four protection controls the
+   checker's hard-coded allowlist ignored, is **closed**: lotus-gateway#742 corrected the
+   canonical checker to compare `lock_branch`, `required_signatures`, `block_creations` and
+   `allow_fork_syncing`, and this repository adopted that copy verbatim and declares all four.
 9. Release image posture is governed by `make image-supply-chain-gate`: images are built locally,
    tagged by Git SHA, labeled with source/build/version/CI metadata, accompanied by an SBOM, and
     fully inventoried, scanned unconditionally for application-library HIGH/CRITICAL findings, and
