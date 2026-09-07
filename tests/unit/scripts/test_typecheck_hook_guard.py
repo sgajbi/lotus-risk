@@ -322,3 +322,91 @@ def test_the_guard_refuses_without_packaging_by_the_same_route(
     stderr = capsys.readouterr().err
     assert exit_code == 1
     assert "packaging" in stderr
+
+
+def test_the_test_framework_is_required_when_mypy_analyses_tests(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`mypy.ini` is `files = src, tests`, and the tests import pytest 95 times.
+
+    Those imports are analysis inputs exactly as the runtime ones are. Without
+    the framework installed, a strict run emits the same `import-not-found`
+    cascade this guard exists to replace -- after reporting the environment as
+    fine, because the runtime dependencies were all present.
+    """
+
+    from packaging.requirements import Requirement
+
+    monkeypatch.setattr(hook, "_runtime_requirements", lambda project: [])
+    monkeypatch.setattr(
+        hook, "_test_framework_requirements", lambda project: [Requirement("pytest-absent>=1.0")]
+    )
+
+    problems = hook._problems()
+
+    assert any("pytest-absent" in problem for problem in problems)
+
+
+def test_the_framework_requirement_follows_mypy_scope(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Read from `mypy.ini`, not assumed.
+
+    If `tests` is dropped from `files`, the framework stops being an analysis
+    input and must stop being demanded -- otherwise the guard enforces a
+    configuration the project no longer has.
+    """
+
+    monkeypatch.setattr(hook, "_mypy_analyses_tests", lambda: False)
+
+    assert hook._test_framework_requirements(hook._project()) == []
+
+
+def test_the_framework_set_is_derived_from_the_naming_convention() -> None:
+    """pytest and its plugins, not a hand-written list, and not every dev tool.
+
+    `bandit`, `radon` and `vulture` are dev dependencies mypy never sees.
+    Demanding them would refuse environments that are correct for this hook.
+    """
+
+    project = {
+        "optional-dependencies": {
+            "dev": [
+                "pytest>=9.0.0",
+                "pytest-asyncio>=1.2.0",
+                "bandit==1.9.4",
+                "radon==6.0.1",
+            ]
+        }
+    }
+
+    names = {requirement.name for requirement in hook._test_framework_requirements(project)}
+
+    assert names == {"pytest", "pytest-asyncio"}
+
+
+def test_the_analysed_tree_really_does_import_the_framework() -> None:
+    """The premise, checked rather than asserted.
+
+    If the tests stopped importing pytest, demanding it would be enforcing a
+    dependency nothing needs -- so the claim that makes this check meaningful
+    is worth pinning to the tree it describes.
+    """
+
+    import ast
+
+    importers = 0
+    for path in (ROOT / "tests").rglob("*.py"):
+        if "__pycache__" in str(path):
+            continue
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except (SyntaxError, UnicodeDecodeError):
+            continue
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import) and any(a.name == "pytest" for a in node.names):
+                importers += 1
+                break
+            if isinstance(node, ast.ImportFrom) and node.module == "pytest":
+                importers += 1
+                break
+
+    assert importers > 50, "the tests no longer import pytest; this check's premise has moved"
