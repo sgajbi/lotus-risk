@@ -56,9 +56,14 @@ class AttributionContributor(BaseModel):
         description=(
             "Share of `total_value` attributable to this group: "
             "`component_contribution / total_value`. A DECIMAL RATIO despite the "
-            "name -- 0.1532 means 15.32%, and the values across contributors sum to "
-            "1.0, not to 100. Multiply by 100 before rendering a percentage. May be "
-            "negative where a group reduces the metric."
+            "name -- 0.1532 means 15.32%. Multiply by 100 before rendering a "
+            "percentage. May be negative where a group reduces the metric. "
+            "Under TOTAL_RISK the values across contributors sum to 1.0, not to 100. "
+            "Under ACTIVE_RISK they sum to ZERO, not to 1.0: they carry the active "
+            "weights, which sum to zero whenever the portfolio and benchmark weights "
+            "each sum to one. A consumer validating `sum == 1` will fail every "
+            "active-risk set, and that is the contract rather than a defect in the "
+            "caller. See lotus-risk#283."
         ),
         json_schema_extra={"example": 0.1532},
     )
