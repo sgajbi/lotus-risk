@@ -28,6 +28,13 @@ RiskSupportabilityState = Literal[
 RiskSupportabilityReason = Literal[
     "calculation_complete",
     "benchmark_unavailable",
+    # Historical attribution has no per-group return series. Every group is fed
+    # the same portfolio-level return, so the covariance can only recover the
+    # weights: under constant weights `percent_contribution` reproduces the
+    # weight exactly, and ACTIVE_RISK leaves the whole tracking error as
+    # residual. The decomposition is a weight proxy, not measured group risk,
+    # and saying so is the difference between a limitation and a false number.
+    "group_return_series_unavailable",
     "calculation_quality_issue",
     "insufficient_aligned_observations",
     "insufficient_observations",
