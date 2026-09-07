@@ -45,6 +45,7 @@ def calculated_attribution_set(
 ) -> AttributionSetResult:
     rows = component_decomposition(
         group_matrix=calculation_inputs.group_matrix,
+        weight_matrix=calculation_inputs.weight_matrix,
         metric_series=calculation_inputs.metric_series,
         contribution_denominator=calculation_inputs.risk_total,
         annualization_basis=annualization_basis,

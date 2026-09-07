@@ -21,13 +21,22 @@ class DecompositionRow(TypedDict):
 @dataclass(frozen=True)
 class AttributionCalculationInputs:
     metric_series: pd.Series
+    #: Per-group contribution series, `weight x metric`. Used for the covariance
+    #: with the metric series, and for nothing else -- its column mean is a mean
+    #: weighted return, not a weight.
     group_matrix: pd.DataFrame
+    #: The weights themselves, aligned to the same index. Carried separately
+    #: because `group_matrix` cannot answer "what was this group's weight":
+    #: taking its column mean yields `E[w * r]`, which is smaller than the weight
+    #: by a factor of the mean return and flips sign with it.
+    weight_matrix: pd.DataFrame
     risk_total: float
 
 
 def component_decomposition(
     *,
     group_matrix: pd.DataFrame,
+    weight_matrix: pd.DataFrame,
     metric_series: pd.Series,
     contribution_denominator: float,
     annualization_basis: int,
@@ -39,14 +48,14 @@ def component_decomposition(
     if np.isclose(std, 0.0):
         return []
 
-    metric_mean = group_matrix.mean(axis=0)
+    weight_mean = weight_matrix.mean(axis=0)
     decomposition: list[DecompositionRow] = []
     for group_key in group_matrix.columns:
         decomposition.append(
             _component_decomposition_row(
                 group_key=str(group_key),
                 group_series=group_matrix[group_key],
-                group_weight_average=float(metric_mean[group_key]),
+                group_weight_average=float(weight_mean[group_key]),
                 metric_series=metric_series,
                 contribution_denominator=contribution_denominator,
                 annualization_basis=annualization_basis,
@@ -68,6 +77,11 @@ def _component_decomposition_row(
 ) -> DecompositionRow:
     cov = float(np.cov(group_series, metric_series, ddof=1)[0, 1])
     component = float((cov / metric_std) * sqrt(annualization_basis))
+    # Marginal contribution to risk is the component divided by the weight that
+    # produced it. `None` rather than an infinity when that weight is zero: for
+    # ACTIVE_RISK the weight is `portfolio - benchmark`, so a group held exactly
+    # at benchmark has no defined marginal, and reporting one would invite a
+    # reader to act on a number produced by dividing by nothing.
     marginal = (
         float(component / group_weight_average)
         if not np.isclose(group_weight_average, 0.0)
@@ -122,6 +136,7 @@ def _total_risk_inputs(
     return AttributionCalculationInputs(
         metric_series=metric_series,
         group_matrix=aligned_weights.mul(metric_series, axis=0),
+        weight_matrix=aligned_weights,
         risk_total=float(metric_series.std(ddof=1) * sqrt(annualization_basis)),
     )
 
@@ -154,5 +169,8 @@ def _active_risk_inputs(
     return AttributionCalculationInputs(
         metric_series=metric_series,
         group_matrix=active_w.mul(metric_series, axis=0),
+        # Active weights, which may be negative or exactly zero -- that is the
+        # quantity an active-risk marginal is per unit of.
+        weight_matrix=active_w,
         risk_total=float(metric_series.std(ddof=1) * sqrt(annualization_basis)),
     )

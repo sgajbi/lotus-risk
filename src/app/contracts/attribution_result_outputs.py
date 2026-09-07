@@ -23,12 +23,27 @@ class AttributionContributor(BaseModel):
     )
     weight_average: float | None = Field(
         default=None,
-        description="Average group weight over attribution observation window.",
+        description=(
+            "Mean weight of this group over the observation window, as a decimal "
+            "fraction of the portfolio (0.245 is 24.5%). For TOTAL_RISK this is the "
+            "portfolio weight. For ACTIVE_RISK it is the ACTIVE weight, portfolio "
+            "minus benchmark, so it is negative for an underweight and zero for a "
+            "group held exactly at benchmark. It is a weight, not a contribution: "
+            "it does not carry metric units and is not derived from the return "
+            "series."
+        ),
         json_schema_extra={"example": 0.245},
     )
     marginal_contribution: float | None = Field(
         default=None,
-        description="Marginal contribution to risk in metric units.",
+        description=(
+            "Contribution to risk per unit of weight: `component_contribution / "
+            "weight_average`, in metric units per unit of weight. Answers what the "
+            "metric would move by for a marginal increase in this group's weight. "
+            "Null when `weight_average` is zero -- under ACTIVE_RISK that is a group "
+            "held exactly at benchmark, which has no defined marginal; the row is "
+            "still returned with its component."
+        ),
         json_schema_extra={"example": 0.0784},
     )
     component_contribution: float | None = Field(
@@ -38,7 +53,13 @@ class AttributionContributor(BaseModel):
     )
     percent_contribution: float | None = Field(
         default=None,
-        description="Percent contribution to total metric value.",
+        description=(
+            "Share of `total_value` attributable to this group: "
+            "`component_contribution / total_value`. A DECIMAL RATIO despite the "
+            "name -- 0.1532 means 15.32%, and the values across contributors sum to "
+            "1.0, not to 100. Multiply by 100 before rendering a percentage. May be "
+            "negative where a group reduces the metric."
+        ),
         json_schema_extra={"example": 0.1532},
     )
 
@@ -58,17 +79,39 @@ class AttributionSetResult(BaseModel):
     )
     total_value: float | None = Field(  # monetary-float-allow: attribution metric value.
         default=None,
-        description="Total metric value for this attribution set.",
+        description=(
+            "The metric being decomposed, for the whole set: annualised volatility "
+            "for VOLATILITY, annualised tracking error for TRACKING_ERROR. A decimal "
+            "ratio (0.1253 is 12.53%), annualised at `metadata.annualization_basis`. "
+            "Null when the period could not be computed; see `error`."
+        ),
         json_schema_extra={"example": 0.1253},
     )
     reconciled_sum: float | None = Field(
         default=None,
-        description="Sum of component contributions used for reconciliation.",
+        description=(
+            "Sum of `component_contribution` across EVERY contributor in this set. "
+            "Contributors are never a top-N subset, so this is the full sum and not "
+            "a remainder-bearing figure."
+        ),
         json_schema_extra={"example": 0.1249},
     )
     residual: float | None = Field(
         default=None,
-        description="Residual reconciliation difference: total_value - reconciled_sum.",
+        description=(
+            "`total_value - reconciled_sum`, in the same units as `total_value`. The "
+            "part of the metric the decomposition did not attribute to any group. "
+            "Present it; do not allocate it away across contributors -- a residual "
+            "spread over groups is indistinguishable from attribution the service "
+            "actually made. "
+            "Under TOTAL_RISK the residual is near zero whenever weights sum to "
+            "one; a larger one is reported as "
+            "`grouping:<dim>:weight_not_sum_to_one` in `quality_flags`. Under "
+            "ACTIVE_RISK it is the WHOLE metric: active weights sum to zero by "
+            "construction, so the components sum to zero and nothing is "
+            "attributed. See lotus-risk#283 before presenting an active-risk "
+            "decomposition."
+        ),
         json_schema_extra={"example": 0.0004},
     )
     contributors: list[AttributionContributor] = Field(
