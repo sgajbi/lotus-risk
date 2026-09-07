@@ -356,3 +356,61 @@ def test_active_risk_also_averages_only_observed_exposure_dates() -> None:
     )
     assert tech["marginal_contribution"] is not None
     assert _by_group(rows)["FIN"]["weight_average"] == pytest.approx(-0.20)
+
+
+def test_an_exposure_date_with_no_return_still_counts_toward_the_weight() -> None:
+    """A month-end falling on a weekend is a holding, not a missing observation.
+
+    The average is over the exposure dates observed inside the window. Projecting
+    the frame onto the return calendar first would silently drop an observation
+    the portfolio genuinely held, making a descriptive weight depend on which
+    days happened to carry returns -- and null it entirely where no exposure date
+    overlaps the return series.
+    """
+    return_dates = pd.to_datetime(["2026-01-30", "2026-02-02", "2026-02-03"])
+    returns = pd.Series([0.004, -0.006, 0.002], index=return_dates)
+    # 0.31 lands on a Saturday: inside the window, no return that day.
+    exposure = pd.DataFrame(
+        {"TECH": [0.60, 0.90, 0.60], "FIN": [0.40, 0.10, 0.40]},
+        index=pd.to_datetime(["2026-01-30", "2026-01-31", "2026-02-02"]),
+    )
+
+    rows, _ = _rows(returns=returns, exposure=exposure)
+
+    # (0.60 + 0.90 + 0.60) / 3 = 0.70, not (0.60 + 0.60) / 2 = 0.60.
+    assert _by_group(rows)["TECH"]["weight_average"] == pytest.approx(0.70)
+    assert _by_group(rows)["FIN"]["weight_average"] == pytest.approx(0.30)
+
+
+def test_active_risk_also_counts_exposure_dates_with_no_return() -> None:
+    """The same off-calendar case on the active-risk path.
+
+    Caught by mutation rather than by reading: the TOTAL_RISK test above does not
+    exercise this code path, and every other active-risk test here shares one
+    date index between exposure and returns, so projecting onto the return
+    calendar changed nothing and the suite could not tell the readings apart.
+    """
+    return_dates = pd.to_datetime(["2026-01-30", "2026-02-02", "2026-02-03"])
+    returns = pd.Series([0.004, -0.006, 0.002], index=return_dates)
+    benchmark_returns = pd.Series([0.003, -0.004, 0.001], index=return_dates)
+
+    exposure_dates = pd.to_datetime(["2026-01-30", "2026-01-31", "2026-02-02"])
+    exposure = pd.DataFrame(
+        {"TECH": [0.60, 0.90, 0.60], "FIN": [0.40, 0.10, 0.40]}, index=exposure_dates
+    )
+    benchmark_w = pd.DataFrame(
+        {"TECH": [0.40, 0.40, 0.40], "FIN": [0.60, 0.60, 0.60]}, index=exposure_dates
+    )
+
+    rows, _ = _rows(
+        returns=returns,
+        exposure=exposure,
+        benchmark_returns=benchmark_returns,
+        benchmark_weights=benchmark_w,
+        attribution_type="ACTIVE_RISK",
+    )
+
+    # Active TECH over all three observed dates: (0.20 + 0.50 + 0.20) / 3 = 0.30.
+    # Projected onto the return calendar it would be (0.20 + 0.20) / 2 = 0.20.
+    assert _by_group(rows)["TECH"]["weight_average"] == pytest.approx(0.30)
+    assert _by_group(rows)["FIN"]["weight_average"] == pytest.approx(-0.30)
