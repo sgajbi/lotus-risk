@@ -13,7 +13,9 @@ than passing while verifying nothing.
 from __future__ import annotations
 
 import argparse
+import shlex
 import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -29,9 +31,24 @@ WORKFLOW_ROOT = ROOT / ".github" / "workflows"
 def test_merged_pr_dispatch_gates_every_revision_the_pr_put_on_main() -> None:
     dispatcher = (WORKFLOW_ROOT / "merged-pr-main-releasability.yml").read_text(encoding="utf-8")
 
-    # Enumeration of every revision, oldest first, from full history.
+    # Enumeration of every revision the PR added, oldest first, bounded by
+    # the RANGE rather than by a count. This assertion previously pinned
+    # `rev-list -n "$COMMIT_COUNT"`, which is the defect (risk#295): it held
+    # the broken shape in place, so the guard and its test were wrong together.
+    assert "BASE_SHA: ${{ github.event.pull_request.base.sha }}" in dispatcher
     assert "COMMIT_COUNT: ${{ github.event.pull_request.commits }}" in dispatcher
-    assert 'git rev-list -n "$COMMIT_COUNT" "$MERGE_COMMIT_SHA" | tac' in dispatcher
+    assert 'git rev-list --reverse "$BASE_SHA..$MERGE_COMMIT_SHA"' in dispatcher
+    assert 'git rev-list -n "$COMMIT_COUNT"' not in dispatcher, (
+        "the count-bounded walk enumerates past the PR into earlier merges"
+    )
+    # The count survives as an ASYMMETRIC cross-check: more revisions than
+    # declared is a wrong window and must fail; fewer is the ordinary rebase
+    # case and must not.
+    assert '"$revision_count" -gt "$COMMIT_COUNT"' in dispatcher
+    assert '"$revision_count" -lt "$COMMIT_COUNT"' in dispatcher
+    assert dispatcher.index('"$revision_count" -gt "$COMMIT_COUNT"') < dispatcher.index(
+        "for revision in $revisions; do"
+    ), "the window must be checked before anything is tagged or dispatched"
     assert "for revision in $revisions; do" in dispatcher
     assert "fetch-depth: 0" in dispatcher
     # Every dispatch is pinned to its own revision, not the PR head.
@@ -227,3 +244,104 @@ def test_audit_passes_when_every_commit_has_a_verdict(
 
 def argparse_namespace(**kwargs: object) -> argparse.Namespace:
     return argparse.Namespace(**kwargs)
+
+
+def _git(repository: Path, *args: str) -> str:
+    result = subprocess.run(
+        ["git", *args],
+        cwd=repository,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return result.stdout.strip()
+
+
+def _commit(repository: Path, message: str) -> str:
+    (repository / "file.txt").write_text(message, encoding="utf-8")
+    _git(repository, "add", "file.txt")
+    _git(repository, "commit", "-q", "-m", message)
+    return _git(repository, "rev-parse", "HEAD")
+
+
+def test_range_enumeration_excludes_commits_the_pr_did_not_add(tmp_path: Path) -> None:
+    """The mechanism, reproduced in a real repository rather than asserted as a string.
+
+    `pull_request.commits` counts the branch when the event fired. A rebase that
+    drops a commit already on main leaves that count larger than the window that
+    landed, and `rev-list -n COUNT` then walks past the PR into commits earlier
+    merges put there.
+
+    Those commits are genuine ancestors of main and genuinely number COUNT, so
+    the dispatcher's ancestry guard and a naive count assertion **both pass on a
+    wrong enumeration**. That is why this is a behavioural test: no assertion
+    about the workflow text can show that the two forms disagree.
+
+    Measured on this repository before it was written: PR #270 declared 4
+    commits and landed 3, so the count-bounded walk reached the base commit
+    added by an earlier PR. lotus-gateway hit the same shape harder on its PR
+    #744, where the walk reached `base.sha` and -- a commit being its own
+    ancestor -- the guard refused the entire dispatch, gating nothing.
+    """
+    repository = tmp_path / "repo"
+    repository.mkdir()
+    _git(repository, "init", "-q", "-b", "main")
+    _git(repository, "config", "user.email", "test@example.com")
+    _git(repository, "config", "user.name", "test")
+
+    _commit(repository, "root")
+    earlier_pr_commit = _commit(repository, "landed by an earlier PR")
+    base_sha = earlier_pr_commit
+
+    first = _commit(repository, "this PR, revision 1")
+    second = _commit(repository, "this PR, revision 2")
+    merge_sha = _commit(repository, "this PR, revision 3")
+
+    landed = [first, second, merge_sha]
+    declared_count = len(landed) + 1  # a rebase dropped one already on main
+
+    # Run the enumeration the workflow ACTUALLY ships, not a restatement of it.
+    # A hand-written `rev-list --reverse` here would pass while the dispatcher
+    # said something else entirely -- the test would be about my understanding
+    # rather than about the shipped command.
+    dispatcher = (WORKFLOW_ROOT / "merged-pr-main-releasability.yml").read_text(encoding="utf-8")
+    shipped = next(
+        line.strip() for line in dispatcher.splitlines() if line.strip().startswith("revisions=")
+    )
+    # The arguments are extracted and run directly rather than through `bash -c`:
+    # on a Windows developer machine `bash` resolves to WSL, which need not
+    # exist, and a test that only runs in CI is a test that stops being read.
+    inner = shipped[shipped.index("$(") + 2 : shipped.rindex(")")]
+    arguments = shlex.split(
+        inner.replace("$BASE_SHA", base_sha)
+        .replace("$MERGE_COMMIT_SHA", merge_sha)
+        .replace("$COMMIT_COUNT", str(declared_count))
+    )
+    assert arguments[0] == "git", f"the dispatcher no longer enumerates with git: {shipped}"
+    by_range = _git(repository, *arguments[1:]).splitlines()
+    by_count = list(
+        reversed(_git(repository, "rev-list", "-n", str(declared_count), merge_sha).splitlines())
+    )
+
+    assert by_range == landed, (
+        "the enumeration the dispatcher ships must produce exactly what the PR added; "
+        f"it produced {by_range}"
+    )
+    assert earlier_pr_commit in by_count, (
+        "the count-bounded walk must reach the earlier PR's commit -- if it does not, "
+        "this test no longer reproduces the defect it exists for"
+    )
+    assert earlier_pr_commit not in by_range
+    assert len(by_count) > len(by_range)
+
+    # Both guards the dispatcher relies on pass on the wrong enumeration, which
+    # is why neither could have caught this.
+    assert len(by_count) == declared_count, "a count assertion accepts the wrong window"
+    for revision in by_count:
+        ancestry = subprocess.run(
+            ["git", "merge-base", "--is-ancestor", revision, merge_sha],
+            cwd=repository,
+            capture_output=True,
+            check=False,  # the exit status IS the assertion here
+        )
+        assert ancestry.returncode == 0, "an ancestry check also accepts the wrong window"
