@@ -117,8 +117,18 @@ Applies to `calculate`, `drawdown`, `rolling-metrics`, `historical-attribution` 
 | dimension | values |
 |---|---|
 | state | `ready`, `stale`, `degraded`, `empty`, `error`, `permission_blocked`, `unsupported` |
-| reason | `calculation_complete`, `benchmark_unavailable`, `calculation_quality_issue`, `insufficient_aligned_observations`, `insufficient_observations`, `no_return_observations`, `permission_blocked`, `stale_source_observations`, `unsupported_input_mode` |
+| reason | `calculation_complete`, `benchmark_unavailable`, `calculation_quality_issue`, `group_return_series_unavailable`, `insufficient_aligned_observations`, `insufficient_observations`, `no_return_observations`, `permission_blocked`, `stale_source_observations`, `unsupported_input_mode` |
 | freshness | `current`, `same_day`, `stale`, `unknown` |
+
+`group_return_series_unavailable` is the one reason that is **not** about this request. Historical
+attribution has no per-group return series, so every group is fed the same portfolio-level return and
+the covariance can only recover the weights: under constant weights `percent_contribution` reproduces
+the group weight exactly, and under `ACTIVE_RISK` the components sum to zero so the residual is the
+whole tracking error. It is therefore returned on **every** attribution response, including one with
+no quality flags — a clean-looking decomposition carries the identical limitation and is the one most
+likely to be presented as empirical. Do not activate a risk-attribution surface from these values;
+the supported scope is metric levels, group weights, freshness and this posture. Tracked in
+`lotus-risk#291`, blocked on a per-group return series contract with `lotus-performance`.
 
 The distinction that most often matters is `insufficient_observations` versus
 `insufficient_aligned_observations`: the first means there was not enough history, the second means
