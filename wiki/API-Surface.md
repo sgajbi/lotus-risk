@@ -124,11 +124,22 @@ Applies to `calculate`, `drawdown`, `rolling-metrics`, `historical-attribution` 
 attribution has no per-group return series, so every group is fed the same portfolio-level return and
 the covariance can only recover the weights: under constant weights `percent_contribution` reproduces
 the group weight exactly, and under `ACTIVE_RISK` the components sum to zero so the residual is the
-whole tracking error. It is therefore returned on **every attribution response that produced a decomposition**, including
-one with no quality flags — a clean-looking decomposition carries the identical limitation and is the
-one most likely to be presented as empirical. The one response it does not carry is `empty`: with no
-return observations the calculation had nothing to work on, so it reports
-`no_return_observations` and never reaches the decomposition this limitation is about. Do not activate a risk-attribution surface from these values;
+whole tracking error. The limitation therefore applies to **every decomposition this service returns**, including one with
+no quality flags — a clean-looking decomposition carries the identical limitation and is the one most
+likely to be presented as empirical.
+
+**`reason` reports the most severe condition, so it does not always name this one.** `reason` is a
+single value drawn by precedence, and an actionable failure outranks a structural limitation: a
+response that decomposed one period and failed another reports `insufficient_observations`, because
+that is the condition an operator can act on. **Do not read `reason != group_return_series_unavailable`
+as "this decomposition is measured."** The rule that holds without exception is the state: a response
+that decomposed is never `ready`, and any decomposition it carries is a weight proxy whatever `reason`
+says. An `empty` response is the case with no decomposition at all — no return observations, so it
+reports `no_return_observations` and never reaches what this limitation is about.
+
+`degraded_metric_count` counts period results carrying deterministic errors. It is **0** on a clean
+decomposition, because the limitation is not a failure — `degraded` with a zero count is the shape
+meaning "this computed, and it is a proxy", distinct from "something went wrong". Do not activate a risk-attribution surface from these values;
 the supported scope is metric levels, group weights, freshness and this posture. Tracked in
 `lotus-risk#291`, blocked on a per-group return series contract with `lotus-performance`.
 

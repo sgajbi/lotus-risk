@@ -123,7 +123,13 @@ def test_attribution_supportability_degrades_when_sets_emit_quality_flags() -> N
     # the one a consumer would be most likely to present as empirical.
     assert supportability.reason == "group_return_series_unavailable"
     assert supportability.freshness_bucket == "current"
-    assert supportability.degraded_metric_count == 2
+    # Zero, not two (#293). `degraded_metric_count` is contractually "results
+    # carrying deterministic error details", and neither set carries an error --
+    # one carries an advisory flag, both carry a structural limitation. Counting
+    # sets here read as "two results failed", which is a different and false
+    # statement. The limitation is reported by `reason`; the count reports
+    # failures, and there are none.
+    assert supportability.degraded_metric_count == 0
     assert supportability.evaluated_period_count == 1
 
 
@@ -162,7 +168,34 @@ def test_attribution_supportability_is_degraded_even_with_no_quality_flags() -> 
 
     assert supportability.state == "degraded"
     assert supportability.reason == "group_return_series_unavailable"
-    assert supportability.degraded_metric_count == 1
+    # Nothing failed, so nothing is counted (#293). `degraded` here is carried
+    # entirely by the reason, which is the honest shape: the response is
+    # qualified, not broken.
+    assert supportability.degraded_metric_count == 0
+
+
+def test_attribution_supportability_reports_empty_when_nothing_was_observed() -> None:
+    """The no-observations guard, which no endpoint test can reach.
+
+    `attribution_engine.calculate_historical_attribution` short-circuits an
+    empty response to `_empty_attribution_response` before this function is
+    called, so the guard has no endpoint-level route and an endpoint test cannot
+    hold it. Proved rather than assumed: replacing the guard with `if False`
+    left every endpoint test passing while a direct call returned
+    `degraded`/`group_return_series_unavailable` for a response with no
+    observations at all -- a methodology caveat attached to an absence.
+
+    Held here, at the level that can actually observe it (#293).
+    """
+    supportability = supportability_from_attribution_results(
+        returns=[],
+        as_of_date=dt.date(2026, 1, 5),
+        results={},
+    )
+
+    assert supportability.state == "empty"
+    assert supportability.reason == "no_return_observations"
+    assert supportability.degraded_metric_count == 0
 
 
 def test_risk_metric_supportability_counts_metric_errors_and_empty_periods() -> None:
