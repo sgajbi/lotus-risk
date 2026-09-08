@@ -124,9 +124,11 @@ Applies to `calculate`, `drawdown`, `rolling-metrics`, `historical-attribution` 
 attribution has no per-group return series, so every group is fed the same portfolio-level return and
 the covariance can only recover the weights: under constant weights `percent_contribution` reproduces
 the group weight exactly, and under `ACTIVE_RISK` the components sum to zero so the residual is the
-whole tracking error. It is therefore returned on **every** attribution response, including one with
-no quality flags — a clean-looking decomposition carries the identical limitation and is the one most
-likely to be presented as empirical. Do not activate a risk-attribution surface from these values;
+whole tracking error. It is therefore returned on **every attribution response that produced a decomposition**, including
+one with no quality flags — a clean-looking decomposition carries the identical limitation and is the
+one most likely to be presented as empirical. The one response it does not carry is `empty`: with no
+return observations the calculation had nothing to work on, so it reports
+`no_return_observations` and never reaches the decomposition this limitation is about. Do not activate a risk-attribution surface from these values;
 the supported scope is metric levels, group weights, freshness and this posture. Tracked in
 `lotus-risk#291`, blocked on a per-group return series contract with `lotus-performance`.
 

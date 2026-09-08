@@ -110,8 +110,10 @@ def supportability_from_attribution_results(
     # weights `percent_contribution` reproduces the weight exactly; under
     # ACTIVE_RISK the components sum to zero and the residual is the whole metric.
     #
-    # Reported as `degraded` rather than `ready` on every response, including
-    # responses with no quality flags at all -- a clean-looking decomposition is
+    # Reported as `degraded` rather than `ready` on every response that reaches
+    # here -- an `empty` result returned above with `no_return_observations`,
+    # having had nothing to decompose -- including responses with no quality
+    # flags at all, because a clean-looking decomposition is
     # precisely the one a consumer would present as empirical. `ready` here would
     # be the service asserting a measurement it has not made.
     return RiskCalculationSupportability(
