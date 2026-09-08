@@ -82,58 +82,65 @@ def supportability_from_attribution_results(
     as_of_date: dt.date,
     results: Mapping[str, Any],
 ) -> RiskCalculationSupportability:
-    supportability = supportability_from_period_results(
+    """Supportability for a historical-attribution response.
+
+    The structural group-return limitation is **composed with** the period
+    assessment, not substituted for it. It was substituted (#293, introduced by
+    #287), which discarded every actionable reason and every count: a period
+    failing with `Insufficient data` reported `group_return_series_unavailable`
+    and `degraded_metric_count=0` -- naming a limitation the operator cannot act
+    on while hiding the failure they can, and reporting zero degraded results at
+    the exact moment one had failed.
+    """
+    baseline = supportability_from_period_results(
         returns=returns,
         as_of_date=as_of_date,
         results=results,
     )
-    if supportability.state == "empty":
-        return supportability
 
-    degraded_set_count = 0
-    for period_result in results.values():
-        attribution_sets = getattr(period_result, "attribution_sets", ())
-        if not isinstance(attribution_sets, Sequence):
-            continue
-        for attribution_set in attribution_sets:
-            quality_flags = getattr(attribution_set, "quality_flags", ())
-            if isinstance(quality_flags, Sequence) and quality_flags:
-                degraded_set_count += 1
-
-    freshness_bucket = freshness_bucket_from_returns(returns, as_of_date=as_of_date)
-
-    # Unconditional, because the limitation is unconditional (lotus-risk#283).
-    # There is no per-group return series anywhere in this service: every group's
-    # contribution is built from `weight_g x r_portfolio`, the same series for
-    # every group, so all groups are perfectly correlated by construction and the
-    # covariance recovers nothing the weights do not already say. Under constant
-    # weights `percent_contribution` reproduces the weight exactly; under
-    # ACTIVE_RISK the components sum to zero and the residual is the whole metric.
+    # No observations means nothing was decomposed, so there is no weight proxy
+    # to qualify and the baseline already names why. Every other response
+    # composes.
     #
-    # Reported as `degraded` rather than `ready` on every response that reaches
-    # here -- an `empty` result returned above with `no_return_observations`,
-    # having had nothing to decompose -- including responses with no quality
-    # flags at all, because a clean-looking decomposition is
-    # precisely the one a consumer would present as empirical. `ready` here would
-    # be the service asserting a measurement it has not made.
+    # This guard is deliberately on the returns and not on the attribution sets.
+    # A set-count gate looks more precise and is worse on both counts: the
+    # engine short-circuits an empty response before this function is called
+    # (`attribution_engine.calculate_historical_attribution`), so the set-count
+    # branch was unreachable from the endpoint -- and where it did fire it fell
+    # through to a baseline that can be `ready`, which is the single answer this
+    # response must never give. Proved by mutation: replacing the set gate with
+    # `if False` changed no test, because no test could reach it.
+    if not returns:
+        return baseline
+
+    assessment = assess_period_results(results)
+
+    # The limitation enters as one more degradation reason and takes its rank in
+    # the existing precedence: below the actionable failures, above staleness and
+    # self-flagged quality. So a response that decomposed *and* failed somewhere
+    # reports the failure -- the reason an operator can act on -- while a
+    # response that only decomposed reports the limitation. No new rule; the
+    # precedence tuple already placed this reason for exactly this purpose.
+    #
+    # `degraded` unconditionally, never `ready`: the proxy is present whenever a
+    # set is, and a clean-looking decomposition is precisely the one a consumer
+    # would present as empirical risk attribution.
+    #
+    # Counts stay the period assessment's. `degraded_metric_count` is defined by
+    # the contract as results carrying deterministic error details; an
+    # attribution set carries a structural limitation, not an error. Counting
+    # sets there overstated the field on clean responses and -- because a failed
+    # period returns no sets -- reported 0 on exactly the responses that failed.
     return RiskCalculationSupportability(
         state="degraded",
-        reason="group_return_series_unavailable",
-        freshness_bucket=freshness_bucket,
-        degraded_metric_count=max(degraded_set_count, _attribution_set_count(results)),
-        empty_period_count=supportability.empty_period_count,
+        reason=select_supportability_reason(
+            [*assessment.degraded_reasons, "group_return_series_unavailable"]
+        ),
+        freshness_bucket=baseline.freshness_bucket,
+        degraded_metric_count=assessment.degraded_result_count,
+        empty_period_count=assessment.empty_period_count,
         evaluated_period_count=len(results),
     )
-
-
-def _attribution_set_count(results: Mapping[str, Any]) -> int:
-    """Every attribution set carries the limitation, not only the flagged ones."""
-    total = 0
-    for period_result in results.values():
-        attribution_sets = getattr(period_result, "attribution_sets", ())
-        if isinstance(attribution_sets, Sequence):
-            total += len(attribution_sets)
-    return total
 
 
 def supportability_from_risk_metric_results(

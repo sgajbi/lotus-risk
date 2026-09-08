@@ -241,3 +241,184 @@ class RecordingHistoricalAttributionCoreClient:
         correlation_id: str | None,
     ) -> dict[str, object]:
         return {"records": []}
+
+
+def build_stateless_attribution_payload() -> dict[str, object]:
+    """A stateless attribution request that decomposes cleanly.
+
+    Shared because the supportability cases (#293) need the same well-formed
+    request and then vary one thing each -- the returns, or the periods. A
+    second copy would let the baseline drift away from the case under test,
+    which is how a supportability assertion stops meaning anything.
+    """
+    return {
+        "input_mode": "stateless",
+        "stateless_input": {
+            "scope": {"as_of_date": "2026-01-06", "net_or_gross": "NET"},
+            "periods": [{"type": "YTD", "name": "YTD"}],
+            "returns": [
+                {"date": "2026-01-02", "value": 1.0},
+                {"date": "2026-01-05", "value": -0.4},
+                {"date": "2026-01-06", "value": 0.3},
+                {"date": "2026-01-05", "value": 0.6},
+                {"date": "2026-01-06", "value": -0.2},
+            ],
+            "benchmark_returns": [
+                {"date": "2026-01-02", "value": 0.8},
+                {"date": "2026-01-05", "value": -0.3},
+                {"date": "2026-01-06", "value": 0.2},
+                {"date": "2026-01-05", "value": 0.4},
+                {"date": "2026-01-06", "value": -0.1},
+            ],
+            "exposure_history": [
+                {
+                    "date": "2026-01-02",
+                    "grouping_dimension": "SECTOR",
+                    "group_key": "SECTOR_TECH",
+                    "group_label": "Technology",
+                    "weight": 0.55,
+                },
+                {
+                    "date": "2026-01-02",
+                    "grouping_dimension": "SECTOR",
+                    "group_key": "SECTOR_HEALTH",
+                    "group_label": "Healthcare",
+                    "weight": 0.45,
+                },
+                {
+                    "date": "2026-01-05",
+                    "grouping_dimension": "SECTOR",
+                    "group_key": "SECTOR_TECH",
+                    "group_label": "Technology",
+                    "weight": 0.50,
+                },
+                {
+                    "date": "2026-01-05",
+                    "grouping_dimension": "SECTOR",
+                    "group_key": "SECTOR_HEALTH",
+                    "group_label": "Healthcare",
+                    "weight": 0.50,
+                },
+                {
+                    "date": "2026-01-06",
+                    "grouping_dimension": "SECTOR",
+                    "group_key": "SECTOR_TECH",
+                    "group_label": "Technology",
+                    "weight": 0.52,
+                },
+                {
+                    "date": "2026-01-06",
+                    "grouping_dimension": "SECTOR",
+                    "group_key": "SECTOR_HEALTH",
+                    "group_label": "Healthcare",
+                    "weight": 0.48,
+                },
+                {
+                    "date": "2026-01-05",
+                    "grouping_dimension": "SECTOR",
+                    "group_key": "SECTOR_TECH",
+                    "group_label": "Technology",
+                    "weight": 0.54,
+                },
+                {
+                    "date": "2026-01-05",
+                    "grouping_dimension": "SECTOR",
+                    "group_key": "SECTOR_HEALTH",
+                    "group_label": "Healthcare",
+                    "weight": 0.46,
+                },
+                {
+                    "date": "2026-01-06",
+                    "grouping_dimension": "SECTOR",
+                    "group_key": "SECTOR_TECH",
+                    "group_label": "Technology",
+                    "weight": 0.53,
+                },
+                {
+                    "date": "2026-01-06",
+                    "grouping_dimension": "SECTOR",
+                    "group_key": "SECTOR_HEALTH",
+                    "group_label": "Healthcare",
+                    "weight": 0.47,
+                },
+            ],
+            "benchmark_exposure_history": [
+                {
+                    "date": "2026-01-02",
+                    "grouping_dimension": "SECTOR",
+                    "group_key": "SECTOR_TECH",
+                    "group_label": "Technology",
+                    "weight": 0.48,
+                },
+                {
+                    "date": "2026-01-02",
+                    "grouping_dimension": "SECTOR",
+                    "group_key": "SECTOR_HEALTH",
+                    "group_label": "Healthcare",
+                    "weight": 0.52,
+                },
+                {
+                    "date": "2026-01-05",
+                    "grouping_dimension": "SECTOR",
+                    "group_key": "SECTOR_TECH",
+                    "group_label": "Technology",
+                    "weight": 0.47,
+                },
+                {
+                    "date": "2026-01-05",
+                    "grouping_dimension": "SECTOR",
+                    "group_key": "SECTOR_HEALTH",
+                    "group_label": "Healthcare",
+                    "weight": 0.53,
+                },
+                {
+                    "date": "2026-01-06",
+                    "grouping_dimension": "SECTOR",
+                    "group_key": "SECTOR_TECH",
+                    "group_label": "Technology",
+                    "weight": 0.49,
+                },
+                {
+                    "date": "2026-01-06",
+                    "grouping_dimension": "SECTOR",
+                    "group_key": "SECTOR_HEALTH",
+                    "group_label": "Healthcare",
+                    "weight": 0.51,
+                },
+                {
+                    "date": "2026-01-05",
+                    "grouping_dimension": "SECTOR",
+                    "group_key": "SECTOR_TECH",
+                    "group_label": "Technology",
+                    "weight": 0.50,
+                },
+                {
+                    "date": "2026-01-05",
+                    "grouping_dimension": "SECTOR",
+                    "group_key": "SECTOR_HEALTH",
+                    "group_label": "Healthcare",
+                    "weight": 0.50,
+                },
+                {
+                    "date": "2026-01-06",
+                    "grouping_dimension": "SECTOR",
+                    "group_key": "SECTOR_TECH",
+                    "group_label": "Technology",
+                    "weight": 0.49,
+                },
+                {
+                    "date": "2026-01-06",
+                    "grouping_dimension": "SECTOR",
+                    "group_key": "SECTOR_HEALTH",
+                    "group_label": "Healthcare",
+                    "weight": 0.51,
+                },
+            ],
+            "attribution_options": {
+                "attribution_types": ["TOTAL_RISK", "ACTIVE_RISK"],
+                "metrics": ["VOLATILITY", "TRACKING_ERROR"],
+                "grouping_dimensions": ["SECTOR"],
+                "annualization_basis": 252,
+            },
+        },
+    }

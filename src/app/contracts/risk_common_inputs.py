@@ -34,6 +34,11 @@ RiskSupportabilityReason = Literal[
     # weight exactly, and ACTIVE_RISK leaves the whole tracking error as
     # residual. The decomposition is a weight proxy, not measured group risk,
     # and saying so is the difference between a limitation and a false number.
+    #
+    # It is composed with the period assessment rather than substituted for it
+    # (#293), so it is the reported `reason` only when nothing more severe is
+    # present. The limitation still applies to every decomposition; `reason`
+    # reports the most severe condition, and an actionable failure outranks it.
     "group_return_series_unavailable",
     "calculation_quality_issue",
     "insufficient_aligned_observations",

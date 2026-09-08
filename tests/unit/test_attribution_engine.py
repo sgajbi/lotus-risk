@@ -271,7 +271,9 @@ def test_attribution_engine_sets_quality_flag_for_missing_grouping_data() -> Non
     # series, which applies to every set whether or not it also carries a
     # per-set quality flag. The flag above still reaches the consumer verbatim.
     assert response.metadata.calculation_supportability.reason == "group_return_series_unavailable"
-    assert response.metadata.calculation_supportability.degraded_metric_count == 1
+    # 0, not 1 (#293): the set carries an advisory grouping flag, not a
+    # deterministic error, and the count field means the latter.
+    assert response.metadata.calculation_supportability.degraded_metric_count == 0
 
 
 def test_every_attribution_metric_states_its_unit_semantics() -> None:

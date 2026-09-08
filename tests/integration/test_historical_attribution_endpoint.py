@@ -10,190 +10,17 @@ from tests.support.historical_attribution_fakes import (
     build_benchmark_exposure_context_response,
     build_sector_position_timeseries_rows,
     build_stateful_attribution_returns_client,
+    build_stateless_attribution_payload,
 )
 
 _EXPECTED_SUPPORTABILITY_METRIC_LABELS = list(RISK_CALCULATION_SUPPORTABILITY_METRIC_LABELS)
-
-
-def _stateless_attribution_payload() -> dict[str, object]:
-    return {
-        "input_mode": "stateless",
-        "stateless_input": {
-            "scope": {"as_of_date": "2026-01-06", "net_or_gross": "NET"},
-            "periods": [{"type": "YTD", "name": "YTD"}],
-            "returns": [
-                {"date": "2026-01-02", "value": 1.0},
-                {"date": "2026-01-05", "value": -0.4},
-                {"date": "2026-01-06", "value": 0.3},
-                {"date": "2026-01-05", "value": 0.6},
-                {"date": "2026-01-06", "value": -0.2},
-            ],
-            "benchmark_returns": [
-                {"date": "2026-01-02", "value": 0.8},
-                {"date": "2026-01-05", "value": -0.3},
-                {"date": "2026-01-06", "value": 0.2},
-                {"date": "2026-01-05", "value": 0.4},
-                {"date": "2026-01-06", "value": -0.1},
-            ],
-            "exposure_history": [
-                {
-                    "date": "2026-01-02",
-                    "grouping_dimension": "SECTOR",
-                    "group_key": "SECTOR_TECH",
-                    "group_label": "Technology",
-                    "weight": 0.55,
-                },
-                {
-                    "date": "2026-01-02",
-                    "grouping_dimension": "SECTOR",
-                    "group_key": "SECTOR_HEALTH",
-                    "group_label": "Healthcare",
-                    "weight": 0.45,
-                },
-                {
-                    "date": "2026-01-05",
-                    "grouping_dimension": "SECTOR",
-                    "group_key": "SECTOR_TECH",
-                    "group_label": "Technology",
-                    "weight": 0.50,
-                },
-                {
-                    "date": "2026-01-05",
-                    "grouping_dimension": "SECTOR",
-                    "group_key": "SECTOR_HEALTH",
-                    "group_label": "Healthcare",
-                    "weight": 0.50,
-                },
-                {
-                    "date": "2026-01-06",
-                    "grouping_dimension": "SECTOR",
-                    "group_key": "SECTOR_TECH",
-                    "group_label": "Technology",
-                    "weight": 0.52,
-                },
-                {
-                    "date": "2026-01-06",
-                    "grouping_dimension": "SECTOR",
-                    "group_key": "SECTOR_HEALTH",
-                    "group_label": "Healthcare",
-                    "weight": 0.48,
-                },
-                {
-                    "date": "2026-01-05",
-                    "grouping_dimension": "SECTOR",
-                    "group_key": "SECTOR_TECH",
-                    "group_label": "Technology",
-                    "weight": 0.54,
-                },
-                {
-                    "date": "2026-01-05",
-                    "grouping_dimension": "SECTOR",
-                    "group_key": "SECTOR_HEALTH",
-                    "group_label": "Healthcare",
-                    "weight": 0.46,
-                },
-                {
-                    "date": "2026-01-06",
-                    "grouping_dimension": "SECTOR",
-                    "group_key": "SECTOR_TECH",
-                    "group_label": "Technology",
-                    "weight": 0.53,
-                },
-                {
-                    "date": "2026-01-06",
-                    "grouping_dimension": "SECTOR",
-                    "group_key": "SECTOR_HEALTH",
-                    "group_label": "Healthcare",
-                    "weight": 0.47,
-                },
-            ],
-            "benchmark_exposure_history": [
-                {
-                    "date": "2026-01-02",
-                    "grouping_dimension": "SECTOR",
-                    "group_key": "SECTOR_TECH",
-                    "group_label": "Technology",
-                    "weight": 0.48,
-                },
-                {
-                    "date": "2026-01-02",
-                    "grouping_dimension": "SECTOR",
-                    "group_key": "SECTOR_HEALTH",
-                    "group_label": "Healthcare",
-                    "weight": 0.52,
-                },
-                {
-                    "date": "2026-01-05",
-                    "grouping_dimension": "SECTOR",
-                    "group_key": "SECTOR_TECH",
-                    "group_label": "Technology",
-                    "weight": 0.47,
-                },
-                {
-                    "date": "2026-01-05",
-                    "grouping_dimension": "SECTOR",
-                    "group_key": "SECTOR_HEALTH",
-                    "group_label": "Healthcare",
-                    "weight": 0.53,
-                },
-                {
-                    "date": "2026-01-06",
-                    "grouping_dimension": "SECTOR",
-                    "group_key": "SECTOR_TECH",
-                    "group_label": "Technology",
-                    "weight": 0.49,
-                },
-                {
-                    "date": "2026-01-06",
-                    "grouping_dimension": "SECTOR",
-                    "group_key": "SECTOR_HEALTH",
-                    "group_label": "Healthcare",
-                    "weight": 0.51,
-                },
-                {
-                    "date": "2026-01-05",
-                    "grouping_dimension": "SECTOR",
-                    "group_key": "SECTOR_TECH",
-                    "group_label": "Technology",
-                    "weight": 0.50,
-                },
-                {
-                    "date": "2026-01-05",
-                    "grouping_dimension": "SECTOR",
-                    "group_key": "SECTOR_HEALTH",
-                    "group_label": "Healthcare",
-                    "weight": 0.50,
-                },
-                {
-                    "date": "2026-01-06",
-                    "grouping_dimension": "SECTOR",
-                    "group_key": "SECTOR_TECH",
-                    "group_label": "Technology",
-                    "weight": 0.49,
-                },
-                {
-                    "date": "2026-01-06",
-                    "grouping_dimension": "SECTOR",
-                    "group_key": "SECTOR_HEALTH",
-                    "group_label": "Healthcare",
-                    "weight": 0.51,
-                },
-            ],
-            "attribution_options": {
-                "attribution_types": ["TOTAL_RISK", "ACTIVE_RISK"],
-                "metrics": ["VOLATILITY", "TRACKING_ERROR"],
-                "grouping_dimensions": ["SECTOR"],
-                "annualization_basis": 252,
-            },
-        },
-    }
 
 
 def test_historical_attribution_stateless_happy_path() -> None:
     client = TestClient(app)
     response = client.post(
         "/analytics/risk/historical-attribution",
-        json=_stateless_attribution_payload(),
+        json=build_stateless_attribution_payload(),
     )
     assert response.status_code == 200
     body = response.json()
@@ -216,7 +43,8 @@ def test_historical_attribution_stateless_happy_path() -> None:
         "reason": "group_return_series_unavailable",
         "freshness_bucket": "current",
         "metric_labels": _EXPECTED_SUPPORTABILITY_METRIC_LABELS,
-        "degraded_metric_count": 4,
+        # 0, not 4 (#293): four attribution sets were produced and none failed.
+        "degraded_metric_count": 0,
         "empty_period_count": 0,
         "evaluated_period_count": 1,
     }
@@ -228,7 +56,7 @@ def test_historical_attribution_stateless_happy_path() -> None:
 
 def test_historical_attribution_supportability_marks_empty_returns() -> None:
     client = TestClient(app)
-    payload = _stateless_attribution_payload()
+    payload = build_stateless_attribution_payload()
     payload["stateless_input"]["returns"] = []  # type: ignore[index]
     response = client.post(
         "/analytics/risk/historical-attribution",

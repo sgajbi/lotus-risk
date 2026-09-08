@@ -38,6 +38,19 @@ GLOSSARY = ROOT / "wiki" / "Glossary.md"
 DECLARED = frozenset(get_args(RiskSupportabilityReason))
 
 
+def _prose(path: Path) -> str:
+    """Published text with emphasis, code styling and line wrapping removed.
+
+        A content assertion should fail when the claim changes, not when the
+        paragraph rewraps or a term gains backticks. Both happened here: `**every**`
+        defeated a raw match, and "on a clean
+    decomposition" defeated a phrase that
+        spanned the wrap.
+    """
+    raw = path.read_text(encoding="utf-8").lower().replace("*", "").replace("`", "")
+    return " ".join(raw.split())
+
+
 def _reason_row_codes() -> frozenset[str]:
     """The `| reason | ... |` row of the supportability table, as a set."""
     text = API_SURFACE.read_text(encoding="utf-8")
@@ -102,39 +115,54 @@ def test_the_glossary_explains_the_reasons_it_mentions() -> None:
     )
 
 
-def test_group_return_series_unavailable_is_documented_as_unconditional() -> None:
-    """The property a consumer most needs and would not infer from a code name.
+def test_the_surface_warns_that_reason_does_not_always_name_the_limitation() -> None:
+    """The property a consumer most needs, and the one that changed (#293).
 
-    It is returned on every attribution response, including unflagged ones --
-    the case most likely to be presented as empirical. A reader who assumes it
-    appears only on degraded-looking output will activate a surface on a weight
-    proxy, which is what `lotus-report#254` and `lotus-render#270` are gated on.
+    The surface previously said the reason was returned on "every attribution
+    response that produced a decomposition". That became false when the
+    limitation was composed with the period assessment instead of substituted
+    for it: an actionable failure now outranks it, so a response that decomposed
+    one period and failed another reports `insufficient_observations`.
+
+    The dangerous inference is the inverse one -- reading the absence of this
+    reason as evidence the decomposition is measured. A consumer that gates a
+    risk-attribution surface on `reason == group_return_series_unavailable`
+    would activate it on exactly the responses that also failed something. So
+    the surface must state the rule that does hold: the `degraded` state, not
+    the reason, is what a consumer can rely on.
+
+    `lotus-report#254` and `lotus-render#270` are gated on this text.
     """
-    text = API_SURFACE.read_text(encoding="utf-8")
-    assert "group_return_series_unavailable" in text, "the reason is not documented at all"
+    text = _prose(API_SURFACE)
 
-    # The paragraph that explains it, not a fixed window after the first
-    # mention: the first mention is the table row, and the prose sits below the
-    # rest of the table. An offset-based check passed or failed on where the
-    # table happened to end.
-    blank_line = "\n" + "\n"
-    paragraphs = [p for p in text.split(blank_line) if "group_return_series_unavailable" in p]
-    explanatory = [p for p in paragraphs if not p.lstrip().startswith("|")]
-    assert explanatory, "the reason appears only in a table row, with no prose explaining it"
+    assert "every decomposition" in text, (
+        "the surface must state that the limitation applies to every decomposition"
+    )
+    assert "reason reports the most severe condition" in text, (
+        "the surface must say that `reason` is drawn by precedence and can name "
+        "something else -- without it, a consumer reads the reason's absence as "
+        "an all-clear"
+    )
+    assert "never ready" in text, (
+        "the surface must give the rule that holds without exception: a response "
+        "that decomposed is never ready"
+    )
 
-    # The PHRASE, not the word. The same paragraph already contains "every group
-    # is fed the same portfolio-level return", so a bare `"every" in p` is
-    # satisfied by an unrelated sentence and passes while the claim under test
-    # has been deleted -- measured, not hypothesised: removing "**every**
-    # attribution response" left this assertion green.
-    # Emphasis stripped first: the source says "**every** attribution response",
-    # so matching the raw text fails on the asterisks while the claim is present
-    # and correct. A content assertion should not depend on markdown styling.
-    plain = [p.lower().replace("*", "") for p in explanatory]
-    assert any("every attribution response that produced a decomposition" in p for p in plain), (
-        "the surface must scope this reason to responses that produced a decomposition: "
-        "a bare 'every attribution response' is false, because an empty result returns "
-        "no_return_observations without reaching the decomposition"
+
+def test_the_surface_states_what_the_degraded_count_means_for_attribution() -> None:
+    """A zero count beside `degraded` is correct, and looks like a bug.
+
+    `degraded_metric_count` counts period results carrying deterministic errors,
+    so a clean decomposition reports `degraded` with 0. An operator who reads
+    the count as "how many things are wrong" sees a contradiction and goes
+    looking for a fault that is not there.
+    """
+    text = _prose(API_SURFACE)
+
+    assert "degraded_metric_count" in text, "the count is undocumented"
+    window = text.split("degraded_metric_count")[-1]
+    assert "0" in window and "clean decomposition" in window, (
+        "the surface must say the count is 0 on a clean decomposition and why"
     )
 
 
@@ -151,7 +179,7 @@ def test_the_empty_response_exception_is_documented() -> None:
     believes the reason is unconditional will treat its absence as a bug, and go
     looking for a fault in a response that is behaving correctly.
     """
-    text = API_SURFACE.read_text(encoding="utf-8").lower().replace("*", "")
+    text = _prose(API_SURFACE)
 
     assert "no_return_observations" in text
     window = text.split("group_return_series_unavailable")[-1]
