@@ -94,6 +94,7 @@ branched on mechanically — branch on the one belonging to the endpoint you cal
 | **`insufficient_observations`** | not enough history |
 | **`insufficient_aligned_observations`** | portfolio and benchmark history did not overlap enough. A different problem, and a different fix. |
 | **`benchmark_unavailable`** | a benchmark-dependent metric was requested without a usable benchmark |
+| **`group_return_series_unavailable`** | historical attribution has no per-group return series, so the decomposition is a weight proxy rather than measured group risk. Returned on **every** attribution response, flagged or not. Not a property of the request — a source limitation this service states rather than implies |
 | **`unsupported_input_mode`** | the request shape is not supported for this workflow — the answer `/integration/capabilities` would have given in advance |
 | **freshness bucket** | `current`, `same_day`, `stale`, `unknown` — how recent the underlying observations are |
 | **lineage** | the record of which upstream sources and versions produced an answer |
