@@ -89,6 +89,10 @@ async def calculate_historical_attribution_stateful(
                 mode="json",
                 exclude_none=False,
             ),
-            "group_evidence": canonical_group_evidence_payload(resolved_inputs.group_evidence),
+            "group_evidence": canonical_group_evidence_payload(
+                resolved_inputs.group_evidence,
+                attribution_types=resolved_inputs.stateless_input.attribution_options.attribution_types,
+                metrics=resolved_inputs.stateless_input.attribution_options.metrics,
+            ),
         },
     )

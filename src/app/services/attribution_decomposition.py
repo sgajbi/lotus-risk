@@ -18,7 +18,10 @@ from app.services.attribution_calculation import (
     attribution_calculation_inputs,
     empirical_total_risk_inputs,
 )
-from app.services.attribution_group_evidence import GroupEvidencePack
+from app.services.attribution_group_evidence import (
+    GroupEvidencePack,
+    group_evidence_applies_to_set,
+)
 from app.services.attribution_set_results import (
     calculated_attribution_set,
     empty_attribution_set,
@@ -133,7 +136,10 @@ def _empirical_evidence_for_set(
     ACTIVE_RISK needs benchmark-group return series under the same grouping, which the
     producer does not supply (lotus-risk#291 residual), so it never uses this evidence.
     """
-    if request.attribution_type != "TOTAL_RISK":
+    if not group_evidence_applies_to_set(
+        attribution_type=request.attribution_type,
+        metric=request.metric,
+    ):
         return None
     return request.group_evidence
 

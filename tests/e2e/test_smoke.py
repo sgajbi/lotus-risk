@@ -725,6 +725,43 @@ def test_e2e_historical_attribution_stateful_active_risk_mode() -> None:
     assert not hasattr(core_client, "get_benchmark_market_series")
 
 
+def test_e2e_historical_attribution_active_risk_does_not_dispatch_portfolio_group_evidence() -> (
+    None
+):
+    """Portfolio-only contribution rows cannot be consumed by active-risk covariance."""
+    performance_client = build_stateful_attribution_returns_client()
+    core_client = RecordingHistoricalAttributionCoreClient()
+
+    with override_app_runtime(
+        lotus_performance_client=performance_client,
+        lotus_core_client=core_client,
+    ):
+        response = TestClient(app).post(
+            "/analytics/risk/historical-attribution",
+            headers={
+                "X-Correlation-Id": "corr-e2e-attr-active-no-group",
+                "X-Tenant-Id": "tenant-a",
+            },
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-06",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "attribution_options": {
+                        "attribution_types": ["ACTIVE_RISK"],
+                        "metrics": ["TRACKING_ERROR"],
+                        "grouping_dimensions": ["SECTOR"],
+                    },
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()["results"]["YTD"]["attribution_sets"][0]["risk_basis"] == "weight_proxy"
+    assert performance_client.contribution_calls == []
+
+
 def test_e2e_historical_attribution_stateful_issuer_active_risk_mode() -> None:
     performance_client = build_stateful_attribution_returns_client()
     performance_client.benchmark_exposure_context_payload = (

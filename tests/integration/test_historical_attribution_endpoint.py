@@ -688,6 +688,136 @@ def test_historical_attribution_stateful_empirical_group_returns_end_to_end() ->
     )
 
 
+def _unclassified_contribution_response(*, dimension_field: str) -> dict[str, object]:
+    dates = ["2026-01-02", "2026-01-05", "2026-01-06"]
+    portfolio_returns = [1.0, -0.5, 0.4]
+
+    def row(group: str) -> dict[str, object]:
+        return {
+            "key": {dimension_field: group},
+            "is_other": False,
+            "group_return": {
+                "status": "READY",
+                "currency": "USD",
+                "return_basis": "SOURCE_POSITION_VALUATION_TWR",
+                "weight_basis": "BEGINNING_CAPITAL_RATIO",
+                "series": [
+                    {
+                        "date": day,
+                        "return_pct": value,
+                        "portfolio_weight_pct": 50.0,
+                    }
+                    for day, value in zip(dates, portfolio_returns, strict=True)
+                ],
+            },
+        }
+
+    return {
+        "results_by_period": {
+            "EXPLICIT": {
+                "levels": [
+                    {
+                        "name": dimension_field,
+                        "rows": [
+                            row("TECH" if dimension_field == "sector" else "EQUITY"),
+                            row("Unclassified"),
+                        ],
+                    }
+                ]
+            }
+        }
+    }
+
+
+@pytest.mark.parametrize(
+    ("grouping_dimension", "dimension_field", "missing_dimensions", "unknown_key"),
+    [
+        ("SECTOR", "sector", {"asset_class": "EQUITY"}, "SECTOR_UNKNOWN"),
+        (
+            "SECTOR",
+            "sector",
+            {"sector": None, "asset_class": "EQUITY"},
+            "SECTOR_UNKNOWN",
+        ),
+        ("ASSET_CLASS", "asset_class", {"sector": "TECH"}, "ASSET_CLASS_UNKNOWN"),
+        (
+            "ASSET_CLASS",
+            "asset_class",
+            {"sector": "TECH", "asset_class": None},
+            "ASSET_CLASS_UNKNOWN",
+        ),
+    ],
+    ids=["sector_missing", "sector_null", "asset_class_missing", "asset_class_null"],
+)
+def test_stateful_route_accepts_performance_unclassified_for_core_missing_dimensions(
+    grouping_dimension: str,
+    dimension_field: str,
+    missing_dimensions: dict[str, object],
+    unknown_key: str,
+) -> None:
+    """Exercise the route with Core's missing/null source dimensions and Performance's actual bucket."""
+    dates = ["2026-01-02", "2026-01-05", "2026-01-06"]
+    classified_dimensions = {"sector": "TECH", "asset_class": "EQUITY"}
+    core_rows: list[dict[str, object]] = []
+    for index, valuation_date in enumerate(dates):
+        core_rows.extend(
+            [
+                {
+                    "security_id": "SEC_CLASSIFIED",
+                    "valuation_date": valuation_date,
+                    "dimensions": classified_dimensions,
+                    "ending_market_value_portfolio_currency": "50",
+                },
+                {
+                    "security_id": "SEC_MISSING",
+                    "valuation_date": valuation_date,
+                    "dimensions": missing_dimensions,
+                    "ending_market_value_portfolio_currency": "50",
+                },
+            ]
+        )
+
+    performance_client = build_stateful_attribution_returns_client()
+    performance_client.contribution_response = _unclassified_contribution_response(
+        dimension_field=dimension_field
+    )
+    with override_app_runtime(
+        lotus_performance_client=performance_client,
+        lotus_core_client=RecordingHistoricalAttributionCoreClient(rows=core_rows),
+    ):
+        response = TestClient(app).post(
+            "/analytics/risk/historical-attribution",
+            headers={"X-Correlation-Id": "corr-unclassified", "X-Tenant-Id": "tenant-a"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-06",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "attribution_options": {
+                        "attribution_types": ["TOTAL_RISK"],
+                        "metrics": ["VOLATILITY"],
+                        "grouping_dimensions": [grouping_dimension],
+                    },
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    attribution_set = body["results"]["YTD"]["attribution_sets"][0]
+    assert attribution_set["risk_basis"] == "empirical_group_returns"
+    assert attribution_set["quality_flags"] == []
+    assert {item["group_key"] for item in attribution_set["contributors"]} == {
+        "SECTOR_TECH" if grouping_dimension == "SECTOR" else "ASSET_CLASS_EQUITY",
+        unknown_key,
+    }
+    assert body["metadata"]["calculation_supportability"]["state"] == "ready"
+    contribution_request = performance_client.contribution_calls[0]["request_payload"]
+    assert contribution_request["hierarchy"] == [dimension_field]
+    assert contribution_request["emit"]["include_unclassified"] is True
+
+
 def test_stateful_attribution_forwards_core_owned_reporting_currency_without_fx() -> None:
     """The routed Risk workflow preserves Performance's BASE_ONLY source contract.
 

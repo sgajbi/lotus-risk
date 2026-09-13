@@ -31,12 +31,15 @@ shape changed without logging full customer payloads.
 For stateful historical attribution, the stable
 `lotus-performance:/performance/contribution` key fingerprints a canonical, sorted **request
 set**, not only the last call. Its value contains every resolved period/dimension contribution
-request, so repeated calls cannot overwrite lineage. The response `request_fingerprint` separately
-binds the canonical group observations actually admitted to covariance (including their resolved
-period, dimension, expected Core group universe, dates, returns, weights, and degradation flags).
-Equivalent shuffled source rows yield the same calculation-input fingerprint; changed evidence
-changes it. These reproducibility identities deliberately exclude downstream authorization,
-which remains admission context rather than calculation input.
+request that Risk actually sent, so repeated calls cannot overwrite lineage. The response
+`request_fingerprint` separately binds canonical group observations only when a supported
+`TOTAL_RISK` + `VOLATILITY` set admits them to covariance (including their resolved period,
+dimension, expected Core group universe, dates, returns, weights, and degradation flags).
+Unsupported `TOTAL_RISK` metrics and `ACTIVE_RISK` neither request portfolio group-return evidence
+nor include unused observations in the calculation fingerprint. Equivalent shuffled consumed source
+rows yield the same calculation-input fingerprint; changed consumed evidence changes it. These
+reproducibility identities deliberately exclude downstream authorization, which remains admission
+context rather than calculation input.
 
 For stateful `risk/calculate`, Sharpe risk-free treatment uses a direct
 `lotus-core:/integration/reference/risk-free-series` upstream request fingerprint. The

@@ -128,9 +128,10 @@ def _evidence_row(
     returns_pp: list[float],
     *,
     currency: str = "USD",
+    dimension_field: str = "sector",
 ) -> dict[str, Any]:
     return {
-        "key": {"sector": group_key},
+        "key": {dimension_field: group_key},
         "contribution": 0.0,
         "weight_avg": sum(weights) / len(weights) * 100.0,
         "is_other": False,
@@ -146,10 +147,12 @@ def _evidence_row(
     }
 
 
-def _contribution_response(rows: list[dict[str, Any]]) -> dict[str, Any]:
+def _contribution_response(
+    rows: list[dict[str, Any]], *, dimension_field: str = "sector"
+) -> dict[str, Any]:
     return {
         "results_by_period": {
-            "EXPLICIT": {"levels": [{"level": 1, "name": "sector", "rows": rows}]}
+            "EXPLICIT": {"levels": [{"level": 1, "name": dimension_field, "rows": rows}]}
         }
     }
 
@@ -167,6 +170,8 @@ def _pack(
     *,
     expected_currency: str | None = "USD",
     expected_group_key_by_source_key: Mapping[str, str] | None = None,
+    grouping_dimension: GroupingDimension = "SECTOR",
+    dimension_field: str = "sector",
 ) -> GroupEvidencePack:
     if expected_group_key_by_source_key is None:
         results = response.get("results_by_period")
@@ -174,17 +179,17 @@ def _pack(
         levels = period.get("levels", []) if isinstance(period, Mapping) else []
         rows = levels[0].get("rows", []) if levels and isinstance(levels[0], dict) else []
         expected_group_key_by_source_key = {
-            str(row["key"]["sector"]): str(row["key"]["sector"])
+            str(row["key"][dimension_field]): str(row["key"][dimension_field])
             for row in rows
             if isinstance(row, dict)
             and not row.get("is_other")
             and isinstance(row.get("key"), dict)
-            and row["key"].get("sector") is not None
+            and row["key"].get(dimension_field) is not None
         }
     return parse_group_evidence(
         response,
-        grouping_dimension="SECTOR",
-        dimension_field="sector",
+        grouping_dimension=grouping_dimension,
+        dimension_field=dimension_field,
         expected_currency=expected_currency,
         portfolio_returns=_portfolio_points(),
         expected_group_key_by_source_key=expected_group_key_by_source_key,
@@ -481,6 +486,128 @@ def test_declared_absences_map_to_bounded_flags() -> None:
 
     empty = _pack({"results_by_period": {}})
     assert empty.degradation_flags == (FLAG_PERIOD_MISSING,)
+
+
+@pytest.mark.parametrize(
+    ("grouping_dimension", "dimension_field", "classified_key", "unknown_key"),
+    [
+        ("SECTOR", "sector", "SECTOR_TECH", "SECTOR_UNKNOWN"),
+        ("ASSET_CLASS", "asset_class", "ASSET_CLASS_EQUITY", "ASSET_CLASS_UNKNOWN"),
+    ],
+)
+def test_performance_unclassified_alias_maps_to_core_missing_dimension_identity(
+    grouping_dimension: GroupingDimension,
+    dimension_field: str,
+    classified_key: str,
+    unknown_key: str,
+) -> None:
+    """Performance's producer-owned missing-field bucket retains Core's UNKNOWN identity."""
+    rows = [
+        _evidence_row(
+            "TECH" if grouping_dimension == "SECTOR" else "EQUITY",
+            W_EQUITY,
+            A_EQUITY,
+            dimension_field=dimension_field,
+        ),
+        _evidence_row(
+            "Unclassified",
+            W_FIXED,
+            A_FIXED,
+            dimension_field=dimension_field,
+        ),
+        _evidence_row(
+            "CASH",
+            W_CASH,
+            ZERO_CASH,
+            dimension_field=dimension_field,
+        ),
+    ]
+    expected_universe = {
+        "TECH" if grouping_dimension == "SECTOR" else "EQUITY": classified_key,
+        "UNKNOWN": unknown_key,
+        "Unclassified": unknown_key,
+        "CASH": f"{grouping_dimension}_CASH",
+    }
+
+    pack = _pack(
+        _contribution_response(rows, dimension_field=dimension_field),
+        expected_group_key_by_source_key=expected_universe,
+        grouping_dimension=grouping_dimension,
+        dimension_field=dimension_field,
+    )
+
+    assert pack.empirical
+    assert set(pack.series_by_group) == {
+        classified_key,
+        unknown_key,
+        f"{grouping_dimension}_CASH",
+    }
+
+
+@pytest.mark.parametrize(
+    ("grouping_dimension", "dimension_field", "classified_key", "unknown_key"),
+    [
+        ("SECTOR", "sector", "SECTOR_TECH", "SECTOR_UNKNOWN"),
+        ("ASSET_CLASS", "asset_class", "ASSET_CLASS_EQUITY", "ASSET_CLASS_UNKNOWN"),
+    ],
+)
+def test_unclassified_declared_unavailable_degrades_without_losing_core_universe(
+    grouping_dimension: GroupingDimension,
+    dimension_field: str,
+    classified_key: str,
+    unknown_key: str,
+) -> None:
+    rows = [
+        _evidence_row(
+            "TECH" if grouping_dimension == "SECTOR" else "EQUITY",
+            W_EQUITY,
+            A_EQUITY,
+            dimension_field=dimension_field,
+        ),
+        {
+            "key": {dimension_field: "Unclassified"},
+            "contribution": 0.0,
+            "is_other": False,
+            "group_return": {
+                "status": "UNAVAILABLE",
+                "currency": None,
+                "series": [],
+                "reason": "SOURCE_POSITION_VALUATION_ECONOMICS_INCOMPLETE",
+            },
+        },
+        _evidence_row("CASH", W_CASH, ZERO_CASH, dimension_field=dimension_field),
+    ]
+    expected_universe = {
+        "TECH" if grouping_dimension == "SECTOR" else "EQUITY": classified_key,
+        "UNKNOWN": unknown_key,
+        "Unclassified": unknown_key,
+        "CASH": f"{grouping_dimension}_CASH",
+    }
+
+    pack = _pack(
+        _contribution_response(rows, dimension_field=dimension_field),
+        expected_group_key_by_source_key=expected_universe,
+        grouping_dimension=grouping_dimension,
+        dimension_field=dimension_field,
+    )
+
+    assert not pack.empirical
+    assert pack.degradation_flags == ("group_return_evidence:unavailable",)
+
+
+def test_foreign_producer_group_remains_an_invalid_response() -> None:
+    rows = _scenario_rows(A_EQUITY, A_FIXED)
+    rows[1]["key"] = {"sector": "FOREIGN"}
+    with pytest.raises(UpstreamServiceError) as excinfo:
+        _pack(
+            _contribution_response(rows),
+            expected_group_key_by_source_key={
+                "equity": "SECTOR_EQUITY",
+                "fixed_income": "SECTOR_FIXED_INCOME",
+                "cash": "SECTOR_CASH",
+            },
+        )
+    assert excinfo.value.code == "UPSTREAM_INVALID_RESPONSE"
 
 
 @pytest.mark.parametrize(
