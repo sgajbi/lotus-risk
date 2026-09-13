@@ -2,6 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.contracts.downstream_authority import (
+    MISSING_TENANT_AUTHORITY_CODE,
+    MISSING_TENANT_AUTHORITY_MESSAGE,
+)
 from app.contracts.error import ErrorResponse
 
 
@@ -99,6 +103,15 @@ ERROR_RESPONSE_DEFAULT = _error_response_metadata(
     message="Unexpected error",
     instance="/analytics/risk/calculate",
 )
+ERROR_RESPONSE_401 = _error_response_metadata(
+    description=(
+        "Stateful request missing admitted tenant authority; refused before any upstream request."
+    ),
+    status_code=401,
+    code=MISSING_TENANT_AUTHORITY_CODE,
+    message=MISSING_TENANT_AUTHORITY_MESSAGE,
+    instance="/analytics/risk/calculate",
+)
 STANDARD_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     400: ERROR_RESPONSE_400,
     424: _error_response_metadata(
@@ -158,11 +171,19 @@ STANDARD_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
 }
 
 
+STATEFUL_TENANT_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
+    **STANDARD_ERROR_RESPONSES,
+    401: ERROR_RESPONSE_401,
+}
+
+
 __all__ = [
     "ERROR_RESPONSE_400",
+    "ERROR_RESPONSE_401",
     "ERROR_RESPONSE_403",
     "ERROR_RESPONSE_404",
     "ERROR_RESPONSE_422",
     "ERROR_RESPONSE_DEFAULT",
     "STANDARD_ERROR_RESPONSES",
+    "STATEFUL_TENANT_ERROR_RESPONSES",
 ]

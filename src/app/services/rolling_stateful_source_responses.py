@@ -4,6 +4,7 @@ import asyncio
 from datetime import date
 from typing import Any
 
+from app.contracts.downstream_authority import DownstreamAuthority
 from app.contracts.rolling import RollingStatefulInput
 from app.services.core_risk_free_series import build_risk_free_series_request
 from app.services.rolling_stateful_dependency_selection import requires_benchmark
@@ -48,7 +49,7 @@ async def fetch_stateful_source_responses(
     *,
     performance_client: LotusPerformanceClientProtocol,
     core_client: LotusCoreClientProtocol | None,
-    correlation_id: str | None,
+    authority: DownstreamAuthority,
     include_risk_free: bool,
     reporting_currency: str | None,
 ) -> StatefulSourceResponses:
@@ -66,7 +67,7 @@ async def fetch_stateful_source_responses(
         risk_free_request=risk_free_request,
         performance_client=performance_client,
         core_client=checked_core_client,
-        correlation_id=correlation_id,
+        authority=authority,
     )
     return StatefulSourceResponses(
         source_payload=source_payload,
@@ -111,23 +112,24 @@ async def _fetch_returns_and_risk_free_responses(
     risk_free_request: dict[str, Any] | None,
     performance_client: LotusPerformanceClientProtocol,
     core_client: LotusCoreClientProtocol | None,
-    correlation_id: str | None,
+    authority: DownstreamAuthority,
 ) -> tuple[dict[str, Any], dict[str, Any] | None]:
     if risk_free_request is not None and core_client is not None:
         source_response, risk_free_response = await asyncio.gather(
             performance_client.get_returns_series(
                 request_payload=source_payload,
-                correlation_id=correlation_id,
+                authority=authority,
             ),
+            # Risk-free rates are a global reference read; only correlation travels.
             core_client.get_risk_free_series(
                 request_payload=risk_free_request,
-                correlation_id=correlation_id,
+                correlation_id=authority.correlation_id,
             ),
         )
         return source_response, risk_free_response
     source_response = await performance_client.get_returns_series(
         request_payload=source_payload,
-        correlation_id=correlation_id,
+        authority=authority,
     )
     return source_response, None
 

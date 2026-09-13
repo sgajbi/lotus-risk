@@ -4,6 +4,7 @@ from datetime import date
 from typing import Any, Protocol
 
 from app.contracts.attribution import GroupingDimension
+from app.contracts.downstream_authority import DownstreamAuthority
 from app.upstream_errors import invalid_upstream_payload
 
 POSITION_TIMESERIES_PAGE_SIZE = 5000
@@ -17,7 +18,7 @@ class LotusCorePositionTimeseriesClient(Protocol):
         *,
         portfolio_id: str,
         request_payload: dict[str, Any],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, Any]: ...
 
 
@@ -38,7 +39,7 @@ async def fetch_position_timeseries_rows(
     start_date: date,
     reporting_currency: str | None,
     grouping_dimensions: list[GroupingDimension],
-    correlation_id: str | None,
+    authority: DownstreamAuthority,
 ) -> list[dict[str, Any]]:
     dimensions = position_timeseries_dimensions(grouping_dimensions)
     page_token: str | None = None
@@ -55,7 +56,7 @@ async def fetch_position_timeseries_rows(
                 dimensions=dimensions,
                 page_token=page_token,
             ),
-            correlation_id=correlation_id,
+            authority=authority,
         )
         page_count += 1
         rows.extend(_extract_position_rows_batch(response=response, portfolio_id=portfolio_id))

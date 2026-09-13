@@ -263,7 +263,7 @@ def test_metrics_expose_stateful_endpoint_execution_mode() -> None:
         response = client.post(
             "/analytics/risk/calculate",
             json=_risk_stateful_payload(),
-            headers={"X-Correlation-Id": "corr-observability"},
+            headers={"X-Correlation-Id": "corr-observability", "X-Tenant-Id": "tenant-a"},
         )
 
     assert response.status_code == 200

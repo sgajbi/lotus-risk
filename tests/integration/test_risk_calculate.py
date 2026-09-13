@@ -1,6 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
+from app.contracts.downstream_authority import DownstreamAuthority
 from app.main import app
 from app.upstream_errors import UpstreamServiceError
 from tests.support.app_runtime import override_app_runtime
@@ -335,7 +336,7 @@ def test_risk_calculate_stateful_mode_uses_lotus_performance_returns_series() ->
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/calculate",
-            headers={"X-Correlation-Id": "corr-risk-stateful"},
+            headers={"X-Correlation-Id": "corr-risk-stateful", "X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "stateful",
                 "stateful_input": {
@@ -420,7 +421,7 @@ def test_risk_calculate_stateful_sharpe_uses_sourced_risk_free_returns() -> None
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/calculate",
-            headers={"X-Correlation-Id": "corr-risk-stateful-rf"},
+            headers={"X-Correlation-Id": "corr-risk-stateful-rf", "X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "stateful",
                 "stateful_input": {
@@ -516,7 +517,7 @@ def test_risk_calculate_stateful_mode_preserves_gross_metric_basis_and_currency(
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/calculate",
-            headers={"X-Correlation-Id": "corr-risk-stateful-gross"},
+            headers={"X-Correlation-Id": "corr-risk-stateful-gross", "X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "stateful",
                 "stateful_input": {
@@ -546,7 +547,7 @@ def test_risk_calculate_stateful_mode_uses_runtime_performance_client_override()
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/calculate",
-            headers={"X-Correlation-Id": "corr-runtime"},
+            headers={"X-Correlation-Id": "corr-runtime", "X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "stateful",
                 "stateful_input": {
@@ -566,7 +567,7 @@ def test_risk_calculate_stateful_mode_fails_closed_without_runtime_client() -> N
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/calculate",
-            headers={"X-Correlation-Id": "corr-runtime-missing"},
+            headers={"X-Correlation-Id": "corr-runtime-missing", "X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "stateful",
                 "stateful_input": {
@@ -595,7 +596,7 @@ def test_risk_calculate_stateful_surfaces_upstream_unavailable_with_dependency_e
             self,
             *,
             request_payload: dict[str, object],
-            correlation_id: str | None,
+            authority: DownstreamAuthority,
         ) -> dict[str, object]:
             raise UpstreamServiceError(
                 service="lotus-performance",
@@ -614,7 +615,7 @@ def test_risk_calculate_stateful_surfaces_upstream_unavailable_with_dependency_e
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/calculate",
-            headers={"X-Correlation-Id": "corr-risk-upstream-down"},
+            headers={"X-Correlation-Id": "corr-risk-upstream-down", "X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "stateful",
                 "stateful_input": {

@@ -56,7 +56,7 @@ async def test_calculate_concentration_stateless_uses_projected_values_when_prov
             },
         }
     )
-    response = (await calculate_concentration(request)).model_dump()
+    response = (await calculate_concentration(request, authority=None)).model_dump()
     assert response["source_service"] == "lotus-risk"
     assert response["risk_proxy"]["hhi_current"] == 5000.0
     assert response["risk_proxy"]["hhi_proposed"] == 6250.0
@@ -156,7 +156,7 @@ async def test_position_hhi_matches_documented_stateless_methodology_example() -
         }
     )
 
-    response = (await calculate_concentration(request)).model_dump()
+    response = (await calculate_concentration(request, authority=None)).model_dump()
 
     assert response["risk_proxy"] == {
         "hhi_current": 3800.0,
@@ -205,7 +205,7 @@ async def test_top_position_weight_matches_documented_stateless_methodology_exam
         }
     )
 
-    response = (await calculate_concentration(request)).model_dump()
+    response = (await calculate_concentration(request, authority=None)).model_dump()
 
     single_position = response["single_position_concentration"]
     assert single_position["top_position_weight_current"] == 0.5
@@ -246,7 +246,7 @@ async def test_top_n_cumulative_weight_matches_documented_stateless_methodology_
         }
     )
 
-    response = (await calculate_concentration(request)).model_dump()
+    response = (await calculate_concentration(request, authority=None)).model_dump()
 
     single_position = response["single_position_concentration"]
     assert single_position["top_n_cumulative_weight_current"] == 0.8
@@ -289,7 +289,7 @@ async def test_issuer_hhi_matches_documented_stateless_methodology_example() -> 
         }
     )
 
-    response = (await calculate_concentration(request)).model_dump()
+    response = (await calculate_concentration(request, authority=None)).model_dump()
 
     issuer_concentration = response["issuer_concentration"]
     assert issuer_concentration["hhi_current"] == 6800.0
@@ -348,7 +348,7 @@ async def test_top_issuer_weight_matches_documented_stateless_methodology_exampl
         }
     )
 
-    response = (await calculate_concentration(request)).model_dump()
+    response = (await calculate_concentration(request, authority=None)).model_dump()
 
     issuer_concentration = response["issuer_concentration"]
     assert issuer_concentration["top_issuer_weight_current"] == 0.8
@@ -386,7 +386,7 @@ async def test_calculate_concentration_falls_back_to_current_when_no_projected()
             "stateless_input": {"current_positions": [{"security_id": "A", "quantity": 10}]},
         }
     )
-    response = (await calculate_concentration(request)).model_dump()
+    response = (await calculate_concentration(request, authority=None)).model_dump()
     assert response["risk_proxy"]["hhi_current"] == 10000.0
     assert response["risk_proxy"]["hhi_proposed"] == 10000.0
     assert response["risk_proxy"]["hhi_delta"] == 0.0

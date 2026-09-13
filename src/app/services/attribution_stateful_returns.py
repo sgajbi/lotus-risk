@@ -5,6 +5,7 @@ from datetime import date
 from typing import Any, Protocol
 
 from app.contracts.attribution import HistoricalAttributionStatefulInput
+from app.contracts.downstream_authority import DownstreamAuthority
 from app.contracts.risk import ReturnPoint
 from app.services.stateful_returns_request import build_stateful_returns_series_request
 from app.services.stateful_returns_series_parser import (
@@ -19,7 +20,7 @@ class LotusPerformanceReturnsClientProtocol(Protocol):
         self,
         *,
         request_payload: dict[str, Any],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, Any]: ...
 
 
@@ -54,12 +55,12 @@ async def fetch_stateful_returns_context(
     *,
     stateful: HistoricalAttributionStatefulInput,
     performance_client: LotusPerformanceReturnsClientProtocol,
-    correlation_id: str | None,
+    authority: DownstreamAuthority,
 ) -> StatefulReturnsContext:
     returns_request = build_stateful_returns_request(stateful)
     returns_response = await performance_client.get_returns_series(
         request_payload=returns_request,
-        correlation_id=correlation_id,
+        authority=authority,
     )
     series, portfolio_returns = extract_required_portfolio_returns(returns_response)
     benchmark_returns = to_return_points(series.get("benchmark_returns"))

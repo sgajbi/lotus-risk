@@ -263,7 +263,7 @@ def test_rolling_metrics_endpoint_stateful_uses_lotus_performance() -> None:
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/rolling-metrics",
-            headers={"X-Correlation-Id": "corr-rolling-stateful"},
+            headers={"X-Correlation-Id": "corr-rolling-stateful", "X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "stateful",
                 "stateful_input": {
@@ -347,7 +347,7 @@ def test_rolling_metrics_endpoint_stateful_surfaces_missing_risk_free_after_curr
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/rolling-metrics",
-            headers={"X-Correlation-Id": "corr-rolling-missing-rf"},
+            headers={"X-Correlation-Id": "corr-rolling-missing-rf", "X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "stateful",
                 "stateful_input": {
@@ -419,7 +419,7 @@ def test_rolling_metrics_endpoint_stateful_uses_explicit_reporting_currency_for_
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/rolling-metrics",
-            headers={"X-Correlation-Id": "corr-rolling-explicit-rf"},
+            headers={"X-Correlation-Id": "corr-rolling-explicit-rf", "X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "stateful",
                 "stateful_input": {
@@ -458,7 +458,7 @@ def test_rolling_metrics_endpoint_stateful_rejects_missing_benchmark_returns_for
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/rolling-metrics",
-            headers={"X-Correlation-Id": "corr-rolling-missing-bmk"},
+            headers={"X-Correlation-Id": "corr-rolling-missing-bmk", "X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "stateful",
                 "stateful_input": {
@@ -585,6 +585,7 @@ def test_rolling_metrics_endpoint_rejects_oversized_stateful_sourced_history() -
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/rolling-metrics",
+            headers={"X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "stateful",
                 "stateful_input": {
@@ -673,7 +674,7 @@ def test_rolling_metrics_endpoint_stateful_uses_runtime_client_overrides() -> No
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/rolling-metrics",
-            headers={"X-Correlation-Id": "corr-rolling-runtime"},
+            headers={"X-Correlation-Id": "corr-rolling-runtime", "X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "stateful",
                 "stateful_input": {

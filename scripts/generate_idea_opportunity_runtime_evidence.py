@@ -17,7 +17,7 @@ from scripts._repo_imports import force_repo_src_first
 
 force_repo_src_first(PROJECT_ROOT)
 
-from app.evidence.idea_opportunity_constants import CANONICAL_AS_OF_DATE
+from app.evidence.idea_opportunity_constants import CANONICAL_AS_OF_DATE, CANONICAL_TENANT_ID
 from app.evidence.idea_opportunity_runtime import (
     build_idea_opportunity_runtime_evidence,
     idea_opportunity_runtime_evidence_is_valid,
@@ -46,7 +46,9 @@ def _parse_datetime(value: str) -> datetime:
 def _execute(
     client: httpx.Client, route: str, payload: dict[str, Any]
 ) -> tuple[int, dict[str, Any]]:
-    response = client.post(route, json=payload)
+    # Canonical evidence is bound to the canonical tenant; stateful routes refuse
+    # tenantless requests before any upstream call, so the header is not optional.
+    response = client.post(route, json=payload, headers={"X-Tenant-Id": CANONICAL_TENANT_ID})
     try:
         body = response.json()
     except json.JSONDecodeError:

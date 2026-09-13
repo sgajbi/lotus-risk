@@ -4,6 +4,10 @@ from typing import Any
 
 import httpx
 
+from app.contracts.downstream_authority import (
+    DownstreamAuthority,
+    downstream_authority_headers,
+)
 from app.integrations._downstream_client_profile import (
     DownstreamClientProfile,
     execute_downstream_request_json,
@@ -23,6 +27,38 @@ def resolve_lotus_core_base_url(base_url: str | None) -> str:
     )
 
 
+async def execute_lotus_core_tenant_scoped_request(
+    *,
+    profile: DownstreamClientProfile,
+    client: httpx.AsyncClient | None,
+    base_url: str,
+    method: str,
+    path: str,
+    operation: str,
+    json_payload: dict[str, Any],
+    authority: DownstreamAuthority,
+    extra_headers: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    """Execute a lotus-core request that reads or mutates tenant-owned portfolio state.
+
+    Snapshot, position-timeseries, and simulation-session requests are portfolio-owned and
+    must carry the admitted tenant; use :func:`execute_lotus_core_json_request` only for
+    global reference reads that are deliberately tenant-free.
+    """
+    headers: dict[str, str] = dict(extra_headers or {})
+    headers.update(downstream_authority_headers(authority))
+    return await _execute_with_optional_owned_client(
+        profile=profile,
+        client=client,
+        base_url=base_url,
+        method=method,
+        path=path,
+        operation=operation,
+        json_payload=json_payload,
+        headers=headers,
+    )
+
+
 async def execute_lotus_core_json_request(
     *,
     profile: DownstreamClientProfile,
@@ -35,10 +71,38 @@ async def execute_lotus_core_json_request(
     correlation_id: str | None,
     extra_headers: dict[str, str] | None = None,
 ) -> dict[str, Any]:
+    """Execute a lotus-core request against global reference data.
+
+    Instrument enrichment and risk-free series/coverage are shared reference reads with no
+    tenant owner; adding tenant scope here would assert an ownership that does not exist.
+    Tenant-owned reads go through :func:`execute_lotus_core_tenant_scoped_request` instead.
+    """
     headers: dict[str, str] = dict(extra_headers or {})
     if correlation_id:
         headers["X-Correlation-Id"] = correlation_id
+    return await _execute_with_optional_owned_client(
+        profile=profile,
+        client=client,
+        base_url=base_url,
+        method=method,
+        path=path,
+        operation=operation,
+        json_payload=json_payload,
+        headers=headers,
+    )
 
+
+async def _execute_with_optional_owned_client(
+    *,
+    profile: DownstreamClientProfile,
+    client: httpx.AsyncClient | None,
+    base_url: str,
+    method: str,
+    path: str,
+    operation: str,
+    json_payload: dict[str, Any],
+    headers: dict[str, str],
+) -> dict[str, Any]:
     url = f"{base_url}{path}"
     started_at = observation_start()
     if client is not None:
@@ -113,5 +177,6 @@ def _parse_json_dict_payload(
 __all__ = [
     "DEFAULT_LOTUS_CORE_BASE_URL",
     "execute_lotus_core_json_request",
+    "execute_lotus_core_tenant_scoped_request",
     "resolve_lotus_core_base_url",
 ]

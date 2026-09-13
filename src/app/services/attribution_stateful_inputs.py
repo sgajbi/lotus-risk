@@ -9,6 +9,7 @@ from app.contracts.attribution import (
     HistoricalAttributionStatefulInput,
     HistoricalAttributionStatelessInput,
 )
+from app.contracts.downstream_authority import DownstreamAuthority
 from app.contracts.risk import RiskRequestScope
 from app.services.attribution_active_benchmark_exposure import (
     BenchmarkExposureClientProtocol,
@@ -50,9 +51,10 @@ class LotusCoreClientProtocol(Protocol):
         *,
         portfolio_id: str,
         request_payload: dict[str, Any],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, Any]: ...
 
+    # Instrument enrichment is a global reference read and stays tenant-free.
     async def get_instrument_enrichment(
         self,
         *,
@@ -110,14 +112,14 @@ async def _stateful_exposure_histories(
     returns_context: StatefulReturnsContext,
     grouping_dimensions: list[GroupingDimension],
     requires_active: bool,
-    correlation_id: str | None,
+    authority: DownstreamAuthority,
 ) -> _StatefulExposureHistories:
     exposure_history = await fetch_stateful_exposure_history(
         stateful=stateful,
         core_client=core_client,
         start_date=returns_context.start_date,
         grouping_dimensions=grouping_dimensions,
-        correlation_id=correlation_id,
+        authority=authority,
     )
     benchmark_exposure_history = (
         await fetch_active_benchmark_exposure_history(
@@ -126,7 +128,7 @@ async def _stateful_exposure_histories(
             benchmark_returns=returns_context.benchmark_returns,
             start_date=returns_context.start_date,
             grouping_dimensions=grouping_dimensions,
-            correlation_id=correlation_id,
+            authority=authority,
         )
         if requires_active
         else []
@@ -142,7 +144,7 @@ async def resolve_stateful_attribution_inputs(
     *,
     performance_client: LotusPerformanceClientProtocol,
     core_client: LotusCoreClientProtocol,
-    correlation_id: str | None,
+    authority: DownstreamAuthority,
 ) -> ResolvedStatefulAttributionInputs:
     options = stateful.attribution_options
     requested_groupings = options.grouping_dimensions
@@ -152,7 +154,7 @@ async def resolve_stateful_attribution_inputs(
     returns_context = await fetch_stateful_returns_context(
         stateful=stateful,
         performance_client=performance_client,
-        correlation_id=correlation_id,
+        authority=authority,
     )
     exposure_histories = await _stateful_exposure_histories(
         stateful=stateful,
@@ -161,7 +163,7 @@ async def resolve_stateful_attribution_inputs(
         returns_context=returns_context,
         grouping_dimensions=requested_groupings,
         requires_active=requires_active,
-        correlation_id=correlation_id,
+        authority=authority,
     )
     return ResolvedStatefulAttributionInputs(
         stateless_input=build_stateful_stateless_input(

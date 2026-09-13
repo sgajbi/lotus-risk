@@ -6,6 +6,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Any, Protocol
 
 from app.contracts.attribution import ExposurePoint, GroupingDimension
+from app.contracts.downstream_authority import DownstreamAuthority
 from app.upstream_errors import invalid_upstream_payload, missing_upstream_data
 
 BENCHMARK_EXPOSURE_CONTEXT_OPERATION = "/integration/benchmarks/exposure-context"
@@ -19,7 +20,7 @@ class BenchmarkExposurePerformanceClientProtocol(Protocol):
         self,
         *,
         request_payload: dict[str, Any],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, Any]: ...
 
 
@@ -31,7 +32,7 @@ class BenchmarkExposureHistoryRequest:
     start_date: date
     reporting_currency: str | None
     grouping_dimensions: list[GroupingDimension]
-    correlation_id: str | None
+    authority: DownstreamAuthority
 
 
 def _as_decimal(value: Any) -> Decimal:
@@ -183,7 +184,7 @@ async def _fetch_benchmark_exposure_page(
             request=request,
             page_token=page_token,
         ),
-        correlation_id=request.correlation_id,
+        authority=request.authority,
     )
     _validate_lineage(response)
 

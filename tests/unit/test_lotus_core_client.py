@@ -14,6 +14,7 @@ from app.integrations.lotus_core_client import (
 from app.integrations.lotus_core_operations import build_simulation_session_payload
 from app.integrations.lotus_core_transport import resolve_lotus_core_base_url
 from app.upstream_errors import UpstreamServiceError
+from tests.support.downstream_authority import admitted_test_authority
 
 
 class _FakeAsyncClient:
@@ -81,7 +82,7 @@ async def test_client_builds_headers_and_payload_for_session_creation(
         portfolio_id="DEMO_DPM_EUR_001",
         ttl_hours=24,
         created_by="risk-agent",
-        correlation_id="corr-123",
+        authority=admitted_test_authority("corr-123"),
     )
 
     assert response["session"]["session_id"] == "SIM_1"
@@ -90,6 +91,7 @@ async def test_client_builds_headers_and_payload_for_session_creation(
     assert _FakeAsyncClient.last_request["json"]["ttl_hours"] == 24
     assert _FakeAsyncClient.last_request["json"]["created_by"] == "risk-agent"
     assert _FakeAsyncClient.last_request["headers"]["X-Correlation-Id"] == "corr-123"
+    assert _FakeAsyncClient.last_request["headers"]["X-Tenant-Id"] == "tenant-a"
     metrics = generate_latest().decode("utf-8")
     assert 'lotus_risk_upstream_requests_total{category="ok"' in metrics
     assert 'dependency="lotus-core"' in metrics
@@ -115,7 +117,7 @@ async def test_client_reuses_injected_http_client_without_creating_temporary_poo
     assert await client.get_core_snapshot(
         portfolio_id="DEMO_DPM_EUR_001",
         request_payload={"snapshot_mode": "BASELINE"},
-        correlation_id=None,
+        authority=admitted_test_authority(),
     ) == {"ok": True}
 
 
@@ -130,7 +132,7 @@ async def test_client_supports_add_changes_and_snapshot_routes(
     add_response = await client.add_simulation_changes(
         session_id="SIM_1",
         changes=[{"security_id": "SEC_A", "transaction_type": "BUY"}],
-        correlation_id=None,
+        authority=admitted_test_authority(),
         idempotency_key="idem-sim-1",
         change_set_fingerprint="sha256:change-set-1",
     )
@@ -140,7 +142,7 @@ async def test_client_supports_add_changes_and_snapshot_routes(
     snapshot_response = await client.get_core_snapshot(
         portfolio_id="DEMO_DPM_EUR_001",
         request_payload={"snapshot_mode": "BASELINE"},
-        correlation_id=None,
+        authority=admitted_test_authority(),
     )
     enrichment_response = await client.get_instrument_enrichment(
         security_ids=["SEC_A", "SEC_B"],
@@ -149,7 +151,7 @@ async def test_client_supports_add_changes_and_snapshot_routes(
     position_timeseries_response = await client.get_position_analytics_timeseries(
         portfolio_id="DEMO_DPM_EUR_001",
         request_payload={"as_of_date": "2026-02-28"},
-        correlation_id=None,
+        authority=admitted_test_authority(),
     )
     risk_free_response = await client.get_risk_free_series(
         request_payload={
@@ -172,6 +174,7 @@ async def test_client_supports_add_changes_and_snapshot_routes(
     assert add_response == {"ok": True}
     assert add_changes_request["headers"]["Idempotency-Key"] == "idem-sim-1"
     assert add_changes_request["headers"]["X-Lotus-Change-Set-Fingerprint"] == "sha256:change-set-1"
+    assert add_changes_request["headers"]["X-Tenant-Id"] == "tenant-a"
     assert snapshot_response == {"ok": True}
     assert enrichment_response == {"ok": True}
     assert position_timeseries_response == {"ok": True}
@@ -182,6 +185,7 @@ async def test_client_supports_add_changes_and_snapshot_routes(
         _FakeAsyncClient.last_request["url"]
         == "http://core.local/integration/reference/risk-free-series/coverage?currency=USD"
     )
+    assert "X-Tenant-Id" not in _FakeAsyncClient.last_request["headers"]
 
 
 @pytest.mark.asyncio
@@ -194,7 +198,7 @@ async def test_client_rejects_non_object_json_response(monkeypatch: pytest.Monke
         await client.get_core_snapshot(
             portfolio_id="DEMO_DPM_EUR_001",
             request_payload={"snapshot_mode": "BASELINE"},
-            correlation_id=None,
+            authority=admitted_test_authority(),
         )
     assert exc_info.value.code == "UPSTREAM_INVALID_RESPONSE"
     assert exc_info.value.status_code == 502
@@ -215,7 +219,7 @@ async def test_client_maps_http_status_error_without_exposing_detail(
         await client.get_core_snapshot(
             portfolio_id="DEMO_DPM_EUR_001",
             request_payload={"snapshot_mode": "BASELINE"},
-            correlation_id=None,
+            authority=admitted_test_authority(),
         )
     assert exc_info.value.code == "FAILED_DEPENDENCY"
     assert exc_info.value.status_code == 424
@@ -242,7 +246,7 @@ async def test_client_maps_http_transport_error(monkeypatch: pytest.MonkeyPatch)
         await client.get_core_snapshot(
             portfolio_id="DEMO_DPM_EUR_001",
             request_payload={"snapshot_mode": "BASELINE"},
-            correlation_id=None,
+            authority=admitted_test_authority(),
         )
     assert exc_info.value.code == "UPSTREAM_UNAVAILABLE"
     assert exc_info.value.status_code == 503

@@ -8,6 +8,7 @@ from app.contracts.attribution import (
     GroupingDimension,
     HistoricalAttributionStatefulInput,
 )
+from app.contracts.downstream_authority import DownstreamAuthority
 from app.services.attribution_exposure_points import (
     as_decimal,
     build_exposure_points,
@@ -153,7 +154,7 @@ async def fetch_stateful_exposure_history(
     core_client: LotusCoreClientProtocol,
     start_date: date,
     grouping_dimensions: list[GroupingDimension],
-    correlation_id: str | None,
+    authority: DownstreamAuthority,
 ) -> list[ExposurePoint]:
     rows = await fetch_position_timeseries_rows(
         core_client=core_client,
@@ -162,14 +163,14 @@ async def fetch_stateful_exposure_history(
         start_date=start_date,
         reporting_currency=stateful.reporting_currency,
         grouping_dimensions=grouping_dimensions,
-        correlation_id=correlation_id,
+        authority=authority,
     )
     _require_position_timeseries_rows(rows=rows, portfolio_id=stateful.portfolio_id)
     issuer_map = await _issuer_map_for_grouping_dimensions(
         core_client=core_client,
         rows=rows,
         grouping_dimensions=grouping_dimensions,
-        correlation_id=correlation_id,
+        correlation_id=authority.correlation_id,
     )
     return _validated_exposure_history(
         rows=rows,

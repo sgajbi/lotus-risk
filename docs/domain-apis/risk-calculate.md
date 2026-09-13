@@ -21,11 +21,18 @@
 
 - Status: implemented in lotus-risk.
 - Current behavior:
+  - caller supplies the admitted tenant in the `X-Tenant-Id` header: a stateful request without a
+    non-blank value refuses `401 MISSING_TENANT_AUTHORITY` before any upstream call, and a trimmed
+    value over 128 characters refuses `400 INVALID_TENANT_AUTHORITY`.
   - caller supplies identifiers plus risk metric specification (`periods`, `metrics`, `options`).
   - caller may provide `stateful_input.benchmark_id` to force benchmark-dependent metrics
     (`BETA`, `TRACKING_ERROR`, `INFORMATION_RATIO`) to use a specific governed benchmark; when
     omitted, `lotus-performance` resolves the portfolio benchmark assignment.
-  - lotus-risk sources canonical return series from `lotus-performance` using `input_mode=stateful` and `stateful_input is an empty envelope; consumer identity is stamped by lotus-performance server-side`.
+  - lotus-risk sources canonical return series from `lotus-performance` using `input_mode=stateful`
+    with an empty `stateful_input` envelope, forwarding the admitted `X-Tenant-Id` on the submit and
+    on every async status/result poll; lotus-performance enforces that tenant authority and scopes
+    async result access to the submitting tenant (a foreign-tenant refusal surfaces as
+    `424 FAILED_DEPENDENCY`).
   - when `SHARPE` is requested, lotus-risk requests risk-free observations directly from
     `lotus-core` using `/integration/reference/risk-free-series` and records a separate
     `lotus-core:/integration/reference/risk-free-series` upstream request fingerprint.

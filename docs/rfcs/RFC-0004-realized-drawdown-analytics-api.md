@@ -80,7 +80,10 @@ The design and metric set follow widely used market practices and literature:
 ## Modes
 
 1. `stateless`: caller supplies return series directly.
-2. `stateful`: caller supplies identifiers; lotus-risk resolves return series via lotus-performance (`/integration/returns/series`, `input_mode=stateful`, `stateful_input is an empty envelope; consumer identity is stamped by lotus-performance server-side`).
+2. `stateful`: caller supplies identifiers and the admitted tenant in the `X-Tenant-Id` header;
+   lotus-risk resolves return series via lotus-performance (`/integration/returns/series`,
+   `input_mode=stateful`, empty `stateful_input` envelope, forwarding the admitted `X-Tenant-Id`
+   on the submit and every async poll; lotus-performance enforces that tenant authority).
 3. `simulation`: not in RFC-0004 scope (reserved for later RFC).
 
 ## Request Envelope (Canonical)

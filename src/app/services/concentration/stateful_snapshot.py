@@ -10,6 +10,7 @@ from app.contracts.concentration import (
     IssuerGroupingLevel,
     StatefulConcentrationInput,
 )
+from app.contracts.downstream_authority import DownstreamAuthority
 from app.services.concentration.datamodels import (
     IssuerEntry,
     IssuerIdentity,
@@ -65,13 +66,13 @@ async def fetch_stateful_snapshot_state(
     request: ConcentrationRequest,
     stateful: StatefulConcentrationInput,
     core_client: LotusCoreClientProtocol,
-    correlation_id: str | None,
+    authority: DownstreamAuthority,
     snapshot_payload: dict[str, Any],
 ) -> StatefulSnapshotState:
     snapshot = await core_client.get_core_snapshot(
         portfolio_id=stateful.portfolio_id,
         request_payload=snapshot_payload,
-        correlation_id=correlation_id,
+        authority=authority,
     )
     sections = snapshot.get("sections")
     if not isinstance(sections, dict):

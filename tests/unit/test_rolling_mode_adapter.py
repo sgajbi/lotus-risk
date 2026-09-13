@@ -12,6 +12,7 @@ from app.services.rolling_mode_adapter import (
     calculate_rolling_metrics_stateful,
 )
 from app.upstream_errors import UpstreamServiceError
+from tests.support.downstream_authority import admitted_test_authority
 from tests.support.lotus_core_fakes import RecordingLotusCoreReferenceClient
 from tests.support.lotus_performance_fakes import RecordingLotusPerformanceClient
 from tests.support.risk_free_series_payloads import build_risk_free_series_response
@@ -124,7 +125,7 @@ def test_stateful_adapter_happy_path() -> None:
             _stateful_input(["ROLLING_VOLATILITY", "ROLLING_BETA", "ROLLING_SHARPE"]),
             performance_client=client,
             core_client=core_client,
-            correlation_id="corr-rolling-stateful",
+            authority=admitted_test_authority("corr-rolling-stateful"),
         )
     )
 
@@ -157,7 +158,7 @@ def test_stateful_adapter_requires_series_object() -> None:
             calculate_rolling_metrics_stateful(
                 _stateful_input(["ROLLING_VOLATILITY"]),
                 performance_client=client,
-                correlation_id=None,
+                authority=admitted_test_authority(),
             )
         )
 
@@ -170,7 +171,7 @@ def test_stateful_adapter_requires_benchmark_when_metric_requested() -> None:
                 _stateful_input(["ROLLING_BETA"]),
                 performance_client=client,
                 core_client=None,
-                correlation_id=None,
+                authority=admitted_test_authority(),
             )
         )
 
@@ -183,7 +184,7 @@ def test_stateful_adapter_requires_risk_free_for_sharpe() -> None:
                 _stateful_input(["ROLLING_SHARPE"]),
                 performance_client=client,
                 core_client=RecordingLotusCoreReferenceClient(),
-                correlation_id=None,
+                authority=admitted_test_authority(),
             )
         )
     assert exc_info.value.details["risk_free_currency"] == "USD"
@@ -217,7 +218,7 @@ def test_stateful_adapter_ignores_coverage_probe_failures_for_missing_risk_free(
                 _stateful_input(["ROLLING_SHARPE"]),
                 performance_client=client,
                 core_client=_CoverageUnavailableCoreClient(),
-                correlation_id=None,
+                authority=admitted_test_authority(),
             )
         )
 
@@ -281,7 +282,7 @@ def test_stateful_adapter_rejects_invalid_return_value() -> None:
                 _stateful_input(["ROLLING_VOLATILITY"]),
                 performance_client=client,
                 core_client=None,
-                correlation_id=None,
+                authority=admitted_test_authority(),
             )
         )
 
@@ -294,7 +295,7 @@ def test_stateful_adapter_requires_core_snapshot_when_sharpe_needs_reporting_cur
                 _stateful_input(["ROLLING_SHARPE"]),
                 performance_client=client,
                 core_client=None,
-                correlation_id=None,
+                authority=admitted_test_authority(),
             )
         )
 
@@ -308,7 +309,7 @@ def test_stateful_adapter_requires_core_client_for_explicit_risk_free_sourcing()
                 request,
                 performance_client=client,
                 core_client=None,
-                correlation_id="corr-explicit-ccy",
+                authority=admitted_test_authority("corr-explicit-ccy"),
             )
         )
 
@@ -322,7 +323,7 @@ def test_stateful_adapter_skips_core_snapshot_when_reporting_currency_is_explici
             request,
             performance_client=client,
             core_client=core_client,
-            correlation_id="corr-explicit-ccy",
+            authority=admitted_test_authority("corr-explicit-ccy"),
         )
     )
     assert client.request_payload is not None
@@ -341,7 +342,7 @@ def test_stateful_adapter_uses_portfolio_currency_when_reporting_currency_missin
             _stateful_input(["ROLLING_SHARPE"]),
             performance_client=client,
             core_client=core_client,
-            correlation_id="corr-portfolio-ccy",
+            authority=admitted_test_authority("corr-portfolio-ccy"),
         )
     )
     assert client.request_payload is not None
@@ -357,7 +358,7 @@ def test_stateful_adapter_rejects_missing_valuation_context() -> None:
                 _stateful_input(["ROLLING_SHARPE"]),
                 performance_client=client,
                 core_client=_StubLotusCoreClientMissingValuationContext(),
-                correlation_id=None,
+                authority=admitted_test_authority(),
             )
         )
 
@@ -370,7 +371,7 @@ def test_stateful_adapter_rejects_missing_portfolio_and_reporting_currency() -> 
                 _stateful_input(["ROLLING_SHARPE"]),
                 performance_client=client,
                 core_client=_StubLotusCoreClientMissingCurrencies(),
-                correlation_id=None,
+                authority=admitted_test_authority(),
             )
         )
 
@@ -394,7 +395,7 @@ def test_stateful_adapter_rejects_unknown_risk_free_value_convention() -> None:
                 _stateful_input(["ROLLING_SHARPE"]),
                 performance_client=client,
                 core_client=core_client,
-                correlation_id=None,
+                authority=admitted_test_authority(),
             )
         )
 
@@ -430,7 +431,7 @@ def test_stateful_adapter_sources_risk_free_after_returns_for_si_window() -> Non
             request,
             performance_client=client,
             core_client=core_client,
-            correlation_id="corr-si-risk-free",
+            authority=admitted_test_authority("corr-si-risk-free"),
         )
     )
 

@@ -8,6 +8,7 @@ from app.contracts.concentration import (
     ConcentrationRequest,
     StatefulConcentrationInput,
 )
+from app.contracts.downstream_authority import DownstreamAuthority
 from app.services.audit_lineage import ordered_source_services
 from app.services.concentration.datamodels import (
     ConcentrationComputationInput,
@@ -31,7 +32,7 @@ async def resolve_stateful(
     request: ConcentrationRequest,
     *,
     core_client: LotusCoreClientProtocol,
-    correlation_id: str | None,
+    authority: DownstreamAuthority,
 ) -> ConcentrationComputationInput:
     stateful = request.stateful_input
     if stateful is None:
@@ -42,13 +43,13 @@ async def resolve_stateful(
         request=request,
         stateful=stateful,
         core_client=core_client,
-        correlation_id=correlation_id,
+        authority=authority,
         snapshot_payload=snapshot_payload,
     )
     metadata = _stateful_metadata(
         request=request,
         stateful=stateful,
-        correlation_id=correlation_id,
+        correlation_id=authority.correlation_id,
         snapshot_payload=snapshot_payload,
     )
     baseline = stateful_baseline_values(snapshot_state)
@@ -111,14 +112,14 @@ async def resolve_simulation(
     request: ConcentrationRequest,
     *,
     core_client: LotusCoreClientProtocol,
-    correlation_id: str | None,
+    authority: DownstreamAuthority,
     actor_id: str | None,
     idempotency_key: str | None,
 ) -> ConcentrationComputationInput:
     return await _resolve_simulation(
         request,
         core_client=core_client,
-        correlation_id=correlation_id,
+        authority=authority,
         actor_id=actor_id,
         idempotency_key=idempotency_key,
     )

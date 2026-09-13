@@ -4,6 +4,7 @@ from typing import Any
 
 import httpx
 
+from app.contracts.downstream_authority import DownstreamAuthority
 from app.integrations._downstream_client_profile import resolve_downstream_client_profile
 from app.integrations.lotus_core_operations import (
     execute_add_simulation_changes_request,
@@ -49,7 +50,7 @@ class LotusCoreClient:
         portfolio_id: str,
         ttl_hours: int | None,
         created_by: str | None,
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, Any]:
         return await execute_create_simulation_session_request(
             profile=self._profile,
@@ -58,7 +59,7 @@ class LotusCoreClient:
             portfolio_id=portfolio_id,
             ttl_hours=ttl_hours,
             created_by=created_by,
-            correlation_id=correlation_id,
+            authority=authority,
         )
 
     async def add_simulation_changes(
@@ -66,7 +67,7 @@ class LotusCoreClient:
         *,
         session_id: str,
         changes: list[dict[str, Any]],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
         idempotency_key: str,
         change_set_fingerprint: str,
     ) -> dict[str, Any]:
@@ -76,7 +77,7 @@ class LotusCoreClient:
             base_url=self._base_url,
             session_id=session_id,
             changes=changes,
-            correlation_id=correlation_id,
+            authority=authority,
             idempotency_key=idempotency_key,
             change_set_fingerprint=change_set_fingerprint,
         )
@@ -86,7 +87,7 @@ class LotusCoreClient:
         *,
         portfolio_id: str,
         request_payload: dict[str, Any],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, Any]:
         return await execute_core_snapshot_request(
             profile=self._profile,
@@ -94,7 +95,7 @@ class LotusCoreClient:
             base_url=self._base_url,
             portfolio_id=portfolio_id,
             request_payload=request_payload,
-            correlation_id=correlation_id,
+            authority=authority,
         )
 
     async def get_instrument_enrichment(
@@ -116,7 +117,7 @@ class LotusCoreClient:
         *,
         portfolio_id: str,
         request_payload: dict[str, Any],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, Any]:
         return await execute_position_analytics_timeseries_request(
             profile=self._profile,
@@ -124,7 +125,7 @@ class LotusCoreClient:
             base_url=self._base_url,
             portfolio_id=portfolio_id,
             request_payload=request_payload,
-            correlation_id=correlation_id,
+            authority=authority,
         )
 
     async def get_risk_free_series(

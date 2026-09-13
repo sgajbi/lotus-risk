@@ -6,6 +6,8 @@ from typing import Any, cast
 
 import httpx
 
+from tests.support.live_portfolio_matrix import live_tenant_headers
+
 RETRYABLE_STATUS_CODES = {502, 503, 504}
 
 
@@ -47,7 +49,7 @@ def fetch_live_returns_series(
             client=client,
             method="POST",
             url=f"{base_url}/integration/returns/series",
-            request_kwargs={"json": request_payload},
+            request_kwargs={"json": request_payload, "headers": live_tenant_headers()},
             max_attempts=request_attempts,
             retry_interval_seconds=poll_interval_seconds,
         )
@@ -64,10 +66,13 @@ def fetch_live_returns_series(
             )
 
         for _ in range(poll_attempts):
+            # Async result access is tenant-fenced by the producer: polls carry the
+            # same admitted tenant as the submit.
             result_body = _request_json_with_retries(
                 client=client,
                 method="GET",
                 url=f"{base_url}{result_path}",
+                request_kwargs={"headers": live_tenant_headers()},
                 max_attempts=request_attempts,
                 retry_interval_seconds=poll_interval_seconds,
             )
@@ -108,7 +113,7 @@ def fetch_live_benchmark_exposure_context(
             client=client,
             method="POST",
             url=f"{base_url}/integration/benchmarks/exposure-context",
-            request_kwargs={"json": request_payload},
+            request_kwargs={"json": request_payload, "headers": live_tenant_headers()},
             max_attempts=request_attempts,
             retry_interval_seconds=retry_interval_seconds,
         )

@@ -4,6 +4,10 @@ from typing import Any
 
 import httpx
 
+from app.contracts.downstream_authority import (
+    DownstreamAuthority,
+    downstream_authority_headers,
+)
 from app.integrations._downstream_client_profile import (
     DownstreamClientProfile,
     execute_downstream_request_json,
@@ -31,21 +35,19 @@ def resolve_lotus_performance_base_url(base_url: str | None) -> str:
     )
 
 
-def correlation_headers(correlation_id: str | None) -> dict[str, str]:
-    return {"X-Correlation-Id": correlation_id} if correlation_id else {}
-
-
 async def execute_returns_series_request(
     *,
     profile: DownstreamClientProfile,
     client: httpx.AsyncClient | None,
     base_url: str,
     request_payload: dict[str, Any],
-    correlation_id: str | None,
+    authority: DownstreamAuthority,
     async_max_polls: int,
     async_poll_interval_seconds: float,
 ) -> dict[str, Any]:
-    headers = correlation_headers(correlation_id)
+    # Submit and every async status/result poll reuse these per-request authority headers,
+    # so the polling identity is always the submitting tenant.
+    headers = downstream_authority_headers(authority)
     url = f"{base_url}{RETURNS_SERIES_OPERATION}"
     started_at = observation_start()
     if client is not None:
@@ -137,9 +139,9 @@ async def execute_benchmark_exposure_context_request(
     client: httpx.AsyncClient | None,
     base_url: str,
     request_payload: dict[str, Any],
-    correlation_id: str | None,
+    authority: DownstreamAuthority,
 ) -> dict[str, Any]:
-    headers = correlation_headers(correlation_id)
+    headers = downstream_authority_headers(authority)
     url = f"{base_url}{BENCHMARK_EXPOSURE_CONTEXT_OPERATION}"
     started_at = observation_start()
     if client is not None:
@@ -214,7 +216,6 @@ async def _finalize_returns_series_payload(
 
 __all__ = [
     "DEFAULT_LOTUS_PERFORMANCE_BASE_URL",
-    "correlation_headers",
     "execute_benchmark_exposure_context_request",
     "execute_returns_series_request",
     "resolve_lotus_performance_base_url",

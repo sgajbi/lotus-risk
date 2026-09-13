@@ -1,5 +1,11 @@
 from typing import Any
 
+from app.contracts.downstream_authority import (
+    INVALID_TENANT_AUTHORITY_CODE,
+    MAX_TENANT_ID_LENGTH,
+    MISSING_TENANT_AUTHORITY_CODE,
+    TENANT_ID_HEADER,
+)
 from app.enterprise_authorization import (
     ENTERPRISE_AUTHORIZATION_REQUIRED_HEADERS,
     ENTERPRISE_CAPABILITIES_HEADER,
@@ -37,6 +43,36 @@ def _enterprise_authorization_extension() -> JsonObject:
     }
 
 
+def _stateful_tenant_header_parameter() -> JsonObject:
+    return {
+        "name": TENANT_ID_HEADER,
+        "in": "header",
+        "required": False,
+        "description": (
+            "Admitted tenant authority for stateful (and concentration simulation) input "
+            "modes. The admitted value is forwarded on every tenant-owned lotus-performance "
+            "and lotus-core request, including async status/result polling. A stateful "
+            f"request without a non-blank value refuses with 401 {MISSING_TENANT_AUTHORITY_CODE} "
+            "before any upstream request is made; a trimmed value longer than "
+            f"{MAX_TENANT_ID_LENGTH} characters refuses with 400 {INVALID_TENANT_AUTHORITY_CODE}. "
+            "Stateless requests do not require tenant authority."
+        ),
+        "schema": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": MAX_TENANT_ID_LENGTH,
+        },
+        "example": "tenant-sg",
+    }
+
+
+def stateful_request_openapi_extra(examples: dict[str, JsonObject]) -> JsonObject:
+    return {
+        **request_body_examples(examples),
+        "parameters": [_stateful_tenant_header_parameter()],
+    }
+
+
 def request_body_examples(examples: dict[str, JsonObject]) -> JsonObject:
     return {
         **_enterprise_authorization_extension(),
@@ -61,4 +97,5 @@ __all__ = [
     "ROLLING_METRICS_EXAMPLES",
     "JsonObject",
     "request_body_examples",
+    "stateful_request_openapi_extra",
 ]

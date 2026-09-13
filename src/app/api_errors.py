@@ -5,7 +5,11 @@ from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.api_error_examples import STANDARD_ERROR_RESPONSES
+from app.api_error_examples import (
+    STANDARD_ERROR_RESPONSES,
+    STATEFUL_TENANT_ERROR_RESPONSES,
+)
+from app.contracts.downstream_authority import TenantAuthorityError
 from app.error_response import error_response
 from app.runtime.downstream_clients import RuntimeCompositionError
 from app.upstream_errors import UpstreamServiceError
@@ -90,6 +94,15 @@ async def handle_upstream_service_error(request: Request, exc: UpstreamServiceEr
     )
 
 
+async def handle_tenant_authority_error(request: Request, exc: TenantAuthorityError) -> Response:
+    return error_response(
+        request,
+        status_code=exc.status_code,
+        code=exc.code,
+        message=exc.message,
+    )
+
+
 async def handle_runtime_composition_error(
     request: Request, exc: RuntimeCompositionError
 ) -> Response:
@@ -123,6 +136,14 @@ def register_exception_handlers(app: FastAPI) -> None:
         UpstreamServiceError,
         cast(ExceptionHandler, handle_upstream_service_error),
     )
+    app.add_exception_handler(
+        TenantAuthorityError,
+        cast(ExceptionHandler, handle_tenant_authority_error),
+    )
 
 
-__all__ = ["STANDARD_ERROR_RESPONSES", "register_exception_handlers"]
+__all__ = [
+    "STANDARD_ERROR_RESPONSES",
+    "STATEFUL_TENANT_ERROR_RESPONSES",
+    "register_exception_handlers",
+]

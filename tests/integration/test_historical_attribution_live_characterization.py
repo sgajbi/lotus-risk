@@ -13,6 +13,7 @@ from tests.support.live_portfolio_matrix import (
     HISTORICAL_ATTRIBUTION_ACTIVE_RISK_GROUPINGS,
     live_as_of_date,
     live_portfolio_id,
+    live_tenant_headers,
 )
 from tests.support.live_returns_series import (
     extract_decimal_returns,
@@ -166,6 +167,7 @@ def test_live_stateful_historical_attribution_supports_sector_active_risk() -> N
     with httpx.Client(timeout=30.0) as client:
         response = client.post(
             f"{RISK_BASE_URL}/analytics/risk/historical-attribution",
+            headers=live_tenant_headers(),
             json=_stateful_active_risk_payload(grouping_dimensions=["SECTOR"]),
         )
 
@@ -210,6 +212,7 @@ def test_live_stateful_historical_attribution_supports_sector_total_risk() -> No
     with httpx.Client(timeout=30.0) as client:
         response = client.post(
             f"{RISK_BASE_URL}/analytics/risk/historical-attribution",
+            headers=live_tenant_headers(),
             json=_stateful_total_risk_payload(grouping_dimensions=["SECTOR"]),
         )
 
@@ -257,6 +260,7 @@ def test_live_stateful_historical_attribution_supports_other_active_risk_groupin
     with httpx.Client(timeout=30.0) as client:
         response = client.post(
             f"{RISK_BASE_URL}/analytics/risk/historical-attribution",
+            headers=live_tenant_headers(),
             json=_stateful_active_risk_payload(grouping_dimensions=[grouping_dimension]),
         )
 

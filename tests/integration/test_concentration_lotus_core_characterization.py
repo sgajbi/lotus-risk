@@ -4,8 +4,10 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
+from app.contracts.downstream_authority import DownstreamAuthority
 from app.main import app
 from tests.support.app_runtime import override_app_runtime
+from tests.support.lotus_core_fakes import SimulationLotusCoreClient
 
 
 class _RecordingLotusCoreClient:
@@ -29,14 +31,15 @@ class _RecordingLotusCoreClient:
         portfolio_id: str,
         ttl_hours: int | None,
         created_by: str | None,
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, Any]:
         self.create_calls.append(
             {
                 "portfolio_id": portfolio_id,
                 "ttl_hours": ttl_hours,
                 "created_by": created_by,
-                "correlation_id": correlation_id,
+                "tenant_id": authority.tenant_id,
+                "correlation_id": authority.correlation_id,
             }
         )
         if self.create_response is not None:
@@ -48,7 +51,7 @@ class _RecordingLotusCoreClient:
         *,
         session_id: str,
         changes: list[dict[str, Any]],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
         idempotency_key: str,
         change_set_fingerprint: str,
     ) -> dict[str, Any]:
@@ -56,7 +59,8 @@ class _RecordingLotusCoreClient:
             {
                 "session_id": session_id,
                 "changes": changes,
-                "correlation_id": correlation_id,
+                "tenant_id": authority.tenant_id,
+                "correlation_id": authority.correlation_id,
                 "idempotency_key": idempotency_key,
                 "change_set_fingerprint": change_set_fingerprint,
             }
@@ -68,13 +72,14 @@ class _RecordingLotusCoreClient:
         *,
         portfolio_id: str,
         request_payload: dict[str, Any],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, Any]:
         self.snapshot_calls.append(
             {
                 "portfolio_id": portfolio_id,
                 "request_payload": request_payload,
-                "correlation_id": correlation_id,
+                "tenant_id": authority.tenant_id,
+                "correlation_id": authority.correlation_id,
             }
         )
         if request_payload.get("snapshot_mode") == "BASELINE":
@@ -181,7 +186,7 @@ def test_stateful_api_characterizes_lotus_core_snapshot_payload_contract() -> No
 
         response = client.post(
             "/analytics/risk/concentration",
-            headers={"X-Correlation-Id": "corr-stateful"},
+            headers={"X-Correlation-Id": "corr-stateful", "X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "stateful",
                 "issuer_grouping_level": "legal_issuer",
@@ -201,6 +206,7 @@ def test_stateful_api_characterizes_lotus_core_snapshot_payload_contract() -> No
     assert len(core_client.snapshot_calls) == 1
     snapshot_call = core_client.snapshot_calls[0]
     assert snapshot_call["portfolio_id"] == "DEMO_DPM_EUR_001"
+    assert snapshot_call["tenant_id"] == "tenant-a"
     assert snapshot_call["correlation_id"] == "corr-stateful"
     payload = snapshot_call["request_payload"]
     assert payload["snapshot_mode"] == "BASELINE"
@@ -245,7 +251,7 @@ def test_stateful_api_maps_invalid_core_snapshot_payload_to_upstream_response() 
 
         response = client.post(
             "/analytics/risk/concentration",
-            headers={"X-Correlation-Id": "corr-stateful-invalid"},
+            headers={"X-Correlation-Id": "corr-stateful-invalid", "X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "stateful",
                 "stateful_input": {
@@ -273,6 +279,7 @@ def test_simulation_api_characterizes_session_creation_and_snapshot_contract() -
             "/analytics/risk/concentration",
             headers={
                 "X-Correlation-Id": "corr-sim",
+                "X-Tenant-Id": "tenant-a",
                 "X-Actor-Id": "risk-tester",
                 "Idempotency-Key": "idem-sim-buy",
             },
@@ -300,10 +307,12 @@ def test_simulation_api_characterizes_session_creation_and_snapshot_contract() -
         "portfolio_id": "DEMO_DPM_EUR_001",
         "ttl_hours": 24,
         "created_by": "risk-tester",
+        "tenant_id": "tenant-a",
         "correlation_id": "corr-sim",
     }
     assert len(core_client.change_calls) == 1
     assert core_client.change_calls[0]["session_id"] == "SIM_9000"
+    assert core_client.change_calls[0]["tenant_id"] == "tenant-a"
     assert core_client.change_calls[0]["correlation_id"] == "corr-sim"
     assert core_client.change_calls[0]["idempotency_key"] == "idem-sim-buy"
     assert core_client.change_calls[0]["change_set_fingerprint"].startswith("sha256:")
@@ -359,7 +368,7 @@ def test_simulation_api_forwards_valid_sell_change() -> None:
 
         response = client.post(
             "/analytics/risk/concentration",
-            headers={"Idempotency-Key": "idem-sim-sell"},
+            headers={"Idempotency-Key": "idem-sim-sell", "X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "simulation",
                 "simulation_input": {
@@ -395,6 +404,7 @@ def test_simulation_api_requires_idempotency_key_for_changes_before_core_write()
 
         response = client.post(
             "/analytics/risk/concentration",
+            headers={"X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "simulation",
                 "simulation_input": {
@@ -427,6 +437,7 @@ def test_simulation_api_requires_idempotency_key_before_creating_new_session() -
 
         response = client.post(
             "/analytics/risk/concentration",
+            headers={"X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "simulation",
                 "simulation_input": {
@@ -458,6 +469,7 @@ def test_simulation_api_rejects_unsupported_transaction_type_before_core_write()
 
         response = client.post(
             "/analytics/risk/concentration",
+            headers={"X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "simulation",
                 "simulation_input": {
@@ -489,6 +501,7 @@ def test_simulation_api_rejects_buy_without_quantity_or_amount_before_core_write
 
         response = client.post(
             "/analytics/risk/concentration",
+            headers={"X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "simulation",
                 "simulation_input": {
@@ -535,6 +548,7 @@ def test_simulation_api_preserves_explicit_empty_projected_positions() -> None:
 
         response = client.post(
             "/analytics/risk/concentration",
+            headers={"X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "simulation",
                 "simulation_input": {
@@ -577,6 +591,7 @@ def test_simulation_api_maps_invalid_create_session_payload_to_upstream_response
 
         response = client.post(
             "/analytics/risk/concentration",
+            headers={"X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "simulation",
                 "simulation_input": {
@@ -602,6 +617,7 @@ def test_simulation_api_maps_invalid_snapshot_payload_to_upstream_response() -> 
 
         response = client.post(
             "/analytics/risk/concentration",
+            headers={"X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "simulation",
                 "simulation_input": {
@@ -636,6 +652,7 @@ def test_simulation_api_maps_missing_projected_positions_to_upstream_response() 
 
         response = client.post(
             "/analytics/risk/concentration",
+            headers={"X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "simulation",
                 "simulation_input": {
@@ -655,3 +672,64 @@ def test_simulation_api_maps_missing_projected_positions_to_upstream_response() 
         reason="missing_positions_projected",
         snapshot_mode="SIMULATION",
     )
+
+
+def test_concentration_stateful_mode_uses_lotus_core_snapshot() -> None:
+    with override_app_runtime(
+        lotus_core_client=SimulationLotusCoreClient(
+            session_id="SIM_0001",
+            simulation_version=3,
+        )
+    ):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/concentration",
+            headers={"X-Tenant-Id": "tenant-a"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-02-27",
+                },
+            },
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["input_mode"] == "stateful"
+    assert body["risk_proxy"]["hhi_current"] == 6800.0
+    assert body["metadata"]["portfolio_id"] == "DEMO_DPM_EUR_001"
+    assert body["metadata"]["issuer_grouping_level"] == "ultimate_parent"
+    assert body["metadata"]["enrichment_policy"] == "merge_caller_then_core"
+
+
+def test_concentration_simulation_mode_reuses_or_creates_session_and_returns_metadata() -> None:
+    with override_app_runtime(
+        lotus_core_client=SimulationLotusCoreClient(
+            session_id="SIM_0001",
+            simulation_version=3,
+        )
+    ):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/concentration",
+            headers={"Idempotency-Key": "idem-health-simulation", "X-Tenant-Id": "tenant-a"},
+            json={
+                "input_mode": "simulation",
+                "simulation_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-02-27",
+                    "simulation_changes": [
+                        {"security_id": "SEC_A", "transaction_type": "BUY", "quantity": 10}
+                    ],
+                },
+            },
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["input_mode"] == "simulation"
+    assert body["risk_proxy"]["hhi_current"] == 5200.0
+    assert body["risk_proxy"]["hhi_proposed"] == 8200.0
+    assert body["metadata"]["simulation_session_id"] == "SIM_0001"
+    assert body["metadata"]["simulation_session_version"] == 3
+    assert body["metadata"]["issuer_grouping_level"] == "ultimate_parent"
+    assert body["metadata"]["enrichment_policy"] == "merge_caller_then_core"

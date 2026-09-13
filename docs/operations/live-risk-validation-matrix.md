@@ -48,7 +48,14 @@ Single canonical portfolio override:
 ```powershell
 $env:LOTUS_RISK_LIVE_PORTFOLIO_ID = "PB_SG_GLOBAL_BAL_001"
 $env:LOTUS_RISK_LIVE_AS_OF_DATE = "2026-03-31"
+$env:LOTUS_RISK_LIVE_TENANT_ID = "tenant-sg"
 ```
+
+`LOTUS_RISK_LIVE_TENANT_ID` defaults to the RFC-0076 canonical `tenant-sg`. Live stateful
+requests to Risk and tenant-owned Performance reads (returns-series submit and result polls,
+benchmark exposure context) carry it as `X-Tenant-Id`; enforcing producers refuse tenantless
+stateful input, so a wrong tenant fails visibly instead of silently reading another tenant's
+portfolio. The lotus-core risk-free reference read stays deliberately tenant-free.
 
 Full matrix override:
 

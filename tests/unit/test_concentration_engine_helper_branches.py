@@ -9,6 +9,7 @@ from app.contracts.concentration import (
     IssuerGroupingLevel,
     IssuerMappingInput,
 )
+from app.contracts.downstream_authority import DownstreamAuthority
 from app.services.concentration.datamodels import IssuerEntry, IssuerIdentity, PositionEntry
 from app.services.concentration.math import _coverage_ratio, _uncovered_count
 from app.services.concentration.parsing import (
@@ -42,7 +43,7 @@ class _MalformedEnrichmentCoreClient:
         portfolio_id: str,
         ttl_hours: int | None,
         created_by: str | None,
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, Any]:
         raise AssertionError("not expected")
 
@@ -51,7 +52,7 @@ class _MalformedEnrichmentCoreClient:
         *,
         session_id: str,
         changes: list[dict[str, Any]],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
         idempotency_key: str,
         change_set_fingerprint: str,
     ) -> dict[str, Any]:
@@ -62,7 +63,7 @@ class _MalformedEnrichmentCoreClient:
         *,
         portfolio_id: str,
         request_payload: dict[str, Any],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, Any]:
         raise AssertionError("not expected")
 
@@ -228,7 +229,9 @@ async def test_stateless_concentration_handles_malformed_core_enrichment_records
             },
         }
     )
-    response = await calculate_concentration(request, core_client=_MalformedEnrichmentCoreClient())
+    response = await calculate_concentration(
+        request, authority=None, core_client=_MalformedEnrichmentCoreClient()
+    )
     assert response.issuer_concentration.covered_position_count_current == 1
 
 
@@ -243,7 +246,9 @@ async def test_stateless_concentration_sets_note_when_core_records_shape_invalid
             },
         }
     )
-    response = await calculate_concentration(request, core_client=_MissingRecordsCoreClient())
+    response = await calculate_concentration(
+        request, authority=None, core_client=_MissingRecordsCoreClient()
+    )
     assert (
         response.issuer_concentration.note == "lotus-core enrichment payload missing records list"
     )
@@ -251,3 +256,14 @@ async def test_stateless_concentration_sets_note_when_core_records_shape_invalid
     assert response.issuer_concentration.uncovered_position_count_proposed == 1
     assert response.issuer_concentration.coverage_ratio_current == 0.0
     assert response.issuer_concentration.coverage_ratio_proposed == 0.0
+
+
+def test_simulation_idempotency_key_over_128_characters_is_refused() -> None:
+    from app.services.concentration.simulation_session import (
+        validate_simulation_idempotency_key,
+    )
+
+    # 128 is the supported bound, not the first refused length.
+    assert validate_simulation_idempotency_key("k" * 128) == "k" * 128
+    with pytest.raises(ValueError, match="128 characters or fewer"):
+        validate_simulation_idempotency_key("k" * 129)

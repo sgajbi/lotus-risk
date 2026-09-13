@@ -6,11 +6,13 @@ from typing import Any, cast
 import pytest
 
 from app.contracts.concentration import ConcentrationRequest
+from app.contracts.downstream_authority import DownstreamAuthority
 from app.integrations.upstream_operations import LOTUS_CORE_SNAPSHOT_OPERATION
 from app.services.concentration import parsing as concentration_parsing
 from app.services.concentration.resolvers import resolve_simulation, resolve_stateful
 from app.services.concentration_engine import calculate_concentration
 from app.upstream_errors import UpstreamServiceError
+from tests.support.downstream_authority import admitted_test_authority
 
 SNAPSHOT_FINGERPRINT_KEY = f"lotus-core:{LOTUS_CORE_SNAPSHOT_OPERATION}"
 
@@ -29,7 +31,7 @@ class _RecordingCoreClient:
         portfolio_id: str,
         ttl_hours: int | None,
         created_by: str | None,
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, object]:
         return self.create_response
 
@@ -38,7 +40,7 @@ class _RecordingCoreClient:
         *,
         session_id: str,
         changes: list[dict[str, object]],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
         idempotency_key: str,
         change_set_fingerprint: str,
     ) -> dict[str, object]:
@@ -46,7 +48,8 @@ class _RecordingCoreClient:
             {
                 "session_id": session_id,
                 "changes": changes,
-                "correlation_id": correlation_id,
+                "tenant_id": authority.tenant_id,
+                "correlation_id": authority.correlation_id,
                 "idempotency_key": idempotency_key,
                 "change_set_fingerprint": change_set_fingerprint,
             }
@@ -58,7 +61,7 @@ class _RecordingCoreClient:
         *,
         portfolio_id: str,
         request_payload: dict[str, object],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, object]:
         self.last_snapshot_payload = request_payload
         return self.snapshot_response
@@ -101,7 +104,10 @@ async def test_stateful_mode_includes_reporting_currency_and_metadata() -> None:
     )
 
     response = await calculate_concentration(
-        request, core_client=client, correlation_id="corr-stateful-unit"
+        request,
+        authority=admitted_test_authority("corr-stateful-unit"),
+        core_client=client,
+        correlation_id="corr-stateful-unit",
     )
 
     assert response.metadata is not None
@@ -139,7 +145,9 @@ async def test_stateful_lineage_key_is_stable_while_fingerprint_captures_portfol
                 },
             }
         )
-        response = await calculate_concentration(request, core_client=client)
+        response = await calculate_concentration(
+            request, authority=admitted_test_authority(), core_client=client
+        )
         assert response.metadata is not None
         return response.metadata.upstream_request_fingerprints
 
@@ -164,7 +172,9 @@ async def test_stateless_legal_issuer_core_enrichment_branch() -> None:
         }
     )
 
-    response = await calculate_concentration(request, core_client=_RecordingCoreClient())
+    response = await calculate_concentration(
+        request, authority=None, core_client=_RecordingCoreClient()
+    )
 
     assert response.issuer_concentration.covered_position_count_current == 1
     assert response.issuer_concentration.covered_position_count_proposed == 1
@@ -181,7 +191,9 @@ async def test_stateful_mode_requires_sections_dict() -> None:
         }
     )
     with pytest.raises(UpstreamServiceError) as exc_info:
-        await calculate_concentration(request, core_client=client)
+        await calculate_concentration(
+            request, authority=admitted_test_authority(), core_client=client
+        )
     assert exc_info.value.code == "UPSTREAM_INVALID_RESPONSE"
     assert exc_info.value.status_code == 502
     assert exc_info.value.details == {
@@ -203,7 +215,9 @@ async def test_stateful_resolver_requires_stateful_input() -> None:
     )
 
     with pytest.raises(ValueError, match="stateful_input is required"):
-        await resolve_stateful(request, core_client=_RecordingCoreClient(), correlation_id=None)
+        await resolve_stateful(
+            request, core_client=_RecordingCoreClient(), authority=admitted_test_authority()
+        )
 
 
 @pytest.mark.asyncio
@@ -221,7 +235,9 @@ async def test_simulation_mode_invalid_create_session_response() -> None:
         }
     )
     with pytest.raises(UpstreamServiceError) as exc_info:
-        await calculate_concentration(request, core_client=client)
+        await calculate_concentration(
+            request, authority=admitted_test_authority(), core_client=client
+        )
     assert exc_info.value.code == "UPSTREAM_INVALID_RESPONSE"
     assert exc_info.value.status_code == 502
     assert exc_info.value.details == {
@@ -247,7 +263,9 @@ async def test_simulation_mode_requires_session_id_in_create_response() -> None:
         }
     )
     with pytest.raises(UpstreamServiceError) as exc_info:
-        await calculate_concentration(request, core_client=client)
+        await calculate_concentration(
+            request, authority=admitted_test_authority(), core_client=client
+        )
     assert exc_info.value.code == "UPSTREAM_INVALID_RESPONSE"
     assert exc_info.value.status_code == 502
     assert exc_info.value.details == {
@@ -293,6 +311,7 @@ async def test_simulation_mode_preserves_explicit_empty_projected_state() -> Non
 
     response = await calculate_concentration(
         request,
+        authority=admitted_test_authority("corr-sim-unit"),
         core_client=client,
         correlation_id="corr-sim-unit",
         actor_id="tester",
@@ -347,7 +366,9 @@ async def test_simulation_mode_requires_idempotency_key_for_changes() -> None:
     )
 
     with pytest.raises(ValueError, match="Idempotency-Key header is required"):
-        await calculate_concentration(request, core_client=client)
+        await calculate_concentration(
+            request, authority=admitted_test_authority(), core_client=client
+        )
 
     assert client.change_calls == []
     assert client.last_snapshot_payload is None
@@ -377,11 +398,13 @@ async def test_simulation_mode_forwards_stable_idempotency_identity_for_replay()
 
     await calculate_concentration(
         request,
+        authority=admitted_test_authority(),
         core_client=client,
         idempotency_key="idem-replay",
     )
     await calculate_concentration(
         request,
+        authority=admitted_test_authority(),
         core_client=client,
         idempotency_key="idem-replay",
     )
@@ -426,6 +449,7 @@ async def test_simulation_mode_forwards_different_fingerprint_for_changed_payloa
         )
         await calculate_concentration(
             request,
+            authority=admitted_test_authority(),
             core_client=client,
             idempotency_key="idem-conflict",
         )
@@ -466,7 +490,9 @@ async def test_simulation_mode_reuses_existing_session_without_snapshot_version(
         }
     )
 
-    response = await calculate_concentration(request, core_client=client)
+    response = await calculate_concentration(
+        request, authority=admitted_test_authority(), core_client=client
+    )
 
     assert response.metadata is not None
     assert response.metadata.simulation_session_id == "SIM_EXISTING"
@@ -491,7 +517,9 @@ async def test_simulation_mode_requires_sections_dict() -> None:
         }
     )
     with pytest.raises(UpstreamServiceError) as exc_info:
-        await calculate_concentration(request, core_client=client)
+        await calculate_concentration(
+            request, authority=admitted_test_authority(), core_client=client
+        )
     assert exc_info.value.code == "UPSTREAM_INVALID_RESPONSE"
     assert exc_info.value.status_code == 502
     assert exc_info.value.details == {
@@ -521,7 +549,9 @@ async def test_simulation_mode_requires_projected_positions_section() -> None:
         }
     )
     with pytest.raises(UpstreamServiceError) as exc_info:
-        await calculate_concentration(request, core_client=client)
+        await calculate_concentration(
+            request, authority=admitted_test_authority(), core_client=client
+        )
     assert exc_info.value.code == "UPSTREAM_INVALID_RESPONSE"
     assert exc_info.value.details == {
         "service": "lotus-core",
@@ -545,7 +575,7 @@ async def test_simulation_resolver_requires_simulation_input() -> None:
         await resolve_simulation(
             request,
             core_client=_RecordingCoreClient(),
-            correlation_id=None,
+            authority=admitted_test_authority(),
             actor_id=None,
             idempotency_key=None,
         )
@@ -560,7 +590,7 @@ async def test_stateful_and_simulation_modes_require_core_client() -> None:
         }
     )
     with pytest.raises(ValueError, match="lotus-core client is required"):
-        await calculate_concentration(request)
+        await calculate_concentration(request, authority=admitted_test_authority())
 
 
 @pytest.mark.asyncio
@@ -572,7 +602,7 @@ async def test_unsupported_mode_guard_branch() -> None:
         simulation_input=None,
     )
     with pytest.raises(ValueError, match="Unsupported concentration input_mode"):
-        await calculate_concentration(request, core_client=_RecordingCoreClient())
+        await calculate_concentration(request, authority=None, core_client=_RecordingCoreClient())
 
 
 def test_helper_branches_for_type_conversion() -> None:

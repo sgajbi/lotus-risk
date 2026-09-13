@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from app.contracts.downstream_authority import DownstreamAuthority
 from app.contracts.risk import ReturnPoint
 from app.contracts.rolling import RollingStatefulInput
 from app.services.rolling_risk_free_dependency import (
@@ -112,13 +113,13 @@ async def _resolve_rolling_source_series(
     dependency_selection: RollingStatefulDependencySelection,
     performance_client: LotusPerformanceClientProtocol,
     core_client: LotusCoreClientProtocol | None,
-    correlation_id: str | None,
+    authority: DownstreamAuthority,
 ) -> _RollingSourceResolution:
     source_responses = await fetch_stateful_source_responses(
         dependency_selection.stateful,
         performance_client=performance_client,
         core_client=core_client,
-        correlation_id=correlation_id,
+        authority=authority,
         include_risk_free=dependency_selection.include_risk_free,
         reporting_currency=dependency_selection.reporting_currency,
     )
@@ -157,25 +158,25 @@ async def resolve_stateful_rolling_inputs(
     *,
     performance_client: LotusPerformanceClientProtocol,
     core_client: LotusCoreClientProtocol | None = None,
-    correlation_id: str | None,
+    authority: DownstreamAuthority,
 ) -> ResolvedStatefulRollingInputs:
     dependency_selection = await resolve_stateful_dependency_selection(
         stateful,
         core_client=core_client,
-        correlation_id=correlation_id,
+        authority=authority,
     )
     source_resolution = await _resolve_rolling_source_series(
         dependency_selection=dependency_selection,
         performance_client=performance_client,
         core_client=core_client,
-        correlation_id=correlation_id,
+        authority=authority,
     )
     risk_free_points = await _resolve_rolling_risk_free_dependency(
         dependency_selection=dependency_selection,
         source_responses=source_resolution.source_responses,
         core_client=core_client,
         portfolio_points=source_resolution.parsed_series.portfolio_points,
-        correlation_id=correlation_id,
+        correlation_id=authority.correlation_id,
     )
     return _resolved_stateful_inputs(
         stateful=dependency_selection.stateful,

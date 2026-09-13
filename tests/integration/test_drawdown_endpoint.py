@@ -73,7 +73,7 @@ def test_drawdown_endpoint_stateful_uses_lotus_performance() -> None:
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/drawdown",
-            headers={"X-Correlation-Id": "corr-dd-stateful"},
+            headers={"X-Correlation-Id": "corr-dd-stateful", "X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "stateful",
                 "stateful_input": {
@@ -126,7 +126,7 @@ def test_drawdown_endpoint_maps_malformed_upstream_return_dates_to_502() -> None
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/drawdown",
-            headers={"X-Correlation-Id": "corr-dd-bad-date"},
+            headers={"X-Correlation-Id": "corr-dd-bad-date", "X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "stateful",
                 "stateful_input": {
@@ -249,7 +249,7 @@ def test_drawdown_endpoint_stateful_uses_runtime_performance_client_override() -
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/drawdown",
-            headers={"X-Correlation-Id": "corr-dd-runtime"},
+            headers={"X-Correlation-Id": "corr-dd-runtime", "X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "stateful",
                 "stateful_input": {

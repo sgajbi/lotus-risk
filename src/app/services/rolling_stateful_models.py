@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Protocol
 
+from app.contracts.downstream_authority import DownstreamAuthority
 from app.contracts.risk import ReturnPoint
 from app.contracts.rolling import RollingStatefulInput
 
@@ -12,7 +13,7 @@ class LotusPerformanceClientProtocol(Protocol):
         self,
         *,
         request_payload: dict[str, Any],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, Any]: ...
 
 
@@ -22,7 +23,7 @@ class LotusCoreClientProtocol(Protocol):
         *,
         portfolio_id: str,
         request_payload: dict[str, Any],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, Any]: ...
 
     async def get_risk_free_series(

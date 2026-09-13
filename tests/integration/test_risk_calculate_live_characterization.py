@@ -13,7 +13,11 @@ import pytest
 
 from app.contracts.risk import RiskRequestPeriod
 from app.services.stateful_returns_request import build_stateful_returns_series_request
-from tests.support.live_portfolio_matrix import live_as_of_date, live_portfolio_id
+from tests.support.live_portfolio_matrix import (
+    live_as_of_date,
+    live_portfolio_id,
+    live_tenant_headers,
+)
 from tests.support.live_returns_series import extract_decimal_returns, fetch_live_returns_series
 
 
@@ -169,7 +173,11 @@ def test_live_stateful_risk_calculate_reconciles_selected_metrics() -> None:
         request_payload=returns_payload,
     )
     with httpx.Client(timeout=30.0) as client:
-        risk_response = client.post(f"{RISK_BASE_URL}/analytics/risk/calculate", json=risk_payload)
+        risk_response = client.post(
+            f"{RISK_BASE_URL}/analytics/risk/calculate",
+            json=risk_payload,
+            headers=live_tenant_headers(),
+        )
         risk_response.raise_for_status()
 
     series = upstream_body["series"]
@@ -286,7 +294,11 @@ def test_live_stateful_risk_calculate_reconciles_parametric_var_methods(
         request_payload=returns_payload,
     )
     with httpx.Client(timeout=30.0) as client:
-        risk_response = client.post(f"{RISK_BASE_URL}/analytics/risk/calculate", json=risk_payload)
+        risk_response = client.post(
+            f"{RISK_BASE_URL}/analytics/risk/calculate",
+            json=risk_payload,
+            headers=live_tenant_headers(),
+        )
         risk_response.raise_for_status()
 
     portfolio_returns = [

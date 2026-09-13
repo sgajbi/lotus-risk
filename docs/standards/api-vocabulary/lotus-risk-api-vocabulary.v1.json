@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-09-04T23:22:42.093716+00:00",
+  "generatedAt": "2026-09-13T05:30:56.497492+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.affected_portfolios",
@@ -4659,6 +4659,23 @@
       ]
     },
     {
+      "semanticId": "lotus.x_tenant_id",
+      "canonicalTerm": "x_tenant_id",
+      "preferredName": "x_tenant_id",
+      "description": "Canonical x tenant id used by lotus-risk APIs.",
+      "example": null,
+      "type": "string",
+      "locations": [
+        "header"
+      ],
+      "observedTypes": [
+        "string"
+      ],
+      "fieldPaths": [
+        "X-Tenant-Id"
+      ]
+    },
+    {
       "semanticId": "lotus.year",
       "canonicalTerm": "year",
       "preferredName": "year",
@@ -4678,6 +4695,42 @@
   ],
   "controlsCatalog": [
     {
+      "name": "x_tenant_id",
+      "kind": "request_option",
+      "location": "header",
+      "required": false,
+      "type": "string",
+      "description": "Admitted tenant authority for stateful (and concentration simulation) input modes. The admitted value is forwarded on every tenant-owned lotus-performance and lotus-core request, including async status/result polling. A stateful request without a non-blank value refuses with 401 MISSING_TENANT_AUTHORITY before any upstream request is made; a trimmed value longer than 128 characters refuses with 400 INVALID_TENANT_AUTHORITY. Stateless requests do not require tenant authority.",
+      "example": "tenant-sg",
+      "allowedValues": [],
+      "semanticId": "lotus.x_tenant_id",
+      "attributeRef": "#/attributeCatalog/lotus.x_tenant_id"
+    },
+    {
+      "name": "x_tenant_id",
+      "kind": "request_option",
+      "location": "header",
+      "required": false,
+      "type": "string",
+      "description": "Admitted tenant authority for stateful (and concentration simulation) input modes. The admitted value is forwarded on every tenant-owned lotus-performance and lotus-core request, including async status/result polling. A stateful request without a non-blank value refuses with 401 MISSING_TENANT_AUTHORITY before any upstream request is made; a trimmed value longer than 128 characters refuses with 400 INVALID_TENANT_AUTHORITY. Stateless requests do not require tenant authority.",
+      "example": "tenant-sg",
+      "allowedValues": [],
+      "semanticId": "lotus.x_tenant_id",
+      "attributeRef": "#/attributeCatalog/lotus.x_tenant_id"
+    },
+    {
+      "name": "x_tenant_id",
+      "kind": "request_option",
+      "location": "header",
+      "required": false,
+      "type": "string",
+      "description": "Admitted tenant authority for stateful (and concentration simulation) input modes. The admitted value is forwarded on every tenant-owned lotus-performance and lotus-core request, including async status/result polling. A stateful request without a non-blank value refuses with 401 MISSING_TENANT_AUTHORITY before any upstream request is made; a trimmed value longer than 128 characters refuses with 400 INVALID_TENANT_AUTHORITY. Stateless requests do not require tenant authority.",
+      "example": "tenant-sg",
+      "allowedValues": [],
+      "semanticId": "lotus.x_tenant_id",
+      "attributeRef": "#/attributeCatalog/lotus.x_tenant_id"
+    },
+    {
       "name": "idempotency_key",
       "kind": "request_option",
       "location": "header",
@@ -4688,6 +4741,30 @@
       "allowedValues": [],
       "semanticId": "lotus.idempotency_key",
       "attributeRef": "#/attributeCatalog/lotus.idempotency_key"
+    },
+    {
+      "name": "x_tenant_id",
+      "kind": "request_option",
+      "location": "header",
+      "required": false,
+      "type": "string",
+      "description": "Admitted tenant authority for stateful (and concentration simulation) input modes. The admitted value is forwarded on every tenant-owned lotus-performance and lotus-core request, including async status/result polling. A stateful request without a non-blank value refuses with 401 MISSING_TENANT_AUTHORITY before any upstream request is made; a trimmed value longer than 128 characters refuses with 400 INVALID_TENANT_AUTHORITY. Stateless requests do not require tenant authority.",
+      "example": "tenant-sg",
+      "allowedValues": [],
+      "semanticId": "lotus.x_tenant_id",
+      "attributeRef": "#/attributeCatalog/lotus.x_tenant_id"
+    },
+    {
+      "name": "x_tenant_id",
+      "kind": "request_option",
+      "location": "header",
+      "required": false,
+      "type": "string",
+      "description": "Admitted tenant authority for stateful (and concentration simulation) input modes. The admitted value is forwarded on every tenant-owned lotus-performance and lotus-core request, including async status/result polling. A stateful request without a non-blank value refuses with 401 MISSING_TENANT_AUTHORITY before any upstream request is made; a trimmed value longer than 128 characters refuses with 400 INVALID_TENANT_AUTHORITY. Stateless requests do not require tenant authority.",
+      "example": "tenant-sg",
+      "allowedValues": [],
+      "semanticId": "lotus.x_tenant_id",
+      "attributeRef": "#/attributeCatalog/lotus.x_tenant_id"
     }
   ],
   "endpoints": [
@@ -6838,6 +6915,14 @@
       "request": {
         "fields": [
           {
+            "name": "X-Tenant-Id",
+            "location": "header",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.x_tenant_id",
+            "attributeRef": "#/attributeCatalog/lotus.x_tenant_id"
+          },
+          {
             "name": "input_mode",
             "location": "body",
             "required": false,
@@ -7204,6 +7289,14 @@
       "summary": "Calculate realized drawdown analytics",
       "request": {
         "fields": [
+          {
+            "name": "X-Tenant-Id",
+            "location": "header",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.x_tenant_id",
+            "attributeRef": "#/attributeCatalog/lotus.x_tenant_id"
+          },
           {
             "name": "input_mode",
             "location": "body",
@@ -7596,6 +7689,14 @@
       "request": {
         "fields": [
           {
+            "name": "X-Tenant-Id",
+            "location": "header",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.x_tenant_id",
+            "attributeRef": "#/attributeCatalog/lotus.x_tenant_id"
+          },
+          {
             "name": "input_mode",
             "location": "body",
             "required": false,
@@ -7953,6 +8054,14 @@
             "type": "object",
             "semanticId": "lotus.idempotency_key",
             "attributeRef": "#/attributeCatalog/lotus.idempotency_key"
+          },
+          {
+            "name": "X-Tenant-Id",
+            "location": "header",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.x_tenant_id",
+            "attributeRef": "#/attributeCatalog/lotus.x_tenant_id"
           },
           {
             "name": "input_mode",
@@ -8409,6 +8518,14 @@
       "summary": "Calculate historical risk attribution analytics",
       "request": {
         "fields": [
+          {
+            "name": "X-Tenant-Id",
+            "location": "header",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.x_tenant_id",
+            "attributeRef": "#/attributeCatalog/lotus.x_tenant_id"
+          },
           {
             "name": "input_mode",
             "location": "body",

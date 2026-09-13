@@ -128,6 +128,8 @@ def test_analytics_routers_keep_defensive_missing_payload_guards(
         input_mode=input_mode, stateless_input=object(), stateful_input=object()
     )
     setattr(payload, missing_field, None)
+    # Stateless paths must never require tenant authority; stateful paths carry it.
+    tenant_id = None if missing_field == "stateless_input" else "tenant-a"
 
     with pytest.raises(ValueError, match=message):
         asyncio.run(
@@ -135,6 +137,7 @@ def test_analytics_routers_keep_defensive_missing_payload_guards(
                 cast(Any, payload),
                 RuntimeDownstreamClients(app_state=SimpleNamespace()),
                 None,
+                tenant_id,
             )
         )
 
@@ -164,5 +167,6 @@ def test_analytics_routers_keep_defensive_unsupported_mode_guards(
                 cast(Any, payload),
                 RuntimeDownstreamClients(app_state=SimpleNamespace()),
                 None,
+                "tenant-a",
             )
         )

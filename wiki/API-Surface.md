@@ -191,6 +191,24 @@ by the cohort engine.
 Because all three sets are closed, each can be branched on mechanically. Branch on the set belonging
 to the endpoint you called.
 
+## Stateful tenant authority
+
+Stateful input modes (and concentration **simulation**) read tenant-owned portfolio data from
+enforcing producers, so those requests must present an admitted tenant:
+
+1. `X-Tenant-Id` is required for stateful/simulation requests. Missing or blank after trimming
+   refuses with **401 `MISSING_TENANT_AUTHORITY`**; longer than 128 characters after trimming
+   refuses with **400 `INVALID_TENANT_AUTHORITY`**. Both refuse **before any upstream request**.
+2. The admitted value is forwarded per request on every tenant-owned `lotus-performance` and
+   `lotus-core` call, including async status/result polling, so the polling identity is always the
+   submitting tenant. A foreign-tenant result refusal from the producer surfaces as a bounded
+   `424 FAILED_DEPENDENCY`, not an endless pending state.
+3. Stateless requests are pure computations over caller-supplied series and need no tenant
+   authority.
+
+Tenant authority is per-request only: pooled shared HTTP clients never carry tenant default
+headers, and tenant is never derived from the business payload.
+
 ## Request bounds and ingress
 
 Write requests are bounded by `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES`, with

@@ -5,6 +5,7 @@ from typing import Any
 import pytest
 
 from app.contracts.concentration import ConcentrationRequest
+from app.contracts.downstream_authority import DownstreamAuthority
 from app.services.concentration_engine import calculate_concentration
 
 
@@ -33,7 +34,7 @@ class _CoreEnrichmentRecorder:
         portfolio_id: str,
         ttl_hours: int | None,
         created_by: str | None,
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, Any]:
         raise AssertionError("not expected in stateless characterization tests")
 
@@ -42,7 +43,7 @@ class _CoreEnrichmentRecorder:
         *,
         session_id: str,
         changes: list[dict[str, Any]],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
         idempotency_key: str,
         change_set_fingerprint: str,
     ) -> dict[str, Any]:
@@ -53,7 +54,7 @@ class _CoreEnrichmentRecorder:
         *,
         portfolio_id: str,
         request_payload: dict[str, Any],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, Any]:
         raise AssertionError("not expected in stateless characterization tests")
 
@@ -85,7 +86,7 @@ async def test_engine_characterization_merge_policy_prefers_caller_mapping() -> 
     )
 
     response = await calculate_concentration(
-        request, core_client=core_client, correlation_id="corr-1"
+        request, authority=None, core_client=core_client, correlation_id="corr-1"
     )
 
     assert response.issuer_concentration.hhi_current == 10000.0
@@ -110,7 +111,7 @@ async def test_engine_characterization_core_only_ignores_caller_mapping() -> Non
         ]
     )
 
-    response = await calculate_concentration(request, core_client=core_client)
+    response = await calculate_concentration(request, authority=None, core_client=core_client)
 
     assert response.issuer_concentration.hhi_current == 5200.0
     assert response.issuer_concentration.coverage_status.value == "complete"
@@ -144,7 +145,7 @@ async def test_engine_characterization_ultimate_parent_grouping_collapses_issuer
     )
     core_client = _CoreEnrichmentRecorder(records=[])
 
-    response = await calculate_concentration(request, core_client=core_client)
+    response = await calculate_concentration(request, authority=None, core_client=core_client)
 
     assert response.issuer_concentration.hhi_current == 10000.0
     assert response.issuer_concentration.covered_position_count_current == 2

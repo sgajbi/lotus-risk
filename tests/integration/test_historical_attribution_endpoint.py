@@ -1,6 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
+from app.contracts.downstream_authority import DownstreamAuthority
 from app.main import app
 from app.observability_contracts import RISK_CALCULATION_SUPPORTABILITY_METRIC_LABELS
 from app.upstream_errors import UpstreamServiceError
@@ -84,7 +85,7 @@ def test_historical_attribution_stateful_total_risk_happy_path() -> None:
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/historical-attribution",
-            headers={"X-Correlation-Id": "corr-attr-stateful"},
+            headers={"X-Correlation-Id": "corr-attr-stateful", "X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "stateful",
                 "stateful_input": {
@@ -133,6 +134,7 @@ def test_historical_attribution_stateful_total_risk_happy_path() -> None:
                     "calendar_policy": "BUSINESS",
                 },
             },
+            "tenant_id": "tenant-a",
             "correlation_id": "corr-attr-stateful",
         }
     ]
@@ -163,7 +165,7 @@ def test_historical_attribution_stateful_total_risk_aligns_exposure_to_return_da
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/historical-attribution",
-            headers={"X-Correlation-Id": "corr-attr-stateful"},
+            headers={"X-Correlation-Id": "corr-attr-stateful", "X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "stateful",
                 "stateful_input": {
@@ -199,6 +201,7 @@ def test_historical_attribution_stateful_total_risk_aligns_exposure_to_return_da
                 "consumer_system": "lotus-risk",
                 "page": {"page_size": 5000, "page_token": None},
             },
+            "tenant_id": "tenant-a",
             "correlation_id": "corr-attr-stateful",
         }
     ]
@@ -216,7 +219,7 @@ def test_historical_attribution_stateful_active_risk_uses_performance_benchmark_
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/historical-attribution",
-            headers={"X-Correlation-Id": "corr-attr-active-stateful"},
+            headers={"X-Correlation-Id": "corr-attr-active-stateful", "X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "stateful",
                 "stateful_input": {
@@ -253,6 +256,7 @@ def test_historical_attribution_stateful_active_risk_uses_performance_benchmark_
                 "grouping_dimensions": ["SECTOR"],
                 "page": {"page_size": 1000, "page_token": None},
             },
+            "tenant_id": "tenant-a",
             "correlation_id": "corr-attr-active-stateful",
         }
     ]
@@ -273,7 +277,7 @@ def test_historical_attribution_stateful_active_risk_asset_class_contract() -> N
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/historical-attribution",
-            headers={"X-Correlation-Id": "corr-attr-active-asset-class"},
+            headers={"X-Correlation-Id": "corr-attr-active-asset-class", "X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "stateful",
                 "stateful_input": {
@@ -344,7 +348,7 @@ def test_historical_attribution_stateful_active_risk_issuer_uses_benchmark_conte
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/historical-attribution",
-            headers={"X-Correlation-Id": "corr-attr-active-issuer"},
+            headers={"X-Correlation-Id": "corr-attr-active-issuer", "X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "stateful",
                 "stateful_input": {
@@ -426,7 +430,7 @@ def test_historical_attribution_stateful_active_risk_rejects_missing_benchmark_r
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/historical-attribution",
-            headers={"X-Correlation-Id": "corr-attr-missing-bmk-return"},
+            headers={"X-Correlation-Id": "corr-attr-missing-bmk-return", "X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "stateful",
                 "stateful_input": {
@@ -464,7 +468,7 @@ def test_historical_attribution_stateful_active_risk_rejects_bad_benchmark_conte
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/historical-attribution",
-            headers={"X-Correlation-Id": "corr-attr-bad-bmk-context"},
+            headers={"X-Correlation-Id": "corr-attr-bad-bmk-context", "X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "stateful",
                 "stateful_input": {
@@ -499,12 +503,13 @@ def test_historical_attribution_stateful_active_risk_maps_benchmark_context_500_
             self,
             *,
             request_payload: dict[str, object],
-            correlation_id: str | None,
+            authority: DownstreamAuthority,
         ) -> dict[str, object]:
             self.calls.append(
                 {
                     "request_payload": request_payload,
-                    "correlation_id": correlation_id,
+                    "tenant_id": authority.tenant_id,
+                    "correlation_id": authority.correlation_id,
                 }
             )
             return build_stateful_attribution_returns_client().response_payload
@@ -513,12 +518,13 @@ def test_historical_attribution_stateful_active_risk_maps_benchmark_context_500_
             self,
             *,
             request_payload: dict[str, object],
-            correlation_id: str | None,
+            authority: DownstreamAuthority,
         ) -> dict[str, object]:
             self.benchmark_exposure_context_calls.append(
                 {
                     "request_payload": request_payload,
-                    "correlation_id": correlation_id,
+                    "tenant_id": authority.tenant_id,
+                    "correlation_id": authority.correlation_id,
                 }
             )
             raise UpstreamServiceError(
@@ -546,7 +552,7 @@ def test_historical_attribution_stateful_active_risk_maps_benchmark_context_500_
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/historical-attribution",
-            headers={"X-Correlation-Id": "corr-attr-bmk-context-500"},
+            headers={"X-Correlation-Id": "corr-attr-bmk-context-500", "X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "stateful",
                 "stateful_input": {

@@ -19,6 +19,11 @@ Provide decomposition of historical realized risk and active risk into transpare
 
 - Status: implemented for approved v1 stateful scope
 - Current behavior:
+  - caller supplies the admitted tenant in the `X-Tenant-Id` header: a stateful request without a
+    non-blank value refuses `401 MISSING_TENANT_AUTHORITY` before any upstream call, and a trimmed
+    value over 128 characters refuses `400 INVALID_TENANT_AUTHORITY`; the admitted value is
+    forwarded on the returns-series submit and polls, benchmark exposure context, and lotus-core
+    position-timeseries reads (instrument enrichment stays a tenant-free reference read)
   - `TOTAL_RISK` stateful path is implemented
   - `ACTIVE_RISK` stateful path is implemented for `POSITION`, `SECTOR`, `ASSET_CLASS`, and `ISSUER` grouping dimensions through the lotus-performance benchmark exposure context derived view
   - `ACTIVE_RISK` + `ISSUER` consumes lotus-performance benchmark exposure context issuer rows sourced from lotus-core index-catalog issuer labels
