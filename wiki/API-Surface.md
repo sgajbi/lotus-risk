@@ -132,8 +132,9 @@ Applies to `calculate`, `drawdown`, `rolling-metrics`, `historical-attribution` 
 the lotus-risk#291 consumer slice it is **evidence-driven rather than unconditional**. Each
 `TOTAL_RISK` attribution set now declares its evidence basis in `risk_basis`:
 
-- `empirical_group_returns` — the set decomposed validated per-group return evidence from the
-  lotus-performance contribution surface: the group's own returns joined with the
+- `empirical_group_returns` — available only for `TOTAL_RISK` `SECTOR` and `ASSET_CLASS` sets
+  whose validated lotus-performance contribution evidence covers the Core-sourced group universe:
+  the group's own returns joined with the
   beginning-capital weights that formed them, complete over every portfolio return date in the
   period, reconciling to the portfolio path per date. These components respond to group return
   behaviour and may be presented as measured attribution.
@@ -141,7 +142,8 @@ the lotus-risk#291 consumer slice it is **evidence-driven rather than unconditio
   can only recover the weights (under constant weights `percent_contribution` reproduces the
   group weight exactly). A bounded `group_return_evidence:*` quality flag names why evidence was
   not usable when it was requested. Every `ACTIVE_RISK` set is a weight proxy — no benchmark-group
-  return series exists — and so is `ISSUER` `TOTAL_RISK` (no producer-side issuer dimension). A
+  return series exists — and so are `POSITION` and `ISSUER` `TOTAL_RISK` (no safely joinable
+  producer identity). A
   date absent from a group's evidence is unknown, never zero: incomplete evidence keeps the whole
   set on the proxy rather than zero-filling or dropping dates.
 

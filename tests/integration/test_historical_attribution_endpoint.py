@@ -605,6 +605,8 @@ def _empirical_contribution_response() -> dict[str, object]:
             "group_return": {
                 "status": "READY",
                 "currency": "USD",
+                "return_basis": "SOURCE_POSITION_VALUATION_TWR",
+                "weight_basis": "BEGINNING_CAPITAL_RATIO",
                 "series": series(weight_pct, returns_pp),
                 "reason": None,
             },
@@ -658,7 +660,7 @@ def test_historical_attribution_stateful_empirical_group_returns_end_to_end() ->
     assert attribution_set["risk_basis"] == "empirical_group_returns"
     assert attribution_set["quality_flags"] == []
     contributors = {c["group_key"]: c for c in attribution_set["contributors"]}
-    assert set(contributors) == {"TECH", "HEALTH"}
+    assert set(contributors) == {"SECTOR_TECH", "SECTOR_HEALTH"}
     # Exact per-date reconciliation: components sum exactly to the decomposed total.
     assert attribution_set["reconciled_sum"] == pytest.approx(
         attribution_set["total_value"], abs=1e-12
@@ -681,6 +683,153 @@ def test_historical_attribution_stateful_empirical_group_returns_end_to_end() ->
     assert payload["report_end_date"] == "2026-01-06"
     assert payload["emit"]["threshold_weight"] == 0.0
     assert payload["stateful_input"]["metric_basis"] == "NET"
+    assert body["metadata"]["upstream_request_fingerprints"].get(
+        "lotus-performance:/performance/contribution"
+    )
+
+
+def test_stateful_attribution_forwards_core_owned_reporting_currency_without_fx() -> None:
+    """The routed Risk workflow preserves Performance's BASE_ONLY source contract.
+
+    These controlled Core rows represent a USD reporting book with USD and EUR
+    source positions. Risk asks Performance for group evidence in USD but does
+    not request `BOTH` or manufacture FX rates; Performance owns the valuation
+    conversion. The no-reporting-currency request remains the same-currency
+    control in `test_historical_attribution_stateful_total_risk_happy_path`.
+    """
+    performance_client = build_stateful_attribution_returns_client()
+    core_client = RecordingHistoricalAttributionCoreClient(
+        rows=[
+            {
+                "security_id": "SEC_USD",
+                "valuation_date": "2026-01-02",
+                "position_currency": "USD",
+                "dimensions": {"sector": "TECH", "asset_class": "EQUITY"},
+                "ending_market_value_portfolio_currency": "60",
+                "ending_market_value_reporting_currency": "60",
+            },
+            {
+                "security_id": "SEC_EUR",
+                "valuation_date": "2026-01-02",
+                "position_currency": "EUR",
+                "dimensions": {"sector": "HEALTH", "asset_class": "EQUITY"},
+                "ending_market_value_portfolio_currency": "36",
+                "ending_market_value_reporting_currency": "40",
+            },
+            {
+                "security_id": "SEC_USD",
+                "valuation_date": "2026-01-05",
+                "position_currency": "USD",
+                "dimensions": {"sector": "TECH", "asset_class": "EQUITY"},
+                "ending_market_value_portfolio_currency": "65",
+                "ending_market_value_reporting_currency": "65",
+            },
+            {
+                "security_id": "SEC_EUR",
+                "valuation_date": "2026-01-05",
+                "position_currency": "EUR",
+                "dimensions": {"sector": "HEALTH", "asset_class": "EQUITY"},
+                "ending_market_value_portfolio_currency": "31.5",
+                "ending_market_value_reporting_currency": "35",
+            },
+        ]
+    )
+    with override_app_runtime(
+        lotus_performance_client=performance_client,
+        lotus_core_client=core_client,
+    ):
+        response = TestClient(app).post(
+            "/analytics/risk/historical-attribution",
+            headers={"X-Correlation-Id": "corr-attr-usd", "X-Tenant-Id": "tenant-a"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-06",
+                    "reporting_currency": "USD",
+                    "net_or_gross": "NET",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "attribution_options": {
+                        "attribution_types": ["TOTAL_RISK"],
+                        "metrics": ["VOLATILITY"],
+                        "grouping_dimensions": ["SECTOR"],
+                    },
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    contribution_request = performance_client.contribution_calls[0]["request_payload"]
+    assert contribution_request["report_ccy"] == "USD"
+    assert contribution_request["currency_mode"] == "BASE_ONLY"
+    assert "fx" not in contribution_request
+    assert contribution_request["stateful_input"]["metric_basis"] == "NET"
+    assert core_client.position_calls[0]["request_payload"]["reporting_currency"] == "USD"
+
+
+def test_stateful_attribution_keeps_missing_core_groups_on_the_proxy_at_the_route() -> None:
+    performance_client = build_stateful_attribution_returns_client()
+    performance_client.contribution_response = {
+        "results_by_period": {"EXPLICIT": {"levels": [{"name": "sector", "rows": []}]}}
+    }
+    with override_app_runtime(
+        lotus_performance_client=performance_client,
+        lotus_core_client=RecordingHistoricalAttributionCoreClient(),
+    ):
+        response = TestClient(app).post(
+            "/analytics/risk/historical-attribution",
+            headers={"X-Correlation-Id": "corr-attr-malformed", "X-Tenant-Id": "tenant-a"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-06",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "attribution_options": {
+                        "attribution_types": ["TOTAL_RISK"],
+                        "metrics": ["VOLATILITY"],
+                        "grouping_dimensions": ["SECTOR"],
+                    },
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    attribution_set = response.json()["results"]["YTD"]["attribution_sets"][0]
+    assert attribution_set["risk_basis"] == "weight_proxy"
+    assert attribution_set["quality_flags"] == ["group_return_evidence:group_universe_incomplete"]
+
+
+def test_stateful_attribution_refuses_malformed_contribution_evidence_at_the_route() -> None:
+    performance_client = build_stateful_attribution_returns_client()
+    performance_client.contribution_response = {"results_by_period": {"EXPLICIT": {"levels": []}}}
+    with override_app_runtime(
+        lotus_performance_client=performance_client,
+        lotus_core_client=RecordingHistoricalAttributionCoreClient(),
+    ):
+        response = TestClient(app).post(
+            "/analytics/risk/historical-attribution",
+            headers={"X-Correlation-Id": "corr-attr-malformed", "X-Tenant-Id": "tenant-a"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-06",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "attribution_options": {
+                        "attribution_types": ["TOTAL_RISK"],
+                        "metrics": ["VOLATILITY"],
+                        "grouping_dimensions": ["SECTOR"],
+                    },
+                },
+            },
+        )
+
+    assert response.status_code == 502
+    error = response.json()["error"]
+    assert error["code"] == "UPSTREAM_INVALID_RESPONSE"
+    assert error["details"]["service"] == "lotus-performance"
+    assert error["details"]["operation"] == "/performance/contribution"
 
 
 def test_stateless_conflicting_duplicate_exposure_weights_refuse_400() -> None:

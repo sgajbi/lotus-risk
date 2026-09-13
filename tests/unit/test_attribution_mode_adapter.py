@@ -1,10 +1,14 @@
 import asyncio
+import copy
 from datetime import date
 from typing import Any, cast
 
 import pytest
 
-from app.contracts.attribution import HistoricalAttributionStatefulInput
+from app.contracts.attribution import (
+    HistoricalAttributionResponse,
+    HistoricalAttributionStatefulInput,
+)
 from app.contracts.downstream_authority import DownstreamAuthority
 from app.services.attribution_exposure_history import (
     as_decimal,
@@ -26,8 +30,9 @@ from tests.support.historical_attribution_fakes import (
 
 
 class _StubPerformanceClient:
-    def __init__(self) -> None:
+    def __init__(self, *, contribution_response: dict[str, Any] | None = None) -> None:
         self._client = build_stateful_attribution_returns_client()
+        self._client.contribution_response = contribution_response
         self.payload: dict[str, object] | None = None
 
     async def get_returns_series(
@@ -67,6 +72,10 @@ class _StubPerformanceClient:
     @property
     def benchmark_exposure_context_calls(self) -> list[dict[str, object]]:
         return self._client.benchmark_exposure_context_calls
+
+    @property
+    def contribution_calls(self) -> list[dict[str, Any]]:
+        return self._client.contribution_calls
 
 
 class _StubCoreClient(RecordingHistoricalAttributionCoreClient):
@@ -183,6 +192,60 @@ def _stateful_input(
     )
 
 
+def _empirical_sector_contribution_response(*, tech_adjustment_pp: float = 0.0) -> dict[str, Any]:
+    dates = ["2026-01-02", "2026-01-05", "2026-01-06"]
+    portfolio_pp = [1.0, -0.5, 0.4]
+    tech_weights = [0.60, 0.65, 0.65]
+    health_weights = [0.40, 0.35, 0.35]
+    tech_returns = [value + tech_adjustment_pp for value in portfolio_pp]
+    health_returns = [
+        (portfolio - tech_weight * tech_return) / health_weight
+        for portfolio, tech_weight, health_weight, tech_return in zip(
+            portfolio_pp,
+            tech_weights,
+            health_weights,
+            tech_returns,
+            strict=True,
+        )
+    ]
+
+    def row(group: str, weights: list[float], returns: list[float]) -> dict[str, Any]:
+        return {
+            "key": {"sector": group},
+            "is_other": False,
+            "group_return": {
+                "status": "READY",
+                "currency": "USD",
+                "return_basis": "SOURCE_POSITION_VALUATION_TWR",
+                "weight_basis": "BEGINNING_CAPITAL_RATIO",
+                "series": [
+                    {
+                        "date": day,
+                        "return_pct": return_pp,
+                        "portfolio_weight_pct": weight * 100.0,
+                    }
+                    for day, weight, return_pp in zip(dates, weights, returns, strict=True)
+                ],
+            },
+        }
+
+    return {
+        "results_by_period": {
+            "EXPLICIT": {
+                "levels": [
+                    {
+                        "name": "sector",
+                        "rows": [
+                            row("TECH", tech_weights, tech_returns),
+                            row("HEALTH", health_weights, health_returns),
+                        ],
+                    }
+                ]
+            }
+        }
+    }
+
+
 def test_stateful_attribution_total_risk_happy_path() -> None:
     perf = _StubPerformanceClient()
     core = _StubCoreClient()
@@ -214,9 +277,10 @@ def test_stateful_attribution_total_risk_happy_path() -> None:
     ]
     assert response.metadata.request_fingerprint is not None
     assert response.metadata.request_fingerprint.startswith("sha256:")
-    assert list(response.metadata.upstream_request_fingerprints) == [
-        "lotus-performance:/integration/returns/series"
-    ]
+    assert set(response.metadata.upstream_request_fingerprints) == {
+        "lotus-performance:/integration/returns/series",
+        "lotus-performance:/performance/contribution",
+    }
 
 
 def test_stateful_attribution_asset_class_and_reporting_currency() -> None:
@@ -236,6 +300,177 @@ def test_stateful_attribution_asset_class_and_reporting_currency() -> None:
     first_payload = core.position_payloads[0]["request_payload"]
     assert first_payload["dimensions"] == ["asset_class"]
     assert first_payload["reporting_currency"] == "USD"
+
+
+def test_stateful_contribution_uses_core_reporting_values_not_unowned_fx() -> None:
+    """Risk requests BASE_ONLY when Core owns the reporting-currency valuations.
+
+    ``BOTH`` is Performance's local/FX decomposition contract and rejects a
+    mixed-currency book without supplied rates.  Risk has neither rates nor
+    authority to invent them, so its request must preserve the producer's
+    source-owned valuation path and the selected NET/GROSS basis.
+    """
+    performance_client = _StubPerformanceClient()
+    stateful = _stateful_input(grouping_dimensions=["SECTOR"], attribution_types=["TOTAL_RISK"])
+    stateful.reporting_currency = "USD"
+
+    asyncio.run(
+        calculate_historical_attribution_stateful(
+            stateful,
+            performance_client=performance_client,
+            core_client=_StubCoreClient(),
+            authority=admitted_test_authority("corr-mixed-currency"),
+        )
+    )
+
+    contribution_request = performance_client.contribution_calls[0]["request_payload"]
+    assert contribution_request["report_ccy"] == "USD"
+    assert contribution_request["currency_mode"] == "BASE_ONLY"
+    assert "fx" not in contribution_request
+    stateful_input = contribution_request["stateful_input"]
+    assert stateful_input["metric_basis"] == "NET"
+    assert contribution_request["hierarchy"] == ["sector"]
+    assert performance_client.contribution_calls[0]["tenant_id"] == "tenant-a"
+
+
+def test_stateful_lineage_fingerprints_every_contribution_request_and_evidence() -> None:
+    """Requests and used observations have separate, deterministic identities."""
+    baseline_client = _StubPerformanceClient(
+        contribution_response=_empirical_sector_contribution_response()
+    )
+    changed_client = _StubPerformanceClient(
+        contribution_response=_empirical_sector_contribution_response(tech_adjustment_pp=0.1)
+    )
+    shuffled_response = copy.deepcopy(_empirical_sector_contribution_response())
+    levels = shuffled_response["results_by_period"]["EXPLICIT"]["levels"]
+    rows = levels[0]["rows"]
+    rows.reverse()
+    for row in rows:
+        row["group_return"]["series"].reverse()
+    shuffled_client = _StubPerformanceClient(contribution_response=shuffled_response)
+
+    def calculate(
+        performance_client: _StubPerformanceClient,
+        correlation_id: str,
+    ) -> HistoricalAttributionResponse:
+        return asyncio.run(
+            calculate_historical_attribution_stateful(
+                _stateful_input(grouping_dimensions=["SECTOR"], attribution_types=["TOTAL_RISK"]),
+                performance_client=performance_client,
+                core_client=_StubCoreClient(),
+                authority=admitted_test_authority(correlation_id),
+            )
+        )
+
+    baseline = calculate(baseline_client, "corr-evidence-a")
+    changed = calculate(changed_client, "corr-evidence-b")
+    shuffled = calculate(shuffled_client, "corr-evidence-c")
+
+    assert baseline.results["YTD"].attribution_sets[0].risk_basis == "empirical_group_returns"
+    assert changed.metadata.request_fingerprint != baseline.metadata.request_fingerprint
+    assert shuffled.metadata.request_fingerprint == baseline.metadata.request_fingerprint
+    contribution_operation = "lotus-performance:/performance/contribution"
+    assert (
+        baseline.metadata.upstream_request_fingerprints[contribution_operation]
+        == changed.metadata.upstream_request_fingerprints[contribution_operation]
+        == shuffled.metadata.upstream_request_fingerprints[contribution_operation]
+    )
+    # Distinct admitted authorities do not enter reproducibility fingerprints.
+    assert (
+        baseline.metadata.upstream_request_fingerprints
+        == shuffled.metadata.upstream_request_fingerprints
+    )
+
+
+def test_stateful_lineage_excludes_degraded_observations_unused_by_covariance() -> None:
+    def degraded_response(*, tech_adjustment_pp: float) -> dict[str, Any]:
+        response = _empirical_sector_contribution_response(tech_adjustment_pp=tech_adjustment_pp)
+        levels = response["results_by_period"]["EXPLICIT"]["levels"]
+        health_row = levels[0]["rows"][1]
+        health_row["group_return"] = {
+            "status": "UNAVAILABLE",
+            "currency": None,
+            "series": [],
+            "reason": "SOURCE_POSITION_VALUATION_ECONOMICS_INCOMPLETE",
+        }
+        return response
+
+    def calculate(tech_adjustment_pp: float) -> HistoricalAttributionResponse:
+        return asyncio.run(
+            calculate_historical_attribution_stateful(
+                _stateful_input(grouping_dimensions=["SECTOR"], attribution_types=["TOTAL_RISK"]),
+                performance_client=_StubPerformanceClient(
+                    contribution_response=degraded_response(tech_adjustment_pp=tech_adjustment_pp)
+                ),
+                core_client=_StubCoreClient(),
+                authority=admitted_test_authority("corr-degraded-evidence"),
+            )
+        )
+
+    baseline = calculate(0.0)
+    changed_unused_observations = calculate(0.5)
+
+    assert baseline.results["YTD"].attribution_sets[0].risk_basis == "weight_proxy"
+    assert (
+        changed_unused_observations.results["YTD"].attribution_sets[0].risk_basis == "weight_proxy"
+    )
+    assert (
+        baseline.metadata.request_fingerprint
+        == changed_unused_observations.metadata.request_fingerprint
+    )
+    assert (
+        baseline.metadata.upstream_request_fingerprints
+        == changed_unused_observations.metadata.upstream_request_fingerprints
+    )
+
+
+def test_stateful_lineage_aggregates_all_period_dimension_contribution_requests() -> None:
+    payload = _stateful_input(
+        grouping_dimensions=["SECTOR", "ASSET_CLASS"], attribution_types=["TOTAL_RISK"]
+    )
+    payload = HistoricalAttributionStatefulInput.model_validate(
+        {
+            **payload.model_dump(mode="json"),
+            "periods": [
+                {
+                    "type": "EXPLICIT",
+                    "name": "EARLY",
+                    "from_date": "2026-01-02",
+                    "to_date": "2026-01-05",
+                },
+                {
+                    "type": "EXPLICIT",
+                    "name": "LATE",
+                    "from_date": "2026-01-05",
+                    "to_date": "2026-01-06",
+                },
+            ],
+        }
+    )
+    performance_client = _StubPerformanceClient()
+    response = asyncio.run(
+        calculate_historical_attribution_stateful(
+            payload,
+            performance_client=performance_client,
+            core_client=_StubCoreClient(),
+            authority=admitted_test_authority("corr-request-set"),
+        )
+    )
+
+    assert len(performance_client.contribution_calls) == 4
+    requests = [call["request_payload"] for call in performance_client.contribution_calls]
+    assert {tuple(request["hierarchy"]) for request in requests} == {
+        ("sector",),
+        ("asset_class",),
+    }
+    assert {(request["report_start_date"], request["report_end_date"]) for request in requests} == {
+        ("2026-01-02", "2026-01-05"),
+        ("2026-01-05", "2026-01-06"),
+    }
+    assert (
+        "lotus-performance:/performance/contribution"
+        in response.metadata.upstream_request_fingerprints
+    )
 
 
 def test_stateful_attribution_issuer_grouping_uses_enrichment() -> None:
