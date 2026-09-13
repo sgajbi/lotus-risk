@@ -71,3 +71,26 @@ def test_extract_series_payload_requires_series_object() -> None:
 def test_extract_required_portfolio_returns_requires_non_empty_portfolio_series() -> None:
     with pytest.raises(ValueError, match="returned no portfolio returns"):
         extract_required_portfolio_returns({"series": {"portfolio_returns": []}})
+
+
+@pytest.mark.parametrize("raw_value", ["NaN", "Infinity", "-Infinity"])
+def test_nonfinite_upstream_returns_are_refused_before_statistics(raw_value: str) -> None:
+    """Decimal("NaN")/("Infinity") parse successfully; before #291 they flowed into
+    covariance as non-finite floats. They are producer corruption and refuse as such."""
+    with pytest.raises(UpstreamServiceError) as excinfo:
+        decimal_return_to_percentage_points(raw_value)
+    assert excinfo.value.code == "UPSTREAM_INVALID_RESPONSE"
+
+
+def test_duplicate_upstream_return_dates_are_refused() -> None:
+    """Two observations for one date are contradictory economics: before #291 both
+    entered the series and double-counted the day."""
+    with pytest.raises(UpstreamServiceError) as excinfo:
+        to_return_points(
+            [
+                {"date": "2026-01-05", "return_value": "0.01"},
+                {"date": "2026-01-05", "return_value": "0.03"},
+            ]
+        )
+    assert excinfo.value.code == "UPSTREAM_INVALID_RESPONSE"
+    assert excinfo.value.details.get("date") == "2026-01-05"

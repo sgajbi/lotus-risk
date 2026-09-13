@@ -113,6 +113,16 @@ def supportability_from_attribution_results(
     if not returns:
         return baseline
 
+    # The structural limitation is evidence-driven since #291's consumer slice: it
+    # stops composing only when at least one set was actually calculated AND every
+    # calculated set decomposed validated per-group return evidence
+    # (`risk_basis="empirical_group_returns"`). A response whose only sets are empty
+    # (unsupported metric, insufficient data) still composes the limitation: nothing
+    # empirical was produced, and `ready` must never describe a proxy-era response
+    # shape by accident of emptiness.
+    if _all_calculated_sets_are_empirical(results):
+        return baseline
+
     assessment = assess_period_results(results)
 
     # The limitation enters as one more degradation reason and takes its rank in
@@ -140,6 +150,21 @@ def supportability_from_attribution_results(
         degraded_metric_count=assessment.degraded_result_count,
         empty_period_count=assessment.empty_period_count,
         evaluated_period_count=len(results),
+    )
+
+
+def _all_calculated_sets_are_empirical(results: Mapping[str, Any]) -> bool:
+    calculated_bases: list[str] = []
+    for period_result in results.values():
+        attribution_sets = getattr(period_result, "attribution_sets", None)
+        if not isinstance(attribution_sets, list):
+            continue
+        for attribution_set in attribution_sets:
+            if getattr(attribution_set, "total_value", None) is None:
+                continue
+            calculated_bases.append(getattr(attribution_set, "risk_basis", "weight_proxy"))
+    return bool(calculated_bases) and all(
+        basis == "empirical_group_returns" for basis in calculated_bases
     )
 
 

@@ -42,6 +42,17 @@ class _StubPerformanceClient:
             authority=authority,
         )
 
+    async def get_contribution(
+        self,
+        *,
+        request_payload: dict[str, object],
+        authority: DownstreamAuthority,
+    ) -> dict[str, object]:
+        return await self._client.get_contribution(
+            request_payload=request_payload,
+            authority=authority,
+        )
+
     async def get_benchmark_exposure_context(
         self,
         *,

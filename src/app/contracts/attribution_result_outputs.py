@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -9,6 +10,8 @@ from app.contracts.attribution_inputs import (
     AttributionType,
     GroupingDimension,
 )
+
+RiskAttributionBasis = Literal["empirical_group_returns", "weight_proxy"]
 
 
 class AttributionContributor(BaseModel):
@@ -157,6 +160,22 @@ class AttributionSetResult(BaseModel):
         default_factory=list,
         description="Deterministic quality flags for this attribution set.",
         json_schema_extra={"example": ["grouping:SECTOR:weight_not_sum_to_one"]},
+    )
+    risk_basis: RiskAttributionBasis = Field(
+        default="weight_proxy",
+        description=(
+            "Evidence basis of this set's decomposition. `empirical_group_returns` "
+            "means every contributor's contribution series was built from validated "
+            "per-group return evidence sourced from lotus-performance (genuine group "
+            "returns joined with the beginning-capital weights that formed them, "
+            "complete over every portfolio return date in the period). `weight_proxy` "
+            "means the set decomposes weight paths against the portfolio return -- the "
+            "lotus-risk#291 limitation -- because no complete validated group-return "
+            "evidence was available for this set; the reason is in `quality_flags` "
+            "when the evidence was requested and declared incomplete. Consumers must "
+            "not present a `weight_proxy` set as empirical risk attribution."
+        ),
+        json_schema_extra={"example": "empirical_group_returns"},
     )
 
 

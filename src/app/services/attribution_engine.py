@@ -11,6 +11,7 @@ from app.contracts.attribution import (
 from app.contracts.risk import RiskCalculationSupportability
 from app.services.attribution_decomposition import build_source_frames
 from app.services.attribution_period_results import (
+    GroupEvidenceByPeriod,
     historical_attribution_period_results,
 )
 from app.services.audit_lineage import fingerprint_model
@@ -72,6 +73,7 @@ def calculate_historical_attribution(
     request: HistoricalAttributionStatelessInput,
     *,
     input_mode: AttributionInputMode,
+    group_evidence: GroupEvidenceByPeriod | None = None,
 ) -> HistoricalAttributionResponse:
     frames = build_source_frames(request)
     if frames.returns_df.empty:
@@ -82,6 +84,7 @@ def calculate_historical_attribution(
         request=request,
         frames=frames,
         options=options,
+        group_evidence=group_evidence,
     )
     calculation_supportability = supportability_from_attribution_results(
         returns=request.returns,

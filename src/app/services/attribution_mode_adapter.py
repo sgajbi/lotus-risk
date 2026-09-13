@@ -50,6 +50,7 @@ async def calculate_historical_attribution_stateful(
     response = calculate_historical_attribution(
         resolved_inputs.stateless_input,
         input_mode=AttributionInputMode.STATEFUL,
+        group_evidence=resolved_inputs.group_evidence,
     )
     return _attach_stateful_lineage(
         response=response,

@@ -1,5 +1,13 @@
 # API Surface
 
+## Current scope and evidence posture
+
+This page describes the API contract generated from `main`; it is not a claim that every upstream
+dependency is live in an operator environment. Historical attribution consumes admitted tenant
+authority and may use verified empirical group-return evidence for `TOTAL_RISK`; malformed or
+incomplete evidence is reported through the response supportability block, while `ACTIVE_RISK`
+remains explicitly degraded pending governed benchmark-group evidence.
+
 Every operation `lotus-risk` publishes, taken from the generated OpenAPI document on `main`. There
 are **17**: eight risk analytics operations and nine operational.
 
@@ -120,28 +128,45 @@ Applies to `calculate`, `drawdown`, `rolling-metrics`, `historical-attribution` 
 | reason | `calculation_complete`, `benchmark_unavailable`, `calculation_quality_issue`, `group_return_series_unavailable`, `insufficient_aligned_observations`, `insufficient_observations`, `no_return_observations`, `permission_blocked`, `stale_source_observations`, `unsupported_input_mode` |
 | freshness | `current`, `same_day`, `stale`, `unknown` |
 
-`group_return_series_unavailable` is the one reason that is **not** about this request. Historical
-attribution has no per-group return series, so every group is fed the same portfolio-level return and
-the covariance can only recover the weights: under constant weights `percent_contribution` reproduces
-the group weight exactly, and under `ACTIVE_RISK` the components sum to zero so the residual is the
-whole tracking error. The limitation therefore applies to **every decomposition this service returns**, including one with
-no quality flags — a clean-looking decomposition carries the identical limitation and is the one most
-likely to be presented as empirical.
+`group_return_series_unavailable` is the one reason that is **not** about this request, and since
+the lotus-risk#291 consumer slice it is **evidence-driven rather than unconditional**. Each
+`TOTAL_RISK` attribution set now declares its evidence basis in `risk_basis`:
+
+- `empirical_group_returns` — the set decomposed validated per-group return evidence from the
+  lotus-performance contribution surface: the group's own returns joined with the
+  beginning-capital weights that formed them, complete over every portfolio return date in the
+  period, reconciling to the portfolio path per date. These components respond to group return
+  behaviour and may be presented as measured attribution.
+- `weight_proxy` — the set decomposes weight paths against the portfolio return: the covariance
+  can only recover the weights (under constant weights `percent_contribution` reproduces the
+  group weight exactly). A bounded `group_return_evidence:*` quality flag names why evidence was
+  not usable when it was requested. Every `ACTIVE_RISK` set is a weight proxy — no benchmark-group
+  return series exists — and so is `ISSUER` `TOTAL_RISK` (no producer-side issuer dimension). A
+  date absent from a group's evidence is unknown, never zero: incomplete evidence keeps the whole
+  set on the proxy rather than zero-filling or dropping dates.
+
+The response-level reason composes accordingly: `group_return_series_unavailable` enters the
+precedence only while at least one **calculated** set is a weight proxy. A response whose
+calculated sets are all empirical can reach `state="ready"` with `calculation_complete` for the
+first time.
 
 **`reason` reports the most severe condition, so it does not always name this one.** `reason` is a
 single value drawn by precedence, and an actionable failure outranks a structural limitation: a
 response that decomposed one period and failed another reports `insufficient_observations`, because
 that is the condition an operator can act on. **Do not read `reason != group_return_series_unavailable`
-as "this decomposition is measured."** The rule that holds without exception is the state: a response
-that decomposed is never `ready`, and any decomposition it carries is a weight proxy whatever `reason`
-says. An `empty` response is the case with no decomposition at all — no return observations, so it
-reports `no_return_observations` and never reaches what this limitation is about.
+as "this decomposition is measured."** The rules that hold without exception are the **state** and
+the per-set **`risk_basis`**: present a decomposition as empirical only when its own set says
+`empirical_group_returns`, whatever `reason` says. An `empty` response is the case with no
+decomposition at all — no return observations, so it reports `no_return_observations` and never
+reaches what this limitation is about.
 
 `degraded_metric_count` counts period results carrying deterministic errors. It is **0** on a clean
-decomposition, because the limitation is not a failure — `degraded` with a zero count is the shape
-meaning "this computed, and it is a proxy", distinct from "something went wrong". Do not activate a risk-attribution surface from these values;
-the supported scope is metric levels, group weights, freshness and this posture. Tracked in
-`lotus-risk#291`, blocked on a per-group return series contract with `lotus-performance`.
+proxy decomposition, because the limitation is not a failure — `degraded` with a zero count means
+"this computed, and it is a proxy", distinct from "something went wrong". An all-empirical response
+is `ready` with the same zero count. Do not activate a risk-attribution surface from these values;
+the supported scope is metric levels, group weights, freshness, the per-set basis, and this posture.
+Tracked in `lotus-risk#291`; empirical TOTAL_RISK consumes the delivered lotus-performance
+contribution contract, while ACTIVE_RISK remains explicitly degraded pending benchmark-group evidence.
 
 The distinction that most often matters is `insufficient_observations` versus
 `insufficient_aligned_observations`: the first means there was not enough history, the second means

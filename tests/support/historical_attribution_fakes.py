@@ -262,15 +262,11 @@ def build_stateless_attribution_payload() -> dict[str, object]:
                 {"date": "2026-01-02", "value": 1.0},
                 {"date": "2026-01-05", "value": -0.4},
                 {"date": "2026-01-06", "value": 0.3},
-                {"date": "2026-01-05", "value": 0.6},
-                {"date": "2026-01-06", "value": -0.2},
             ],
             "benchmark_returns": [
                 {"date": "2026-01-02", "value": 0.8},
                 {"date": "2026-01-05", "value": -0.3},
                 {"date": "2026-01-06", "value": 0.2},
-                {"date": "2026-01-05", "value": 0.4},
-                {"date": "2026-01-06", "value": -0.1},
             ],
             "exposure_history": [
                 {
@@ -315,34 +311,6 @@ def build_stateless_attribution_payload() -> dict[str, object]:
                     "group_label": "Healthcare",
                     "weight": 0.48,
                 },
-                {
-                    "date": "2026-01-05",
-                    "grouping_dimension": "SECTOR",
-                    "group_key": "SECTOR_TECH",
-                    "group_label": "Technology",
-                    "weight": 0.54,
-                },
-                {
-                    "date": "2026-01-05",
-                    "grouping_dimension": "SECTOR",
-                    "group_key": "SECTOR_HEALTH",
-                    "group_label": "Healthcare",
-                    "weight": 0.46,
-                },
-                {
-                    "date": "2026-01-06",
-                    "grouping_dimension": "SECTOR",
-                    "group_key": "SECTOR_TECH",
-                    "group_label": "Technology",
-                    "weight": 0.53,
-                },
-                {
-                    "date": "2026-01-06",
-                    "grouping_dimension": "SECTOR",
-                    "group_key": "SECTOR_HEALTH",
-                    "group_label": "Healthcare",
-                    "weight": 0.47,
-                },
             ],
             "benchmark_exposure_history": [
                 {
@@ -372,34 +340,6 @@ def build_stateless_attribution_payload() -> dict[str, object]:
                     "group_key": "SECTOR_HEALTH",
                     "group_label": "Healthcare",
                     "weight": 0.53,
-                },
-                {
-                    "date": "2026-01-06",
-                    "grouping_dimension": "SECTOR",
-                    "group_key": "SECTOR_TECH",
-                    "group_label": "Technology",
-                    "weight": 0.49,
-                },
-                {
-                    "date": "2026-01-06",
-                    "grouping_dimension": "SECTOR",
-                    "group_key": "SECTOR_HEALTH",
-                    "group_label": "Healthcare",
-                    "weight": 0.51,
-                },
-                {
-                    "date": "2026-01-05",
-                    "grouping_dimension": "SECTOR",
-                    "group_key": "SECTOR_TECH",
-                    "group_label": "Technology",
-                    "weight": 0.50,
-                },
-                {
-                    "date": "2026-01-05",
-                    "grouping_dimension": "SECTOR",
-                    "group_key": "SECTOR_HEALTH",
-                    "group_label": "Healthcare",
-                    "weight": 0.50,
                 },
                 {
                     "date": "2026-01-06",

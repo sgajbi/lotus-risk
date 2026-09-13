@@ -156,14 +156,13 @@ def test_a_mixed_response_reports_the_failure_over_the_limitation() -> None:
         pytest.param("returns", id="empty-returns"),
     ],
 )
-def test_the_summary_never_claims_ready(mutation: str) -> None:
-    """`ready` is the one answer that is wrong in every case here.
+def test_stateless_summary_never_claims_ready(mutation: str) -> None:
+    """Stateless input has no admitted empirical group-return evidence.
 
-    Whatever else varies, a historical-attribution response must never report
-    `calculation_complete`: either it decomposed, and the decomposition is a
-    weight proxy, or it did not, and there is nothing to call complete. Held
-    separately from the specific-reason assertions so that a future change to
-    the precedence cannot quietly reintroduce it.
+    Whatever else varies, this stateless route must not report
+    `calculation_complete`: it either decomposes a weight proxy or has nothing
+    to call complete. Stateful TOTAL_RISK may be ready only when every
+    calculated set declares validated empirical evidence.
     """
     payload = build_stateless_attribution_payload()
     if mutation == "periods":

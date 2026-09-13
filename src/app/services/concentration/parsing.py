@@ -62,21 +62,6 @@ def _to_exposure_value(
     return float(value)  # monetary-float-allow: concentration exposure value.
 
 
-def _extract_values_from_snapshot_positions(positions: list[dict[str, Any]] | None) -> list[float]:
-    if not positions:
-        return []
-    values: list[float] = []
-    for position in positions:
-        if not isinstance(position, dict):
-            continue
-        candidate = _to_decimal(position.get("market_value_base"))
-        if candidate is None:
-            candidate = _to_decimal(position.get("quantity"))
-        if candidate is not None:
-            values.append(_to_exposure_value(candidate))
-    return values
-
-
 def _extract_values_from_stateless_payload(
     payload: StatelessConcentrationInput,
 ) -> tuple[list[PositionEntry], list[PositionEntry]]:
@@ -177,7 +162,6 @@ __all__ = [
     "_caller_issuer_map",
     "_extract_issuer_map",
     "_extract_valuation_context",
-    "_extract_values_from_snapshot_positions",
     "_extract_values_from_stateless_payload",
     "_extract_values_with_issuer_from_snapshot",
     "_issuer_key_from_mapping",

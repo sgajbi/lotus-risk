@@ -119,7 +119,11 @@ class ExposurePoint(BaseModel):
         json_schema_extra={"example": "Technology"},
     )
     weight: float = Field(
-        description="Portfolio or benchmark weight in decimal units for this group/date.",
+        allow_inf_nan=False,
+        description=(
+            "Portfolio or benchmark weight in decimal units for this group/date. Must "
+            "be finite: NaN and infinity are refused before any statistical processing."
+        ),
         json_schema_extra={"example": 0.245},
     )
 

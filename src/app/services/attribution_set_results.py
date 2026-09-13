@@ -7,6 +7,7 @@ from app.contracts.attribution import (
     AttributionType,
     GroupingDimension,
 )
+from app.contracts.attribution_result_outputs import RiskAttributionBasis
 from app.services.attribution_calculation import (
     AttributionCalculationInputs,
     DecompositionRow,
@@ -42,6 +43,7 @@ def calculated_attribution_set(
     group_labels: dict[str, str | None],
     annualization_basis: int,
     quality_flags: list[str],
+    risk_basis: RiskAttributionBasis = "weight_proxy",
 ) -> AttributionSetResult:
     rows = component_decomposition(
         group_matrix=calculation_inputs.group_matrix,
@@ -57,6 +59,7 @@ def calculated_attribution_set(
         risk_total=calculation_inputs.risk_total,
         contributors=_attribution_contributors(rows=rows, group_labels=group_labels),
         quality_flags=quality_flags,
+        risk_basis=risk_basis,
     )
 
 
@@ -86,6 +89,7 @@ def _reconciled_attribution_set(
     risk_total: float,
     contributors: list[AttributionContributor],
     quality_flags: list[str],
+    risk_basis: RiskAttributionBasis,
 ) -> AttributionSetResult:
     reconciled_sum = float(sum(c.component_contribution or 0.0 for c in contributors))
     residual = float(risk_total - reconciled_sum)
@@ -98,6 +102,7 @@ def _reconciled_attribution_set(
         residual=residual,
         contributors=contributors,
         quality_flags=quality_flags,
+        risk_basis=risk_basis,
     )
 
 

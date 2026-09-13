@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-09-13T05:30:56.497492+00:00",
+  "generatedAt": "2026-09-13T08:12:28.268650+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.affected_portfolios",
@@ -4450,7 +4450,7 @@
       "semanticId": "lotus.value",
       "canonicalTerm": "value",
       "preferredName": "value",
-      "description": "Return value in percentage points.",
+      "description": "Return value in percentage points. Must be finite: NaN and infinity are refused before any statistical processing.",
       "example": 0.85,
       "type": "number",
       "locations": [

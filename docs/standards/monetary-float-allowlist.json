@@ -172,7 +172,7 @@
       "review_by": "2026-10-10"
     },
     {
-      "finding": "src/app/services/stateful_returns_series_parser.py:24:return float(decimal_value * Decimal(\"100\"))",
+      "finding": "src/app/services/stateful_returns_series_parser.py:32:return float(decimal_value * Decimal(\"100\"))",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
       "review_by": "2026-10-10"

@@ -22,9 +22,25 @@ Provide decomposition of historical realized risk and active risk into transpare
   - caller supplies the admitted tenant in the `X-Tenant-Id` header: a stateful request without a
     non-blank value refuses `401 MISSING_TENANT_AUTHORITY` before any upstream call, and a trimmed
     value over 128 characters refuses `400 INVALID_TENANT_AUTHORITY`; the admitted value is
-    forwarded on the returns-series submit and polls, benchmark exposure context, and lotus-core
-    position-timeseries reads (instrument enrichment stays a tenant-free reference read)
-  - `TOTAL_RISK` stateful path is implemented
+    forwarded on the returns-series submit and polls, the contribution group-evidence submit and
+    polls, benchmark exposure context, and lotus-core position-timeseries reads (instrument
+    enrichment stays a tenant-free reference read)
+  - `TOTAL_RISK` stateful path is implemented; for `SECTOR`, `ASSET_CLASS`, and `POSITION`
+    groupings lotus-risk also requests per-group return evidence from the lotus-performance
+    contribution surface (`/performance/contribution`, one `EXPLICIT`-window call per resolved
+    period and dimension, same NET/GROSS basis and reporting currency as the returns series).
+    When every group's validated evidence covers every portfolio return date in the window, the
+    set decomposes the genuine group returns and reports
+    `risk_basis="empirical_group_returns"`; otherwise the set keeps the weight-proxy
+    decomposition with `risk_basis="weight_proxy"` and a bounded
+    `group_return_evidence:*` quality flag naming why (producer `UNAVAILABLE`, truncated
+    hierarchy, calendar gap, reconciliation breach, or missing period). A date absent from a
+    group's evidence is unknown coverage, never zero: nothing is zero-filled or dropped, and an
+    explicit zero-weight observation is the only authoritative zero-exposure evidence.
+    Malformed evidence (non-finite values, duplicate dates, duplicate groups, out-of-window
+    observations, currency contradictions) refuses as `UPSTREAM_INVALID_RESPONSE` rather than
+    silently falling back. `ISSUER` `TOTAL_RISK` has no producer-side group dimension and stays
+    weight-proxy (recorded residual on lotus-risk#291)
   - `ACTIVE_RISK` stateful path is implemented for `POSITION`, `SECTOR`, `ASSET_CLASS`, and `ISSUER` grouping dimensions through the lotus-performance benchmark exposure context derived view
   - `ACTIVE_RISK` + `ISSUER` consumes lotus-performance benchmark exposure context issuer rows sourced from lotus-core index-catalog issuer labels
   - `CUSTOM` grouping remains unsupported in stateful mode and is rejected at request validation

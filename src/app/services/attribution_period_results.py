@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import datetime as dt
+from collections.abc import Mapping
 from typing import cast
 
 import pandas as pd
 
 from app.contracts.attribution import (
     AttributionOptions,
+    GroupingDimension,
     HistoricalAttributionPeriodResult,
     HistoricalAttributionStatelessInput,
 )
@@ -16,7 +18,11 @@ from app.services.attribution_decomposition import (
     build_period_attribution_sets,
     window_returns,
 )
+from app.services.attribution_group_evidence import GroupEvidencePack
 from app.services.risk.period_resolution import resolve_period
+
+#: Validated group evidence keyed by period name, then grouping dimension.
+GroupEvidenceByPeriod = Mapping[str, Mapping[GroupingDimension, GroupEvidencePack]]
 
 
 def period_name(period: RiskRequestPeriod) -> str:
@@ -83,6 +89,7 @@ def attribution_period_result(
     benchmark_series: pd.Series,
     start: pd.Timestamp,
     end: pd.Timestamp,
+    period_group_evidence: Mapping[GroupingDimension, GroupEvidencePack] | None = None,
 ) -> HistoricalAttributionPeriodResult:
     return HistoricalAttributionPeriodResult(
         start_date=start_date,
@@ -94,6 +101,7 @@ def attribution_period_result(
             benchmark_series=benchmark_series,
             start=start,
             end=end,
+            period_group_evidence=period_group_evidence,
         ),
         error=None,
     )
@@ -106,6 +114,7 @@ def calculate_period_attribution(
     frames: AttributionSourceFrames,
     open_timestamp: pd.Timestamp,
     options: AttributionOptions,
+    period_group_evidence: Mapping[GroupingDimension, GroupEvidencePack] | None = None,
 ) -> tuple[str, HistoricalAttributionPeriodResult]:
     start_date, end_date, start, end = resolved_period_window(
         period=period,
@@ -134,6 +143,7 @@ def calculate_period_attribution(
         benchmark_series=benchmark_series,
         start=start,
         end=end,
+        period_group_evidence=period_group_evidence,
     )
 
 
@@ -142,16 +152,19 @@ def historical_attribution_period_results(
     request: HistoricalAttributionStatelessInput,
     frames: AttributionSourceFrames,
     options: AttributionOptions,
+    group_evidence: GroupEvidenceByPeriod | None = None,
 ) -> dict[str, HistoricalAttributionPeriodResult]:
     open_timestamp = cast(pd.Timestamp, frames.returns_df.index.min())
     results: dict[str, HistoricalAttributionPeriodResult] = {}
     for period in request.periods:
+        name = period_name(period)
         name, period_result = calculate_period_attribution(
             period=period,
             request=request,
             frames=frames,
             open_timestamp=open_timestamp,
             options=options,
+            period_group_evidence=group_evidence.get(name) if group_evidence else None,
         )
         results[name] = period_result
     return results

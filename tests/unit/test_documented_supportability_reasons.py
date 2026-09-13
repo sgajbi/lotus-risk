@@ -115,8 +115,8 @@ def test_the_glossary_explains_the_reasons_it_mentions() -> None:
     )
 
 
-def test_the_surface_warns_that_reason_does_not_always_name_the_limitation() -> None:
-    """The property a consumer most needs, and the one that changed (#293).
+def test_the_surface_explains_when_reason_qualifies_a_proxy() -> None:
+    """The property a consumer most needs after empirical TOTAL_RISK (#291).
 
     The surface previously said the reason was returned on "every attribution
     response that produced a decomposition". That became false when the
@@ -124,28 +124,29 @@ def test_the_surface_warns_that_reason_does_not_always_name_the_limitation() -> 
     for it: an actionable failure now outranks it, so a response that decomposed
     one period and failed another reports `insufficient_observations`.
 
-    The dangerous inference is the inverse one -- reading the absence of this
-    reason as evidence the decomposition is measured. A consumer that gates a
-    risk-attribution surface on `reason == group_return_series_unavailable`
-    would activate it on exactly the responses that also failed something. So
-    the surface must state the rule that does hold: the `degraded` state, not
-    the reason, is what a consumer can rely on.
+    The dangerous inference is reading either this response-level reason or its
+    absence as a property of every set. A consumer must branch on each set's
+    `risk_basis`: a calculated proxy keeps this reason in the response-level
+    precedence, while a response of entirely empirical calculated sets can be
+    ready. An actionable failure still outranks the structural limitation.
 
     `lotus-report#254` and `lotus-render#270` are gated on this text.
     """
     text = _prose(API_SURFACE)
 
-    assert "every decomposition" in text, (
-        "the surface must state that the limitation applies to every decomposition"
+    assert "at least one calculated set is a weight proxy" in text, (
+        "the surface must state when the response-level proxy limitation applies"
+    )
+    assert "risk_basis" in text and "empirical_group_returns" in text, (
+        "the surface must require consumers to use each set's declared basis"
     )
     assert "reason reports the most severe condition" in text, (
         "the surface must say that `reason` is drawn by precedence and can name "
         "something else -- without it, a consumer reads the reason's absence as "
         "an all-clear"
     )
-    assert "never ready" in text, (
-        "the surface must give the rule that holds without exception: a response "
-        "that decomposed is never ready"
+    assert 'can reach state="ready"' in text, (
+        "the surface must document the all-empirical readiness condition"
     )
 
 
@@ -153,16 +154,16 @@ def test_the_surface_states_what_the_degraded_count_means_for_attribution() -> N
     """A zero count beside `degraded` is correct, and looks like a bug.
 
     `degraded_metric_count` counts period results carrying deterministic errors,
-    so a clean decomposition reports `degraded` with 0. An operator who reads
-    the count as "how many things are wrong" sees a contradiction and goes
+    so a clean proxy decomposition reports `degraded` with 0. An operator who
+    reads the count as "how many things are wrong" sees a contradiction and goes
     looking for a fault that is not there.
     """
     text = _prose(API_SURFACE)
 
     assert "degraded_metric_count" in text, "the count is undocumented"
     window = text.split("degraded_metric_count")[-1]
-    assert "0" in window and "clean decomposition" in window, (
-        "the surface must say the count is 0 on a clean decomposition and why"
+    assert "0" in window and "clean proxy decomposition" in window, (
+        "the surface must say the count is 0 on a clean proxy decomposition and why"
     )
 
 

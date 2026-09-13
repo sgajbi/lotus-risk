@@ -100,6 +100,8 @@ class HistoricalAttributionStatelessInput(BaseModel):
     @model_validator(mode="after")
     def validate_semantics(self) -> HistoricalAttributionStatelessInput:
         validate_unique_period_names(self.periods)
+        validate_unique_return_dates(self.returns, series_name="returns")
+        validate_unique_return_dates(self.benchmark_returns, series_name="benchmark_returns")
         validate_active_attribution_inputs(
             attribution_options=self.attribution_options,
             benchmark_returns=self.benchmark_returns,
@@ -108,7 +110,21 @@ class HistoricalAttributionStatelessInput(BaseModel):
         return self
 
 
+def validate_unique_return_dates(returns: list[ReturnPoint], *, series_name: str) -> None:
+    """Two observations for one date are contradictory economics (#291): which return
+    applies is undecidable, and both entering covariance double-counts the day —
+    equal values included."""
+    seen: set[object] = set()
+    for point in returns:
+        if point.date in seen:
+            raise ValueError(
+                f"duplicate return observation date in {series_name}: {point.date.isoformat()}"
+            )
+        seen.add(point.date)
+
+
 __all__ = [
     "HistoricalAttributionStatelessInput",
     "validate_active_attribution_inputs",
+    "validate_unique_return_dates",
 ]

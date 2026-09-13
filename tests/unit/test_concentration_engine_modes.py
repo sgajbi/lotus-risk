@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, cast
 
 import pytest
 
@@ -610,12 +609,3 @@ def test_helper_branches_for_type_conversion() -> None:
     assert concentration_parsing._as_int("12") == 12
     assert concentration_parsing._as_datetime(None) is None
     assert concentration_parsing._as_datetime("not-a-date") is None
-    mixed_positions: list[Any] = [
-        None,
-        {"security_id": "A", "market_value_base": "bad"},
-        {"security_id": "B", "quantity": "7.5"},
-    ]
-    values = concentration_parsing._extract_values_from_snapshot_positions(
-        cast(list[dict[str, Any]], mixed_positions)
-    )
-    assert values == [7.5]

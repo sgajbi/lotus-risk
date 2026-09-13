@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 import pandas as pd
@@ -9,12 +10,20 @@ from app.contracts.attribution import (
     AttributionSetResult,
     GroupingDimension,
 )
+from app.contracts.attribution_common_inputs import requires_active_attribution
 from app.services.attribution_decomposition import AttributionSetBuildRequest, build_attribution_set
+from app.services.attribution_group_evidence import GroupEvidencePack
 from app.services.attribution_source_frames import AttributionSourceFrames, pivot_exposure
 
 
 def requires_benchmark_attribution(options: AttributionOptions) -> bool:
-    return "ACTIVE_RISK" in options.attribution_types or "TRACKING_ERROR" in options.metrics
+    """Calculation-time benchmark gate; one rule with request validation and sourcing.
+
+    The predicate lives on the contract (`attribution_common_inputs`), so request
+    validation, the upstream include_benchmark sourcing flag, and this gate cannot
+    drift apart.
+    """
+    return requires_active_attribution(options)
 
 
 @dataclass(frozen=True)
@@ -68,6 +77,7 @@ def _grouping_attribution_sets(
     exposure_inputs: _PeriodExposureInputs,
     returns_series: pd.Series,
     benchmark_series: pd.Series,
+    group_evidence: GroupEvidencePack | None,
 ) -> list[AttributionSetResult]:
     attribution_sets: list[AttributionSetResult] = []
     for attribution_type in options.attribution_types:
@@ -85,6 +95,7 @@ def _grouping_attribution_sets(
                         group_labels=exposure_inputs.labels,
                         annualization_basis=options.annualization_basis,
                         quality_flags=list(exposure_inputs.flags),
+                        group_evidence=group_evidence,
                     )
                 )
             )
@@ -99,6 +110,7 @@ def build_period_attribution_sets(
     benchmark_series: pd.Series,
     start: pd.Timestamp,
     end: pd.Timestamp,
+    period_group_evidence: Mapping[GroupingDimension, GroupEvidencePack] | None = None,
 ) -> list[AttributionSetResult]:
     period_sets: list[AttributionSetResult] = []
     benchmark_required = requires_benchmark_attribution(options)
@@ -118,6 +130,9 @@ def build_period_attribution_sets(
                 exposure_inputs=exposure_inputs,
                 returns_series=returns_series,
                 benchmark_series=benchmark_series,
+                group_evidence=(
+                    period_group_evidence.get(grouping_dimension) if period_group_evidence else None
+                ),
             )
         )
     return period_sets

@@ -186,7 +186,10 @@ def test_historical_attribution_stateful_total_risk_aligns_exposure_to_return_da
     assert attribution_set["attribution_type"] == "TOTAL_RISK"
     assert attribution_set["metric"] == "VOLATILITY"
     assert attribution_set["contributors"]
-    assert attribution_set["quality_flags"] == []
+    # The default fake declares group-return evidence absent, so this TOTAL_RISK set
+    # keeps the weight proxy with the bounded evidence flag and stays proxy-based.
+    assert attribution_set["quality_flags"] == ["group_return_evidence:period_missing"]
+    assert attribution_set["risk_basis"] == "weight_proxy"
     assert core_client.position_calls == [
         {
             "portfolio_id": "DEMO_DPM_EUR_001",
@@ -579,3 +582,116 @@ def test_historical_attribution_stateful_active_risk_maps_benchmark_context_500_
         performance_client.benchmark_exposure_context_calls[0]["correlation_id"]
         == "corr-attr-bmk-context-500"
     )
+
+
+def _empirical_contribution_response() -> dict[str, object]:
+    """Evidence matching the shared returns fixture (pp 1.0 / -0.5 / 0.4): TECH chosen,
+    HEALTH derived so sum(w*r) reconciles exactly per date at weights .6/.4."""
+    dates = ["2026-01-02", "2026-01-05", "2026-01-06"]
+    tech = [2.0, -1.0, 1.0]
+    health = [-0.5, 0.25, -0.5]
+
+    def series(weight_pct: float, returns_pp: list[float]) -> list[dict[str, object]]:
+        return [
+            {"date": day, "return_pct": value, "portfolio_weight_pct": weight_pct}
+            for day, value in zip(dates, returns_pp, strict=True)
+        ]
+
+    def row(sector: str, weight_pct: float, returns_pp: list[float]) -> dict[str, object]:
+        return {
+            "key": {"sector": sector},
+            "contribution": 0.0,
+            "is_other": False,
+            "group_return": {
+                "status": "READY",
+                "currency": "USD",
+                "series": series(weight_pct, returns_pp),
+                "reason": None,
+            },
+        }
+
+    return {
+        "results_by_period": {
+            "EXPLICIT": {
+                "levels": [
+                    {
+                        "level": 1,
+                        "name": "sector",
+                        "rows": [row("TECH", 60.0, tech), row("HEALTH", 40.0, health)],
+                    }
+                ]
+            }
+        }
+    }
+
+
+def test_historical_attribution_stateful_empirical_group_returns_end_to_end() -> None:
+    performance_client = build_stateful_attribution_returns_client()
+    performance_client.contribution_response = _empirical_contribution_response()
+    core_client = RecordingHistoricalAttributionCoreClient()
+    with override_app_runtime(
+        lotus_performance_client=performance_client,
+        lotus_core_client=core_client,
+    ):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/historical-attribution",
+            headers={"X-Correlation-Id": "corr-attr-empirical", "X-Tenant-Id": "tenant-a"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-06",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "attribution_options": {
+                        "attribution_types": ["TOTAL_RISK"],
+                        "metrics": ["VOLATILITY"],
+                        "grouping_dimensions": ["SECTOR"],
+                    },
+                },
+            },
+        )
+    assert response.status_code == 200
+    body = response.json()
+
+    attribution_set = body["results"]["YTD"]["attribution_sets"][0]
+    assert attribution_set["risk_basis"] == "empirical_group_returns"
+    assert attribution_set["quality_flags"] == []
+    contributors = {c["group_key"]: c for c in attribution_set["contributors"]}
+    assert set(contributors) == {"TECH", "HEALTH"}
+    # Exact per-date reconciliation: components sum exactly to the decomposed total.
+    assert attribution_set["reconciled_sum"] == pytest.approx(
+        attribution_set["total_value"], abs=1e-12
+    )
+    # All calculated sets are empirical: the structural limitation stops composing.
+    assert body["metadata"]["calculation_supportability"]["state"] == "ready"
+    assert body["metadata"]["calculation_supportability"]["reason"] == "calculation_complete"
+
+    # The evidence request went out with the admitted tenant, an EXPLICIT window over
+    # the resolved period, one flat hierarchy level, and untruncated emission bounds.
+    assert len(performance_client.contribution_calls) == 1
+    contribution_call = performance_client.contribution_calls[0]
+    assert contribution_call["tenant_id"] == "tenant-a"
+    payload = contribution_call["request_payload"]
+    assert payload["analyses"] == [{"period": "EXPLICIT", "frequencies": ["daily"]}]
+    assert payload["hierarchy"] == ["sector"]
+    # The evidence window is the engine-resolved period window (YTD clamped to the
+    # first portfolio observation), not the wider returns-series request window.
+    assert payload["report_start_date"] == "2026-01-02"
+    assert payload["report_end_date"] == "2026-01-06"
+    assert payload["emit"]["threshold_weight"] == 0.0
+    assert payload["stateful_input"]["metric_basis"] == "NET"
+
+
+def test_stateless_conflicting_duplicate_exposure_weights_refuse_400() -> None:
+    payload = build_stateless_attribution_payload()
+    exposure = payload["stateless_input"]["exposure_history"]  # type: ignore[index]
+    first = dict(exposure[0])
+    first["weight"] = float(first["weight"]) / 2 + 0.05
+    exposure.append(first)
+    client = TestClient(app)
+    response = client.post("/analytics/risk/historical-attribution", json=payload)
+    assert response.status_code == 400
+    body = response.json()["error"]
+    assert body["code"] == "INVALID_INPUT"
+    assert "conflicting duplicate exposure weights" in body["message"]
