@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Any
 
 from app.contracts.concentration import SimulationConcentrationInput
+from app.contracts.downstream_authority import DownstreamAuthority
 from app.service_metadata import SERVICE_NAME
 from app.services.audit_lineage import fingerprint_payload
 from app.services.concentration.parsing import _as_datetime, _as_int, _as_str
@@ -27,7 +28,7 @@ async def resolve_simulation_session(
     simulation: SimulationConcentrationInput,
     *,
     core_client: LotusCoreClientProtocol,
-    correlation_id: str | None,
+    authority: DownstreamAuthority,
     actor_id: str | None,
 ) -> SimulationSession:
     session_id = simulation.session_id
@@ -40,7 +41,7 @@ async def resolve_simulation_session(
             portfolio_id=simulation.portfolio_id,
             ttl_hours=simulation.session_ttl_hours,
             created_by=actor_id or SERVICE_NAME,
-            correlation_id=correlation_id,
+            authority=authority,
         )
         created_session = _created_simulation_session(session_response)
         session_id = created_session.session_id
@@ -75,7 +76,7 @@ async def apply_simulation_changes(
     *,
     session: SimulationSession,
     core_client: LotusCoreClientProtocol,
-    correlation_id: str | None,
+    authority: DownstreamAuthority,
     idempotency_key: str | None,
 ) -> SimulationSession:
     if not simulation.simulation_changes:
@@ -89,7 +90,7 @@ async def apply_simulation_changes(
     changes_response = await core_client.add_simulation_changes(
         session_id=session.session_id,
         changes=payload,
-        correlation_id=correlation_id,
+        authority=authority,
         idempotency_key=normalized_idempotency_key,
         change_set_fingerprint=_change_set_fingerprint(
             session=session,

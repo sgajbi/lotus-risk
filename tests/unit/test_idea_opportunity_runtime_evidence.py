@@ -10,6 +10,7 @@ from typing import Any, Self
 import pytest
 from fastapi.testclient import TestClient
 
+from app.contracts.downstream_authority import DownstreamAuthority
 from app.evidence.idea_opportunity_constants import (
     CANONICAL_AS_OF_DATE,
     CANONICAL_CONTRACT_PROVENANCE,
@@ -52,12 +53,12 @@ class _CanonicalCoreClient(SimulationLotusCoreClient):
         *,
         portfolio_id: str,
         request_payload: dict[str, object],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, object]:
         snapshot = await super().get_core_snapshot(
             portfolio_id=portfolio_id,
             request_payload=request_payload,
-            correlation_id=correlation_id,
+            authority=authority,
         )
         sections = snapshot.setdefault("sections", {})
         assert isinstance(sections, dict)
@@ -92,7 +93,7 @@ def _execute(route: str, payload: Mapping[str, Any]) -> tuple[int, Mapping[str, 
         lotus_performance_client=performance_client,
         lotus_core_client=core_client,
     ):
-        response = TestClient(app).post(route, json=payload)
+        response = TestClient(app).post(route, json=payload, headers={"X-Tenant-Id": "tenant-a"})
     return response.status_code, response.json()
 
 
@@ -355,10 +356,17 @@ def test_idea_opportunity_runtime_evidence_cli_writes_valid_artifact(
         def __exit__(self, *_args: object) -> None:
             return None
 
-        def post(self, route: str, json: Mapping[str, Any]) -> _Response:
+        def post(
+            self,
+            route: str,
+            json: Mapping[str, Any],
+            headers: Mapping[str, str] | None = None,
+        ) -> _Response:
+            seen_headers.append(dict(headers or {}))
             status_code, body = _execute(route, json)
             return _Response(status_code, body)
 
+    seen_headers: list[dict[str, str]] = []
     output = tmp_path / "idea-risk-runtime-evidence.json"
     monkeypatch.setattr("scripts.generate_idea_opportunity_runtime_evidence.httpx.Client", _Client)
 
@@ -376,6 +384,8 @@ def test_idea_opportunity_runtime_evidence_cli_writes_valid_artifact(
     payload = json.loads(output.read_text(encoding="utf-8"))
     assert result == 0
     assert idea_opportunity_runtime_evidence_is_valid(payload) is True
+    # Every stateful canonical request carries the RFC-0076 canonical tenant authority.
+    assert seen_headers == [{"X-Tenant-Id": "tenant-sg"}] * 3
 
 
 def test_idea_opportunity_runtime_evidence_cli_rejects_noncanonical_portfolio(

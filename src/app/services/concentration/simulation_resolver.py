@@ -8,6 +8,7 @@ from app.contracts.concentration import (
     ConcentrationRequest,
     SimulationConcentrationInput,
 )
+from app.contracts.downstream_authority import DownstreamAuthority
 from app.services.audit_lineage import ordered_source_services
 from app.services.concentration.datamodels import ConcentrationComputationInput
 from app.services.concentration.lineage import core_snapshot_upstream_fingerprint
@@ -62,13 +63,13 @@ async def _fetch_simulation_snapshot_state(
     simulation: SimulationConcentrationInput,
     session: SimulationSession,
     core_client: LotusCoreClientProtocol,
-    correlation_id: str | None,
+    authority: DownstreamAuthority,
     snapshot_payload: dict[str, Any],
 ) -> tuple[SimulationSnapshotState, SimulationSession]:
     snapshot = await core_client.get_core_snapshot(
         portfolio_id=simulation.portfolio_id,
         request_payload=snapshot_payload,
-        correlation_id=correlation_id,
+        authority=authority,
     )
     sections = snapshot.get("sections")
     if not isinstance(sections, dict):
@@ -97,7 +98,7 @@ async def _resolve_applied_simulation_session(
     *,
     simulation: SimulationConcentrationInput,
     core_client: LotusCoreClientProtocol,
-    correlation_id: str | None,
+    authority: DownstreamAuthority,
     actor_id: str | None,
     idempotency_key: str | None,
 ) -> SimulationSession:
@@ -106,14 +107,14 @@ async def _resolve_applied_simulation_session(
     session = await resolve_simulation_session(
         simulation,
         core_client=core_client,
-        correlation_id=correlation_id,
+        authority=authority,
         actor_id=actor_id,
     )
     return await apply_simulation_changes(
         simulation,
         session=session,
         core_client=core_client,
-        correlation_id=correlation_id,
+        authority=authority,
         idempotency_key=idempotency_key,
     )
 
@@ -146,7 +147,7 @@ async def resolve_simulation(
     request: ConcentrationRequest,
     *,
     core_client: LotusCoreClientProtocol,
-    correlation_id: str | None,
+    authority: DownstreamAuthority,
     actor_id: str | None,
     idempotency_key: str | None,
 ) -> ConcentrationComputationInput:
@@ -157,7 +158,7 @@ async def resolve_simulation(
     session = await _resolve_applied_simulation_session(
         simulation=simulation,
         core_client=core_client,
-        correlation_id=correlation_id,
+        authority=authority,
         actor_id=actor_id,
         idempotency_key=idempotency_key,
     )
@@ -167,14 +168,14 @@ async def resolve_simulation(
         simulation=simulation,
         session=session,
         core_client=core_client,
-        correlation_id=correlation_id,
+        authority=authority,
         snapshot_payload=snapshot_payload,
     )
     metadata = _simulation_metadata(
         request,
         simulation=simulation,
         session=session,
-        correlation_id=correlation_id,
+        correlation_id=authority.correlation_id,
         snapshot_payload=snapshot_payload,
     )
     return _simulation_computation_input(

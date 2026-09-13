@@ -9,6 +9,7 @@ from app.contracts.drawdown import (
 from app.services.drawdown_mode_adapter import (
     calculate_drawdown_stateful,
 )
+from tests.support.downstream_authority import admitted_test_authority
 from tests.support.lotus_performance_fakes import RecordingLotusPerformanceClient
 
 
@@ -44,7 +45,7 @@ def test_drawdown_stateful_adapter_happy_path() -> None:
             _stateful(),
             analysis_options=DrawdownAnalysisOptions.model_validate({}),
             performance_client=client,
-            correlation_id="corr-dd",
+            authority=admitted_test_authority("corr-dd"),
         )
     )
     assert client.request_payload is not None
@@ -81,7 +82,7 @@ def test_drawdown_stateful_adapter_requires_series_payload() -> None:
                 _stateful(),
                 analysis_options=DrawdownAnalysisOptions.model_validate({}),
                 performance_client=client,
-                correlation_id=None,
+                authority=admitted_test_authority(),
             )
         )
 
@@ -94,7 +95,7 @@ def test_drawdown_stateful_adapter_requires_portfolio_returns() -> None:
                 _stateful(),
                 analysis_options=DrawdownAnalysisOptions.model_validate({}),
                 performance_client=client,
-                correlation_id=None,
+                authority=admitted_test_authority(),
             )
         )
 
@@ -117,7 +118,7 @@ def test_drawdown_stateful_adapter_requires_benchmark_when_policy_requires() -> 
                 _stateful(),
                 analysis_options=DrawdownAnalysisOptions.model_validate({}),
                 performance_client=client,
-                correlation_id=None,
+                authority=admitted_test_authority(),
             )
         )
 
@@ -148,7 +149,7 @@ def test_drawdown_stateful_adapter_rejects_invalid_portfolio_return_value() -> N
                 ),
                 analysis_options=DrawdownAnalysisOptions.model_validate({}),
                 performance_client=client,
-                correlation_id=None,
+                authority=admitted_test_authority(),
             )
         )
 
@@ -181,7 +182,7 @@ def test_drawdown_stateful_adapter_skips_malformed_rows_and_allows_optional_benc
             ),
             analysis_options=DrawdownAnalysisOptions.model_validate({}),
             performance_client=client,
-            correlation_id=None,
+            authority=admitted_test_authority(),
         )
     )
     assert "YTD" in response.results

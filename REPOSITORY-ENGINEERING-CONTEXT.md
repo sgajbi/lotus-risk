@@ -282,7 +282,19 @@ Boundary rules:
     `lotus.calculation_supportability_reason`, and `lotus.period_type`. Update
     `scripts/api_vocabulary_inventory.py`, `docs/standards/api-vocabulary.md`, and focused tests
     when adding new ambiguous vocabulary.
-29. Treat `src/app/contracts` as mixed public API DTOs, shared application values, and compatibility
+29. Admitted tenant authority is one typed path: routes admit `X-Tenant-Id` once through
+    `contracts/downstream_authority.py` (stateful and concentration-simulation modes; missing/blank
+    refuses 401 `MISSING_TENANT_AUTHORITY`, over 128 chars refuses 400 `INVALID_TENANT_AUTHORITY`,
+    both before any upstream I/O and before the observed endpoint operation), and every
+    tenant-owned lotus-performance/lotus-core request — returns-series submit and async polls,
+    benchmark exposure context, core snapshot, position analytics timeseries, simulation session
+    create/changes — derives per-request headers from the admitted `DownstreamAuthority`. Instrument
+    enrichment and risk-free series/coverage are deliberately tenant-free global reference reads;
+    do not add tenant scope to them without a lotus-core ownership decision. Pooled shared clients
+    must never carry tenant default headers, and tenant must never be derived from a business
+    payload. A producer 403 on result access maps to bounded `424 FAILED_DEPENDENCY`, never a
+    pending loop.
+30. Treat `src/app/contracts` as mixed public API DTOs, shared application values, and compatibility
     facades until a fuller domain package is introduced. Pure calculation helpers must not construct
     public response DTOs directly for migrated paths. The concentration representative path maps
     internal driver values from `src/app/services/concentration/datamodels.py` to public Pydantic

@@ -8,6 +8,7 @@ from app.contracts.attribution import (
     GroupingDimension,
     HistoricalAttributionStatefulInput,
 )
+from app.contracts.downstream_authority import DownstreamAuthority
 from app.contracts.risk import ReturnPoint
 from app.services.benchmark_exposure_history import (
     BenchmarkExposureHistoryRequest,
@@ -21,7 +22,7 @@ class BenchmarkExposureClientProtocol(Protocol):
         self,
         *,
         request_payload: dict[str, Any],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, Any]: ...
 
 
@@ -52,7 +53,7 @@ async def fetch_active_benchmark_exposure_history(
     benchmark_returns: list[ReturnPoint],
     start_date: date,
     grouping_dimensions: list[GroupingDimension],
-    correlation_id: str | None,
+    authority: DownstreamAuthority,
 ) -> list[ExposurePoint]:
     benchmark_exposure_history = await fetch_benchmark_exposure_history(
         BenchmarkExposureHistoryRequest(
@@ -62,7 +63,7 @@ async def fetch_active_benchmark_exposure_history(
             start_date=start_date,
             reporting_currency=stateful.reporting_currency,
             grouping_dimensions=grouping_dimensions,
-            correlation_id=correlation_id,
+            authority=authority,
         )
     )
     validate_benchmark_exposure_alignment(

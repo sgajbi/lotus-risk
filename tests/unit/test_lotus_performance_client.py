@@ -12,10 +12,10 @@ from app.integrations.lotus_performance_client import (
     LotusPerformanceClient,
 )
 from app.integrations.lotus_performance_transport import (
-    correlation_headers,
     resolve_lotus_performance_base_url,
 )
 from app.upstream_errors import UpstreamServiceError
+from tests.support.downstream_authority import admitted_test_authority
 
 
 class _FakeAsyncClient:
@@ -81,7 +81,7 @@ async def test_client_builds_headers_and_payload_for_returns_series(
     client = LotusPerformanceClient(base_url="http://performance.local", timeout_seconds=5)
     response = await client.get_returns_series(
         request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
-        correlation_id="corr-123",
+        authority=admitted_test_authority("corr-123"),
     )
 
     assert response["series"] == {"portfolio_returns": []}
@@ -91,6 +91,7 @@ async def test_client_builds_headers_and_payload_for_returns_series(
         == "http://performance.local/integration/returns/series"
     )
     assert _FakeAsyncClient.last_request["headers"]["X-Correlation-Id"] == "corr-123"
+    assert _FakeAsyncClient.last_request["headers"]["X-Tenant-Id"] == "tenant-a"
     metrics = generate_latest().decode("utf-8")
     assert 'lotus_risk_upstream_requests_total{category="ok"' in metrics
     assert 'dependency="lotus-performance"' in metrics
@@ -116,7 +117,7 @@ async def test_client_reuses_injected_http_client_without_creating_temporary_poo
     )
     response = await client.get_returns_series(
         request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
-        correlation_id=None,
+        authority=admitted_test_authority(),
     )
 
     assert response["series"] == {"portfolio_returns": []}
@@ -132,7 +133,7 @@ async def test_client_rejects_non_object_json_response(monkeypatch: pytest.Monke
     with pytest.raises(UpstreamServiceError, match="invalid JSON payload") as exc_info:
         await client.get_returns_series(
             request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
-            correlation_id=None,
+            authority=admitted_test_authority(),
         )
     assert exc_info.value.code == "UPSTREAM_INVALID_RESPONSE"
 
@@ -150,7 +151,7 @@ async def test_client_maps_http_status_error_with_detail(monkeypatch: pytest.Mon
     with pytest.raises(UpstreamServiceError, match="failed \\(503\\)") as exc_info:
         await client.get_returns_series(
             request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
-            correlation_id=None,
+            authority=admitted_test_authority(),
         )
     assert exc_info.value.code == "UPSTREAM_FAILURE"
     assert exc_info.value.status_code == 502
@@ -172,7 +173,7 @@ async def test_client_maps_http_transport_error(monkeypatch: pytest.MonkeyPatch)
     with pytest.raises(UpstreamServiceError, match="unavailable") as exc_info:
         await client.get_returns_series(
             request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
-            correlation_id=None,
+            authority=admitted_test_authority(),
         )
     assert exc_info.value.code == "UPSTREAM_UNAVAILABLE"
 
@@ -226,7 +227,7 @@ async def test_client_polls_async_returns_series_result_until_complete(
     client = LotusPerformanceClient(base_url="http://performance.local")
     response = await client.get_returns_series(
         request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
-        correlation_id="corr-async",
+        authority=admitted_test_authority("corr-async"),
     )
 
     assert response["series"] == {"portfolio_returns": []}
@@ -239,6 +240,13 @@ async def test_client_polls_async_returns_series_result_until_complete(
     ]
     assert _FakeAsyncClient.requests[2]["url"].endswith(
         "/integration/returns/series/results/calc-1"
+    )
+    # The submitting tenant's authority is reused verbatim on every status/result poll.
+    assert [request["headers"]["X-Tenant-Id"] for request in _FakeAsyncClient.requests] == (
+        ["tenant-a"] * 5
+    )
+    assert [request["headers"]["X-Correlation-Id"] for request in _FakeAsyncClient.requests] == (
+        ["corr-async"] * 5
     )
 
 
@@ -278,7 +286,7 @@ async def test_client_surfaces_async_execution_failure(
     ) as exc_info:
         await client.get_returns_series(
             request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
-            correlation_id="corr-async-fail",
+            authority=admitted_test_authority("corr-async-fail"),
         )
     assert exc_info.value.code == "FAILED_DEPENDENCY"
 
@@ -308,7 +316,7 @@ async def test_client_surfaces_async_execution_failure_without_message(
     with pytest.raises(UpstreamServiceError, match="async returns-series failed$") as exc_info:
         await client.get_returns_series(
             request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
-            correlation_id="corr-async-fail",
+            authority=admitted_test_authority("corr-async-fail"),
         )
     assert exc_info.value.code == "FAILED_DEPENDENCY"
 
@@ -353,7 +361,7 @@ async def test_client_rejects_null_async_result_payload(monkeypatch: pytest.Monk
     ) as exc_info:
         await client.get_returns_series(
             request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
-            correlation_id=None,
+            authority=admitted_test_authority(),
         )
     assert exc_info.value.code == "FAILED_DEPENDENCY"
     assert [request["method"] for request in _FakeAsyncClient.requests] == ["POST", "GET"]
@@ -379,7 +387,7 @@ async def test_client_rejects_invalid_async_accepted_payloads(
         with pytest.raises(UpstreamServiceError, match=expected) as exc_info:
             await client.get_returns_series(
                 request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
-                correlation_id=None,
+                authority=admitted_test_authority(),
             )
         assert exc_info.value.code == "UPSTREAM_INVALID_RESPONSE"
 
@@ -406,7 +414,7 @@ async def test_client_raises_for_unexpected_async_result_status(
     with pytest.raises(UpstreamServiceError, match="failed \\(500\\)") as exc_info:
         await client.get_returns_series(
             request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
-            correlation_id=None,
+            authority=admitted_test_authority(),
         )
     assert exc_info.value.code == "UPSTREAM_FAILURE"
     assert "not ready" not in exc_info.value.message
@@ -437,7 +445,7 @@ async def test_client_raises_for_unexpected_async_result_client_error(
     with pytest.raises(UpstreamServiceError, match="rejected request \\(400\\)") as exc_info:
         await client.get_returns_series(
             request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
-            correlation_id=None,
+            authority=admitted_test_authority(),
         )
     assert exc_info.value.code == "FAILED_DEPENDENCY"
     assert "portfolio identifier leaked" not in exc_info.value.message
@@ -497,7 +505,7 @@ async def test_client_times_out_async_returns_series_when_result_never_completes
     ) as exc_info:
         await client.get_returns_series(
             request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
-            correlation_id="corr-async-timeout",
+            authority=admitted_test_authority("corr-async-timeout"),
         )
     assert exc_info.value.code == "FAILED_DEPENDENCY"
 
@@ -520,7 +528,7 @@ async def test_client_builds_headers_and_payload_for_benchmark_exposure_context(
     client = LotusPerformanceClient(base_url="http://performance.local", timeout_seconds=5)
     response = await client.get_benchmark_exposure_context(
         request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
-        correlation_id="corr-benchmark-context",
+        authority=admitted_test_authority("corr-benchmark-context"),
     )
 
     assert response["source_service"] == "lotus-performance"
@@ -530,6 +538,7 @@ async def test_client_builds_headers_and_payload_for_benchmark_exposure_context(
         == "http://performance.local/integration/benchmarks/exposure-context"
     )
     assert _FakeAsyncClient.last_request["headers"]["X-Correlation-Id"] == "corr-benchmark-context"
+    assert _FakeAsyncClient.last_request["headers"]["X-Tenant-Id"] == "tenant-a"
     assert _FakeAsyncClient.last_request["json"] == {"portfolio_id": "DEMO_DPM_EUR_001"}
 
 
@@ -551,7 +560,7 @@ async def test_client_maps_benchmark_exposure_context_errors(
     ) as exc_info:
         await client.get_benchmark_exposure_context(
             request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
-            correlation_id=None,
+            authority=admitted_test_authority(),
         )
     assert exc_info.value.code == "UPSTREAM_FAILURE"
 
@@ -571,11 +580,6 @@ def test_resolve_lotus_performance_base_url_prefers_explicit_then_env(
         "http://explicit-performance.local"
     )
     assert resolve_lotus_performance_base_url(None) == "http://env-performance.local"
-
-
-def test_correlation_headers_omits_empty_correlation_id() -> None:
-    assert correlation_headers(None) == {}
-    assert correlation_headers("corr-perf") == {"X-Correlation-Id": "corr-perf"}
 
 
 def test_client_reads_async_polling_controls_with_fallbacks(

@@ -70,6 +70,13 @@ Stateful workflows depend on governed upstream inputs:
 1. `lotus-performance` for returns and benchmark exposure context,
 2. `lotus-core` for snapshots, simulation contracts, enrichment, and risk-free reference data.
 
+Admitted tenant authority (`X-Tenant-Id`) travels with every **tenant-owned** upstream request —
+returns-series submit and its async status/result polls, benchmark exposure context, core
+snapshots, position analytics timeseries, and simulation session create/changes. Instrument
+enrichment and risk-free series/coverage are deliberately tenant-free: they are shared reference
+data with no tenant owner, and adding tenant scope there would assert an ownership that does not
+exist. The discriminator is recorded at the transports and every client port.
+
 Use:
 
 - `docs/domain-apis/RFC-0082-upstream-contract-family-map.md`

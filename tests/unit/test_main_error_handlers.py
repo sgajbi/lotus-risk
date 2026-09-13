@@ -81,5 +81,6 @@ def test_analytics_risk_calculate_unsupported_mode_guard_branch() -> None:
                 cast(Any, request_payload),
                 RuntimeDownstreamClients(app_state=SimpleNamespace()),
                 None,
+                "tenant-a",
             )
         )

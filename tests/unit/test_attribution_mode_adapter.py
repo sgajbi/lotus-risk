@@ -5,12 +5,19 @@ from typing import Any, cast
 import pytest
 
 from app.contracts.attribution import HistoricalAttributionStatefulInput
-from app.services import attribution_mode_adapter as adapter
+from app.contracts.downstream_authority import DownstreamAuthority
+from app.services.attribution_exposure_history import (
+    as_decimal,
+    build_exposure_points,
+    build_issuer_map,
+    group_key_and_label,
+)
 from app.services.attribution_mode_adapter import calculate_historical_attribution_stateful
 from app.services.stateful_returns_series_parser import (
     decimal_return_to_percentage_points,
     to_return_points,
 )
+from tests.support.downstream_authority import admitted_test_authority
 from tests.support.historical_attribution_fakes import (
     RecordingHistoricalAttributionCoreClient,
     build_benchmark_exposure_context_response,
@@ -27,23 +34,23 @@ class _StubPerformanceClient:
         self,
         *,
         request_payload: dict[str, object],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, object]:
         self.payload = request_payload
         return await self._client.get_returns_series(
             request_payload=request_payload,
-            correlation_id=correlation_id,
+            authority=authority,
         )
 
     async def get_benchmark_exposure_context(
         self,
         *,
         request_payload: dict[str, object],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, object]:
         return await self._client.get_benchmark_exposure_context(
             request_payload=request_payload,
-            correlation_id=correlation_id,
+            authority=authority,
         )
 
     @property
@@ -78,7 +85,7 @@ class _StubCoreClientBadRows(_StubCoreClient):
         *,
         portfolio_id: str,
         request_payload: dict[str, object],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, object]:
         return {"rows": "bad"}
 
@@ -89,7 +96,7 @@ class _StubCoreClientNoRows(_StubCoreClient):
         *,
         portfolio_id: str,
         request_payload: dict[str, object],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, object]:
         return {"rows": [], "page": {"next_page_token": None}}
 
@@ -100,7 +107,7 @@ class _StubCoreClientInvalidExposure(_StubCoreClient):
         *,
         portfolio_id: str,
         request_payload: dict[str, object],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, object]:
         return {
             "rows": [
@@ -130,7 +137,7 @@ class _StubPerformanceClientMissingSeries(_StubPerformanceClient):
         self,
         *,
         request_payload: dict[str, object],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, object]:
         return {}
 
@@ -140,7 +147,7 @@ class _StubPerformanceClientEmptyReturns(_StubPerformanceClient):
         self,
         *,
         request_payload: dict[str, object],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, object]:
         return {"series": {"portfolio_returns": []}}
 
@@ -173,7 +180,7 @@ def test_stateful_attribution_total_risk_happy_path() -> None:
             _stateful_input(grouping_dimensions=["SECTOR"], attribution_types=["TOTAL_RISK"]),
             performance_client=perf,
             core_client=core,
-            correlation_id="corr-attr",
+            authority=admitted_test_authority("corr-attr"),
         )
     )
     assert perf.payload is not None
@@ -211,7 +218,7 @@ def test_stateful_attribution_asset_class_and_reporting_currency() -> None:
             payload,
             performance_client=perf,
             core_client=core,
-            correlation_id="corr-attr",
+            authority=admitted_test_authority("corr-attr"),
         )
     )
     assert response.results["YTD"].error is None
@@ -228,7 +235,7 @@ def test_stateful_attribution_issuer_grouping_uses_enrichment() -> None:
             _stateful_input(grouping_dimensions=["ISSUER"], attribution_types=["TOTAL_RISK"]),
             performance_client=perf,
             core_client=core,
-            correlation_id="corr-attr",
+            authority=admitted_test_authority("corr-attr"),
         )
     )
     assert len(core.enrichment_calls) == 1
@@ -243,7 +250,7 @@ def test_stateful_attribution_issuer_grouping_rejects_bad_enrichment_shape() -> 
                 _stateful_input(grouping_dimensions=["ISSUER"], attribution_types=["TOTAL_RISK"]),
                 performance_client=_StubPerformanceClient(),
                 core_client=_StubCoreClientBadRecords(),
-                correlation_id="corr-attr",
+                authority=admitted_test_authority("corr-attr"),
             )
         )
 
@@ -260,7 +267,7 @@ def test_stateful_attribution_active_risk_sources_performance_benchmark_exposure
             ),
             performance_client=perf,
             core_client=core,
-            correlation_id="corr-attr-active",
+            authority=admitted_test_authority("corr-attr-active"),
         )
     )
 
@@ -289,7 +296,7 @@ def test_stateful_attribution_rejects_active_risk_when_benchmark_returns_missing
             self,
             *,
             request_payload: dict[str, object],
-            correlation_id: str | None,
+            authority: DownstreamAuthority,
         ) -> dict[str, object]:
             self.payload = request_payload
             return {
@@ -306,7 +313,7 @@ def test_stateful_attribution_rejects_active_risk_when_benchmark_returns_missing
                 ),
                 performance_client=_NoBenchmarkPerformanceClient(),
                 core_client=_StubCoreClient(),
-                correlation_id="corr-attr",
+                authority=admitted_test_authority("corr-attr"),
             )
         )
 
@@ -317,10 +324,14 @@ def test_stateful_attribution_supports_active_risk_issuer_grouping() -> None:
             self,
             *,
             request_payload: dict[str, object],
-            correlation_id: str | None,
+            authority: DownstreamAuthority,
         ) -> dict[str, object]:
             self._client.benchmark_exposure_context_calls.append(
-                {"request_payload": request_payload, "correlation_id": correlation_id}
+                {
+                    "request_payload": request_payload,
+                    "tenant_id": authority.tenant_id,
+                    "correlation_id": authority.correlation_id,
+                }
             )
             return build_benchmark_exposure_context_response(grouping_dimension="ISSUER")
 
@@ -336,7 +347,7 @@ def test_stateful_attribution_supports_active_risk_issuer_grouping() -> None:
             ),
             performance_client=performance_client,
             core_client=core_client,
-            correlation_id="corr-attr",
+            authority=admitted_test_authority("corr-attr"),
         )
     )
 
@@ -362,7 +373,7 @@ def test_stateful_attribution_rejects_benchmark_exposure_date_misalignment() -> 
             self,
             *,
             request_payload: dict[str, object],
-            correlation_id: str | None,
+            authority: DownstreamAuthority,
         ) -> dict[str, object]:
             payload = build_benchmark_exposure_context_response()
             rows = payload["rows"]
@@ -382,7 +393,7 @@ def test_stateful_attribution_rejects_benchmark_exposure_date_misalignment() -> 
                 ),
                 performance_client=_MisalignedBenchmarkExposurePerformanceClient(),
                 core_client=_StubCoreClient(),
-                correlation_id="corr-attr",
+                authority=admitted_test_authority("corr-attr"),
             )
         )
 
@@ -393,7 +404,7 @@ def test_stateful_attribution_rejects_bad_benchmark_exposure_context_shape() -> 
             self,
             *,
             request_payload: dict[str, object],
-            correlation_id: str | None,
+            authority: DownstreamAuthority,
         ) -> dict[str, object]:
             return {**build_benchmark_exposure_context_response(), "rows": "bad"}
 
@@ -407,7 +418,7 @@ def test_stateful_attribution_rejects_bad_benchmark_exposure_context_shape() -> 
                 ),
                 performance_client=_BadBenchmarkExposurePerformanceClient(),
                 core_client=_StubCoreClient(),
-                correlation_id="corr-attr",
+                authority=admitted_test_authority("corr-attr"),
             )
         )
 
@@ -418,7 +429,7 @@ def test_stateful_attribution_rejects_missing_benchmark_exposure_lineage() -> No
             self,
             *,
             request_payload: dict[str, object],
-            correlation_id: str | None,
+            authority: DownstreamAuthority,
         ) -> dict[str, object]:
             return {**build_benchmark_exposure_context_response(), "metadata": {}}
 
@@ -432,7 +443,7 @@ def test_stateful_attribution_rejects_missing_benchmark_exposure_lineage() -> No
                 ),
                 performance_client=_BadLineagePerformanceClient(),
                 core_client=_StubCoreClient(),
-                correlation_id="corr-attr",
+                authority=admitted_test_authority("corr-attr"),
             )
         )
 
@@ -444,7 +455,7 @@ def test_stateful_attribution_rejects_custom_grouping() -> None:
                 _stateful_input(grouping_dimensions=["CUSTOM"], attribution_types=["TOTAL_RISK"]),
                 performance_client=_StubPerformanceClient(),
                 core_client=_StubCoreClient(),
-                correlation_id="corr-attr",
+                authority=admitted_test_authority("corr-attr"),
             )
         )
 
@@ -456,7 +467,7 @@ def test_stateful_attribution_rejects_missing_series_object() -> None:
                 _stateful_input(grouping_dimensions=["SECTOR"], attribution_types=["TOTAL_RISK"]),
                 performance_client=_StubPerformanceClientMissingSeries(),
                 core_client=_StubCoreClient(),
-                correlation_id="corr-attr",
+                authority=admitted_test_authority("corr-attr"),
             )
         )
 
@@ -468,7 +479,7 @@ def test_stateful_attribution_rejects_empty_portfolio_returns() -> None:
                 _stateful_input(grouping_dimensions=["SECTOR"], attribution_types=["TOTAL_RISK"]),
                 performance_client=_StubPerformanceClientEmptyReturns(),
                 core_client=_StubCoreClient(),
-                correlation_id="corr-attr",
+                authority=admitted_test_authority("corr-attr"),
             )
         )
 
@@ -480,7 +491,7 @@ def test_stateful_attribution_rejects_missing_rows_list() -> None:
                 _stateful_input(grouping_dimensions=["SECTOR"], attribution_types=["TOTAL_RISK"]),
                 performance_client=_StubPerformanceClient(),
                 core_client=_StubCoreClientBadRows(),
-                correlation_id="corr-attr",
+                authority=admitted_test_authority("corr-attr"),
             )
         )
 
@@ -492,7 +503,7 @@ def test_stateful_attribution_rejects_empty_rows() -> None:
                 _stateful_input(grouping_dimensions=["SECTOR"], attribution_types=["TOTAL_RISK"]),
                 performance_client=_StubPerformanceClient(),
                 core_client=_StubCoreClientNoRows(),
-                correlation_id="corr-attr",
+                authority=admitted_test_authority("corr-attr"),
             )
         )
 
@@ -504,7 +515,7 @@ def test_stateful_attribution_rejects_empty_exposure_history() -> None:
                 _stateful_input(grouping_dimensions=["SECTOR"], attribution_types=["TOTAL_RISK"]),
                 performance_client=_StubPerformanceClient(),
                 core_client=_StubCoreClientInvalidExposure(),
-                correlation_id="corr-attr",
+                authority=admitted_test_authority("corr-attr"),
             )
         )
 
@@ -517,22 +528,23 @@ def test_helper_branch_coverage_for_conversion_and_grouping() -> None:
     with pytest.raises(ValueError, match="Invalid return value"):
         decimal_return_to_percentage_points("nan%")
     with pytest.raises(ValueError, match="Invalid market value"):
-        adapter._as_decimal("invalid")
+        as_decimal("invalid")
 
     row = {"security_id": "SEC_X", "dimensions": {}}
-    assert adapter._group_key_and_label(row=row, grouping_dimension="POSITION", issuer_map={}) == (
+    assert group_key_and_label(row=row, grouping_dimension="POSITION", issuer_map={}) == (
         "SEC_X",
         "SEC_X",
     )
-    assert adapter._group_key_and_label(
-        row=row, grouping_dimension="ASSET_CLASS", issuer_map={}
-    ) == ("ASSET_CLASS_UNKNOWN", "UNKNOWN")
-    assert adapter._group_key_and_label(row=row, grouping_dimension="ISSUER", issuer_map={}) == (
+    assert group_key_and_label(row=row, grouping_dimension="ASSET_CLASS", issuer_map={}) == (
+        "ASSET_CLASS_UNKNOWN",
+        "UNKNOWN",
+    )
+    assert group_key_and_label(row=row, grouping_dimension="ISSUER", issuer_map={}) == (
         "ISSUER_SEC_X",
         None,
     )
     with pytest.raises(ValueError, match="Unsupported stateful grouping_dimension"):
-        adapter._group_key_and_label(
+        group_key_and_label(
             row=row,
             grouping_dimension="UNKNOWN",  # type: ignore[arg-type]
             issuer_map={},
@@ -540,7 +552,7 @@ def test_helper_branch_coverage_for_conversion_and_grouping() -> None:
 
 
 def test_build_exposure_points_skips_zero_total_rows() -> None:
-    points = adapter._build_exposure_points(
+    points = build_exposure_points(
         rows=[
             {
                 "security_id": "SEC_ZERO",
@@ -558,14 +570,12 @@ def test_build_exposure_points_skips_zero_total_rows() -> None:
 def test_build_issuer_map_handles_empty_and_partial_rows() -> None:
     core = _StubCoreClient()
     empty_map = asyncio.run(
-        adapter._build_issuer_map(
-            core_client=core, rows=[{"security_id": None}], correlation_id="corr"
-        )
+        build_issuer_map(core_client=core, rows=[{"security_id": None}], correlation_id="corr")
     )
     assert empty_map == {}
 
     mixed_map = asyncio.run(
-        adapter._build_issuer_map(
+        build_issuer_map(
             core_client=core,
             rows=[{"security_id": "SEC_A"}],
             correlation_id="corr",
@@ -591,10 +601,20 @@ def test_build_issuer_map_skips_non_dict_and_missing_security_id_records() -> No
             }
 
     issuer_map = asyncio.run(
-        adapter._build_issuer_map(
+        build_issuer_map(
             core_client=_StubCoreClientWithBadRecords(),
             rows=[{"security_id": "SEC_A"}],
             correlation_id="corr",
         )
     )
     assert issuer_map == {"SEC_A": ("ISSUER_A", None)}
+
+
+def test_validate_stateful_groupings_refuses_custom_for_direct_service_callers() -> None:
+    """The HTTP contract already rejects CUSTOM at validation (422); this seam guards
+    non-route callers of the stateful resolver with the same rule."""
+    from app.services.attribution_stateful_inputs import validate_stateful_groupings
+
+    validate_stateful_groupings(["SECTOR", "ASSET_CLASS"])
+    with pytest.raises(ValueError, match="grouping_dimension=CUSTOM"):
+        validate_stateful_groupings(["CUSTOM"])

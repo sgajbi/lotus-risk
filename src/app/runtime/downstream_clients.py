@@ -5,20 +5,22 @@ from typing import Any, Protocol, cast
 
 from fastapi import Request
 
+from app.contracts.downstream_authority import DownstreamAuthority
+
 
 class LotusPerformanceClientProtocol(Protocol):
     async def get_returns_series(
         self,
         *,
         request_payload: dict[str, Any],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, Any]: ...
 
     async def get_benchmark_exposure_context(
         self,
         *,
         request_payload: dict[str, Any],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, Any]: ...
 
 
@@ -29,7 +31,7 @@ class LotusCoreClientProtocol(Protocol):
         portfolio_id: str,
         ttl_hours: int | None,
         created_by: str | None,
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, Any]: ...
 
     async def add_simulation_changes(
@@ -37,7 +39,7 @@ class LotusCoreClientProtocol(Protocol):
         *,
         session_id: str,
         changes: list[dict[str, Any]],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
         idempotency_key: str,
         change_set_fingerprint: str,
     ) -> dict[str, Any]: ...
@@ -47,7 +49,7 @@ class LotusCoreClientProtocol(Protocol):
         *,
         portfolio_id: str,
         request_payload: dict[str, Any],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, Any]: ...
 
     async def get_instrument_enrichment(
@@ -62,7 +64,7 @@ class LotusCoreClientProtocol(Protocol):
         *,
         portfolio_id: str,
         request_payload: dict[str, Any],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, Any]: ...
 
     async def get_risk_free_series(

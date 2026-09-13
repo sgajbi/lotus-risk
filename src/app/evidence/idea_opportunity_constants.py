@@ -10,6 +10,9 @@ CANONICAL_PORTFOLIO_REF: Final = "canonical-front-office:global_balanced"
 CANONICAL_PORTFOLIO_ID: Final = "PB_SG_GLOBAL_BAL_001"
 CANONICAL_BENCHMARK_ID: Final = "BMK_PB_GLOBAL_BALANCED_60_40"
 CANONICAL_AS_OF_DATE: Final = date(2026, 4, 10)
+# RFC-0076 canonical source_tenant_id; the stateful evidence requests carry it as
+# admitted tenant authority (the enforcing route refuses tenantless stateful input).
+CANONICAL_TENANT_ID: Final = "tenant-sg"
 CANONICAL_CONTRACT_PROVENANCE: Final = {
     "canonicalDemoDataContract": {
         "sourceSystem": "lotus-platform",

@@ -4,12 +4,14 @@ from typing import Any
 
 import pytest
 
+from app.contracts.downstream_authority import DownstreamAuthority
 from app.services.attribution_position_timeseries import (
     POSITION_TIMESERIES_MAX_PAGES,
     POSITION_TIMESERIES_MAX_ROWS,
     POSITION_TIMESERIES_PAGE_SIZE,
     fetch_position_timeseries_rows,
 )
+from tests.support.downstream_authority import admitted_test_authority
 
 
 def _position_row(index: int) -> dict[str, object]:
@@ -31,13 +33,14 @@ class _PagedCoreClient:
         *,
         portfolio_id: str,
         request_payload: dict[str, Any],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, object]:
         self.position_calls.append(
             {
                 "portfolio_id": portfolio_id,
                 "request_payload": request_payload,
-                "correlation_id": correlation_id,
+                "tenant_id": authority.tenant_id,
+                "correlation_id": authority.correlation_id,
             }
         )
         index = len(self.position_calls) - 1
@@ -53,7 +56,7 @@ def _fetch_rows(client: _PagedCoreClient) -> list[dict[str, Any]]:
             start_date=date(2026, 1, 2),
             reporting_currency="USD",
             grouping_dimensions=["SECTOR", "ASSET_CLASS"],
-            correlation_id="corr-position-pages",
+            authority=admitted_test_authority("corr-position-pages"),
         )
     )
 

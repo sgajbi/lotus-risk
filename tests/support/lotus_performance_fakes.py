@@ -3,6 +3,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any, ClassVar
 
+from app.contracts.downstream_authority import DownstreamAuthority
+
 
 class RecordingLotusPerformanceClient:
     def __init__(
@@ -20,12 +22,13 @@ class RecordingLotusPerformanceClient:
         self,
         *,
         request_payload: dict[str, Any],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, Any]:
         self.calls.append(
             {
                 "request_payload": request_payload,
-                "correlation_id": correlation_id,
+                "tenant_id": authority.tenant_id,
+                "correlation_id": authority.correlation_id,
             }
         )
         return self.response_payload
@@ -34,12 +37,13 @@ class RecordingLotusPerformanceClient:
         self,
         *,
         request_payload: dict[str, Any],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, Any]:
         self.benchmark_exposure_context_calls.append(
             {
                 "request_payload": request_payload,
-                "correlation_id": correlation_id,
+                "tenant_id": authority.tenant_id,
+                "correlation_id": authority.correlation_id,
             }
         )
         if self.benchmark_exposure_context_payload is None:
@@ -74,12 +78,13 @@ def build_autowired_lotus_performance_client_class(
             self,
             *,
             request_payload: dict[str, Any],
-            correlation_id: str | None,
+            authority: DownstreamAuthority,
         ) -> dict[str, Any]:
             _AutoWiredLotusPerformanceClient.calls.append(
                 {
                     "request_payload": request_payload,
-                    "correlation_id": correlation_id,
+                    "tenant_id": authority.tenant_id,
+                    "correlation_id": authority.correlation_id,
                 }
             )
             return response_factory()
@@ -88,12 +93,13 @@ def build_autowired_lotus_performance_client_class(
             self,
             *,
             request_payload: dict[str, Any],
-            correlation_id: str | None,
+            authority: DownstreamAuthority,
         ) -> dict[str, Any]:
             _AutoWiredLotusPerformanceClient.benchmark_exposure_context_calls.append(
                 {
                     "request_payload": request_payload,
-                    "correlation_id": correlation_id,
+                    "tenant_id": authority.tenant_id,
+                    "correlation_id": authority.correlation_id,
                 }
             )
             if benchmark_exposure_context_response_factory is None:

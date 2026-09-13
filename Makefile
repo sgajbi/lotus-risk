@@ -53,8 +53,14 @@ test-integration:
 test-e2e:
 	python -m pytest tests/e2e
 
+# Coverage floor enforcement runs through coverage's own CLI, exactly like the CI
+# coverage-gate jobs: pytest-cov 7 under pytest 9 prints the --cov-fail-under FAIL
+# line but exits 0, so pytest's flag can no longer fail the target (measured
+# 2026-09-13: --cov-fail-under=99 at 0.58% coverage exited 0). `coverage report
+# --fail-under` exits 2 on breach and is the pinned gate-output tool.
 test-all:
-	python -m pytest --cov=src --cov-report=term-missing --cov-fail-under=$(COVERAGE_FAIL_UNDER)
+	python -m pytest --cov=src --cov-report=term-missing
+	python -m coverage report --fail-under=$(COVERAGE_FAIL_UNDER) --format=total
 
 test-coverage: test-all
 
@@ -64,7 +70,8 @@ test-fast:
 
 # Full suite with coverage gate, but without term-missing output overhead
 test-all-fast:
-	python -m pytest --cov=src --cov-report= --cov-fail-under=$(COVERAGE_FAIL_UNDER)
+	python -m pytest --cov=src --cov-report=
+	python -m coverage report --fail-under=$(COVERAGE_FAIL_UNDER) --format=total
 
 # Full suite without coverage for quickest full functional signal
 test-all-no-cov:
@@ -72,7 +79,8 @@ test-all-no-cov:
 
 # Full suite, optional parallel workers when pytest-xdist is installed
 test-all-parallel:
-	python -c "import importlib.util, subprocess, sys; args=[sys.executable,'-m','pytest','--cov=src','--cov-report=','--cov-fail-under=$(COVERAGE_FAIL_UNDER)']; args += (['-n','auto','--dist','loadscope'] if importlib.util.find_spec('xdist') else []); raise SystemExit(subprocess.call(args))"
+	python -c "import importlib.util, subprocess, sys; args=[sys.executable,'-m','pytest','--cov=src','--cov-report=']; args += (['-n','auto','--dist','loadscope'] if importlib.util.find_spec('xdist') else []); raise SystemExit(subprocess.call(args))"
+	python -m coverage report --fail-under=$(COVERAGE_FAIL_UNDER) --format=total
 
 # Split-suite local coverage loop without Docker. Use `make ci` for PR-grade parity.
 ci-local: lint check-deps

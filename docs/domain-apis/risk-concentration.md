@@ -53,6 +53,9 @@ Caller provides:
 
 Caller provides:
 
+- `X-Tenant-Id` header (admitted tenant authority; missing/blank refuses
+  `401 MISSING_TENANT_AUTHORITY` before any upstream call, over 128 characters after trimming
+  refuses `400 INVALID_TENANT_AUTHORITY`)
 - `stateful_input.portfolio_id`
 - `stateful_input.as_of_date`
 
@@ -62,6 +65,8 @@ Caller provides:
 
 Caller provides:
 
+- `X-Tenant-Id` header (same admitted tenant authority and refusal semantics as `stateful`;
+  forwarded on the simulation session create/changes and snapshot calls)
 - `simulation_input.portfolio_id`
 - `simulation_input.as_of_date`
 - `simulation_input.simulation_changes`

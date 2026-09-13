@@ -5,6 +5,10 @@ from app.contracts.concentration import (
     ConcentrationRequest,
     ConcentrationResponse,
 )
+from app.contracts.downstream_authority import (
+    DownstreamAuthority,
+    required_downstream_authority,
+)
 from app.services.concentration.ports import LotusCoreClientProtocol
 from app.services.concentration.resolvers import (
     resolve_simulation,
@@ -17,6 +21,7 @@ from app.services.concentration.stateless_resolver import resolve_stateless
 async def calculate_concentration(
     request: ConcentrationRequest,
     *,
+    authority: DownstreamAuthority | None,
     core_client: LotusCoreClientProtocol | None = None,
     correlation_id: str | None = None,
     actor_id: str | None = None,
@@ -36,7 +41,11 @@ async def calculate_concentration(
 
     if request.input_mode == ConcentrationInputMode.STATEFUL:
         return _build_response(
-            await resolve_stateful(request, core_client=core_client, correlation_id=correlation_id)
+            await resolve_stateful(
+                request,
+                core_client=core_client,
+                authority=required_downstream_authority(authority),
+            )
         )
 
     if request.input_mode == ConcentrationInputMode.SIMULATION:
@@ -44,7 +53,7 @@ async def calculate_concentration(
             await resolve_simulation(
                 request,
                 core_client=core_client,
-                correlation_id=correlation_id,
+                authority=required_downstream_authority(authority),
                 actor_id=actor_id,
                 idempotency_key=idempotency_key,
             )

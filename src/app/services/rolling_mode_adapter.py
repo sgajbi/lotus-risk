@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
+from app.contracts.downstream_authority import DownstreamAuthority
 from app.contracts.risk import ReturnPoint, RiskRequestScope
 from app.contracts.rolling import (
     RollingInputMode,
@@ -149,13 +150,13 @@ async def calculate_rolling_metrics_stateful(
     *,
     performance_client: LotusPerformanceClientProtocol,
     core_client: LotusCoreClientProtocol | None = None,
-    correlation_id: str | None,
+    authority: DownstreamAuthority,
 ) -> RollingResponse:
     resolved_inputs = await resolve_stateful_rolling_inputs(
         stateful,
         performance_client=performance_client,
         core_client=core_client,
-        correlation_id=correlation_id,
+        authority=authority,
     )
     return _attach_stateful_lineage(
         _calculate_stateful_response(resolved_inputs),

@@ -5,6 +5,7 @@ from typing import Any, cast
 
 import pytest
 
+from app.contracts.downstream_authority import DownstreamAuthority
 from app.contracts.risk import RiskRequestPeriod, StatefulRiskInput
 from app.services.risk_mode_adapter import (
     _build_stateful_source_request,
@@ -12,6 +13,7 @@ from app.services.risk_mode_adapter import (
     calculate_risk_stateful,
 )
 from app.upstream_errors import UpstreamServiceError
+from tests.support.downstream_authority import admitted_test_authority
 from tests.support.lotus_core_fakes import RecordingLotusCoreReferenceClient
 from tests.support.lotus_performance_fakes import RecordingLotusPerformanceClient
 from tests.support.returns_series_payloads import build_returns_series_response
@@ -113,7 +115,7 @@ def test_calculate_risk_stateful_characterization() -> None:
         calculate_risk_stateful(
             _stateful_input(),
             performance_client=performance_client,
-            correlation_id="corr-risk-stateful",
+            authority=admitted_test_authority("corr-risk-stateful"),
         )
     )
 
@@ -148,7 +150,7 @@ def test_calculate_risk_stateful_applies_sourced_risk_free_for_sharpe() -> None:
             stateful,
             performance_client=performance_client,
             core_client=core_client,
-            correlation_id="corr-risk-stateful-rf",
+            authority=admitted_test_authority("corr-risk-stateful-rf"),
         )
     )
 
@@ -202,7 +204,7 @@ def test_calculate_risk_stateful_uses_source_currency_when_reporting_currency_mi
             stateful,
             performance_client=performance_client,
             core_client=core_client,
-            correlation_id="corr-risk-stateful-rf-currency",
+            authority=admitted_test_authority("corr-risk-stateful-rf-currency"),
         )
     )
 
@@ -234,7 +236,7 @@ def test_calculate_risk_stateful_sources_risk_free_after_si_returns_resolve_wind
             stateful,
             performance_client=performance_client,
             core_client=core_client,
-            correlation_id="corr-risk-stateful-rf-si",
+            authority=admitted_test_authority("corr-risk-stateful-rf-si"),
         )
     )
 
@@ -267,7 +269,7 @@ def test_calculate_risk_stateful_rejects_missing_risk_free_for_sharpe() -> None:
                 stateful,
                 performance_client=performance_client,
                 core_client=core_client,
-                correlation_id="corr-risk-stateful-rf",
+                authority=admitted_test_authority("corr-risk-stateful-rf"),
             )
         )
 
@@ -289,7 +291,7 @@ def test_calculate_risk_stateful_requires_core_client_for_sharpe() -> None:
             calculate_risk_stateful(
                 stateful,
                 performance_client=performance_client,
-                correlation_id="corr-risk-stateful-rf",
+                authority=admitted_test_authority("corr-risk-stateful-rf"),
             )
         )
 
@@ -300,7 +302,7 @@ def test_calculate_risk_stateful_requires_series_payload() -> None:
             self,
             *,
             request_payload: dict[str, object],
-            correlation_id: str | None,
+            authority: DownstreamAuthority,
         ) -> dict[str, object]:
             return {}
 
@@ -309,7 +311,7 @@ def test_calculate_risk_stateful_requires_series_payload() -> None:
             calculate_risk_stateful(
                 _stateful_input(),
                 performance_client=_MissingSeriesClient(),
-                correlation_id="corr-risk-stateful",
+                authority=admitted_test_authority("corr-risk-stateful"),
             )
         )
 
@@ -320,7 +322,7 @@ def test_calculate_risk_stateful_requires_portfolio_returns() -> None:
             self,
             *,
             request_payload: dict[str, object],
-            correlation_id: str | None,
+            authority: DownstreamAuthority,
         ) -> dict[str, object]:
             return {"series": {"portfolio_returns": []}}
 
@@ -329,6 +331,6 @@ def test_calculate_risk_stateful_requires_portfolio_returns() -> None:
             calculate_risk_stateful(
                 _stateful_input(),
                 performance_client=_EmptySeriesClient(),
-                correlation_id="corr-risk-stateful",
+                authority=admitted_test_authority("corr-risk-stateful"),
             )
         )

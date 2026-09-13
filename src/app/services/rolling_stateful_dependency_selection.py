@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from app.contracts.downstream_authority import DownstreamAuthority
 from app.contracts.rolling import ROLLING_BENCHMARK_METRICS, RollingStatefulInput
 from app.services.rolling_metric_series import ROLLING_SHARPE_METRIC
 from app.services.rolling_stateful_models import LotusCoreClientProtocol
@@ -27,7 +28,7 @@ async def _resolve_reporting_currency(
     stateful: RollingStatefulInput,
     include_risk_free: bool,
     core_client: LotusCoreClientProtocol | None,
-    correlation_id: str | None,
+    authority: DownstreamAuthority,
 ) -> str | None:
     if stateful.reporting_currency:
         return stateful.reporting_currency
@@ -45,7 +46,7 @@ async def _resolve_reporting_currency(
             "as_of_date": stateful.as_of_date.isoformat(),
             "sections": ["portfolio_totals"],
         },
-        correlation_id=correlation_id,
+        authority=authority,
     )
     valuation_context = snapshot.get("valuation_context")
     if not isinstance(valuation_context, dict):
@@ -67,14 +68,14 @@ async def resolve_stateful_dependency_selection(
     stateful: RollingStatefulInput,
     *,
     core_client: LotusCoreClientProtocol | None,
-    correlation_id: str | None,
+    authority: DownstreamAuthority,
 ) -> RollingStatefulDependencySelection:
     include_risk_free = requires_risk_free(stateful)
     resolved_reporting_currency = await _resolve_reporting_currency(
         stateful=stateful,
         include_risk_free=include_risk_free,
         core_client=core_client,
-        correlation_id=correlation_id,
+        authority=authority,
     )
     if resolved_reporting_currency != stateful.reporting_currency:
         stateful = stateful.model_copy(update={"reporting_currency": resolved_reporting_currency})

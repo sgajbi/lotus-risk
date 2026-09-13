@@ -13,7 +13,11 @@ from app.services.core_risk_free_series import (
     to_risk_free_return_points,
 )
 from app.services.stateful_returns_request import build_stateful_returns_series_request
-from tests.support.live_portfolio_matrix import live_as_of_date, live_portfolio_id
+from tests.support.live_portfolio_matrix import (
+    live_as_of_date,
+    live_portfolio_id,
+    live_tenant_headers,
+)
 from tests.support.live_returns_series import (
     extract_decimal_returns,
     fetch_live_returns_series,
@@ -122,6 +126,7 @@ def test_live_stateful_rolling_reconciles_selected_metrics() -> None:
         rolling_response = client.post(
             f"{RISK_BASE_URL}/analytics/risk/rolling-metrics",
             json=rolling_payload,
+            headers=live_tenant_headers(),
         )
         rolling_response.raise_for_status()
 
@@ -297,6 +302,7 @@ def test_live_stateful_rolling_sharpe_reconciles_with_live_risk_free_series() ->
         rolling_response = client.post(
             f"{RISK_BASE_URL}/analytics/risk/rolling-metrics",
             json=rolling_payload,
+            headers=live_tenant_headers(),
         )
         rolling_response.raise_for_status()
 
@@ -385,6 +391,7 @@ def test_live_stateful_rolling_emits_time_series_for_multiple_partial_windows() 
         response = client.post(
             f"{RISK_BASE_URL}/analytics/risk/rolling-metrics",
             json=rolling_payload,
+            headers=live_tenant_headers(),
         )
         response.raise_for_status()
 

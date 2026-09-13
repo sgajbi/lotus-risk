@@ -2,14 +2,15 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
-from app.api_errors import STANDARD_ERROR_RESPONSES
+from app.api_errors import STATEFUL_TENANT_ERROR_RESPONSES
+from app.contracts.downstream_authority import admit_downstream_authority
 from app.contracts.rolling import (
     RollingAnalyticsRequest,
     RollingInputMode,
     RollingResponse,
 )
-from app.dependencies.request_context import request_correlation_id
-from app.openapi_examples import ROLLING_METRICS_EXAMPLES, request_body_examples
+from app.dependencies.request_context import request_correlation_id, request_tenant_id
+from app.openapi_examples import ROLLING_METRICS_EXAMPLES, stateful_request_openapi_extra
 from app.runtime.downstream_clients import RuntimeDownstreamClients, runtime_downstream_clients
 from app.services.endpoint_observation import observed_endpoint
 from app.services.rolling_engine import calculate_rolling_metrics
@@ -22,10 +23,10 @@ router = APIRouter(tags=["risk-analytics"])
 @router.post(
     "/analytics/risk/rolling-metrics",
     response_model=RollingResponse,
-    responses=STANDARD_ERROR_RESPONSES,
+    responses=STATEFUL_TENANT_ERROR_RESPONSES,
     operation_id="calculateRollingRiskMetrics",
     summary="Calculate rolling risk metrics",
-    openapi_extra=request_body_examples(ROLLING_METRICS_EXAMPLES),
+    openapi_extra=stateful_request_openapi_extra(ROLLING_METRICS_EXAMPLES),
     description=(
         "Calculates rolling-window historical risk diagnostics including volatility, Sharpe, beta, "
         "tracking error, information ratio, and rolling max drawdown. Supports stateless and "
@@ -37,6 +38,7 @@ async def analytics_risk_rolling_metrics(
     request_payload: RollingAnalyticsRequest,
     runtime_clients: Annotated[RuntimeDownstreamClients, Depends(runtime_downstream_clients)],
     correlation_id: Annotated[str | None, Depends(request_correlation_id)],
+    tenant_id: Annotated[str | None, Depends(request_tenant_id)],
 ) -> RollingResponse:
     if request_payload.input_mode == RollingInputMode.STATELESS:
         return await _stateless_rolling_response(request_payload)
@@ -46,6 +48,7 @@ async def analytics_risk_rolling_metrics(
             request_payload=request_payload,
             runtime_clients=runtime_clients,
             correlation_id=correlation_id,
+            tenant_id=tenant_id,
         )
 
     raise ValueError(
@@ -75,10 +78,17 @@ async def _stateful_rolling_response(
     request_payload: RollingAnalyticsRequest,
     runtime_clients: RuntimeDownstreamClients,
     correlation_id: str | None,
+    tenant_id: str | None,
 ) -> RollingResponse:
     stateful_input = request_payload.stateful_input
     if stateful_input is None:
         raise ValueError("stateful_input is required when input_mode=stateful")
+    # Admission precedes the observed operation: a refused request makes no
+    # upstream call and, like other request refusals, is not an endpoint execution.
+    authority = admit_downstream_authority(
+        tenant_id=tenant_id,
+        correlation_id=correlation_id,
+    )
     return await observed_endpoint(
         endpoint="rolling-metrics",
         input_mode=request_payload.input_mode.value,
@@ -89,6 +99,6 @@ async def _stateful_rolling_response(
             core_client=runtime_clients.lotus_core()
             if requires_risk_free(stateful_input)
             else None,
-            correlation_id=correlation_id,
+            authority=authority,
         ),
     )

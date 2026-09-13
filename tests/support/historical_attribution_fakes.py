@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.contracts.downstream_authority import DownstreamAuthority
 from tests.support.lotus_performance_fakes import RecordingLotusPerformanceClient
 from tests.support.returns_series_payloads import build_returns_series_response
 
@@ -220,13 +221,14 @@ class RecordingHistoricalAttributionCoreClient:
         *,
         portfolio_id: str,
         request_payload: dict[str, object],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, object]:
         self.position_calls.append(
             {
                 "portfolio_id": portfolio_id,
                 "request_payload": request_payload,
-                "correlation_id": correlation_id,
+                "tenant_id": authority.tenant_id,
+                "correlation_id": authority.correlation_id,
             }
         )
         return {

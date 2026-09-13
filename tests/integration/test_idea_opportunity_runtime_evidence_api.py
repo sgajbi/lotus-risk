@@ -6,7 +6,8 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
-from app.evidence.idea_opportunity_constants import CANONICAL_AS_OF_DATE
+from app.contracts.downstream_authority import DownstreamAuthority
+from app.evidence.idea_opportunity_constants import CANONICAL_AS_OF_DATE, CANONICAL_TENANT_ID
 from app.evidence.idea_opportunity_runtime import (
     build_idea_opportunity_runtime_evidence,
     idea_opportunity_runtime_evidence_is_valid,
@@ -39,12 +40,12 @@ class _CanonicalCoreClient(SimulationLotusCoreClient):
         *,
         portfolio_id: str,
         request_payload: dict[str, object],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, object]:
         snapshot = await super().get_core_snapshot(
             portfolio_id=portfolio_id,
             request_payload=request_payload,
-            correlation_id=correlation_id,
+            authority=authority,
         )
         sections = snapshot.setdefault("sections", {})
         assert isinstance(sections, dict)
@@ -80,7 +81,11 @@ def test_idea_opportunity_runtime_evidence_executes_live_api_routes() -> None:
 
     def execute(route: str, payload: Mapping[str, Any]) -> tuple[int, Mapping[str, Any]]:
         seen_payloads.append(payload)
-        response = client.post(route, json=payload)
+        response = client.post(
+            route,
+            json=payload,
+            headers={"X-Tenant-Id": CANONICAL_TENANT_ID},
+        )
         return response.status_code, response.json()
 
     with override_app_runtime(

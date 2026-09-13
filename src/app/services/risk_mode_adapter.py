@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Any, Protocol
 
+from app.contracts.downstream_authority import DownstreamAuthority
 from app.contracts.risk import (
     ReturnPoint,
     RiskOptions,
@@ -32,7 +33,7 @@ class LotusPerformanceClientProtocol(Protocol):
         self,
         *,
         request_payload: dict[str, Any],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, Any]: ...
 
 
@@ -179,11 +180,11 @@ async def _fetch_stateful_source_payload(
     *,
     source_payload: dict[str, Any],
     performance_client: LotusPerformanceClientProtocol,
-    correlation_id: str | None,
+    authority: DownstreamAuthority,
 ) -> dict[str, Any]:
     return await performance_client.get_returns_series(
         request_payload=source_payload,
-        correlation_id=correlation_id,
+        authority=authority,
     )
 
 
@@ -208,13 +209,13 @@ async def _fetch_stateful_risk_source(
     stateful: StatefulRiskInput,
     performance_client: LotusPerformanceClientProtocol,
     core_client: LotusCoreClientProtocol | None,
-    correlation_id: str | None,
+    authority: DownstreamAuthority,
 ) -> _StatefulRiskSource:
     source_payload = _build_stateful_source_request(stateful)
     source_response = await _fetch_stateful_source_payload(
         source_payload=source_payload,
         performance_client=performance_client,
-        correlation_id=correlation_id,
+        authority=authority,
     )
     series, portfolio_points = extract_required_portfolio_returns(source_response)
     risk_free_request = _build_stateful_risk_free_request(
@@ -222,10 +223,11 @@ async def _fetch_stateful_risk_source(
         source_response=source_response,
         portfolio_points=portfolio_points,
     )
+    # Risk-free rates are a global reference read; only correlation travels with them.
     risk_free_response = await _fetch_risk_free_payload(
         risk_free_request=risk_free_request,
         core_client=core_client,
-        correlation_id=correlation_id,
+        correlation_id=authority.correlation_id,
     )
 
     benchmark_points: list[ReturnPoint] = []
@@ -335,13 +337,13 @@ async def calculate_risk_stateful(
     *,
     performance_client: LotusPerformanceClientProtocol,
     core_client: LotusCoreClientProtocol | None = None,
-    correlation_id: str | None,
+    authority: DownstreamAuthority,
 ) -> RiskResponse:
     source = await _fetch_stateful_risk_source(
         stateful=stateful,
         performance_client=performance_client,
         core_client=core_client,
-        correlation_id=correlation_id,
+        authority=authority,
     )
     response = calculate_risk(
         _build_stateful_stateless_risk_input(

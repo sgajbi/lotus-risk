@@ -2,14 +2,22 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header
 
-from app.api_errors import STANDARD_ERROR_RESPONSES
+from app.api_errors import STATEFUL_TENANT_ERROR_RESPONSES
 from app.contracts.concentration import (
     ConcentrationInputMode,
     ConcentrationRequest,
     ConcentrationResponse,
 )
-from app.dependencies.request_context import request_actor_id, request_correlation_id
-from app.openapi_examples import CONCENTRATION_EXAMPLES, request_body_examples
+from app.contracts.downstream_authority import (
+    DownstreamAuthority,
+    admit_downstream_authority,
+)
+from app.dependencies.request_context import (
+    request_actor_id,
+    request_correlation_id,
+    request_tenant_id,
+)
+from app.openapi_examples import CONCENTRATION_EXAMPLES, stateful_request_openapi_extra
 from app.runtime.downstream_clients import RuntimeDownstreamClients, runtime_downstream_clients
 from app.services.concentration_engine import calculate_concentration
 from app.services.endpoint_observation import observed_endpoint
@@ -20,10 +28,10 @@ router = APIRouter(tags=["risk-analytics"])
 @router.post(
     "/analytics/risk/concentration",
     response_model=ConcentrationResponse,
-    responses=STANDARD_ERROR_RESPONSES,
+    responses=STATEFUL_TENANT_ERROR_RESPONSES,
     operation_id="calculateConcentrationRiskAnalytics",
     summary="Calculate concentration risk analytics",
-    openapi_extra=request_body_examples(CONCENTRATION_EXAMPLES),
+    openapi_extra=stateful_request_openapi_extra(CONCENTRATION_EXAMPLES),
     description=(
         "Calculates portfolio, single-position, and issuer concentration analytics across "
         "stateless, stateful, and simulation modes. Returns position-level HHI, top-position "
@@ -35,6 +43,7 @@ async def analytics_risk_concentration(
     payload: ConcentrationRequest,
     runtime_clients: Annotated[RuntimeDownstreamClients, Depends(runtime_downstream_clients)],
     correlation_id: Annotated[str | None, Depends(request_correlation_id)],
+    tenant_id: Annotated[str | None, Depends(request_tenant_id)],
     actor_id: Annotated[str | None, Depends(request_actor_id)],
     idempotency_key: Annotated[
         str | None,
@@ -47,12 +56,22 @@ async def analytics_risk_concentration(
         ),
     ] = None,
 ) -> ConcentrationResponse:
+    # Stateless concentration keeps working without tenant authority; stateful and
+    # simulation modes admit it here, before the observed operation, so a refused
+    # request makes no upstream call and is not an endpoint execution.
+    authority: DownstreamAuthority | None = None
+    if payload.input_mode != ConcentrationInputMode.STATELESS:
+        authority = admit_downstream_authority(
+            tenant_id=tenant_id,
+            correlation_id=correlation_id,
+        )
     return await observed_endpoint(
         endpoint="concentration",
         input_mode=payload.input_mode.value,
         response_model=ConcentrationResponse,
         operation=lambda: calculate_concentration(
             payload,
+            authority=authority,
             core_client=(
                 runtime_clients.lotus_core_optional()
                 if payload.input_mode == ConcentrationInputMode.STATELESS

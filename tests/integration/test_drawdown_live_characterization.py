@@ -8,7 +8,11 @@ from datetime import date
 import httpx
 import pytest
 
-from tests.support.live_portfolio_matrix import live_as_of_date, live_portfolio_id
+from tests.support.live_portfolio_matrix import (
+    live_as_of_date,
+    live_portfolio_id,
+    live_tenant_headers,
+)
 from tests.support.live_returns_series import extract_decimal_returns, fetch_live_returns_series
 
 
@@ -109,7 +113,9 @@ def test_live_stateful_drawdown_reconciles_with_upstream_returns() -> None:
     )
     with httpx.Client(timeout=30.0) as client:
         drawdown_response = client.post(
-            f"{RISK_BASE_URL}/analytics/risk/drawdown", json=drawdown_payload
+            f"{RISK_BASE_URL}/analytics/risk/drawdown",
+            json=drawdown_payload,
+            headers=live_tenant_headers(),
         )
         drawdown_response.raise_for_status()
     drawdown_body = drawdown_response.json()

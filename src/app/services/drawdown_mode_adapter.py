@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Protocol
 
+from app.contracts.downstream_authority import DownstreamAuthority
 from app.contracts.drawdown import (
     DrawdownAnalysisOptions,
     DrawdownInputMode,
@@ -25,7 +26,7 @@ class LotusPerformanceClientProtocol(Protocol):
         self,
         *,
         request_payload: dict[str, Any],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, Any]: ...
 
 
@@ -102,12 +103,12 @@ async def calculate_drawdown_stateful(
     *,
     analysis_options: DrawdownAnalysisOptions,
     performance_client: LotusPerformanceClientProtocol,
-    correlation_id: str | None,
+    authority: DownstreamAuthority,
 ) -> DrawdownResponse:
     source_payload = _build_stateful_source_request(stateful, analysis_options=analysis_options)
     source_response = await performance_client.get_returns_series(
         request_payload=source_payload,
-        correlation_id=correlation_id,
+        authority=authority,
     )
     source_series = _parse_drawdown_source_series(
         source_response,

@@ -4,6 +4,7 @@ from datetime import date
 import pytest
 
 from app.contracts.attribution import GroupingDimension
+from app.contracts.downstream_authority import DownstreamAuthority
 from app.services.benchmark_exposure_history import (
     BENCHMARK_EXPOSURE_MAX_PAGES,
     BENCHMARK_EXPOSURE_MAX_ROWS,
@@ -12,6 +13,7 @@ from app.services.benchmark_exposure_history import (
     _rows_to_exposure_points,
     fetch_benchmark_exposure_history,
 )
+from tests.support.downstream_authority import admitted_test_authority
 from tests.support.historical_attribution_fakes import build_benchmark_exposure_context_response
 from tests.support.lotus_performance_fakes import RecordingLotusPerformanceClient
 from tests.support.returns_series_payloads import build_returns_series_response
@@ -40,7 +42,7 @@ def _benchmark_request(
         start_date=date(2026, 1, 2),
         reporting_currency=reporting_currency,
         grouping_dimensions=grouping_dimensions or ["SECTOR"],
-        correlation_id=correlation_id,
+        authority=admitted_test_authority(correlation_id),
     )
 
 
@@ -111,6 +113,7 @@ def test_fetch_benchmark_exposure_history_uses_performance_context_contract() ->
                 "page": {"page_size": 1000, "page_token": None},
                 "reporting_currency": "USD",
             },
+            "tenant_id": "tenant-a",
             "correlation_id": "corr-benchmark-exposure",
         }
     ]
@@ -136,10 +139,14 @@ def test_fetch_benchmark_exposure_history_follows_performance_pagination() -> No
             self,
             *,
             request_payload: dict[str, object],
-            correlation_id: str | None,
+            authority: DownstreamAuthority,
         ) -> dict[str, object]:
             self.benchmark_exposure_context_calls.append(
-                {"request_payload": request_payload, "correlation_id": correlation_id}
+                {
+                    "request_payload": request_payload,
+                    "tenant_id": authority.tenant_id,
+                    "correlation_id": authority.correlation_id,
+                }
             )
             page = request_payload.get("page")
             page_token = page.get("page_token") if isinstance(page, dict) else None
@@ -193,10 +200,14 @@ def test_fetch_benchmark_exposure_history_rejects_repeated_page_token() -> None:
             self,
             *,
             request_payload: dict[str, object],
-            correlation_id: str | None,
+            authority: DownstreamAuthority,
         ) -> dict[str, object]:
             self.benchmark_exposure_context_calls.append(
-                {"request_payload": request_payload, "correlation_id": correlation_id}
+                {
+                    "request_payload": request_payload,
+                    "tenant_id": authority.tenant_id,
+                    "correlation_id": authority.correlation_id,
+                }
             )
             payload = build_benchmark_exposure_context_response()
             return {**payload, "page": {"next_page_token": "same-token"}}
@@ -226,10 +237,14 @@ def test_fetch_benchmark_exposure_history_rejects_excessive_page_count() -> None
             self,
             *,
             request_payload: dict[str, object],
-            correlation_id: str | None,
+            authority: DownstreamAuthority,
         ) -> dict[str, object]:
             self.benchmark_exposure_context_calls.append(
-                {"request_payload": request_payload, "correlation_id": correlation_id}
+                {
+                    "request_payload": request_payload,
+                    "tenant_id": authority.tenant_id,
+                    "correlation_id": authority.correlation_id,
+                }
             )
             token = f"page-{len(self.benchmark_exposure_context_calls) + 1}"
             return {
@@ -256,10 +271,14 @@ def test_fetch_benchmark_exposure_history_rejects_excessive_row_count() -> None:
             self,
             *,
             request_payload: dict[str, object],
-            correlation_id: str | None,
+            authority: DownstreamAuthority,
         ) -> dict[str, object]:
             self.benchmark_exposure_context_calls.append(
-                {"request_payload": request_payload, "correlation_id": correlation_id}
+                {
+                    "request_payload": request_payload,
+                    "tenant_id": authority.tenant_id,
+                    "correlation_id": authority.correlation_id,
+                }
             )
             token = f"page-{len(self.benchmark_exposure_context_calls) + 1}"
             return {

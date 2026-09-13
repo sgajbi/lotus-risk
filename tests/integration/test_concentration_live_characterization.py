@@ -8,7 +8,11 @@ from typing import Any
 import httpx
 import pytest
 
-from tests.support.live_portfolio_matrix import live_as_of_date, live_portfolio_id
+from tests.support.live_portfolio_matrix import (
+    live_as_of_date,
+    live_portfolio_id,
+    live_tenant_headers,
+)
 
 
 def _live_enabled() -> bool:
@@ -168,11 +172,13 @@ def test_live_stateful_concentration_reconciles_top_drivers() -> None:
         snapshot_response = client.post(
             f"{CORE_BASE_URL}/integration/portfolios/{PORTFOLIO_ID}/core-snapshot",
             json=snapshot_payload,
+            headers=live_tenant_headers(),
         )
         snapshot_response.raise_for_status()
         concentration_response = client.post(
             f"{RISK_BASE_URL}/analytics/risk/concentration",
             json=risk_payload,
+            headers=live_tenant_headers(),
         )
         concentration_response.raise_for_status()
 

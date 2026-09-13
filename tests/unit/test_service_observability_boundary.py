@@ -154,3 +154,15 @@ async def test_endpoint_observation_records_response_model_validation_failure(
             "started_at": 42.0,
         }
     ]
+
+
+@pytest.mark.asyncio
+async def test_observed_endpoint_without_response_model_returns_result_unvalidated() -> None:
+    """The response_model=None overload is a public seam: the operation result passes
+    through untouched, while the execution is still observed."""
+    result = await endpoint_observation.observed_endpoint(
+        endpoint="test-endpoint",
+        input_mode="stateless",
+        operation=lambda: {"raw": 1},
+    )
+    assert result == {"raw": 1}

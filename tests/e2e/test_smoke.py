@@ -388,7 +388,7 @@ def test_e2e_risk_calculate_stateful_mode() -> None:
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/calculate",
-            headers={"X-Correlation-Id": "corr-e2e-risk-stateful"},
+            headers={"X-Correlation-Id": "corr-e2e-risk-stateful", "X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "stateful",
                 "stateful_input": {
@@ -562,6 +562,7 @@ def test_e2e_concentration_stateful_mode() -> None:
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/concentration",
+            headers={"X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "stateful",
                 "stateful_input": {
@@ -588,7 +589,10 @@ def test_e2e_concentration_simulation_mode() -> None:
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/concentration",
-            headers={"Idempotency-Key": "idem-e2e-concentration-simulation"},
+            headers={
+                "Idempotency-Key": "idem-e2e-concentration-simulation",
+                "X-Tenant-Id": "tenant-a",
+            },
             json={
                 "input_mode": "simulation",
                 "simulation_input": {
@@ -625,6 +629,7 @@ def test_e2e_rolling_metrics_stateful_mode() -> None:
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/rolling-metrics",
+            headers={"X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "stateful",
                 "stateful_input": {
@@ -659,7 +664,7 @@ def test_e2e_drawdown_stateful_mode_with_benchmark() -> None:
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/drawdown",
-            headers={"X-Correlation-Id": "corr-e2e-dd-stateful"},
+            headers={"X-Correlation-Id": "corr-e2e-dd-stateful", "X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "stateful",
                 "stateful_input": {
@@ -694,7 +699,7 @@ def test_e2e_historical_attribution_stateful_active_risk_mode() -> None:
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/historical-attribution",
-            headers={"X-Correlation-Id": "corr-e2e-attr-active"},
+            headers={"X-Correlation-Id": "corr-e2e-attr-active", "X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "stateful",
                 "stateful_input": {
@@ -747,6 +752,7 @@ def test_e2e_historical_attribution_stateful_issuer_active_risk_mode() -> None:
         client = TestClient(app)
         response = client.post(
             "/analytics/risk/historical-attribution",
+            headers={"X-Tenant-Id": "tenant-a"},
             json={
                 "input_mode": "stateful",
                 "stateful_input": {

@@ -137,7 +137,7 @@ async def test_concentration_metadata_includes_reproducible_audit_lineage() -> N
         }
     )
 
-    response = await calculate_concentration(request)
+    response = await calculate_concentration(request, authority=None)
 
     assert response.metadata is not None
     assert response.metadata.request_fingerprint == fingerprint_payload(request)

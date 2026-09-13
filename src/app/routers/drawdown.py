@@ -2,14 +2,15 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
-from app.api_errors import STANDARD_ERROR_RESPONSES
+from app.api_errors import STATEFUL_TENANT_ERROR_RESPONSES
+from app.contracts.downstream_authority import admit_downstream_authority
 from app.contracts.drawdown import (
     DrawdownAnalyticsRequest,
     DrawdownInputMode,
     DrawdownResponse,
 )
-from app.dependencies.request_context import request_correlation_id
-from app.openapi_examples import DRAWDOWN_EXAMPLES, request_body_examples
+from app.dependencies.request_context import request_correlation_id, request_tenant_id
+from app.openapi_examples import DRAWDOWN_EXAMPLES, stateful_request_openapi_extra
 from app.runtime.downstream_clients import RuntimeDownstreamClients, runtime_downstream_clients
 from app.services.drawdown_engine import calculate_drawdown
 from app.services.drawdown_mode_adapter import calculate_drawdown_stateful
@@ -21,10 +22,10 @@ router = APIRouter(tags=["risk-analytics"])
 @router.post(
     "/analytics/risk/drawdown",
     response_model=DrawdownResponse,
-    responses=STANDARD_ERROR_RESPONSES,
+    responses=STATEFUL_TENANT_ERROR_RESPONSES,
     operation_id="calculateDrawdownAnalytics",
     summary="Calculate realized drawdown analytics",
-    openapi_extra=request_body_examples(DRAWDOWN_EXAMPLES),
+    openapi_extra=stateful_request_openapi_extra(DRAWDOWN_EXAMPLES),
     description=(
         "Calculates realized drawdown analytics for stateless or stateful return histories, including "
         "max drawdown, episode diagnostics, time-under-water, ulcer index, drawdown-at-risk, and "
@@ -36,6 +37,7 @@ async def analytics_risk_drawdown(
     request_payload: DrawdownAnalyticsRequest,
     runtime_clients: Annotated[RuntimeDownstreamClients, Depends(runtime_downstream_clients)],
     correlation_id: Annotated[str | None, Depends(request_correlation_id)],
+    tenant_id: Annotated[str | None, Depends(request_tenant_id)],
 ) -> DrawdownResponse:
     if request_payload.input_mode == DrawdownInputMode.STATELESS:
         return await _stateless_drawdown_response(request_payload)
@@ -45,6 +47,7 @@ async def analytics_risk_drawdown(
             request_payload=request_payload,
             runtime_clients=runtime_clients,
             correlation_id=correlation_id,
+            tenant_id=tenant_id,
         )
 
     raise ValueError(
@@ -77,10 +80,17 @@ async def _stateful_drawdown_response(
     request_payload: DrawdownAnalyticsRequest,
     runtime_clients: RuntimeDownstreamClients,
     correlation_id: str | None,
+    tenant_id: str | None,
 ) -> DrawdownResponse:
     stateful_input = request_payload.stateful_input
     if stateful_input is None:
         raise ValueError("stateful_input is required when input_mode=stateful")
+    # Admission precedes the observed operation: a refused request makes no
+    # upstream call and, like other request refusals, is not an endpoint execution.
+    authority = admit_downstream_authority(
+        tenant_id=tenant_id,
+        correlation_id=correlation_id,
+    )
     return await observed_endpoint(
         endpoint="drawdown",
         input_mode=request_payload.input_mode.value,
@@ -89,6 +99,6 @@ async def _stateful_drawdown_response(
             stateful_input,
             analysis_options=request_payload.analysis_options,
             performance_client=runtime_clients.lotus_performance(),
-            correlation_id=correlation_id,
+            authority=authority,
         ),
     )

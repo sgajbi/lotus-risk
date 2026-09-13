@@ -126,6 +126,11 @@ def test_fetch_live_benchmark_exposure_context_uses_performance_endpoint(
     assert payload == {"rows": []}
     assert captured["method"] == "POST"
     assert captured["url"] == "http://performance.example/integration/benchmarks/exposure-context"
-    assert captured["request_kwargs"] == {"json": {"portfolio_id": "PB_001"}}
+    # Benchmark exposure context is a tenant-owned Performance read: the live helper
+    # must carry the admitted canonical tenant, unlike the risk-free reference read.
+    assert captured["request_kwargs"] == {
+        "json": {"portfolio_id": "PB_001"},
+        "headers": {"X-Tenant-Id": "tenant-sg"},
+    }
     assert captured["max_attempts"] == 4
     assert captured["retry_interval_seconds"] == 0.5

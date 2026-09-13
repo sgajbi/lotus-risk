@@ -8,9 +8,13 @@ from typing import Any
 
 CANONICAL_LIVE_PORTFOLIO_ID = "PB_SG_GLOBAL_BAL_001"
 CANONICAL_LIVE_AS_OF_DATE = "2026-03-31"
+# RFC-0076 canonical source tenant; live stateful requests must carry admitted
+# tenant authority because enforcing producers refuse tenantless stateful input.
+CANONICAL_LIVE_TENANT_ID = "tenant-sg"
 
 LIVE_PORTFOLIO_ID_ENV = "LOTUS_RISK_LIVE_PORTFOLIO_ID"
 LIVE_AS_OF_DATE_ENV = "LOTUS_RISK_LIVE_AS_OF_DATE"
+LIVE_TENANT_ID_ENV = "LOTUS_RISK_LIVE_TENANT_ID"
 LIVE_PORTFOLIO_MATRIX_JSON_ENV = "LOTUS_RISK_LIVE_PORTFOLIO_MATRIX_JSON"
 
 SUPPORTED_LIVE_ENDPOINTS = (
@@ -57,6 +61,16 @@ def live_portfolio_id(env: Mapping[str, str] | None = None) -> str:
 def live_as_of_date(env: Mapping[str, str] | None = None) -> str:
     values = env or os.environ
     return values.get(LIVE_AS_OF_DATE_ENV, CANONICAL_LIVE_AS_OF_DATE)
+
+
+def live_tenant_id(env: Mapping[str, str] | None = None) -> str:
+    values = env or os.environ
+    return values.get(LIVE_TENANT_ID_ENV, CANONICAL_LIVE_TENANT_ID)
+
+
+def live_tenant_headers(env: Mapping[str, str] | None = None) -> dict[str, str]:
+    """Admitted tenant authority headers for live stateful requests to Risk and Performance."""
+    return {"X-Tenant-Id": live_tenant_id(env)}
 
 
 def default_live_portfolio_case(env: Mapping[str, str] | None = None) -> LivePortfolioCase:

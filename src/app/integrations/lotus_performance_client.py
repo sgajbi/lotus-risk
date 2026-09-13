@@ -4,6 +4,7 @@ from typing import Any
 
 import httpx
 
+from app.contracts.downstream_authority import DownstreamAuthority
 from app.integrations._downstream_client_profile import resolve_downstream_client_profile
 from app.integrations.downstream_profile_env import env_float_with_default, env_int_with_default
 from app.integrations.lotus_performance_transport import (
@@ -45,14 +46,14 @@ class LotusPerformanceClient:
         self,
         *,
         request_payload: dict[str, Any],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, Any]:
         return await execute_returns_series_request(
             profile=self._profile,
             client=self._http_client,
             base_url=self._base_url,
             request_payload=request_payload,
-            correlation_id=correlation_id,
+            authority=authority,
             async_max_polls=self._async_max_polls,
             async_poll_interval_seconds=self._async_poll_interval_seconds,
         )
@@ -61,12 +62,12 @@ class LotusPerformanceClient:
         self,
         *,
         request_payload: dict[str, Any],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, Any]:
         return await execute_benchmark_exposure_context_request(
             profile=self._profile,
             client=self._http_client,
             base_url=self._base_url,
             request_payload=request_payload,
-            correlation_id=correlation_id,
+            authority=authority,
         )

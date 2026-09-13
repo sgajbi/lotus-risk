@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from app.contracts.downstream_authority import DownstreamAuthority
+
 
 class SimulationLotusCoreClient:
     def __init__(
@@ -19,7 +21,7 @@ class SimulationLotusCoreClient:
         portfolio_id: str,
         ttl_hours: int | None,
         created_by: str | None,
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, object]:
         return {
             "session": {
@@ -38,7 +40,7 @@ class SimulationLotusCoreClient:
         *,
         session_id: str,
         changes: list[dict[str, object]],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
         idempotency_key: str,
         change_set_fingerprint: str,
     ) -> dict[str, object]:
@@ -53,7 +55,7 @@ class SimulationLotusCoreClient:
         *,
         portfolio_id: str,
         request_payload: dict[str, object],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, object]:
         if request_payload.get("snapshot_mode") == "BASELINE":
             return {
@@ -193,13 +195,14 @@ class RecordingLotusCoreReferenceClient:
         *,
         portfolio_id: str,
         request_payload: dict[str, object],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, object]:
         self.snapshot_calls.append(
             {
                 "portfolio_id": portfolio_id,
                 "request_payload": request_payload,
-                "correlation_id": correlation_id,
+                "tenant_id": authority.tenant_id,
+                "correlation_id": authority.correlation_id,
             }
         )
         return self.snapshot_response

@@ -28,11 +28,17 @@
 
 - Status: implemented
 - Behavior:
+  - caller supplies the admitted tenant in the `X-Tenant-Id` header: a stateful request without a
+    non-blank value refuses `401 MISSING_TENANT_AUTHORITY` before any upstream call, and a trimmed
+    value over 128 characters refuses `400 INVALID_TENANT_AUTHORITY`
   - caller provides identifiers and period config
   - caller provides `stateful_input.benchmark_id` when
     `stateful_input.benchmark_policy.include_benchmark=true`; relying on an upstream default
     benchmark is not a governed proof for benchmark-relative drawdown
-  - lotus-risk sources canonical return series from lotus-performance (`/integration/returns/series`, `input_mode=stateful`, `stateful_input is an empty envelope; consumer identity is stamped by lotus-performance server-side`)
+  - lotus-risk sources canonical return series from lotus-performance
+    (`/integration/returns/series`, `input_mode=stateful`, empty `stateful_input` envelope),
+    forwarding the admitted `X-Tenant-Id` on the submit and on every async status/result poll;
+    lotus-performance enforces that tenant authority
   - lotus-risk computes drawdown analytics on sourced series
 
 ### Simulation
