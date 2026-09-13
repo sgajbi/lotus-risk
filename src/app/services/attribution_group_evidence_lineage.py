@@ -2,15 +2,21 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Collection, Mapping
 from typing import Any
 
-from app.contracts.attribution import GroupingDimension
-from app.services.attribution_group_evidence import GroupEvidencePack
+from app.contracts.attribution import AttributionMetric, AttributionType, GroupingDimension
+from app.services.attribution_group_evidence import (
+    GroupEvidencePack,
+    group_evidence_applies_to_set,
+)
 
 
 def canonical_group_evidence_payload(
     evidence: Mapping[str, Mapping[GroupingDimension, GroupEvidencePack]] | None,
+    *,
+    attribution_types: Collection[AttributionType],
+    metrics: Collection[AttributionMetric],
 ) -> dict[str, Any]:
     """Capture the validated producer observations that reached covariance.
 
@@ -18,6 +24,11 @@ def canonical_group_evidence_payload(
     outgoing contribution calls rather than their returned calculation facts.
     """
     if not evidence:
+        return {}
+    if not _has_supported_empirical_set(
+        attribution_types=attribution_types,
+        metrics=metrics,
+    ):
         return {}
     return {
         period_name: {
@@ -30,6 +41,18 @@ def canonical_group_evidence_payload(
         }
         for period_name, per_dimension in sorted(evidence.items())
     }
+
+
+def _has_supported_empirical_set(
+    *,
+    attribution_types: Collection[AttributionType],
+    metrics: Collection[AttributionMetric],
+) -> bool:
+    return any(
+        group_evidence_applies_to_set(attribution_type=attribution_type, metric=metric)
+        for attribution_type in attribution_types
+        for metric in metrics
+    )
 
 
 def _empirical_series_payload(pack: GroupEvidencePack) -> dict[str, Any]:

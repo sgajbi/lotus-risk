@@ -31,7 +31,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-from app.contracts.attribution import GroupingDimension
+from app.contracts.attribution import AttributionMetric, AttributionType, GroupingDimension
 from app.contracts.downstream_authority import DownstreamAuthority
 from app.contracts.risk import ReturnPoint
 from app.integrations.upstream_operations import LOTUS_PERFORMANCE_CONTRIBUTION_OPERATION
@@ -69,6 +69,13 @@ FLAG_GROUP_UNIVERSE_INCOMPLETE = "group_return_evidence:group_universe_incomplet
 
 GROUP_RETURN_BASIS = "SOURCE_POSITION_VALUATION_TWR"
 GROUP_WEIGHT_BASIS = "BEGINNING_CAPITAL_RATIO"
+
+# Performance deliberately retains positions without a requested hierarchy dimension
+# under this producer-owned label when ``emit.include_unclassified`` is true.  Core's
+# exposure projection uses the canonical calculation identity ``UNKNOWN`` for the
+# same absent source field; the stateful universe adapter reconciles the two without
+# changing a genuine source category named ``Unclassified``.
+PERFORMANCE_UNCLASSIFIED_GROUP_LABEL = "Unclassified"
 
 
 def _flag_unavailable() -> str:
@@ -110,6 +117,21 @@ class GroupEvidencePack:
     @property
     def empirical(self) -> bool:
         return not self.degradation_flags and bool(self.series_by_group)
+
+
+def group_evidence_applies_to_set(
+    *,
+    attribution_type: AttributionType,
+    metric: AttributionMetric,
+) -> bool:
+    """Return whether a set can use Performance's portfolio group-return contract.
+
+    The producer has portfolio group-return economics only.  It therefore applies to
+    TOTAL_RISK/VOLATILITY, not unsupported TOTAL_RISK metrics or ACTIVE_RISK, which
+    would additionally need benchmark-group returns.  This rule is shared by request
+    selection, covariance admission and calculation lineage.
+    """
+    return attribution_type == "TOTAL_RISK" and metric == "VOLATILITY"
 
 
 def _malformed(message: str) -> Exception:
@@ -333,6 +355,7 @@ def _collect_row_evidence(
     flags: list[str] = []
     series_by_group: dict[str, GroupReturnSeries] = {}
     seen_source_keys: set[str] = set()
+    seen_calculation_keys: set[str] = set()
     for row in rows:
         if row.get("is_other"):
             flags.append(FLAG_TRUNCATED)
@@ -346,6 +369,12 @@ def _collect_row_evidence(
             raise _malformed(
                 f"hierarchy row group {source_group_key!r} is outside the Core group universe"
             )
+        if calculation_group_key in seen_calculation_keys:
+            raise _malformed(
+                "multiple hierarchy rows resolve to one Core group identity "
+                f"{calculation_group_key!r}"
+            )
+        seen_calculation_keys.add(calculation_group_key)
         row_evidence = row.get("group_return")
         if not isinstance(row_evidence, Mapping):
             raise _malformed(
@@ -365,7 +394,10 @@ def _collect_row_evidence(
             expected_currency=expected_currency,
             window_dates=window_dates,
         )
-    if set(expected_group_key_by_source_key) - seen_source_keys:
+    # The map may contain a producer spelling alias for a Core group (notably
+    # Performance's ``Unclassified`` for Core's ``UNKNOWN``).  Completeness is
+    # about source-owned group identities, never the number of accepted spellings.
+    if set(expected_group_key_by_source_key.values()) - seen_calculation_keys:
         flags.append(FLAG_GROUP_UNIVERSE_INCOMPLETE)
     return series_by_group, flags
 
@@ -378,10 +410,12 @@ __all__ = [
     "FLAG_TRUNCATED",
     "GROUP_RETURN_BASIS",
     "GROUP_WEIGHT_BASIS",
+    "PERFORMANCE_UNCLASSIFIED_GROUP_LABEL",
     "RECONCILIATION_TOLERANCE_PP",
     "GroupEvidencePack",
     "GroupReturnObservation",
     "GroupReturnSeries",
     "LotusPerformanceContributionClientProtocol",
+    "group_evidence_applies_to_set",
     "parse_group_evidence",
 ]

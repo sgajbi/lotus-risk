@@ -6,6 +6,8 @@ from typing import Any, cast
 import pytest
 
 from app.contracts.attribution import (
+    ExposurePoint,
+    GroupingDimension,
     HistoricalAttributionResponse,
     HistoricalAttributionStatefulInput,
 )
@@ -17,10 +19,12 @@ from app.services.attribution_exposure_history import (
     group_key_and_label,
 )
 from app.services.attribution_mode_adapter import calculate_historical_attribution_stateful
+from app.services.attribution_stateful_inputs import _expected_group_key_by_source_key
 from app.services.stateful_returns_series_parser import (
     decimal_return_to_percentage_points,
     to_return_points,
 )
+from app.upstream_errors import UpstreamServiceError
 from tests.support.downstream_authority import admitted_test_authority
 from tests.support.historical_attribution_fakes import (
     RecordingHistoricalAttributionCoreClient,
@@ -246,6 +250,67 @@ def _empirical_sector_contribution_response(*, tech_adjustment_pp: float = 0.0) 
     }
 
 
+@pytest.mark.parametrize(
+    ("grouping_dimension", "classified_key", "unknown_key"),
+    [
+        ("SECTOR", "SECTOR_TECH", "SECTOR_UNKNOWN"),
+        ("ASSET_CLASS", "ASSET_CLASS_EQUITY", "ASSET_CLASS_UNKNOWN"),
+    ],
+)
+def test_core_unknown_group_accepts_only_the_producer_unclassified_alias(
+    grouping_dimension: GroupingDimension,
+    classified_key: str,
+    unknown_key: str,
+) -> None:
+    points = [
+        ExposurePoint(
+            date=date(2026, 1, 2),
+            grouping_dimension=grouping_dimension,
+            group_key=classified_key,
+            group_label="TECH" if grouping_dimension == "SECTOR" else "EQUITY",
+            weight=0.6,
+        ),
+        ExposurePoint(
+            date=date(2026, 1, 2),
+            grouping_dimension=grouping_dimension,
+            group_key=unknown_key,
+            group_label="UNKNOWN",
+            weight=0.4,
+        ),
+    ]
+
+    mapping = _expected_group_key_by_source_key(
+        exposure_history=points,
+        grouping_dimension=grouping_dimension,
+        start_date=date(2026, 1, 2),
+        end_date=date(2026, 1, 2),
+    )
+
+    assert mapping == {
+        "TECH" if grouping_dimension == "SECTOR" else "EQUITY": classified_key,
+        "UNKNOWN": unknown_key,
+        "Unclassified": unknown_key,
+    }
+
+    points.append(
+        ExposurePoint(
+            date=date(2026, 1, 2),
+            grouping_dimension=grouping_dimension,
+            group_key=f"{grouping_dimension}_LITERAL_UNCLASSIFIED",
+            group_label="Unclassified",
+            weight=0.0,
+        )
+    )
+    with pytest.raises(UpstreamServiceError) as excinfo:
+        _expected_group_key_by_source_key(
+            exposure_history=points,
+            grouping_dimension=grouping_dimension,
+            start_date=date(2026, 1, 2),
+            end_date=date(2026, 1, 2),
+        )
+    assert excinfo.value.code == "UPSTREAM_INVALID_RESPONSE"
+
+
 def test_stateful_attribution_total_risk_happy_path() -> None:
     perf = _StubPerformanceClient()
     core = _StubCoreClient()
@@ -421,6 +486,117 @@ def test_stateful_lineage_excludes_degraded_observations_unused_by_covariance() 
     assert (
         baseline.metadata.upstream_request_fingerprints
         == changed_unused_observations.metadata.upstream_request_fingerprints
+    )
+
+
+def test_unsupported_total_risk_metric_neither_requests_nor_fingerprints_group_observations() -> (
+    None
+):
+    def calculate(
+        tech_adjustment_pp: float,
+    ) -> tuple[HistoricalAttributionResponse, _StubPerformanceClient]:
+        performance_client = _StubPerformanceClient(
+            contribution_response=_empirical_sector_contribution_response(
+                tech_adjustment_pp=tech_adjustment_pp
+            )
+        )
+        response = asyncio.run(
+            calculate_historical_attribution_stateful(
+                _stateful_input(
+                    grouping_dimensions=["SECTOR"],
+                    attribution_types=["TOTAL_RISK"],
+                    metrics=["TRACKING_ERROR"],
+                ),
+                performance_client=performance_client,
+                core_client=_StubCoreClient(),
+                authority=admitted_test_authority("corr-unsupported-total-risk"),
+            )
+        )
+        return response, performance_client
+
+    baseline, baseline_client = calculate(0.0)
+    changed, changed_client = calculate(0.5)
+
+    for response in (baseline, changed):
+        attribution_set = response.results["YTD"].attribution_sets[0]
+        assert attribution_set.contributors == []
+        assert attribution_set.quality_flags == ["metric:TRACKING_ERROR:unsupported_for_total_risk"]
+    assert baseline_client.contribution_calls == []
+    assert changed_client.contribution_calls == []
+    assert baseline.metadata.request_fingerprint == changed.metadata.request_fingerprint
+    assert "lotus-performance:/performance/contribution" not in (
+        baseline.metadata.upstream_request_fingerprints
+    )
+
+
+def test_mixed_total_risk_metrics_consume_and_fingerprint_only_volatility_evidence() -> None:
+    def calculate(
+        tech_adjustment_pp: float,
+    ) -> tuple[HistoricalAttributionResponse, _StubPerformanceClient]:
+        performance_client = _StubPerformanceClient(
+            contribution_response=_empirical_sector_contribution_response(
+                tech_adjustment_pp=tech_adjustment_pp
+            )
+        )
+        response = asyncio.run(
+            calculate_historical_attribution_stateful(
+                _stateful_input(
+                    grouping_dimensions=["SECTOR"],
+                    attribution_types=["TOTAL_RISK"],
+                    metrics=["VOLATILITY", "TRACKING_ERROR"],
+                ),
+                performance_client=performance_client,
+                core_client=_StubCoreClient(),
+                authority=admitted_test_authority("corr-mixed-total-risk"),
+            )
+        )
+        return response, performance_client
+
+    baseline, baseline_client = calculate(0.0)
+    changed, changed_client = calculate(0.5)
+
+    assert len(baseline_client.contribution_calls) == len(changed_client.contribution_calls) == 1
+    baseline_sets = baseline.results["YTD"].attribution_sets
+    changed_sets = changed.results["YTD"].attribution_sets
+    assert [(item.metric, item.risk_basis) for item in baseline_sets] == [
+        ("VOLATILITY", "empirical_group_returns"),
+        ("TRACKING_ERROR", "weight_proxy"),
+    ]
+    assert [(item.metric, item.risk_basis) for item in changed_sets] == [
+        ("VOLATILITY", "empirical_group_returns"),
+        ("TRACKING_ERROR", "weight_proxy"),
+    ]
+    assert baseline_sets[1].contributors == changed_sets[1].contributors == []
+    assert baseline.metadata.request_fingerprint != changed.metadata.request_fingerprint
+    contribution_operation = "lotus-performance:/performance/contribution"
+    assert (
+        baseline.metadata.upstream_request_fingerprints[contribution_operation]
+        == changed.metadata.upstream_request_fingerprints[contribution_operation]
+    )
+
+
+def test_active_risk_proxy_does_not_request_or_fingerprint_portfolio_group_returns() -> None:
+    performance_client = _StubPerformanceClient(
+        contribution_response=_empirical_sector_contribution_response()
+    )
+    response = asyncio.run(
+        calculate_historical_attribution_stateful(
+            _stateful_input(
+                grouping_dimensions=["SECTOR"],
+                attribution_types=["ACTIVE_RISK"],
+                metrics=["TRACKING_ERROR"],
+            ),
+            performance_client=performance_client,
+            core_client=_StubCoreClient(),
+            authority=admitted_test_authority("corr-active-risk-lineage"),
+        )
+    )
+
+    active_set = response.results["YTD"].attribution_sets[0]
+    assert active_set.risk_basis == "weight_proxy"
+    assert performance_client.contribution_calls == []
+    assert "lotus-performance:/performance/contribution" not in (
+        response.metadata.upstream_request_fingerprints
     )
 
 

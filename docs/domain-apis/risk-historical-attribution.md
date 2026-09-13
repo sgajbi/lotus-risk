@@ -25,7 +25,7 @@ Provide decomposition of historical realized risk and active risk into transpare
     forwarded on the returns-series submit and polls, the contribution group-evidence submit and
     polls, benchmark exposure context, and lotus-core position-timeseries reads (instrument
     enrichment stays a tenant-free reference read)
-  - `TOTAL_RISK` stateful path is implemented; only `SECTOR` and `ASSET_CLASS`
+  - `TOTAL_RISK` + `VOLATILITY` stateful path is implemented; only `SECTOR` and `ASSET_CLASS`
     groupings request per-group return evidence from the lotus-performance
     contribution surface (`/performance/contribution`, one `EXPLICIT`-window call per resolved
     period and dimension, same NET/GROSS basis and reporting currency as the returns series).
@@ -39,11 +39,19 @@ Provide decomposition of historical realized risk and active risk into transpare
     hierarchy, Core group-universe incompleteness, calendar gap, reconciliation breach, or missing period). A date absent from a
     group's evidence is unknown coverage, never zero: nothing is zero-filled or dropped, and an
     explicit zero-weight observation is the only authoritative zero-exposure evidence.
-    Malformed evidence (non-finite values, duplicate dates, duplicate groups, out-of-window
+    Core remains the authoritative universe: its missing/null `sector` or `asset_class` is the
+    canonical `UNKNOWN` group, while Performance's documented
+    `emit.include_unclassified=true` output uses `Unclassified` for that same missing source field.
+    Risk accepts that producer spelling only as an alias for a Core `UNKNOWN` identity; a literal
+    Core `Unclassified` category alongside `UNKNOWN` is ambiguous and a foreign producer category
+    is refused as `UPSTREAM_INVALID_RESPONSE`, never relabeled, invented, or dropped. Malformed
+    evidence (non-finite values, duplicate dates, duplicate groups, out-of-window
     observations, currency contradictions, malformed containers, or unsupported return/weight
     bases) refuses as `UPSTREAM_INVALID_RESPONSE` rather than silently falling back. `POSITION`
     and `ISSUER` `TOTAL_RISK` stay weight-proxy because their contribution identities cannot be
-    safely joined to the Core grouping universe (recorded residual on lotus-risk#291)
+    safely joined to the Core grouping universe (recorded residual on lotus-risk#291). Unsupported
+    `TOTAL_RISK` metrics do not request contribution evidence; `ACTIVE_RISK` remains a weight proxy
+    because portfolio-only group returns cannot supply benchmark-group economics.
   - `ACTIVE_RISK` stateful path is implemented for `POSITION`, `SECTOR`, `ASSET_CLASS`, and `ISSUER` grouping dimensions through the lotus-performance benchmark exposure context derived view
   - `ACTIVE_RISK` + `ISSUER` consumes lotus-performance benchmark exposure context issuer rows sourced from lotus-core index-catalog issuer labels
   - `CUSTOM` grouping remains unsupported in stateful mode and is rejected at request validation
@@ -95,6 +103,17 @@ Provide decomposition of historical realized risk and active risk into transpare
   - canonical exposure snapshots by date/grouping dimension (system of record)
   - canonical instrument and hierarchy mapping for grouping dimensions (issuer/sector/asset class)
   - benchmark composition, assignment, and classification data as the authoritative source behind lotus-performance's derived benchmark exposure context
+
+### Current producer handoff: differing base and reporting currencies
+
+Risk continues to refuse contribution evidence whose declared `group_return.currency` differs from
+the returns-series reporting currency. On lotus-performance main
+`8a1aeed08e770e439822d46c06d725eebef4221b`, a stateful `BASE_ONLY` contribution can select Core
+reporting-currency valuations but overwrite the resolved currency with the portfolio base currency,
+so USD economics for an EUR-base/USD-reporting portfolio are labeled EUR. This is tracked by the
+producer in [lotus-performance#527](https://github.com/sgajbi/lotus-performance/issues/527).
+Risk will not relabel the evidence or manufacture FX. Consumer acceptance for that differing-currency
+case requires the producer's actual contribution-workflow proof and a same-currency control.
 
 ## Expected Output Structure
 

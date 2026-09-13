@@ -5,6 +5,8 @@ from datetime import date
 from typing import Any, Protocol
 
 from app.contracts.attribution import (
+    AttributionMetric,
+    AttributionType,
     ExposurePoint,
     GroupingDimension,
     HistoricalAttributionStatefulInput,
@@ -12,6 +14,7 @@ from app.contracts.attribution import (
 )
 from app.contracts.downstream_authority import DownstreamAuthority
 from app.contracts.risk import ReturnPoint, RiskRequestScope
+from app.integrations.upstream_operations import LOTUS_CORE_POSITION_TIMESERIES_OPERATION
 from app.services.attribution_active_benchmark_exposure import (
     BenchmarkExposureClientProtocol,
     fetch_active_benchmark_exposure_history,
@@ -22,8 +25,10 @@ from app.services.attribution_exposure_history import (
 )
 from app.services.attribution_group_evidence import (
     EMPIRICAL_GROUPING_DIMENSION_FIELDS,
+    PERFORMANCE_UNCLASSIFIED_GROUP_LABEL,
     GroupEvidencePack,
     LotusPerformanceContributionClientProtocol,
+    group_evidence_applies_to_set,
     parse_group_evidence,
 )
 from app.services.attribution_period_results import GroupEvidenceByPeriod, period_name
@@ -35,6 +40,7 @@ from app.services.attribution_stateful_returns import (
     requires_active_attribution,
 )
 from app.services.risk.period_resolution import resolve_period
+from app.upstream_errors import invalid_upstream_payload
 
 __all__ = [
     "LotusCoreClientProtocol",
@@ -160,14 +166,19 @@ async def _stateful_exposure_histories(
 
 def _evidence_grouping_dimensions(
     options_grouping_dimensions: list[GroupingDimension],
-    attribution_types: list[str],
+    attribution_types: list[AttributionType],
+    metrics: list[AttributionMetric],
 ) -> list[GroupingDimension]:
     """Dimensions whose TOTAL_RISK sets can use producer group-return evidence.
 
     ISSUER has no producer-side dimension on the contribution surface and stays a
     weight-proxy decomposition (recorded residual on lotus-risk#291).
     """
-    if "TOTAL_RISK" not in attribution_types:
+    if not any(
+        group_evidence_applies_to_set(attribution_type=attribution_type, metric=metric)
+        for attribution_type in attribution_types
+        for metric in metrics
+    ):
         return []
     return [
         dimension
@@ -276,7 +287,39 @@ def _expected_group_key_by_source_key(
                 "lotus-core exposure history has ambiguous source group identity for "
                 f"{grouping_dimension}:{source_key}"
             )
+    _add_performance_unclassified_alias(
+        source_key_to_calculation_key=result,
+        grouping_dimension=grouping_dimension,
+    )
     return result
+
+
+def _add_performance_unclassified_alias(
+    *,
+    source_key_to_calculation_key: dict[str, str],
+    grouping_dimension: GroupingDimension,
+) -> None:
+    """Reconcile Performance's missing-field bucket with Core's UNKNOWN identity.
+
+    A genuine Core category named ``Unclassified`` is indistinguishable in the
+    producer response from Performance's missing-field bucket.  Reject that ambiguous
+    universe rather than guessing, relabeling the real category, or admitting a
+    duplicate calculation group.
+    """
+    unknown_calculation_key = source_key_to_calculation_key.get("UNKNOWN")
+    if unknown_calculation_key is None:
+        return
+    existing = source_key_to_calculation_key.get(PERFORMANCE_UNCLASSIFIED_GROUP_LABEL)
+    if existing is not None and existing != unknown_calculation_key:
+        raise invalid_upstream_payload(
+            service="lotus-core",
+            operation=LOTUS_CORE_POSITION_TIMESERIES_OPERATION,
+            message=(
+                "lotus-core exposure universe cannot distinguish its UNKNOWN group from "
+                f"a literal {PERFORMANCE_UNCLASSIFIED_GROUP_LABEL!r} {grouping_dimension} group"
+            ),
+        )
+    source_key_to_calculation_key[PERFORMANCE_UNCLASSIFIED_GROUP_LABEL] = unknown_calculation_key
 
 
 async def resolve_stateful_attribution_inputs(
@@ -306,7 +349,9 @@ async def resolve_stateful_attribution_inputs(
         authority=authority,
     )
     evidence_dimensions = _evidence_grouping_dimensions(
-        requested_groupings, list(options.attribution_types)
+        requested_groupings,
+        list(options.attribution_types),
+        list(options.metrics),
     )
     resolved_group_evidence = (
         await fetch_group_evidence(
