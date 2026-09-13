@@ -35,6 +35,7 @@ from app.contracts.attribution import GroupingDimension
 from app.contracts.downstream_authority import DownstreamAuthority
 from app.contracts.risk import ReturnPoint
 from app.integrations.upstream_operations import LOTUS_PERFORMANCE_CONTRIBUTION_OPERATION
+from app.services.attribution_contribution_response import extract_period_rows
 from app.upstream_errors import invalid_upstream_payload
 
 
@@ -53,7 +54,6 @@ class LotusPerformanceContributionClientProtocol(Protocol):
 EMPIRICAL_GROUPING_DIMENSION_FIELDS: Mapping[GroupingDimension, str] = {
     "SECTOR": "sector",
     "ASSET_CLASS": "asset_class",
-    "POSITION": "position_id",
 }
 
 #: One basis point in percentage-point units: per-date reconciliation bound between the
@@ -62,11 +62,13 @@ RECONCILIATION_TOLERANCE_PP = 0.01
 
 #: Emission bounds: no threshold suppression, and a group count beyond this bound is a
 #: truncated hierarchy (an ``Other`` rollup row), which keeps the set degraded.
-CONTRIBUTION_TOP_N_PER_LEVEL = 1000
-
 FLAG_TRUNCATED = "group_return_evidence:truncated"
 FLAG_PERIOD_MISSING = "group_return_evidence:period_missing"
 FLAG_RECONCILIATION_BREACH = "group_return_evidence:reconciliation_breach"
+FLAG_GROUP_UNIVERSE_INCOMPLETE = "group_return_evidence:group_universe_incomplete"
+
+GROUP_RETURN_BASIS = "SOURCE_POSITION_VALUATION_TWR"
+GROUP_WEIGHT_BASIS = "BEGINNING_CAPITAL_RATIO"
 
 
 def _flag_unavailable() -> str:
@@ -103,51 +105,11 @@ class GroupEvidencePack:
     grouping_dimension: GroupingDimension
     series_by_group: Mapping[str, GroupReturnSeries]
     degradation_flags: tuple[str, ...]
+    expected_group_keys: tuple[str, ...] = ()
 
     @property
     def empirical(self) -> bool:
         return not self.degradation_flags and bool(self.series_by_group)
-
-
-def build_contribution_request(
-    *,
-    portfolio_id: str,
-    start_date: dt.date,
-    end_date: dt.date,
-    dimension_field: str,
-    metric_basis: str,
-    reporting_currency: str | None,
-) -> dict[str, Any]:
-    """Contribution request for one grouping dimension over one explicit period window.
-
-    The basis and currency are pinned to the same values as the portfolio returns-series
-    request so the group evidence is decomposable against that series.
-    """
-    request: dict[str, Any] = {
-        "portfolio_id": portfolio_id,
-        "report_start_date": start_date.isoformat(),
-        "report_end_date": end_date.isoformat(),
-        "analyses": [{"period": "EXPLICIT", "frequencies": ["daily"]}],
-        "hierarchy": [dimension_field],
-        "input_mode": "stateful",
-        "stateful_input": {
-            "metric_basis": metric_basis,
-            "dimensions": (
-                [dimension_field] if dimension_field in {"sector", "asset_class"} else []
-            ),
-        },
-        "emit": {
-            "by_level": True,
-            "threshold_weight": 0.0,
-            "top_n_per_level": CONTRIBUTION_TOP_N_PER_LEVEL,
-            "include_other": True,
-            "include_unclassified": True,
-        },
-    }
-    if reporting_currency:
-        request["report_ccy"] = reporting_currency
-        request["currency_mode"] = "BOTH"
-    return request
 
 
 def _malformed(message: str) -> Exception:
@@ -177,29 +139,6 @@ def _parse_observation_date(value: Any, *, group_key: str) -> dt.date:
         except ValueError:
             pass
     raise _malformed(f"invalid observation date for group {group_key!r}: {value!r}")
-
-
-def _extract_period_rows(
-    response: Mapping[str, Any],
-    *,
-    dimension_field: str,
-) -> list[Mapping[str, Any]] | None:
-    results = response.get("results_by_period")
-    if not isinstance(results, Mapping):
-        return None
-    period = results.get("EXPLICIT")
-    if not isinstance(period, Mapping):
-        return None
-    levels = period.get("levels")
-    if not isinstance(levels, list):
-        return None
-    for level in levels:
-        if isinstance(level, Mapping) and level.get("name") == dimension_field:
-            rows = level.get("rows")
-            if isinstance(rows, list):
-                return [row for row in rows if isinstance(row, Mapping)]
-            return None
-    return None
 
 
 def _group_key_from_row(row: Mapping[str, Any], *, dimension_field: str) -> str:
@@ -267,6 +206,10 @@ def _parse_ready_series(
     expected_currency: str | None,
     window_dates: frozenset[dt.date],
 ) -> GroupReturnSeries:
+    if row_evidence.get("return_basis") != GROUP_RETURN_BASIS:
+        raise _malformed(f"READY evidence has unsupported return_basis for group {group_key!r}")
+    if row_evidence.get("weight_basis") != GROUP_WEIGHT_BASIS:
+        raise _malformed(f"READY evidence has unsupported weight_basis for group {group_key!r}")
     currency = _validated_series_currency(
         row_evidence, group_key=group_key, expected_currency=expected_currency
     )
@@ -329,18 +272,24 @@ def parse_group_evidence(
     dimension_field: str,
     expected_currency: str | None,
     portfolio_returns: Sequence[ReturnPoint],
+    expected_group_key_by_source_key: Mapping[str, str],
 ) -> GroupEvidencePack:
     """Validate one contribution response into evidence for one grouping dimension.
 
     ``portfolio_returns`` is the period-window slice of the portfolio return series (in
     percentage points) that the evidence must be able to decompose.
     """
-    rows = _extract_period_rows(response, dimension_field=dimension_field)
+    rows = extract_period_rows(
+        response,
+        dimension_field=dimension_field,
+        malformed=_malformed,
+    )
     if rows is None:
         return GroupEvidencePack(
             grouping_dimension=grouping_dimension,
             series_by_group={},
             degradation_flags=(FLAG_PERIOD_MISSING,),
+            expected_group_keys=tuple(sorted(set(expected_group_key_by_source_key.values()))),
         )
 
     window_dates = frozenset(point.date for point in portfolio_returns)
@@ -349,6 +298,7 @@ def parse_group_evidence(
         dimension_field=dimension_field,
         expected_currency=expected_currency,
         window_dates=window_dates,
+        expected_group_key_by_source_key=expected_group_key_by_source_key,
     )
 
     if not series_by_group and not flags:
@@ -368,6 +318,7 @@ def parse_group_evidence(
         grouping_dimension=grouping_dimension,
         series_by_group=series_by_group,
         degradation_flags=tuple(dict.fromkeys(flags)),
+        expected_group_keys=tuple(sorted(set(expected_group_key_by_source_key.values()))),
     )
 
 
@@ -377,47 +328,60 @@ def _collect_row_evidence(
     dimension_field: str,
     expected_currency: str | None,
     window_dates: frozenset[dt.date],
+    expected_group_key_by_source_key: Mapping[str, str],
 ) -> tuple[dict[str, GroupReturnSeries], list[str]]:
     flags: list[str] = []
     series_by_group: dict[str, GroupReturnSeries] = {}
-    seen_group_keys: set[str] = set()
+    seen_source_keys: set[str] = set()
     for row in rows:
         if row.get("is_other"):
             flags.append(FLAG_TRUNCATED)
             continue
-        group_key = _group_key_from_row(row, dimension_field=dimension_field)
-        if group_key in seen_group_keys:
-            raise _malformed(f"duplicate hierarchy rows for group {group_key!r}")
-        seen_group_keys.add(group_key)
+        source_group_key = _group_key_from_row(row, dimension_field=dimension_field)
+        if source_group_key in seen_source_keys:
+            raise _malformed(f"duplicate hierarchy rows for group {source_group_key!r}")
+        seen_source_keys.add(source_group_key)
+        calculation_group_key = expected_group_key_by_source_key.get(source_group_key)
+        if calculation_group_key is None:
+            raise _malformed(
+                f"hierarchy row group {source_group_key!r} is outside the Core group universe"
+            )
         row_evidence = row.get("group_return")
         if not isinstance(row_evidence, Mapping):
-            raise _malformed(f"hierarchy row without group_return evidence for {group_key!r}")
+            raise _malformed(
+                f"hierarchy row without group_return evidence for {source_group_key!r}"
+            )
         status = row_evidence.get("status")
         if status == "UNAVAILABLE":
             flags.append(_flag_unavailable())
             continue
         if status != "READY":
-            raise _malformed(f"unknown group_return status {status!r} for group {group_key!r}")
-        series_by_group[group_key] = _parse_ready_series(
+            raise _malformed(
+                f"unknown group_return status {status!r} for group {source_group_key!r}"
+            )
+        series_by_group[calculation_group_key] = _parse_ready_series(
             row_evidence,
-            group_key=group_key,
+            group_key=calculation_group_key,
             expected_currency=expected_currency,
             window_dates=window_dates,
         )
+    if set(expected_group_key_by_source_key) - seen_source_keys:
+        flags.append(FLAG_GROUP_UNIVERSE_INCOMPLETE)
     return series_by_group, flags
 
 
 __all__ = [
-    "CONTRIBUTION_TOP_N_PER_LEVEL",
     "EMPIRICAL_GROUPING_DIMENSION_FIELDS",
+    "FLAG_GROUP_UNIVERSE_INCOMPLETE",
     "FLAG_PERIOD_MISSING",
     "FLAG_RECONCILIATION_BREACH",
     "FLAG_TRUNCATED",
+    "GROUP_RETURN_BASIS",
+    "GROUP_WEIGHT_BASIS",
     "RECONCILIATION_TOLERANCE_PP",
     "GroupEvidencePack",
     "GroupReturnObservation",
     "GroupReturnSeries",
     "LotusPerformanceContributionClientProtocol",
-    "build_contribution_request",
     "parse_group_evidence",
 ]

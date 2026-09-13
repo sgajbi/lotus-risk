@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import datetime as dt
 import random
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from typing import Any
 
 import pytest
@@ -35,6 +35,7 @@ from app.contracts.attribution import (
 from app.contracts.risk import ReturnPoint, RiskRequestPeriod, RiskRequestScope
 from app.services.attribution_engine import calculate_historical_attribution
 from app.services.attribution_group_evidence import (
+    FLAG_GROUP_UNIVERSE_INCOMPLETE,
     FLAG_PERIOD_MISSING,
     FLAG_RECONCILIATION_BREACH,
     FLAG_TRUNCATED,
@@ -161,13 +162,32 @@ def _scenario_rows(equity_pp: list[float], fixed_pp: list[float]) -> list[dict[s
     ]
 
 
-def _pack(response: dict[str, Any], *, expected_currency: str | None = "USD") -> GroupEvidencePack:
+def _pack(
+    response: dict[str, Any],
+    *,
+    expected_currency: str | None = "USD",
+    expected_group_key_by_source_key: Mapping[str, str] | None = None,
+) -> GroupEvidencePack:
+    if expected_group_key_by_source_key is None:
+        results = response.get("results_by_period")
+        period = results.get("EXPLICIT") if isinstance(results, Mapping) else None
+        levels = period.get("levels", []) if isinstance(period, Mapping) else []
+        rows = levels[0].get("rows", []) if levels and isinstance(levels[0], dict) else []
+        expected_group_key_by_source_key = {
+            str(row["key"]["sector"]): str(row["key"]["sector"])
+            for row in rows
+            if isinstance(row, dict)
+            and not row.get("is_other")
+            and isinstance(row.get("key"), dict)
+            and row["key"].get("sector") is not None
+        }
     return parse_group_evidence(
         response,
         grouping_dimension="SECTOR",
         dimension_field="sector",
         expected_currency=expected_currency,
         portfolio_returns=_portfolio_points(),
+        expected_group_key_by_source_key=expected_group_key_by_source_key,
     )
 
 
@@ -304,18 +324,47 @@ def test_shuffled_valid_rows_and_series_reproduce_exact_outputs() -> None:
         rng.shuffle(series)
         row["group_return"]["series"] = series
 
-    baseline = _attribution_response(_pack(_contribution_response(rows)))
-    reshuffled = _attribution_response(_pack(_contribution_response(shuffled)))
+    expected_universe = {"equity": "equity", "fixed_income": "fixed_income", "cash": "cash"}
+    baseline = _attribution_response(
+        _pack(
+            _contribution_response(rows),
+            expected_group_key_by_source_key=expected_universe,
+        )
+    )
+    reshuffled = _attribution_response(
+        _pack(
+            _contribution_response(shuffled),
+            expected_group_key_by_source_key=expected_universe,
+        )
+    )
     assert reshuffled.results["WINDOW"] == baseline.results["WINDOW"]
 
 
 def test_explicit_zero_weight_is_authoritative_zero_but_an_absent_date_is_unknown() -> None:
     # Explicit zero-weight observations are supplied evidence: fully empirical, and the
     # zero-return zero-mean cash sleeve contributes exactly nothing.
-    complete = _pack(_contribution_response(_scenario_rows(A_EQUITY, A_FIXED)))
+    expected_universe = {"equity": "equity", "fixed_income": "fixed_income", "cash": "cash"}
+    complete = _pack(
+        _contribution_response(_scenario_rows(A_EQUITY, A_FIXED)),
+        expected_group_key_by_source_key=expected_universe,
+    )
     assert complete.empirical
     _, contributors = _contributors_by_key(_attribution_response(complete))
     assert contributors["cash"].component_contribution == pytest.approx(0.0, abs=1e-12)
+
+    # A complete source universe may also explicitly carry a zero-exposure group.
+    # It is a supported economic fact, unlike omission of the same group.
+    zero_exposure_rows = _scenario_rows(A_EQUITY, A_FIXED)
+    for observation in zero_exposure_rows[2]["group_return"]["series"]:
+        observation["portfolio_weight_pct"] = 0.0
+    zero_exposure = _pack(
+        _contribution_response(zero_exposure_rows),
+        expected_group_key_by_source_key=expected_universe,
+    )
+    assert zero_exposure.empirical
+    assert _contributors_by_key(_attribution_response(zero_exposure))[1][
+        "cash"
+    ].component_contribution == pytest.approx(0.0, abs=1e-12)
 
     # The same evidence with one cash date ABSENT is unknown coverage, not zero: the
     # pack degrades with the bounded calendar flag and the set keeps the weight proxy.
@@ -329,6 +378,57 @@ def test_explicit_zero_weight_is_authoritative_zero_but_an_absent_date_is_unknow
     degraded_set, _ = _contributors_by_key(_attribution_response(partial))
     assert degraded_set.risk_basis == "weight_proxy"
     assert "group_return_evidence:calendar_incomplete" in degraded_set.quality_flags
+
+
+def test_omitted_zero_return_or_offsetting_group_never_promotes_empirical_evidence() -> None:
+    """A source omission is not detected by reconciliation when its contribution is zero.
+
+    The second variant represents offsetting omitted groups: regardless of whether their
+    missing weighted returns would cancel, the Core-sourced universe is authoritative.
+    """
+    full_universe = {"equity": "equity", "fixed_income": "fixed_income", "cash": "cash"}
+    rows_without_cash = _scenario_rows(A_EQUITY, A_FIXED)[:2]
+    zero_return_omission = _pack(
+        _contribution_response(rows_without_cash),
+        expected_group_key_by_source_key=full_universe,
+    )
+    assert zero_return_omission.degradation_flags == (FLAG_GROUP_UNIVERSE_INCOMPLETE,)
+    assert not zero_return_omission.empirical
+    assert (
+        _contributors_by_key(_attribution_response(zero_return_omission))[0].risk_basis
+        == "weight_proxy"
+    )
+
+    anchor_weights = [0.8] * len(DATES)
+    offset_weights = [0.1] * len(DATES)
+    anchor_returns = [value / 0.8 for value in PORTFOLIO_PP]
+    offset_returns = [0.75] * len(DATES)
+    complete_offsetting_rows = [
+        _evidence_row("anchor", anchor_weights, anchor_returns),
+        _evidence_row("offset_gain", offset_weights, offset_returns),
+        _evidence_row("offset_loss", offset_weights, [-value for value in offset_returns]),
+    ]
+    assert all(
+        sum(weight * group_return for weight, group_return in zip(weights, returns, strict=True))
+        == pytest.approx(portfolio_return)
+        for weights, returns, portfolio_return in zip(
+            zip(anchor_weights, offset_weights, offset_weights, strict=True),
+            zip(anchor_returns, offset_returns, [-value for value in offset_returns], strict=True),
+            PORTFOLIO_PP,
+            strict=True,
+        )
+    )
+    rows_without_offsetting_groups = complete_offsetting_rows[:1]
+    offsetting_omission = _pack(
+        _contribution_response(rows_without_offsetting_groups),
+        expected_group_key_by_source_key={
+            "anchor": "anchor",
+            "offset_gain": "offset_gain",
+            "offset_loss": "offset_loss",
+        },
+    )
+    assert offsetting_omission.degradation_flags == (FLAG_GROUP_UNIVERSE_INCOMPLETE,)
+    assert not offsetting_omission.empirical
 
 
 def test_missing_date_with_coincidentally_passing_reconciliation_still_degrades() -> None:
@@ -381,6 +481,39 @@ def test_declared_absences_map_to_bounded_flags() -> None:
 
     empty = _pack({"results_by_period": {}})
     assert empty.degradation_flags == (FLAG_PERIOD_MISSING,)
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        {},
+        {"results_by_period": []},
+        {"results_by_period": {"EXPLICIT": []}},
+        {"results_by_period": {"EXPLICIT": {}}},
+        {"results_by_period": {"EXPLICIT": {"levels": {}}}},
+        {"results_by_period": {"EXPLICIT": {"levels": []}}},
+        {"results_by_period": {"EXPLICIT": {"levels": ["not-a-level"]}}},
+        {
+            "results_by_period": {
+                "EXPLICIT": {"levels": [{"name": "sector", "rows": ["not-a-row"]}]}
+            }
+        },
+    ],
+)
+def test_malformed_nested_contribution_containers_refuse_not_degrade(
+    response: dict[str, Any],
+) -> None:
+    with pytest.raises(UpstreamServiceError) as excinfo:
+        _pack(response)
+    assert excinfo.value.code == "UPSTREAM_INVALID_RESPONSE"
+
+
+def test_non_object_row_mixed_with_valid_rows_is_refused_not_filtered() -> None:
+    rows: list[Any] = _scenario_rows(A_EQUITY, A_FIXED)
+    rows.insert(1, "not-a-row")
+    with pytest.raises(UpstreamServiceError) as excinfo:
+        _pack(_contribution_response(rows))
+    assert excinfo.value.code == "UPSTREAM_INVALID_RESPONSE"
 
 
 def _malformed_case(mutate: Callable[[list[dict[str, Any]]], object]) -> dict[str, Any]:
@@ -439,6 +572,14 @@ def _malformed_case(mutate: Callable[[list[dict[str, Any]]], object]) -> dict[st
         (
             "missing_group_return",
             lambda rows: rows[0].__setitem__("group_return", None),
+        ),
+        (
+            "unsupported_return_basis",
+            lambda rows: rows[0]["group_return"].__setitem__("return_basis", "DERIVED"),
+        ),
+        (
+            "missing_weight_basis",
+            lambda rows: rows[0]["group_return"].__delitem__("weight_basis"),
         ),
     ],
 )

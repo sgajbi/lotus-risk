@@ -63,8 +63,9 @@ Important posture limits:
 5. stateful historical attribution supports `TOTAL_RISK` and `ACTIVE_RISK` across `POSITION`,
    `SECTOR`, `ASSET_CLASS`, and `ISSUER` grouping dimensions (`ACTIVE_RISK + ISSUER` through
    lotus-performance benchmark exposure context issuer groups); each `TOTAL_RISK` set declares its
-   evidence basis — `empirical_group_returns` when validated per-group return evidence from
-   lotus-performance covers every portfolio date in the period, `weight_proxy` otherwise — and
+   evidence basis — `empirical_group_returns` only for `SECTOR` and `ASSET_CLASS` when validated
+   per-group return evidence from lotus-performance covers the Core-sourced group universe and
+   every portfolio date in the period, `weight_proxy` otherwise — and
    `ACTIVE_RISK` sets remain weight-proxy decompositions until benchmark-group return evidence
    exists (lotus-risk#291),
 6. live validation defaults to canonical portfolio `PB_SG_GLOBAL_BAL_001`,

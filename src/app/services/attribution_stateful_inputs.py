@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from typing import Any, Protocol
 
 from app.contracts.attribution import (
@@ -15,6 +16,7 @@ from app.services.attribution_active_benchmark_exposure import (
     BenchmarkExposureClientProtocol,
     fetch_active_benchmark_exposure_history,
 )
+from app.services.attribution_contribution_request import build_contribution_request
 from app.services.attribution_exposure_history import (
     fetch_stateful_exposure_history,
 )
@@ -22,7 +24,6 @@ from app.services.attribution_group_evidence import (
     EMPIRICAL_GROUPING_DIMENSION_FIELDS,
     GroupEvidencePack,
     LotusPerformanceContributionClientProtocol,
-    build_contribution_request,
     parse_group_evidence,
 )
 from app.services.attribution_period_results import GroupEvidenceByPeriod, period_name
@@ -78,6 +79,13 @@ class ResolvedStatefulAttributionInputs:
     stateless_input: HistoricalAttributionStatelessInput
     returns_request: dict[str, Any]
     group_evidence: GroupEvidenceByPeriod | None = None
+    contribution_requests: tuple[dict[str, Any], ...] = ()
+
+
+@dataclass(frozen=True)
+class ResolvedGroupEvidence:
+    group_evidence: GroupEvidenceByPeriod
+    contribution_requests: tuple[dict[str, Any], ...]
 
 
 @dataclass(frozen=True)
@@ -173,9 +181,10 @@ async def fetch_group_evidence(
     stateful: HistoricalAttributionStatefulInput,
     performance_client: LotusPerformanceContributionClientProtocol,
     portfolio_returns: list[ReturnPoint],
+    exposure_history: list[ExposurePoint],
     evidence_dimensions: list[GroupingDimension],
     authority: DownstreamAuthority,
-) -> GroupEvidenceByPeriod:
+) -> ResolvedGroupEvidence:
     """Fetch and validate per-group return evidence per resolved period and dimension.
 
     Period windows are resolved exactly as the engine resolves them (same
@@ -186,6 +195,7 @@ async def fetch_group_evidence(
     """
     open_date = min(point.date for point in portfolio_returns)
     evidence: dict[str, dict[GroupingDimension, GroupEvidencePack]] = {}
+    contribution_requests: list[dict[str, Any]] = []
     for period in stateful.periods:
         start_date, end_date = resolve_period(
             period.type,
@@ -201,26 +211,72 @@ async def fetch_group_evidence(
         per_dimension: dict[GroupingDimension, GroupEvidencePack] = {}
         for dimension in evidence_dimensions:
             dimension_field = EMPIRICAL_GROUPING_DIMENSION_FIELDS[dimension]
+            expected_group_key_by_source_key = _expected_group_key_by_source_key(
+                exposure_history=exposure_history,
+                grouping_dimension=dimension,
+                start_date=start_date,
+                end_date=end_date,
+            )
+            request_payload = build_contribution_request(
+                portfolio_id=stateful.portfolio_id,
+                start_date=start_date,
+                end_date=end_date,
+                dimension_field=dimension_field,
+                metric_basis=stateful.net_or_gross,
+                reporting_currency=stateful.reporting_currency,
+            )
             response = await performance_client.get_contribution(
-                request_payload=build_contribution_request(
-                    portfolio_id=stateful.portfolio_id,
-                    start_date=start_date,
-                    end_date=end_date,
-                    dimension_field=dimension_field,
-                    metric_basis=stateful.net_or_gross,
-                    reporting_currency=stateful.reporting_currency,
-                ),
+                request_payload=request_payload,
                 authority=authority,
             )
+            contribution_requests.append(request_payload)
             per_dimension[dimension] = parse_group_evidence(
                 response,
                 grouping_dimension=dimension,
                 dimension_field=dimension_field,
                 expected_currency=stateful.reporting_currency,
                 portfolio_returns=windowed,
+                expected_group_key_by_source_key=expected_group_key_by_source_key,
             )
         evidence[period_name(period)] = per_dimension
-    return evidence
+    return ResolvedGroupEvidence(
+        group_evidence=evidence,
+        contribution_requests=tuple(contribution_requests),
+    )
+
+
+def _expected_group_key_by_source_key(
+    *,
+    exposure_history: list[ExposurePoint],
+    grouping_dimension: GroupingDimension,
+    start_date: date,
+    end_date: date,
+) -> dict[str, str]:
+    """Use the Core-sourced exposure universe as the authoritative group set.
+
+    The contribution endpoint uses the source dimension value (for example
+    ``TECH``), while Risk contributor identities retain their canonical grouping
+    keys (for example ``SECTOR_TECH``).  A group seen on any date in the
+    resolved period is required; its per-date evidence is separately checked by
+    the calendar rule.  This catches held zero-return and offsetting groups that
+    reconciliation alone cannot reveal.
+    """
+    result: dict[str, str] = {}
+    for point in exposure_history:
+        if (
+            point.grouping_dimension != grouping_dimension
+            or point.date < start_date
+            or point.date > end_date
+        ):
+            continue
+        source_key = point.group_label or "UNKNOWN"
+        existing = result.setdefault(source_key, point.group_key)
+        if existing != point.group_key:
+            raise ValueError(
+                "lotus-core exposure history has ambiguous source group identity for "
+                f"{grouping_dimension}:{source_key}"
+            )
+    return result
 
 
 async def resolve_stateful_attribution_inputs(
@@ -252,11 +308,12 @@ async def resolve_stateful_attribution_inputs(
     evidence_dimensions = _evidence_grouping_dimensions(
         requested_groupings, list(options.attribution_types)
     )
-    group_evidence = (
+    resolved_group_evidence = (
         await fetch_group_evidence(
             stateful=stateful,
             performance_client=performance_client,
             portfolio_returns=returns_context.portfolio_returns,
+            exposure_history=exposure_histories.exposure_history,
             evidence_dimensions=evidence_dimensions,
             authority=authority,
         )
@@ -271,5 +328,10 @@ async def resolve_stateful_attribution_inputs(
             benchmark_exposure_history=exposure_histories.benchmark_exposure_history,
         ),
         returns_request=returns_context.returns_request,
-        group_evidence=group_evidence,
+        group_evidence=(
+            resolved_group_evidence.group_evidence if resolved_group_evidence else None
+        ),
+        contribution_requests=(
+            resolved_group_evidence.contribution_requests if resolved_group_evidence else ()
+        ),
     )
