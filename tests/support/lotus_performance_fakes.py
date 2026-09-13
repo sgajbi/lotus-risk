@@ -12,11 +12,17 @@ class RecordingLotusPerformanceClient:
         *,
         response_payload: dict[str, Any],
         benchmark_exposure_context_payload: dict[str, Any] | None = None,
+        contribution_response: dict[str, Any] | None = None,
     ) -> None:
         self.response_payload = response_payload
         self.benchmark_exposure_context_payload = benchmark_exposure_context_payload
+        # Default is declared absence (no EXPLICIT period): TOTAL_RISK sets keep the
+        # weight proxy with a bounded `group_return_evidence:period_missing` flag.
+        # Empirical tests supply a complete contribution response explicitly.
+        self.contribution_response = contribution_response
         self.calls: list[dict[str, Any]] = []
         self.benchmark_exposure_context_calls: list[dict[str, Any]] = []
+        self.contribution_calls: list[dict[str, Any]] = []
 
     async def get_returns_series(
         self,
@@ -32,6 +38,23 @@ class RecordingLotusPerformanceClient:
             }
         )
         return self.response_payload
+
+    async def get_contribution(
+        self,
+        *,
+        request_payload: dict[str, Any],
+        authority: DownstreamAuthority,
+    ) -> dict[str, Any]:
+        self.contribution_calls.append(
+            {
+                "request_payload": request_payload,
+                "tenant_id": authority.tenant_id,
+                "correlation_id": authority.correlation_id,
+            }
+        )
+        if self.contribution_response is None:
+            return {"results_by_period": {}}
+        return self.contribution_response
 
     async def get_benchmark_exposure_context(
         self,

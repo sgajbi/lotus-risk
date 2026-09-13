@@ -21,6 +21,14 @@ def decimal_return_to_percentage_points(value: Any) -> float:
             operation="/integration/returns/series",
             message=f"Invalid return value from lotus-performance: {value}",
         ) from exc
+    if not decimal_value.is_finite():
+        # Decimal("NaN") and Decimal("Infinity") parse successfully and would flow into
+        # covariance as non-finite floats; a non-finite return is producer corruption.
+        raise invalid_upstream_payload(
+            service="lotus-performance",
+            operation="/integration/returns/series",
+            message=f"Non-finite return value from lotus-performance: {value}",
+        )
     return float(decimal_value * Decimal("100"))
 
 
@@ -28,6 +36,7 @@ def to_return_points(series: Any) -> list[ReturnPoint]:
     if not isinstance(series, list):
         return []
     result: list[ReturnPoint] = []
+    seen_dates: set[date] = set()
     for row in series:
         if not isinstance(row, dict):
             continue
@@ -45,6 +54,16 @@ def to_return_points(series: Any) -> list[ReturnPoint]:
             ) from exc
         if not is_trading_day(parsed_date):
             continue
+        if parsed_date in seen_dates:
+            # Two observations for one date are contradictory economics: which return
+            # applies is undecidable, and both entering covariance double-counts a day.
+            raise invalid_upstream_payload(
+                service="lotus-performance",
+                operation="/integration/returns/series",
+                message="Duplicate return date from lotus-performance",
+                details={"field": "date", "date": parsed_date.isoformat()},
+            )
+        seen_dates.add(parsed_date)
         result.append(
             ReturnPoint(
                 date=parsed_date,

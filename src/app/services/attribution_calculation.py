@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from app.contracts.attribution import AttributionType
+from app.services.attribution_group_evidence import GroupEvidencePack
 
 
 class DecompositionRow(TypedDict):
@@ -122,6 +123,51 @@ def _component_decomposition_row(
         "component_contribution": component,
         "percent_contribution": percent,
     }
+
+
+def empirical_total_risk_inputs(
+    *,
+    returns_series: pd.Series,
+    group_evidence: GroupEvidencePack,
+    annualization_basis: int,
+) -> AttributionCalculationInputs:
+    """TOTAL_RISK inputs from validated per-group return evidence.
+
+    Each group's contribution series is `weight(t) * group_return(t)` from the producer's
+    joined evidence pair -- the group's own return, not the portfolio return -- so the
+    covariance can discriminate between group return paths (lotus-risk#291). Evidence is
+    calendar-complete over the metric series by validation, so every cell is an actual
+    observation: nothing here is zero-filled. Producer returns are percentage points;
+    the metric series is decimal, so evidence returns are scaled to match.
+    """
+    index = returns_series.index
+    dates = [timestamp.date() for timestamp in index]
+    observations_by_group = {
+        group_key: {point.observation_date: point for point in series.observations}
+        for group_key, series in group_evidence.series_by_group.items()
+    }
+    group_matrix = pd.DataFrame(
+        {
+            group_key: [
+                per_date[date].weight_ratio * (per_date[date].return_pp / 100.0) for date in dates
+            ]
+            for group_key, per_date in sorted(observations_by_group.items())
+        },
+        index=index,
+    )
+    weight_matrix = pd.DataFrame(
+        {
+            group_key: [per_date[date].weight_ratio for date in dates]
+            for group_key, per_date in sorted(observations_by_group.items())
+        },
+        index=index,
+    )
+    return AttributionCalculationInputs(
+        metric_series=returns_series,
+        group_matrix=group_matrix,
+        weight_matrix=weight_matrix,
+        risk_total=float(returns_series.std(ddof=1) * sqrt(annualization_basis)),
+    )
 
 
 def attribution_calculation_inputs(

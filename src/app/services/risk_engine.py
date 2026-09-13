@@ -13,9 +13,6 @@ from app.services.observability_ports import (
     record_risk_metric_requests,
 )
 from app.services.risk import calculation_orchestrator as risk_orchestrator
-from app.services.risk import helpers as risk_helpers
-
-BENCHMARK_METRICS = risk_helpers.BENCHMARK_METRICS
 
 
 def _build_metadata(

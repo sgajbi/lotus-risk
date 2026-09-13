@@ -5,6 +5,9 @@ from datetime import date
 from typing import Any, Protocol
 
 from app.contracts.attribution import HistoricalAttributionStatefulInput
+from app.contracts.attribution_common_inputs import (
+    requires_active_attribution as _requires_active_attribution,
+)
 from app.contracts.downstream_authority import DownstreamAuthority
 from app.contracts.risk import ReturnPoint
 from app.services.stateful_returns_request import build_stateful_returns_series_request
@@ -33,8 +36,9 @@ class StatefulReturnsContext:
 
 
 def requires_active_attribution(stateful: HistoricalAttributionStatefulInput) -> bool:
-    options = stateful.attribution_options
-    return "ACTIVE_RISK" in options.attribution_types or "TRACKING_ERROR" in options.metrics
+    """Delegates to the single contract-owned predicate so the sourcing flag, request
+    validation, and the calculation-time benchmark gate share one rule."""
+    return _requires_active_attribution(stateful.attribution_options)
 
 
 def build_stateful_returns_request(stateful: HistoricalAttributionStatefulInput) -> dict[str, Any]:

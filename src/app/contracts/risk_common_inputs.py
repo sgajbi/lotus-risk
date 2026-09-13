@@ -28,17 +28,18 @@ RiskSupportabilityState = Literal[
 RiskSupportabilityReason = Literal[
     "calculation_complete",
     "benchmark_unavailable",
-    # Historical attribution has no per-group return series. Every group is fed
-    # the same portfolio-level return, so the covariance can only recover the
-    # weights: under constant weights `percent_contribution` reproduces the
-    # weight exactly, and ACTIVE_RISK leaves the whole tracking error as
-    # residual. The decomposition is a weight proxy, not measured group risk,
-    # and saying so is the difference between a limitation and a false number.
+    # A historical-attribution set without validated per-group return evidence is
+    # a weight proxy: every group is fed the same portfolio-level return, so the
+    # covariance can only recover the weights. Under constant weights
+    # `percent_contribution` reproduces the weight exactly, and ACTIVE_RISK
+    # leaves the whole tracking error as residual. Empirical TOTAL_RISK sets
+    # declare `risk_basis="empirical_group_returns"`; consumers must use that
+    # per-set declaration rather than infer a basis from this response reason.
     #
     # It is composed with the period assessment rather than substituted for it
     # (#293), so it is the reported `reason` only when nothing more severe is
-    # present. The limitation still applies to every decomposition; `reason`
-    # reports the most severe condition, and an actionable failure outranks it.
+    # present. The reason applies whenever any calculated set remains a proxy;
+    # it reports the most severe condition, and an actionable failure outranks it.
     "group_return_series_unavailable",
     "calculation_quality_issue",
     "insufficient_aligned_observations",
@@ -151,7 +152,11 @@ class ReturnPoint(BaseModel):
     )
     value: float = (  # monetary-float-allow: return observation in percentage points, not money.
         Field(
-            description="Return value in percentage points.",
+            allow_inf_nan=False,
+            description=(
+                "Return value in percentage points. Must be finite: NaN and infinity "
+                "are refused before any statistical processing."
+            ),
             json_schema_extra={"example": 0.85},
         )
     )

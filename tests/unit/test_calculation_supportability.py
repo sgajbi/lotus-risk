@@ -23,6 +23,8 @@ class _PeriodResult(BaseModel):
 
 class _AttributionSet(BaseModel):
     quality_flags: list[str]
+    risk_basis: str = "weight_proxy"
+    total_value: float | None = 0.25
 
 
 class _AttributionPeriodResult(BaseModel):
@@ -140,9 +142,9 @@ def test_attribution_supportability_ignores_non_sequence_attribution_sets() -> N
         results={"YTD": SimpleNamespace(portfolio_observation_count=1, attribution_sets=object())},
     )
 
-    # Not "ready". There is no per-group return series regardless of what the
-    # attribution sets look like, so a response that reports `calculation_complete`
-    # would assert a measurement this service has not made.
+    # Not "ready". The malformed set collection cannot establish that every
+    # calculated set is empirical, so a response that reports
+    # `calculation_complete` would assert a measurement this service has not made.
     assert supportability.state == "degraded"
     assert supportability.reason == "group_return_series_unavailable"
 
@@ -171,6 +173,27 @@ def test_attribution_supportability_is_degraded_even_with_no_quality_flags() -> 
     # Nothing failed, so nothing is counted (#293). `degraded` here is carried
     # entirely by the reason, which is the honest shape: the response is
     # qualified, not broken.
+    assert supportability.degraded_metric_count == 0
+
+
+def test_attribution_supportability_is_ready_when_every_calculated_set_is_empirical() -> None:
+    supportability = supportability_from_attribution_results(
+        returns=[ReturnPoint(date=dt.date(2026, 1, 5), value=1.2)],
+        as_of_date=dt.date(2026, 1, 5),
+        results={
+            "YTD": _AttributionPeriodResult(
+                attribution_sets=[
+                    _AttributionSet(
+                        quality_flags=[],
+                        risk_basis="empirical_group_returns",
+                    )
+                ],
+            )
+        },
+    )
+
+    assert supportability.state == "ready"
+    assert supportability.reason == "calculation_complete"
     assert supportability.degraded_metric_count == 0
 
 

@@ -10,7 +10,7 @@ from app.contracts.attribution import (
     HistoricalAttributionStatelessInput,
 )
 from app.contracts.downstream_authority import DownstreamAuthority
-from app.contracts.risk import RiskRequestScope
+from app.contracts.risk import ReturnPoint, RiskRequestScope
 from app.services.attribution_active_benchmark_exposure import (
     BenchmarkExposureClientProtocol,
     fetch_active_benchmark_exposure_history,
@@ -18,6 +18,14 @@ from app.services.attribution_active_benchmark_exposure import (
 from app.services.attribution_exposure_history import (
     fetch_stateful_exposure_history,
 )
+from app.services.attribution_group_evidence import (
+    EMPIRICAL_GROUPING_DIMENSION_FIELDS,
+    GroupEvidencePack,
+    LotusPerformanceContributionClientProtocol,
+    build_contribution_request,
+    parse_group_evidence,
+)
+from app.services.attribution_period_results import GroupEvidenceByPeriod, period_name
 from app.services.attribution_stateful_returns import (
     LotusPerformanceReturnsClientProtocol,
     StatefulReturnsContext,
@@ -25,6 +33,7 @@ from app.services.attribution_stateful_returns import (
     fetch_stateful_returns_context,
     requires_active_attribution,
 )
+from app.services.risk.period_resolution import resolve_period
 
 __all__ = [
     "LotusCoreClientProtocol",
@@ -40,6 +49,7 @@ __all__ = [
 class LotusPerformanceClientProtocol(
     LotusPerformanceReturnsClientProtocol,
     BenchmarkExposureClientProtocol,
+    LotusPerformanceContributionClientProtocol,
     Protocol,
 ):
     pass
@@ -67,6 +77,7 @@ class LotusCoreClientProtocol(Protocol):
 class ResolvedStatefulAttributionInputs:
     stateless_input: HistoricalAttributionStatelessInput
     returns_request: dict[str, Any]
+    group_evidence: GroupEvidenceByPeriod | None = None
 
 
 @dataclass(frozen=True)
@@ -139,6 +150,79 @@ async def _stateful_exposure_histories(
     )
 
 
+def _evidence_grouping_dimensions(
+    options_grouping_dimensions: list[GroupingDimension],
+    attribution_types: list[str],
+) -> list[GroupingDimension]:
+    """Dimensions whose TOTAL_RISK sets can use producer group-return evidence.
+
+    ISSUER has no producer-side dimension on the contribution surface and stays a
+    weight-proxy decomposition (recorded residual on lotus-risk#291).
+    """
+    if "TOTAL_RISK" not in attribution_types:
+        return []
+    return [
+        dimension
+        for dimension in options_grouping_dimensions
+        if dimension in EMPIRICAL_GROUPING_DIMENSION_FIELDS
+    ]
+
+
+async def fetch_group_evidence(
+    *,
+    stateful: HistoricalAttributionStatefulInput,
+    performance_client: LotusPerformanceContributionClientProtocol,
+    portfolio_returns: list[ReturnPoint],
+    evidence_dimensions: list[GroupingDimension],
+    authority: DownstreamAuthority,
+) -> GroupEvidenceByPeriod:
+    """Fetch and validate per-group return evidence per resolved period and dimension.
+
+    Period windows are resolved exactly as the engine resolves them (same
+    ``resolve_period``, open date = first portfolio observation) so the evidence is
+    validated against the same portfolio-date calendar the decomposition will use.
+    Periods with fewer than two windowed observations produce no sets, so no evidence
+    is fetched for them.
+    """
+    open_date = min(point.date for point in portfolio_returns)
+    evidence: dict[str, dict[GroupingDimension, GroupEvidencePack]] = {}
+    for period in stateful.periods:
+        start_date, end_date = resolve_period(
+            period.type,
+            stateful.as_of_date,
+            open_date,
+            year=period.year,
+            from_date=period.from_date,
+            to_date=period.to_date,
+        )
+        windowed = [point for point in portfolio_returns if start_date <= point.date <= end_date]
+        if len(windowed) < 2:
+            continue
+        per_dimension: dict[GroupingDimension, GroupEvidencePack] = {}
+        for dimension in evidence_dimensions:
+            dimension_field = EMPIRICAL_GROUPING_DIMENSION_FIELDS[dimension]
+            response = await performance_client.get_contribution(
+                request_payload=build_contribution_request(
+                    portfolio_id=stateful.portfolio_id,
+                    start_date=start_date,
+                    end_date=end_date,
+                    dimension_field=dimension_field,
+                    metric_basis=stateful.net_or_gross,
+                    reporting_currency=stateful.reporting_currency,
+                ),
+                authority=authority,
+            )
+            per_dimension[dimension] = parse_group_evidence(
+                response,
+                grouping_dimension=dimension,
+                dimension_field=dimension_field,
+                expected_currency=stateful.reporting_currency,
+                portfolio_returns=windowed,
+            )
+        evidence[period_name(period)] = per_dimension
+    return evidence
+
+
 async def resolve_stateful_attribution_inputs(
     stateful: HistoricalAttributionStatefulInput,
     *,
@@ -165,6 +249,20 @@ async def resolve_stateful_attribution_inputs(
         requires_active=requires_active,
         authority=authority,
     )
+    evidence_dimensions = _evidence_grouping_dimensions(
+        requested_groupings, list(options.attribution_types)
+    )
+    group_evidence = (
+        await fetch_group_evidence(
+            stateful=stateful,
+            performance_client=performance_client,
+            portfolio_returns=returns_context.portfolio_returns,
+            evidence_dimensions=evidence_dimensions,
+            authority=authority,
+        )
+        if evidence_dimensions
+        else None
+    )
     return ResolvedStatefulAttributionInputs(
         stateless_input=build_stateful_stateless_input(
             stateful=stateful,
@@ -173,4 +271,5 @@ async def resolve_stateful_attribution_inputs(
             benchmark_exposure_history=exposure_histories.benchmark_exposure_history,
         ),
         returns_request=returns_context.returns_request,
+        group_evidence=group_evidence,
     )

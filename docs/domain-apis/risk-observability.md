@@ -50,7 +50,10 @@ are:
 9. `/integration/returns/series/status/{calculation_id}`,
 10. `/integration/returns/series/results/{calculation_id}`,
 11. `/integration/benchmarks/exposure-context`,
-12. `unknown`.
+12. `/performance/contribution`,
+13. `/performance/executions/{calculation_id}`,
+14. `/performance/contribution/results/{calculation_id}`,
+15. `unknown`.
 
 `category="ok"` means the upstream call returned a usable response. Failure categories are derived
 from deterministic upstream error classification:

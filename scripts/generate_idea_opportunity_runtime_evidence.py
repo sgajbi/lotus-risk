@@ -66,11 +66,11 @@ def main(argv: list[str] | None = None) -> int:
             portfolio_id=args.portfolio_id,
             as_of_date=date.fromisoformat(args.as_of_date),
         )
+    if not idea_opportunity_runtime_evidence_is_valid(payload):
+        print("Generated evidence failed contract validation; nothing was written.")
+        return 1
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    if not idea_opportunity_runtime_evidence_is_valid(payload):
-        print(f"Generated evidence failed contract validation: {output}")
-        return 1
     print(f"Idea opportunity runtime evidence written: {output}")
     return 0
 

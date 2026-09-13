@@ -100,6 +100,9 @@
           "/integration/returns/series/status/{calculation_id}",
           "/integration/returns/series/results/{calculation_id}",
           "/integration/benchmarks/exposure-context",
+          "/performance/contribution",
+          "/performance/executions/{calculation_id}",
+          "/performance/contribution/results/{calculation_id}",
           "unknown"
         ],
         "outcome": [
@@ -140,6 +143,9 @@
           "/integration/returns/series/status/{calculation_id}",
           "/integration/returns/series/results/{calculation_id}",
           "/integration/benchmarks/exposure-context",
+          "/performance/contribution",
+          "/performance/executions/{calculation_id}",
+          "/performance/contribution/results/{calculation_id}",
           "unknown"
         ],
         "outcome": [

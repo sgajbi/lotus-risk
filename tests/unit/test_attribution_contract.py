@@ -143,6 +143,16 @@ def test_attribution_contract_rejects_duplicate_period_names() -> None:
         HistoricalAttributionRequest.model_validate(payload)
 
 
+def test_attribution_contract_refuses_duplicate_return_dates_before_calculation() -> None:
+    payload = deepcopy(BASE_STATELESS_PAYLOAD)
+    stateless_input = cast(dict[str, Any], payload["stateless_input"])
+    returns = cast(list[dict[str, Any]], stateless_input["returns"])
+    returns.append(dict(returns[0]))
+
+    with pytest.raises(ValueError, match="duplicate return observation date in returns"):
+        HistoricalAttributionRequest.model_validate(payload)
+
+
 def test_stateful_attribution_contract_accepts_active_risk_issuer_grouping() -> None:
     request = HistoricalAttributionRequest.model_validate(
         {

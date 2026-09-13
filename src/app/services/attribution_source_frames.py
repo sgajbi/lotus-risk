@@ -80,6 +80,18 @@ def pivot_exposure(
 
     labels_raw = scoped.groupby("group_key", as_index=True)["group_label"].last().to_dict()
     labels = {str(key): cast(str | None, value) for key, value in labels_raw.items()}
+    conflicting = (
+        scoped.groupby(["date", "group_key"])["weight"].nunique().loc[lambda counts: counts > 1]
+    )
+    if not conflicting.empty:
+        # Two different weights for one group on one date are contradictory exposure
+        # facts; averaging them (the previous behavior) invented a weight nobody
+        # supplied. Identical duplicates still collapse harmlessly below.
+        conflict_date, conflict_key = conflicting.index[0]
+        raise ValueError(
+            "conflicting duplicate exposure weights for "
+            f"{grouping_dimension}:{conflict_key} on {pd.Timestamp(conflict_date).date()}"
+        )
     weights = scoped.pivot_table(index="date", columns="group_key", values="weight", aggfunc="mean")
     weights = weights.sort_index().fillna(0.0)
 

@@ -1,5 +1,11 @@
 # Glossary
 
+## Current scope and evidence posture
+
+These are current contract terms, not a claim that every dependency is live. In historical
+attribution, per-set `risk_basis` distinguishes empirical `TOTAL_RISK` evidence from a
+`weight_proxy`; `ACTIVE_RISK` remains degraded until governed benchmark-group evidence exists.
+
 The vocabulary `lotus-risk` uses. Metric *definitions* — formulas, conventions, inputs — are authored
 per metric under
 [`docs/methodologies/metrics/`](https://github.com/sgajbi/lotus-risk/tree/main/docs/methodologies/metrics)
@@ -94,7 +100,7 @@ branched on mechanically — branch on the one belonging to the endpoint you cal
 | **`insufficient_observations`** | not enough history |
 | **`insufficient_aligned_observations`** | portfolio and benchmark history did not overlap enough. A different problem, and a different fix. |
 | **`benchmark_unavailable`** | a benchmark-dependent metric was requested without a usable benchmark |
-| **`group_return_series_unavailable`** | historical attribution has no per-group return series, so the decomposition is a weight proxy rather than measured group risk. Applies to **every decomposition**, flagged or not. It is not always the reported `reason`: an actionable failure outranks it by precedence, so a response that also failed a period reports that failure instead — read the `degraded` state, never the absence of this reason, as the signal that a decomposition is a proxy. An `empty` response reports `no_return_observations`, having had nothing to decompose. Not a property of the request — a source limitation this service states rather than implies |
+| **`group_return_series_unavailable`** | at least one calculated attribution set is a `weight_proxy`, not measured group risk. It is not always the reported `reason`: an actionable failure outranks it by precedence, so a response that also failed a period reports that failure instead. Read every set's `risk_basis`, never the absence of this reason alone, to decide whether that set is empirical. A response whose calculated sets are all `empirical_group_returns` can be `ready`; an `empty` response reports `no_return_observations`, having had nothing to decompose. Not a property of the request — a source-evidence limitation this service states rather than implies |
 | **`unsupported_input_mode`** | the request shape is not supported for this workflow — the answer `/integration/capabilities` would have given in advance |
 | **freshness bucket** | `current`, `same_day`, `stale`, `unknown` — how recent the underlying observations are |
 | **lineage** | the record of which upstream sources and versions produced an answer |

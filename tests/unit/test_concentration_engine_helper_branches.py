@@ -16,7 +16,6 @@ from app.services.concentration.parsing import (
     _apply_snapshot_display_names,
     _caller_issuer_map,
     _extract_issuer_map,
-    _extract_values_from_snapshot_positions,
     _extract_values_with_issuer_from_snapshot,
     _issuer_key_from_mapping,
     _issuer_key_from_position,
@@ -135,16 +134,6 @@ def test_helper_issuer_key_resolution_covers_legal_issuer_and_missing_ids() -> N
         )
         is None
     )
-
-
-def test_extract_snapshot_position_values_handles_empty_and_quantity_fallback() -> None:
-    assert _extract_values_from_snapshot_positions(None) == []
-    rows: list[Any] = [
-        "bad-row",
-        {"market_value_base": None, "quantity": "12.5"},
-        {"market_value_base": "-1", "quantity": None},
-    ]
-    assert _extract_values_from_snapshot_positions(cast(list[dict[str, Any]], rows)) == [12.5]
 
 
 def test_extract_values_with_issuer_handles_fallback_and_non_dict_rows() -> None:
