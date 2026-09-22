@@ -292,8 +292,11 @@ Boundary rules:
     enrichment and risk-free series/coverage are deliberately tenant-free global reference reads;
     do not add tenant scope to them without a lotus-core ownership decision. Pooled shared clients
     must never carry tenant default headers, and tenant must never be derived from a business
-    payload. A producer 403 on result access maps to bounded `424 FAILED_DEPENDENCY`, never a
-    pending loop.
+    payload. Core snapshot also requires `tenant_id` in its JSON body: bind it from that same
+    admitted authority and identify `consumer_system=lotus-risk` for snapshots and position
+    timeseries. Refuse a conflicting internally supplied body scope before transport; the body
+    is never an alternative source of tenant authority. A producer 403 on result access maps to
+    bounded `424 FAILED_DEPENDENCY`, never a pending loop.
 30. Treat `src/app/contracts` as mixed public API DTOs, shared application values, and compatibility
     facades until a fuller domain package is introduced. Pure calculation helpers must not construct
     public response DTOs directly for migrated paths. The concentration representative path maps

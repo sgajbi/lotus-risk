@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import json
 from collections.abc import Callable
 from typing import Any, Self, cast
 
@@ -119,6 +121,106 @@ async def test_client_reuses_injected_http_client_without_creating_temporary_poo
         request_payload={"snapshot_mode": "BASELINE"},
         authority=admitted_test_authority(),
     ) == {"ok": True}
+
+
+@pytest.mark.asyncio
+async def test_core_snapshot_body_and_header_use_the_same_admitted_risk_authority(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(httpx, "AsyncClient", _FakeAsyncClient)
+    _FakeAsyncClient.response_factory = lambda **_: _ok_response({"ok": True})
+    client = LotusCoreClient(base_url="http://core.local")
+    requested = {"as_of_date": "2026-04-10", "sections": ["positions_baseline"]}
+
+    await client.get_core_snapshot(
+        portfolio_id="PB_SG_GLOBAL_BAL_001",
+        request_payload=requested,
+        authority=admitted_test_authority(),
+    )
+
+    assert _FakeAsyncClient.last_request is not None
+    sent = _FakeAsyncClient.last_request
+    assert sent["headers"]["X-Tenant-Id"] == "tenant-a"
+    assert sent["json"]["tenant_id"] == "tenant-a"
+    assert sent["json"]["consumer_system"] == "lotus-risk"
+    assert requested == {"as_of_date": "2026-04-10", "sections": ["positions_baseline"]}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "conflict",
+    [{"tenant_id": "tenant-b"}, {"consumer_system": "lotus-performance"}],
+)
+async def test_core_snapshot_refuses_internal_authority_drift_before_transport(
+    monkeypatch: pytest.MonkeyPatch,
+    conflict: dict[str, str],
+) -> None:
+    monkeypatch.setattr(httpx, "AsyncClient", _FakeAsyncClient)
+    _FakeAsyncClient.last_request = None
+    _FakeAsyncClient.response_factory = lambda **_: _ok_response({"ok": True})
+    client = LotusCoreClient(base_url="http://core.local")
+
+    with pytest.raises(ValueError, match="Core"):
+        await client.get_core_snapshot(
+            portfolio_id="PB_SG_GLOBAL_BAL_001",
+            request_payload={"as_of_date": "2026-04-10", **conflict},
+            authority=admitted_test_authority(),
+        )
+
+    assert _FakeAsyncClient.last_request is None
+
+
+@pytest.mark.asyncio
+async def test_position_timeseries_identifies_the_admitted_risk_consumer(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(httpx, "AsyncClient", _FakeAsyncClient)
+    _FakeAsyncClient.response_factory = lambda **_: _ok_response({"ok": True})
+    client = LotusCoreClient(base_url="http://core.local")
+
+    await client.get_position_analytics_timeseries(
+        portfolio_id="PB_SG_GLOBAL_BAL_001",
+        request_payload={"as_of_date": "2026-04-10", "period": "ytd"},
+        authority=admitted_test_authority(),
+    )
+
+    assert _FakeAsyncClient.last_request is not None
+    sent = _FakeAsyncClient.last_request
+    assert sent["headers"]["X-Tenant-Id"] == "tenant-a"
+    assert sent["json"]["consumer_system"] == "lotus-risk"
+    assert "tenant_id" not in sent["json"]  # Core timeseries has no body tenant field.
+
+
+@pytest.mark.asyncio
+async def test_shared_core_transport_never_mix_tenants_between_snapshot_requests() -> None:
+    observed: list[tuple[str, str, str]] = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        tenant = request.headers["X-Tenant-Id"]
+        observed.append((tenant, body["tenant_id"], body["consumer_system"]))
+        return httpx.Response(200, json={"owner": tenant})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as pooled:
+        client = LotusCoreClient(base_url="http://core.local", http_client=pooled)
+        response_a, response_b = await asyncio.gather(
+            client.get_core_snapshot(
+                portfolio_id="PB_SG_GLOBAL_BAL_001",
+                request_payload={"as_of_date": "2026-04-10", "sections": ["portfolio_totals"]},
+                authority=admitted_test_authority(tenant_id="tenant-a"),
+            ),
+            client.get_core_snapshot(
+                portfolio_id="PB_SG_GLOBAL_BAL_001",
+                request_payload={"as_of_date": "2026-04-10", "sections": ["portfolio_totals"]},
+                authority=admitted_test_authority(tenant_id="tenant-b"),
+            ),
+        )
+
+    assert {response_a["owner"], response_b["owner"]} == {"tenant-a", "tenant-b"}
+    assert set(observed) == {
+        ("tenant-a", "tenant-a", "lotus-risk"),
+        ("tenant-b", "tenant-b", "lotus-risk"),
+    }
 
 
 @pytest.mark.asyncio

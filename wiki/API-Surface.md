@@ -235,8 +235,10 @@ enforcing producers, so those requests must present an admitted tenant:
    refuses with **400 `INVALID_TENANT_AUTHORITY`**. Both refuse **before any upstream request**.
 2. The admitted value is forwarded per request on every tenant-owned `lotus-performance` and
    `lotus-core` call, including async status/result polling, so the polling identity is always the
-   submitting tenant. A foreign-tenant result refusal from the producer surfaces as a bounded
-   `424 FAILED_DEPENDENCY`, not an endless pending state.
+   submitting tenant. Core snapshot JSON binds `tenant_id` to that same admitted value and
+   declares Risk as the consumer; position timeseries also declares Risk as consumer. Neither
+   takes tenant authority from the business payload. A foreign-tenant result refusal from the
+   producer surfaces as a bounded `424 FAILED_DEPENDENCY`, not an endless pending state.
 3. Stateless requests are pure computations over caller-supplied series and need no tenant
    authority.
 

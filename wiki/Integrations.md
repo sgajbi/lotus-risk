@@ -75,7 +75,10 @@ returns-series submit and its async status/result polls, benchmark exposure cont
 snapshots, position analytics timeseries, and simulation session create/changes. Instrument
 enrichment and risk-free series/coverage are deliberately tenant-free: they are shared reference
 data with no tenant owner, and adding tenant scope there would assert an ownership that does not
-exist. The discriminator is recorded at the transports and every client port.
+exist. Core snapshots also require the admitted tenant in the JSON body, identical to the header;
+snapshots and position timeseries declare `consumer_system=lotus-risk` instead of inheriting a
+Performance default. A conflicting internal scope refuses before I/O. The discriminator is
+recorded at the transports and every client port.
 
 Use:
 

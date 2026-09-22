@@ -59,7 +59,11 @@ Caller provides:
 - `stateful_input.portfolio_id`
 - `stateful_input.as_of_date`
 
-`lotus-risk` calls lotus-core `core-snapshot` in `BASELINE` mode and computes concentration from the baseline portfolio state.
+`lotus-risk` calls lotus-core `core-snapshot` in `BASELINE` mode and computes concentration from
+the baseline portfolio state. Core requires the admitted tenant in both the `X-Tenant-Id` header
+and snapshot body; Risk binds both from one admitted authority and declares
+`consumer_system=lotus-risk` for policy and lineage. A conflicting internal body scope refuses
+before Core I/O.
 
 ### `simulation`
 
@@ -72,7 +76,10 @@ Caller provides:
 - `simulation_input.simulation_changes`
 - `Idempotency-Key` header when `simulation_input.simulation_changes[]` is non-empty
 
-`lotus-risk` orchestrates lotus-core simulation session APIs, then calls lotus-core `core-snapshot` in `SIMULATION` mode to evaluate baseline vs projected concentration.
+`lotus-risk` orchestrates lotus-core simulation session APIs, then calls lotus-core
+`core-snapshot` in `SIMULATION` mode to evaluate baseline vs projected concentration. The same
+admitted tenant binds the snapshot header and body; Risk does not derive it from simulation
+business fields.
 
 ## Source Evidence Metadata
 
