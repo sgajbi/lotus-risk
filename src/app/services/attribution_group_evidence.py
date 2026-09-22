@@ -195,6 +195,8 @@ def _parse_observation(
     *,
     group_key: str,
     window_dates: frozenset[dt.date],
+    period_start: dt.date,
+    period_end: dt.date,
     seen_dates: set[dt.date],
 ) -> GroupReturnObservation:
     if not isinstance(raw_point, Mapping):
@@ -204,7 +206,16 @@ def _parse_observation(
         raise _malformed(
             f"duplicate observation date {observation_date.isoformat()} for group {group_key!r}"
         )
-    if observation_date not in window_dates:
+    # Performance's daily contribution surface includes calendar weekends while
+    # the admitted returns request explicitly selects BUSINESS observations.
+    # A weekend inside the resolved contribution request period is valid producer
+    # data even when it precedes the first or follows the last BUSINESS return;
+    # it is not a covariance date. Missing weekdays are not guessed to be bank
+    # holidays; every other extra date remains a source-contract failure.
+    in_range_weekend = (
+        period_start <= observation_date <= period_end and observation_date.weekday() >= 5
+    )
+    if observation_date not in window_dates and not in_range_weekend:
         raise _malformed(
             f"observation outside the analysed window for group {group_key!r}: "
             f"{observation_date.isoformat()}"
@@ -227,6 +238,8 @@ def _parse_ready_series(
     group_key: str,
     expected_currency: str | None,
     window_dates: frozenset[dt.date],
+    period_start: dt.date,
+    period_end: dt.date,
 ) -> GroupReturnSeries:
     if row_evidence.get("return_basis") != GROUP_RETURN_BASIS:
         raise _malformed(f"READY evidence has unsupported return_basis for group {group_key!r}")
@@ -239,15 +252,22 @@ def _parse_ready_series(
     if not isinstance(raw_series, list) or not raw_series:
         raise _malformed(f"READY evidence without a series for group {group_key!r}")
 
+    if not window_dates:
+        raise _malformed(f"READY evidence without portfolio return dates for group {group_key!r}")
     observations: dict[dt.date, GroupReturnObservation] = {}
+    seen_dates: set[dt.date] = set()
     for raw_point in raw_series:
         observation = _parse_observation(
             raw_point,
             group_key=group_key,
             window_dates=window_dates,
-            seen_dates=set(observations),
+            period_start=period_start,
+            period_end=period_end,
+            seen_dates=seen_dates,
         )
-        observations[observation.observation_date] = observation
+        seen_dates.add(observation.observation_date)
+        if observation.observation_date in window_dates:
+            observations[observation.observation_date] = observation
 
     ordered = tuple(observations[key] for key in sorted(observations))
     return GroupReturnSeries(group_key=group_key, currency=currency, observations=ordered)
@@ -294,6 +314,8 @@ def parse_group_evidence(
     dimension_field: str,
     expected_currency: str | None,
     portfolio_returns: Sequence[ReturnPoint],
+    period_start: dt.date,
+    period_end: dt.date,
     expected_group_key_by_source_key: Mapping[str, str],
 ) -> GroupEvidencePack:
     """Validate one contribution response into evidence for one grouping dimension.
@@ -320,6 +342,8 @@ def parse_group_evidence(
         dimension_field=dimension_field,
         expected_currency=expected_currency,
         window_dates=window_dates,
+        period_start=period_start,
+        period_end=period_end,
         expected_group_key_by_source_key=expected_group_key_by_source_key,
     )
 
@@ -350,6 +374,8 @@ def _collect_row_evidence(
     dimension_field: str,
     expected_currency: str | None,
     window_dates: frozenset[dt.date],
+    period_start: dt.date,
+    period_end: dt.date,
     expected_group_key_by_source_key: Mapping[str, str],
 ) -> tuple[dict[str, GroupReturnSeries], list[str]]:
     flags: list[str] = []
@@ -393,6 +419,8 @@ def _collect_row_evidence(
             group_key=calculation_group_key,
             expected_currency=expected_currency,
             window_dates=window_dates,
+            period_start=period_start,
+            period_end=period_end,
         )
     # The map may contain a producer spelling alias for a Core group (notably
     # Performance's ``Unclassified`` for Core's ``UNKNOWN``).  Completeness is

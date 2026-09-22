@@ -93,6 +93,9 @@ Use `lotus-risk` directly or through gateway with these rules:
 1. preserve input-mode truth,
 2. do not offer unsupported workflow modes,
 3. treat partial historical attribution support as a real product limit,
+   including declared group-return unavailability; the BUSINESS portfolio-return calendar
+   excludes validated in-period weekend contribution points from covariance without treating
+   missing weekdays as holidays or zero returns,
 4. consume regime scenario-pack evaluation as source-owned stress evidence rather than
    reconstructing scenario shocks downstream,
 5. preserve regime scenario-pack contribution rows in proof packs and product surfaces when

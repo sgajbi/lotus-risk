@@ -173,9 +173,10 @@ is `ready` with the same zero count. Do not activate a risk-attribution surface 
 the supported scope is metric levels, group weights, freshness, the per-set basis, and this posture.
 Tracked in `lotus-risk#291`; empirical TOTAL_RISK/VOLATILITY consumes the delivered
 lotus-performance contribution contract, while ACTIVE_RISK remains explicitly degraded pending
-benchmark-group evidence. Differing base/report-currency `BASE_ONLY` contribution labels remain a
-producer defect tracked in [lotus-performance#527](https://github.com/sgajbi/lotus-performance/issues/527);
-Risk retains its currency-mismatch refusal and makes no FX or relabeling claim.
+benchmark-group evidence. Performance corrected differing base/report-currency `BASE_ONLY`
+contribution labels under [lotus-performance#527](https://github.com/sgajbi/lotus-performance/issues/527)
+on main `f597e4d`; joint Risk consumer acceptance remains a separate proof. Risk retains its
+currency-mismatch refusal and makes no FX or relabeling claim.
 
 The distinction that most often matters is `insufficient_observations` versus
 `insufficient_aligned_observations`: the first means there was not enough history, the second means
