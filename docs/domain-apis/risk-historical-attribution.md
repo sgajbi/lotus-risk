@@ -37,15 +37,21 @@ Provide decomposition of historical realized risk and active risk into transpare
     decomposition with `risk_basis="weight_proxy"` and a bounded
     `group_return_evidence:*` quality flag naming why (producer `UNAVAILABLE`, truncated
     hierarchy, Core group-universe incompleteness, calendar gap, reconciliation breach, or missing period). A date absent from a
-    group's evidence is unknown coverage, never zero: nothing is zero-filled or dropped, and an
-    explicit zero-weight observation is the only authoritative zero-exposure evidence.
+    group's evidence on a BUSINESS portfolio-return date is unknown coverage, never zero:
+    no calculation date is zero-filled or dropped, and an explicit zero-weight observation is
+    the only authoritative zero-exposure evidence. Performance's daily contribution output may
+    additionally contain calendar-weekend observations inside the resolved contribution-request
+    period, including its leading or trailing weekend outside the first/last BUSINESS return.
+    Risk validates those observations (including duplicate and non-finite refusals) but
+    does not feed them into business-date covariance. It does not infer a bank-holiday calendar:
+    an unlisted weekday or an observation outside the resolved window remains invalid.
     Core remains the authoritative universe: its missing/null `sector` or `asset_class` is the
     canonical `UNKNOWN` group, while Performance's documented
     `emit.include_unclassified=true` output uses `Unclassified` for that same missing source field.
     Risk accepts that producer spelling only as an alias for a Core `UNKNOWN` identity; a literal
     Core `Unclassified` category alongside `UNKNOWN` is ambiguous and a foreign producer category
     is refused as `UPSTREAM_INVALID_RESPONSE`, never relabeled, invented, or dropped. Malformed
-    evidence (non-finite values, duplicate dates, duplicate groups, out-of-window
+    evidence (non-finite values, duplicate dates, duplicate groups, unlisted weekdays, out-of-window
     observations, currency contradictions, malformed containers, or unsupported return/weight
     bases) refuses as `UPSTREAM_INVALID_RESPONSE` rather than silently falling back. `POSITION`
     and `ISSUER` `TOTAL_RISK` stay weight-proxy because their contribution identities cannot be
@@ -104,16 +110,15 @@ Provide decomposition of historical realized risk and active risk into transpare
   - canonical instrument and hierarchy mapping for grouping dimensions (issuer/sector/asset class)
   - benchmark composition, assignment, and classification data as the authoritative source behind lotus-performance's derived benchmark exposure context
 
-### Current producer handoff: differing base and reporting currencies
+### Differing base and reporting currencies
 
 Risk continues to refuse contribution evidence whose declared `group_return.currency` differs from
-the returns-series reporting currency. On lotus-performance main
-`8a1aeed08e770e439822d46c06d725eebef4221b`, a stateful `BASE_ONLY` contribution can select Core
-reporting-currency valuations but overwrite the resolved currency with the portfolio base currency,
-so USD economics for an EUR-base/USD-reporting portfolio are labeled EUR. This is tracked by the
-producer in [lotus-performance#527](https://github.com/sgajbi/lotus-performance/issues/527).
-Risk will not relabel the evidence or manufacture FX. Consumer acceptance for that differing-currency
-case requires the producer's actual contribution-workflow proof and a same-currency control.
+the returns-series reporting currency. Performance corrected its stateful `BASE_ONLY` producer
+labeling under [lotus-performance#527](https://github.com/sgajbi/lotus-performance/issues/527),
+merged to main `f597e4d116e69675ec24baa9ba3c938479d24834` with controlled HTTP producer proof.
+Risk will not relabel evidence or manufacture FX. That producer delivery is not a joint Risk
+consumer acceptance receipt for the differing-currency path; a source-pinned Risk consumer run
+with a same-currency control is still required before claiming that acceptance.
 
 ## Expected Output Structure
 

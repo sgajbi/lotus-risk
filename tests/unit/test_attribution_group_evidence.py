@@ -172,6 +172,9 @@ def _pack(
     expected_group_key_by_source_key: Mapping[str, str] | None = None,
     grouping_dimension: GroupingDimension = "SECTOR",
     dimension_field: str = "sector",
+    portfolio_returns: list[ReturnPoint] | None = None,
+    period_start: dt.date = DATES[0],
+    period_end: dt.date = DATES[-1],
 ) -> GroupEvidencePack:
     if expected_group_key_by_source_key is None:
         results = response.get("results_by_period")
@@ -191,7 +194,11 @@ def _pack(
         grouping_dimension=grouping_dimension,
         dimension_field=dimension_field,
         expected_currency=expected_currency,
-        portfolio_returns=_portfolio_points(),
+        portfolio_returns=portfolio_returns
+        if portfolio_returns is not None
+        else _portfolio_points(),
+        period_start=period_start,
+        period_end=period_end,
         expected_group_key_by_source_key=expected_group_key_by_source_key,
     )
 
@@ -343,6 +350,77 @@ def test_shuffled_valid_rows_and_series_reproduce_exact_outputs() -> None:
         )
     )
     assert reshuffled.results["WINDOW"] == baseline.results["WINDOW"]
+
+
+def test_in_window_weekend_producer_points_do_not_enter_business_covariance() -> None:
+    rows = _scenario_rows(A_EQUITY, A_FIXED)
+    baseline = _attribution_response(_pack(_contribution_response(rows)))
+    for row in rows:
+        row["group_return"]["series"].extend(
+            [
+                {"date": "2026-04-11", "return_pct": 9.0, "portfolio_weight_pct": 80.0},
+                {"date": "2026-04-12", "return_pct": -7.0, "portfolio_weight_pct": 20.0},
+            ]
+        )
+
+    pack = _pack(_contribution_response(rows))
+    assert pack.empirical
+    assert all(len(series.observations) == len(DATES) for series in pack.series_by_group.values())
+    assert _attribution_response(pack).results["WINDOW"] == baseline.results["WINDOW"]
+
+
+def test_resolved_period_boundary_weekends_are_not_calculated() -> None:
+    rows = _scenario_rows(A_EQUITY, A_FIXED)
+    baseline = _attribution_response(_pack(_contribution_response(rows)))
+    for row in rows:
+        row["group_return"]["series"].extend(
+            [
+                {"date": "2026-04-04", "return_pct": 8.0, "portfolio_weight_pct": 50.0},
+                {"date": "2026-04-05", "return_pct": -6.0, "portfolio_weight_pct": 30.0},
+                {"date": "2026-04-18", "return_pct": 9.0, "portfolio_weight_pct": 80.0},
+                {"date": "2026-04-19", "return_pct": -7.0, "portfolio_weight_pct": 20.0},
+            ]
+        )
+    pack = _pack(
+        _contribution_response(rows),
+        period_start=dt.date(2026, 4, 4),
+        period_end=dt.date(2026, 4, 19),
+    )
+    assert pack.empirical
+    assert _attribution_response(pack).results["WINDOW"] == baseline.results["WINDOW"]
+
+
+@pytest.mark.parametrize(
+    "bad_date",
+    ["2026-04-03", "2026-04-04", "2026-04-16", "2026-04-18"],
+)
+def test_out_of_window_producer_point_still_fails_closed(bad_date: str) -> None:
+    rows = _scenario_rows(A_EQUITY, A_FIXED)
+    rows[0]["group_return"]["series"].append(
+        {"date": bad_date, "return_pct": 1.0, "portfolio_weight_pct": 60.0}
+    )
+    with pytest.raises(UpstreamServiceError):
+        _pack(_contribution_response(rows))
+
+
+def test_unlisted_weekday_is_not_inferred_to_be_a_bank_holiday() -> None:
+    rows = _scenario_rows(A_EQUITY, A_FIXED)
+    business_returns = [point for point in _portfolio_points() if point.date != dt.date(2026, 4, 9)]
+    with pytest.raises(UpstreamServiceError):
+        _pack(_contribution_response(rows), portfolio_returns=business_returns)
+
+
+@pytest.mark.parametrize("mutation", ["duplicate", "nonfinite"])
+def test_discarded_weekend_points_still_require_valid_source_evidence(mutation: str) -> None:
+    rows = _scenario_rows(A_EQUITY, A_FIXED)
+    weekend = {"date": "2026-04-11", "return_pct": 1.0, "portfolio_weight_pct": 60.0}
+    rows[0]["group_return"]["series"].append(weekend)
+    if mutation == "duplicate":
+        rows[0]["group_return"]["series"].append(dict(weekend))
+    else:
+        weekend["return_pct"] = float("nan")
+    with pytest.raises(UpstreamServiceError):
+        _pack(_contribution_response(rows))
 
 
 def test_explicit_zero_weight_is_authoritative_zero_but_an_absent_date_is_unknown() -> None:

@@ -1,3 +1,5 @@
+from typing import Any, cast
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -627,9 +629,24 @@ def _empirical_contribution_response() -> dict[str, object]:
     }
 
 
-def test_historical_attribution_stateful_empirical_group_returns_end_to_end() -> None:
+@pytest.mark.parametrize(
+    ("as_of_date", "trailing_weekend_dates", "expected_supportability"),
+    [
+        ("2026-01-06", (), "ready"),
+        ("2026-01-11", ("2026-01-10", "2026-01-11"), "stale"),
+    ],
+)
+def test_historical_attribution_stateful_empirical_group_returns_end_to_end(
+    as_of_date: str, trailing_weekend_dates: tuple[str, ...], expected_supportability: str
+) -> None:
     performance_client = build_stateful_attribution_returns_client()
-    performance_client.contribution_response = _empirical_contribution_response()
+    contribution_response = cast(dict[str, Any], _empirical_contribution_response())
+    for row in contribution_response["results_by_period"]["EXPLICIT"]["levels"][0]["rows"]:
+        row["group_return"]["series"].extend(
+            {"date": day, "return_pct": 9.0, "portfolio_weight_pct": 80.0}
+            for day in ("2026-01-03", "2026-01-04", *trailing_weekend_dates)
+        )
+    performance_client.contribution_response = contribution_response
     core_client = RecordingHistoricalAttributionCoreClient()
     with override_app_runtime(
         lotus_performance_client=performance_client,
@@ -643,7 +660,7 @@ def test_historical_attribution_stateful_empirical_group_returns_end_to_end() ->
                 "input_mode": "stateful",
                 "stateful_input": {
                     "portfolio_id": "DEMO_DPM_EUR_001",
-                    "as_of_date": "2026-01-06",
+                    "as_of_date": as_of_date,
                     "periods": [{"type": "YTD", "name": "YTD"}],
                     "attribution_options": {
                         "attribution_types": ["TOTAL_RISK"],
@@ -666,8 +683,9 @@ def test_historical_attribution_stateful_empirical_group_returns_end_to_end() ->
         attribution_set["total_value"], abs=1e-12
     )
     # All calculated sets are empirical: the structural limitation stops composing.
-    assert body["metadata"]["calculation_supportability"]["state"] == "ready"
-    assert body["metadata"]["calculation_supportability"]["reason"] == "calculation_complete"
+    assert body["metadata"]["calculation_supportability"]["state"] == expected_supportability
+    if expected_supportability == "ready":
+        assert body["metadata"]["calculation_supportability"]["reason"] == "calculation_complete"
 
     # The evidence request went out with the admitted tenant, an EXPLICIT window over
     # the resolved period, one flat hierarchy level, and untruncated emission bounds.
@@ -680,7 +698,7 @@ def test_historical_attribution_stateful_empirical_group_returns_end_to_end() ->
     # The evidence window is the engine-resolved period window (YTD clamped to the
     # first portfolio observation), not the wider returns-series request window.
     assert payload["report_start_date"] == "2026-01-02"
-    assert payload["report_end_date"] == "2026-01-06"
+    assert payload["report_end_date"] == as_of_date
     assert payload["emit"]["threshold_weight"] == 0.0
     assert payload["stateful_input"]["metric_basis"] == "NET"
     assert body["metadata"]["upstream_request_fingerprints"].get(

@@ -247,6 +247,8 @@ async def fetch_group_evidence(
                 dimension_field=dimension_field,
                 expected_currency=stateful.reporting_currency,
                 portfolio_returns=windowed,
+                period_start=start_date,
+                period_end=end_date,
                 expected_group_key_by_source_key=expected_group_key_by_source_key,
             )
         evidence[period_name(period)] = per_dimension
