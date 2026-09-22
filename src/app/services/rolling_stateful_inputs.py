@@ -139,7 +139,7 @@ async def _resolve_rolling_risk_free_dependency(
     source_responses: StatefulSourceResponses,
     core_client: LotusCoreClientProtocol | None,
     portfolio_points: list[ReturnPoint],
-    correlation_id: str | None,
+    authority: DownstreamAuthority,
 ) -> list[ReturnPoint]:
     risk_free_dependency = await resolve_risk_free_dependency(
         include_risk_free=dependency_selection.include_risk_free,
@@ -148,7 +148,7 @@ async def _resolve_rolling_risk_free_dependency(
         reporting_currency=dependency_selection.reporting_currency,
         stateful=dependency_selection.stateful,
         portfolio_points=portfolio_points,
-        correlation_id=correlation_id,
+        authority=authority,
     )
     return risk_free_dependency.points
 
@@ -176,7 +176,7 @@ async def resolve_stateful_rolling_inputs(
         source_responses=source_resolution.source_responses,
         core_client=core_client,
         portfolio_points=source_resolution.parsed_series.portfolio_points,
-        correlation_id=authority.correlation_id,
+        authority=authority,
     )
     return _resolved_stateful_inputs(
         stateful=dependency_selection.stateful,

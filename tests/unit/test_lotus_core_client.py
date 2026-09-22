@@ -9,6 +9,7 @@ import httpx
 import pytest
 from prometheus_client import generate_latest
 
+from app.contracts.downstream_authority import DownstreamAuthority, TenantAuthorityError
 from app.integrations.lotus_core_client import (
     DEFAULT_LOTUS_CORE_BASE_URL,
     LotusCoreClient,
@@ -224,6 +225,71 @@ async def test_shared_core_transport_never_mix_tenants_between_snapshot_requests
 
 
 @pytest.mark.asyncio
+async def test_global_risk_free_reference_admits_each_caller_without_scoping_source_data() -> None:
+    observed: list[tuple[str, str, dict[str, Any]]] = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        tenant = request.headers.get("X-Tenant-Id")
+        if not tenant:
+            return httpx.Response(401, json={"error_code": "TENANT_CONTEXT_REQUIRED"})
+        observed.append((request.url.path, tenant, json.loads(request.content)))
+        return httpx.Response(200, json={"tenant_id": None, "points": []})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as pooled:
+        client = LotusCoreClient(base_url="http://core.local", http_client=pooled)
+        series_request = {"currency": "USD", "as_of_date": "2026-04-10"}
+        responses = await asyncio.gather(
+            client.get_risk_free_series(
+                request_payload=series_request,
+                authority=admitted_test_authority(tenant_id="tenant-a"),
+            ),
+            client.get_risk_free_series(
+                request_payload=series_request,
+                authority=admitted_test_authority(tenant_id="tenant-b"),
+            ),
+            client.get_risk_free_coverage(
+                currency="USD",
+                request_payload={"window": {"start_date": "2026-04-01", "end_date": "2026-04-10"}},
+                authority=admitted_test_authority(tenant_id="tenant-a"),
+            ),
+        )
+
+    assert list(responses) == [{"tenant_id": None, "points": []}] * 3
+    assert [(path, tenant) for path, tenant, _ in observed] == [
+        ("/integration/reference/risk-free-series", "tenant-a"),
+        ("/integration/reference/risk-free-series", "tenant-b"),
+        ("/integration/reference/risk-free-series/coverage", "tenant-a"),
+    ]
+    assert observed[0][2] == observed[1][2] == series_request
+    assert all("tenant_id" not in body for _, _, body in observed)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("operation", ["series", "coverage"])
+async def test_risk_free_reference_refuses_missing_caller_authority_before_core_io(
+    monkeypatch: pytest.MonkeyPatch,
+    operation: str,
+) -> None:
+    monkeypatch.setattr(httpx, "AsyncClient", _FakeAsyncClient)
+    _FakeAsyncClient.last_request = None
+    client = LotusCoreClient(base_url="http://core.local")
+    missing = cast(DownstreamAuthority, None)
+
+    with pytest.raises(TenantAuthorityError) as exc_info:
+        if operation == "series":
+            await client.get_risk_free_series(
+                request_payload={"currency": "USD"}, authority=missing
+            )
+        else:
+            await client.get_risk_free_coverage(
+                currency="USD", request_payload={"window": {}}, authority=missing
+            )
+
+    assert exc_info.value.code == "MISSING_TENANT_AUTHORITY"
+    assert _FakeAsyncClient.last_request is None
+
+
+@pytest.mark.asyncio
 async def test_client_supports_add_changes_and_snapshot_routes(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -263,14 +329,14 @@ async def test_client_supports_add_changes_and_snapshot_routes(
             "window": {"start_date": "2026-01-01", "end_date": "2026-01-04"},
             "frequency": "daily",
         },
-        correlation_id=None,
+        authority=admitted_test_authority(),
     )
     risk_free_coverage_response = await client.get_risk_free_coverage(
         currency="USD",
         request_payload={
             "window": {"start_date": "2026-01-01", "end_date": "2026-01-04"},
         },
-        correlation_id=None,
+        authority=admitted_test_authority(),
     )
 
     assert add_response == {"ok": True}
@@ -287,7 +353,7 @@ async def test_client_supports_add_changes_and_snapshot_routes(
         _FakeAsyncClient.last_request["url"]
         == "http://core.local/integration/reference/risk-free-series/coverage?currency=USD"
     )
-    assert "X-Tenant-Id" not in _FakeAsyncClient.last_request["headers"]
+    assert _FakeAsyncClient.last_request["headers"]["X-Tenant-Id"] == "tenant-a"
 
 
 @pytest.mark.asyncio

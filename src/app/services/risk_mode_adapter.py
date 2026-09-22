@@ -42,7 +42,7 @@ class LotusCoreClientProtocol(Protocol):
         self,
         *,
         request_payload: dict[str, Any],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, Any]: ...
 
 
@@ -192,7 +192,7 @@ async def _fetch_risk_free_payload(
     *,
     risk_free_request: dict[str, Any] | None,
     core_client: LotusCoreClientProtocol | None,
-    correlation_id: str | None,
+    authority: DownstreamAuthority,
 ) -> dict[str, Any] | None:
     if risk_free_request is None:
         return None
@@ -200,7 +200,7 @@ async def _fetch_risk_free_payload(
         raise ValueError("lotus-core client is required for stateful Sharpe risk-free sourcing")
     return await core_client.get_risk_free_series(
         request_payload=risk_free_request,
-        correlation_id=correlation_id,
+        authority=authority,
     )
 
 
@@ -223,11 +223,11 @@ async def _fetch_stateful_risk_source(
         source_response=source_response,
         portfolio_points=portfolio_points,
     )
-    # Risk-free rates are a global reference read; only correlation travels with them.
+    # Reference facts are global, but Core still admits the caller's tenant context.
     risk_free_response = await _fetch_risk_free_payload(
         risk_free_request=risk_free_request,
         core_client=core_client,
-        correlation_id=authority.correlation_id,
+        authority=authority,
     )
 
     benchmark_points: list[ReturnPoint] = []

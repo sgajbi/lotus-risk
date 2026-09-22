@@ -444,6 +444,7 @@ def test_risk_calculate_stateful_sharpe_uses_sourced_risk_free_returns() -> None
         "include_risk_free": False,
     }
     assert core_client.risk_free_calls
+    assert core_client.risk_free_calls[0]["tenant_id"] == "tenant-a"
     core_payload = core_client.risk_free_calls[0]["request_payload"]
     assert core_payload == {
         "currency": "USD",

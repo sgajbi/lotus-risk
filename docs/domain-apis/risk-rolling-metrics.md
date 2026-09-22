@@ -21,8 +21,9 @@ Provide windowed historical risk diagnostics for PB/WM portfolios with instituti
 - Caller supplies the admitted tenant in the `X-Tenant-Id` header: a stateful request without a
   non-blank value refuses `401 MISSING_TENANT_AUTHORITY` before any upstream call, and a trimmed
   value over 128 characters refuses `400 INVALID_TENANT_AUTHORITY`. The admitted value is forwarded
-  on every tenant-owned upstream request, including async polls; the lotus-core risk-free reference
-  read stays tenant-free.
+  on every tenant-owned upstream request, including async polls. Core also requires that admitted
+  caller header on risk-free series/coverage requests; the risk-free facts remain global and the
+  body carries no tenant filter. A missing caller context refuses before Core I/O.
 - Caller provides identifiers and options; lotus-risk sources portfolio and benchmark return series from lotus-performance.
 - lotus-risk resolves the longest required source window from the requested periods and sends an explicit `window` to lotus-performance unless `SI` is requested.
 - when `ROLLING_SHARPE` is requested, lotus-risk sources risk-free reference series from lotus-core.

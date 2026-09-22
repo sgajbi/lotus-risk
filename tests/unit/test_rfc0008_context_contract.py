@@ -45,6 +45,9 @@ def test_risk_analytics_contract_records_final_simulation_mode_decisions() -> No
     assert "reserved and not implemented" not in contract
     assert "concentration is the only simulation-enabled risk flow" in contract
     assert contract.count("simulation`: intentionally unsupported by contract") == 4
+    assert "Core admits the caller's `X-Tenant-Id` header" in contract
+    assert "reference facts\n  remain globally scoped" in contract
+    assert "a tenant-free reference read" not in contract
 
 
 def test_rfc0009_records_enterprise_risk_intelligence_plan() -> None:

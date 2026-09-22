@@ -69,16 +69,19 @@ async def execute_lotus_core_json_request(
     operation: str,
     json_payload: dict[str, Any],
     correlation_id: str | None,
+    authority: DownstreamAuthority | None = None,
     extra_headers: dict[str, str] | None = None,
 ) -> dict[str, Any]:
-    """Execute a lotus-core request against global reference data.
+    """Read global Core reference data with per-request caller admission when required.
 
-    Instrument enrichment and risk-free series/coverage are shared reference reads with no
-    tenant owner; adding tenant scope here would assert an ownership that does not exist.
-    Tenant-owned reads go through :func:`execute_lotus_core_tenant_scoped_request` instead.
+    A caller tenant header admits a request through Core enterprise security; it does not
+    tenant-scope reference facts or add a tenant field to the business payload. Tenant-owned
+    portfolio reads still use :func:`execute_lotus_core_tenant_scoped_request`.
     """
     headers: dict[str, str] = dict(extra_headers or {})
-    if correlation_id:
+    if authority is not None:
+        headers.update(downstream_authority_headers(authority))
+    elif correlation_id:
         headers["X-Correlation-Id"] = correlation_id
     return await _execute_with_optional_owned_client(
         profile=profile,

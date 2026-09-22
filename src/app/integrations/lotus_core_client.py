@@ -132,14 +132,14 @@ class LotusCoreClient:
         self,
         *,
         request_payload: dict[str, Any],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, Any]:
         return await execute_risk_free_series_request(
             profile=self._profile,
             client=self._http_client,
             base_url=self._base_url,
             request_payload=request_payload,
-            correlation_id=correlation_id,
+            authority=authority,
         )
 
     async def get_risk_free_coverage(
@@ -147,7 +147,7 @@ class LotusCoreClient:
         *,
         currency: str,
         request_payload: dict[str, Any],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, Any]:
         return await execute_risk_free_coverage_request(
             profile=self._profile,
@@ -155,5 +155,5 @@ class LotusCoreClient:
             base_url=self._base_url,
             currency=currency,
             request_payload=request_payload,
-            correlation_id=correlation_id,
+            authority=authority,
         )

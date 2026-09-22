@@ -292,6 +292,7 @@ def test_rolling_metrics_endpoint_stateful_uses_lotus_performance() -> None:
     assert payload["series_selection"]["include_benchmark"] is True
     assert payload["series_selection"]["include_risk_free"] is False
     assert core_client.risk_free_calls
+    assert core_client.risk_free_calls[0]["tenant_id"] == "tenant-a"
     body = response.json()
     assert body["input_mode"] == "stateful"
     assert body["metadata"]["requested_metrics"] == [

@@ -4,7 +4,10 @@ from typing import Any
 
 import httpx
 
-from app.contracts.downstream_authority import DownstreamAuthority
+from app.contracts.downstream_authority import (
+    DownstreamAuthority,
+    required_downstream_authority,
+)
 from app.integrations._downstream_client_profile import DownstreamClientProfile
 from app.integrations.lotus_core_transport import (
     execute_lotus_core_json_request,
@@ -177,8 +180,9 @@ async def execute_risk_free_series_request(
     client: httpx.AsyncClient | None,
     base_url: str,
     request_payload: dict[str, Any],
-    correlation_id: str | None,
+    authority: DownstreamAuthority,
 ) -> dict[str, Any]:
+    authority = required_downstream_authority(authority)
     return await execute_lotus_core_json_request(
         profile=profile,
         client=client,
@@ -187,7 +191,8 @@ async def execute_risk_free_series_request(
         path="/integration/reference/risk-free-series",
         operation=LOTUS_CORE_RISK_FREE_SERIES_OPERATION,
         json_payload=request_payload,
-        correlation_id=correlation_id,
+        correlation_id=authority.correlation_id,
+        authority=authority,
     )
 
 
@@ -198,8 +203,9 @@ async def execute_risk_free_coverage_request(
     base_url: str,
     currency: str,
     request_payload: dict[str, Any],
-    correlation_id: str | None,
+    authority: DownstreamAuthority,
 ) -> dict[str, Any]:
+    authority = required_downstream_authority(authority)
     return await execute_lotus_core_json_request(
         profile=profile,
         client=client,
@@ -208,7 +214,8 @@ async def execute_risk_free_coverage_request(
         path=f"/integration/reference/risk-free-series/coverage?currency={currency}",
         operation=LOTUS_CORE_RISK_FREE_COVERAGE_OPERATION,
         json_payload=request_payload,
-        correlation_id=correlation_id,
+        correlation_id=authority.correlation_id,
+        authority=authority,
     )
 
 

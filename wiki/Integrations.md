@@ -73,9 +73,11 @@ Stateful workflows depend on governed upstream inputs:
 Admitted tenant authority (`X-Tenant-Id`) travels with every **tenant-owned** upstream request —
 returns-series submit and its async status/result polls, benchmark exposure context, core
 snapshots, position analytics timeseries, and simulation session create/changes. Instrument
-enrichment and risk-free series/coverage are deliberately tenant-free: they are shared reference
-data with no tenant owner, and adding tenant scope there would assert an ownership that does not
-exist. Core snapshots also require the admitted tenant in the JSON body, identical to the header;
+enrichment and risk-free series/coverage remain globally scoped reference data with no tenant
+owner. Core enterprise admission still requires the admitted caller header for risk-free
+series/coverage, forwarded per request without a tenant body filter; this does not turn the
+reference facts into tenant-owned data. Core snapshots also require the admitted tenant in the
+JSON body, identical to the header;
 snapshots and position timeseries declare `consumer_system=lotus-risk` instead of inheriting a
 Performance default. A conflicting internal scope refuses before I/O. The discriminator is
 recorded at the transports and every client port.

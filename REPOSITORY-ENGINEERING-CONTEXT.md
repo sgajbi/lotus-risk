@@ -289,8 +289,11 @@ Boundary rules:
     tenant-owned lotus-performance/lotus-core request — returns-series submit and async polls,
     benchmark exposure context, core snapshot, position analytics timeseries, simulation session
     create/changes — derives per-request headers from the admitted `DownstreamAuthority`. Instrument
-    enrichment and risk-free series/coverage are deliberately tenant-free global reference reads;
-    do not add tenant scope to them without a lotus-core ownership decision. Pooled shared clients
+    enrichment and risk-free series/coverage remain globally scoped reference facts, not
+    tenant-owned source data. Core enterprise admission nevertheless requires the admitted caller
+    header for risk-free series/coverage: forward it per request from `DownstreamAuthority`, never
+    as a reference-data filter or body tenant. Do not add tenant data scope without a lotus-core
+    ownership decision. Pooled shared clients
     must never carry tenant default headers, and tenant must never be derived from a business
     payload. Core snapshot also requires `tenant_id` in its JSON body: bind it from that same
     admitted authority and identify `consumer_system=lotus-risk` for snapshots and position
