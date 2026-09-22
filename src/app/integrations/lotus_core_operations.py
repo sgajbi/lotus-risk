@@ -20,6 +20,27 @@ from app.integrations.upstream_operations import (
     LOTUS_CORE_SNAPSHOT_OPERATION,
 )
 
+RISK_CONSUMER_SYSTEM = "lotus-risk"
+
+
+def _risk_core_payload(request_payload: dict[str, Any]) -> dict[str, Any]:
+    """Identify Risk to Core without accepting a conflicting internal consumer."""
+    if (
+        "consumer_system" in request_payload
+        and request_payload["consumer_system"] != RISK_CONSUMER_SYSTEM
+    ):
+        raise ValueError("Core consumer disagrees with lotus-risk.")
+    return {**request_payload, "consumer_system": RISK_CONSUMER_SYSTEM}
+
+
+def _risk_core_snapshot_payload(
+    request_payload: dict[str, Any], authority: DownstreamAuthority
+) -> dict[str, Any]:
+    """Bind Core's body tenant to the same admitted authority as its header."""
+    if "tenant_id" in request_payload and request_payload["tenant_id"] != authority.tenant_id:
+        raise ValueError("Core snapshot tenant disagrees with admitted authority.")
+    return {**_risk_core_payload(request_payload), "tenant_id": authority.tenant_id}
+
 
 def build_simulation_session_payload(
     *,
@@ -104,7 +125,7 @@ async def execute_core_snapshot_request(
         method="POST",
         path=f"/integration/portfolios/{portfolio_id}/core-snapshot",
         operation=LOTUS_CORE_SNAPSHOT_OPERATION,
-        json_payload=request_payload,
+        json_payload=_risk_core_snapshot_payload(request_payload, authority),
         authority=authority,
     )
 
@@ -145,7 +166,7 @@ async def execute_position_analytics_timeseries_request(
         method="POST",
         path=f"/integration/portfolios/{portfolio_id}/analytics/position-timeseries",
         operation=LOTUS_CORE_POSITION_TIMESERIES_OPERATION,
-        json_payload=request_payload,
+        json_payload=_risk_core_payload(request_payload),
         authority=authority,
     )
 
