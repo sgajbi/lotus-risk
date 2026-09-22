@@ -123,7 +123,7 @@ class SimulationLotusCoreClient:
         self,
         *,
         request_payload: dict[str, object],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, object]:
         return {
             "currency": request_payload.get("currency", "USD"),
@@ -211,12 +211,13 @@ class RecordingLotusCoreReferenceClient:
         self,
         *,
         request_payload: dict[str, object],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, object]:
         self.risk_free_calls.append(
             {
                 "request_payload": request_payload,
-                "correlation_id": correlation_id,
+                "correlation_id": authority.correlation_id,
+                "tenant_id": authority.tenant_id,
             }
         )
         return self.risk_free_response
@@ -226,13 +227,14 @@ class RecordingLotusCoreReferenceClient:
         *,
         currency: str,
         request_payload: dict[str, object],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, object]:
         self.risk_free_coverage_calls.append(
             {
                 "currency": currency,
                 "request_payload": request_payload,
-                "correlation_id": correlation_id,
+                "correlation_id": authority.correlation_id,
+                "tenant_id": authority.tenant_id,
             }
         )
         return self.risk_free_coverage_response

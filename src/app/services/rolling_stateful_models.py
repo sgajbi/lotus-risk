@@ -30,7 +30,7 @@ class LotusCoreClientProtocol(Protocol):
         self,
         *,
         request_payload: dict[str, Any],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, Any]: ...
 
     async def get_risk_free_coverage(
@@ -38,7 +38,7 @@ class LotusCoreClientProtocol(Protocol):
         *,
         currency: str,
         request_payload: dict[str, Any],
-        correlation_id: str | None,
+        authority: DownstreamAuthority,
     ) -> dict[str, Any]: ...
 
 

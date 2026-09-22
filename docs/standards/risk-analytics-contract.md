@@ -95,7 +95,9 @@
   (`/integration/returns/series`, `input_mode=stateful`, empty `stateful_input` envelope,
   forwarding the admitted `X-Tenant-Id` on the submit and every async poll; lotus-performance
   enforces that tenant authority), sources risk-free observations directly from lotus-core when
-  Sharpe is requested (a tenant-free reference read), and computes with the same engine.
+  Sharpe is requested (Core admits the caller's `X-Tenant-Id` header, while the reference facts
+  remain globally scoped and the request body has no tenant filter), and computes with the same
+  engine.
 - `simulation`: intentionally unsupported by contract for `risk/calculate`; concentration is the only simulation-enabled risk flow.
 
 ## Drawdown Details

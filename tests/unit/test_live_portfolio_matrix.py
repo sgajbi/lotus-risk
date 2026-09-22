@@ -42,6 +42,17 @@ def test_live_validation_matrix_doc_lists_code_required_archetypes() -> None:
         assert archetype in matrix_doc
 
 
+def test_live_validation_guide_distinguishes_core_caller_admission_from_reference_scope() -> None:
+    matrix_doc = Path("docs/operations/live-risk-validation-matrix.md").read_text(encoding="utf-8")
+
+    assert (
+        "Core enterprise admission also requires the admitted `X-Tenant-Id` caller header"
+        in matrix_doc
+    )
+    assert "reference facts remain globally scoped" in matrix_doc
+    assert "risk-free reference read stays deliberately tenant-free" not in matrix_doc
+
+
 def test_issuer_active_risk_live_docs_match_characterization_suite() -> None:
     expected_phrase = "`POSITION`, `SECTOR`, `ASSET_CLASS`, and `ISSUER`"
     docs = [

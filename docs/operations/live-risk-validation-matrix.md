@@ -55,7 +55,9 @@ $env:LOTUS_RISK_LIVE_TENANT_ID = "tenant-sg"
 requests to Risk and tenant-owned Performance reads (returns-series submit and result polls,
 benchmark exposure context) carry it as `X-Tenant-Id`; enforcing producers refuse tenantless
 stateful input, so a wrong tenant fails visibly instead of silently reading another tenant's
-portfolio. The lotus-core risk-free reference read stays deliberately tenant-free.
+portfolio. Core enterprise admission also requires the admitted `X-Tenant-Id` caller header
+on risk-free series/coverage reads. Those reference facts remain globally scoped: Risk does
+not add a tenant filter to the request body or treat the header as reference-data ownership.
 
 Full matrix override:
 

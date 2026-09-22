@@ -4,6 +4,7 @@ from typing import Any, cast
 
 import pytest
 
+from app.contracts.downstream_authority import DownstreamAuthority
 from app.contracts.rolling import RollingStatefulInput
 from app.services.rolling_mode_adapter import (
     _build_stateful_source_request,
@@ -199,7 +200,7 @@ def test_stateful_adapter_ignores_coverage_probe_failures_for_missing_risk_free(
             *,
             currency: str,
             request_payload: dict[str, object],
-            correlation_id: str | None,
+            authority: DownstreamAuthority,
         ) -> dict[str, object]:
             raise UpstreamServiceError(
                 service="lotus-core",
@@ -244,7 +245,7 @@ def test_stateful_adapter_enriches_risk_free_coverage_details() -> None:
             currency="CHF",
             start_date=date(2026, 1, 2),
             end_date=date(2026, 1, 5),
-            correlation_id="corr-coverage",
+            authority=admitted_test_authority("corr-coverage"),
         )
     )
 

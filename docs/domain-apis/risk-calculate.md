@@ -36,6 +36,8 @@
   - when `SHARPE` is requested, lotus-risk requests risk-free observations directly from
     `lotus-core` using `/integration/reference/risk-free-series` and records a separate
     `lotus-core:/integration/reference/risk-free-series` upstream request fingerprint.
+    Core admits the per-request caller `X-Tenant-Id`, while the reference series remains
+    globally scoped with no tenant business filter.
   - sourced risk-free period returns are converted into the existing annual-rate risk-engine option so `metadata.risk_free_context.reason` becomes `ANNUAL_RATE_APPLIED`; missing sourced risk-free returns fail closed instead of silently using a zero-rate convention.
   - lotus-risk computes with the same risk engine used by stateless mode.
 

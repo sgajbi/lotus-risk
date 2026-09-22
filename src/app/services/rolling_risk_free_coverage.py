@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
+from app.contracts.downstream_authority import DownstreamAuthority
 from app.services.rolling_stateful_models import LotusCoreClientProtocol
 from app.upstream_errors import UpstreamServiceError
 
@@ -96,7 +97,7 @@ async def get_risk_free_coverage_details(
     currency: str,
     start_date: date,
     end_date: date,
-    correlation_id: str | None,
+    authority: DownstreamAuthority,
 ) -> dict[str, Any]:
     details: dict[str, Any] = {"risk_free_currency": currency}
     try:
@@ -106,7 +107,7 @@ async def get_risk_free_coverage_details(
                 start_date=start_date,
                 end_date=end_date,
             ),
-            correlation_id=correlation_id,
+            authority=authority,
         )
     except UpstreamServiceError:
         return details

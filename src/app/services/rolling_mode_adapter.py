@@ -45,14 +45,14 @@ async def _get_risk_free_coverage_details(
     currency: str,
     start_date: date,
     end_date: date,
-    correlation_id: str | None,
+    authority: DownstreamAuthority,
 ) -> dict[str, Any]:
     return await get_risk_free_coverage_details(
         core_client=core_client,
         currency=currency,
         start_date=start_date,
         end_date=end_date,
-        correlation_id=correlation_id,
+        authority=authority,
     )
 
 

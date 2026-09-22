@@ -120,10 +120,10 @@ async def _fetch_returns_and_risk_free_responses(
                 request_payload=source_payload,
                 authority=authority,
             ),
-            # Risk-free rates are a global reference read; only correlation travels.
+            # The reference facts are global; Core still admits the caller context.
             core_client.get_risk_free_series(
                 request_payload=risk_free_request,
-                correlation_id=authority.correlation_id,
+                authority=authority,
             ),
         )
         return source_response, risk_free_response

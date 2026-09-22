@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, NoReturn
 
+from app.contracts.downstream_authority import DownstreamAuthority
 from app.contracts.risk import ReturnPoint
 from app.contracts.rolling import RollingStatefulInput
 from app.services.core_risk_free_series import (
@@ -25,7 +26,7 @@ async def _risk_free_response_or_none(
     reporting_currency: str | None,
     stateful: RollingStatefulInput,
     portfolio_points: list[ReturnPoint],
-    correlation_id: str | None,
+    authority: DownstreamAuthority,
 ) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
     if not include_risk_free or risk_free_response is not None:
         return risk_free_response, None
@@ -42,7 +43,7 @@ async def _risk_free_response_or_none(
     )
     fetched_response = await core_client.get_risk_free_series(
         request_payload=risk_free_request,
-        correlation_id=correlation_id,
+        authority=authority,
     )
     return fetched_response, risk_free_request
 
@@ -55,7 +56,7 @@ async def _risk_free_points_or_raise(
     reporting_currency: str | None,
     annualization_basis: int,
     portfolio_points: list[ReturnPoint],
-    correlation_id: str | None,
+    authority: DownstreamAuthority,
 ) -> list[ReturnPoint]:
     risk_free_points = _risk_free_points_from_response(
         include_risk_free=include_risk_free,
@@ -73,7 +74,7 @@ async def _risk_free_points_or_raise(
         currency=reporting_currency,
         start_date=min(point.date for point in portfolio_points),
         end_date=max(point.date for point in portfolio_points),
-        correlation_id=correlation_id,
+        authority=authority,
     )
     _raise_missing_risk_free_points(coverage_details)
 
@@ -112,7 +113,7 @@ async def resolve_risk_free_dependency(
     reporting_currency: str | None,
     stateful: RollingStatefulInput,
     portfolio_points: list[ReturnPoint],
-    correlation_id: str | None,
+    authority: DownstreamAuthority,
 ) -> ResolvedRiskFreeDependency:
     risk_free_response, fallback_risk_free_request = await _risk_free_response_or_none(
         include_risk_free=include_risk_free,
@@ -121,7 +122,7 @@ async def resolve_risk_free_dependency(
         reporting_currency=reporting_currency,
         stateful=stateful,
         portfolio_points=portfolio_points,
-        correlation_id=correlation_id,
+        authority=authority,
     )
     return ResolvedRiskFreeDependency(
         request=source_responses.risk_free_request or fallback_risk_free_request,
@@ -132,7 +133,7 @@ async def resolve_risk_free_dependency(
             reporting_currency=reporting_currency,
             annualization_basis=stateful.rolling_options.annualization_basis,
             portfolio_points=portfolio_points,
-            correlation_id=correlation_id,
+            authority=authority,
         ),
     )
 
