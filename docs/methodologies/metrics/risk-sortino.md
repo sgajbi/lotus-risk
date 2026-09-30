@@ -96,6 +96,11 @@
 13. Populate metric value and details fields.
 
 ## Validation and Failure Behavior
+- For `WEEKLY` or `MONTHLY`, an empty calendar bucket bounded by supplied source buckets returns
+  `metrics.SORTINO.value = null` with `details.error` beginning `Missing return observations in
+  resampling buckets ending:`. The bucket is not converted to a zero return or counted as a sample.
+  An explicit zero is retained; leading/trailing partial buckets remain eligible because Risk does
+  not infer an unprovided daily market calendar or source cadence.
 - Fewer than two portfolio observations after period filtering, frequency compounding, and optional
   transformation return `metrics.SORTINO.value = null` with `details.error = "Insufficient data"`.
 - Empty downside set after MAR comparison returns `metrics.SORTINO.value = null` with

@@ -30,6 +30,7 @@ from app.services.risk.period_resolution import (
 
 RISK_METRICS_REQUIRING_RISK_FREE = {"SHARPE"}
 LOG_RETURN_UNDEFINED_ERROR = "Log returns are undefined for returns less than or equal to -100%"
+RESAMPLING_GAP_ERROR_PREFIX = "Missing return observations in resampling buckets ending"
 
 
 def _resolve_period(
@@ -70,17 +71,41 @@ def _resolve_period_bounds(
     )
 
 
-def _resample_returns(returns: pd.Series, frequency: str) -> pd.Series:
+def _resample_returns(
+    returns: pd.Series,
+    frequency: str,
+) -> pd.Series:
+    """Compound populated buckets and refuse gaps bounded by source observations.
+
+    An absent bucket between supplied observations cannot acquire the
+    mathematical identity return of zero. Leading and trailing partial buckets
+    remain eligible because Risk cannot infer an unprovided market calendar or
+    source cadence from a selected period boundary alone.
+    """
     if returns.empty:
         return returns
     if frequency == "DAILY":
         return returns
     rule = {"WEEKLY": "W-FRI", "MONTHLY": "ME"}[frequency]
-    resampled = returns.resample(rule).apply(lambda x: ((1 + x / 100).prod() - 1) * 100).dropna()
+
+    def _compound_populated_bucket(bucket: pd.Series) -> float:
+        observations = bucket.dropna()
+        if observations.empty:
+            return float("nan")
+        observation_values = observations.to_numpy(dtype=float)
+        return float((np.prod(1.0 + observation_values / 100.0) - 1.0) * 100.0)
+
+    resampled = returns.resample(rule).apply(_compound_populated_bucket)
     if isinstance(resampled, pd.DataFrame):
         if resampled.shape[1] != 1:
             raise TypeError(f"Unexpected resample result shape: {resampled.shape}")
         resampled = resampled.iloc[:, 0]
+    missing_bucket_ends = resampled.index[resampled.isna()]
+    if len(missing_bucket_ends):
+        formatted_bucket_ends = ", ".join(
+            pd.Timestamp(bucket_end).date().isoformat() for bucket_end in missing_bucket_ends
+        )
+        raise ValueError(f"{RESAMPLING_GAP_ERROR_PREFIX}: {formatted_bucket_ends}")
     return resampled
 
 
@@ -163,4 +188,5 @@ __all__ = [
     "_resolve_period",
     "_resolve_period_bounds",
     "_to_log_returns",
+    "RESAMPLING_GAP_ERROR_PREFIX",
 ]

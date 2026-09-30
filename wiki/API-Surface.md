@@ -99,6 +99,17 @@ the API accepts.
 Three metrics depend on benchmark inputs — **`BETA`, `TRACKING_ERROR` and `INFORMATION_RATIO`**.
 `VAR` does not: it is computed from the portfolio series alone.
 
+### Weekly and monthly source-bucket coverage
+
+For weekly/monthly risk metrics, an empty calendar bucket between supplied source buckets is missing
+evidence, not a measured flat return. The affected resampled metric returns `null` with
+`details.error` beginning `Missing return observations in resampling buckets ending:`; its
+supportability is degraded rather than ready. An explicitly supplied zero remains a real
+observation. A populated leading or trailing partial bucket remains eligible because this service
+does not invent a daily market calendar or source cadence from a period boundary. The same policy
+applies to both portfolio and benchmark series before benchmark alignment; drawdown retains its
+separate raw-return path.
+
 **The two surfaces handle a missing benchmark differently, and the difference is the HTTP contract:**
 
 | surface | behaviour without benchmark data |
