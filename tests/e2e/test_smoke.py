@@ -426,6 +426,34 @@ def test_e2e_drawdown_stateless_happy_path() -> None:
     assert body["results"]["YTD"]["summary"]["max_drawdown"] is not None
 
 
+def test_e2e_drawdown_retains_initial_loss_from_opening_wealth() -> None:
+    client = TestClient(app)
+    response = client.post(
+        "/analytics/risk/drawdown",
+        json={
+            "input_mode": "stateless",
+            "stateless_input": {
+                "scope": {"as_of_date": "2026-01-05", "net_or_gross": "NET"},
+                "periods": [{"type": "YTD", "name": "YTD"}],
+                "returns": [
+                    {"date": "2026-01-02", "value": -10.0},
+                    {"date": "2026-01-05", "value": 0.0},
+                ],
+            },
+            "analysis_options": {"include_underwater_series": True},
+        },
+    )
+
+    assert response.status_code == 200
+    period = response.json()["results"]["YTD"]
+    assert period["summary"]["max_drawdown"] == pytest.approx(-0.1)
+    assert period["summary"]["max_drawdown_peak_date"] is None
+    assert period["summary"]["is_recovered"] is False
+    assert [point["drawdown"] for point in period["underwater_series"]] == pytest.approx(
+        [-0.1, -0.1]
+    )
+
+
 def test_e2e_drawdown_average_drawdown_public_contract() -> None:
     client = TestClient(app)
     response = client.post(
