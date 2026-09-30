@@ -188,5 +188,4 @@ __all__ = [
     "_resolve_period",
     "_resolve_period_bounds",
     "_to_log_returns",
-    "RESAMPLING_GAP_ERROR_PREFIX",
 ]
