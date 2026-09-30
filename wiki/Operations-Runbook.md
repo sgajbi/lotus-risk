@@ -148,8 +148,14 @@ flowchart LR
     Supportability --> Gateway[Gateway source_supportability]
     Supportability --> Metrics[lotus_risk_calculation_supportability_total]
     Metrics --> Platform[Platform dashboards and alerts]
-    Gateway --> Workbench[Workbench risk panel support state]
+Gateway --> Workbench[Workbench risk panel support state]
 ```
+
+For stateful drawdown, inspect `metadata.source_returns_evidence` alongside supportability. It
+names the exact Performance calculation and source freshness/coverage that Risk accepted. Missing,
+malformed, unsupported, or request-mismatched qualification is an upstream-invalid response rather
+than a successful calculation; a stale or incomplete qualified source must remain visible as stale
+or degraded supportability downstream.
 
 When the question is "should this workflow be offered at all?" also check:
 

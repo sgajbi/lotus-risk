@@ -4,10 +4,13 @@ import math
 import os
 from collections.abc import Sequence
 from datetime import date
+from uuid import UUID
 
 import httpx
 import pytest
 
+from app.contracts.risk import RiskRequestPeriod
+from app.services.stateful_returns_request import build_stateful_returns_series_request
 from tests.support.live_portfolio_matrix import (
     live_as_of_date,
     live_portfolio_id,
@@ -65,27 +68,22 @@ def _business_day_returns(rows: list[tuple[str, float]]) -> list[tuple[str, floa
     ]
 
 
+def _returns_request() -> dict[str, object]:
+    """Mirror the governed request Risk sends to Performance for this drawdown."""
+    return build_stateful_returns_series_request(
+        portfolio_id=PORTFOLIO_ID,
+        as_of_date=date.fromisoformat(AS_OF_DATE),
+        periods=[RiskRequestPeriod(type="YTD", name="YTD")],
+        frequency="DAILY",
+        metric_basis="NET",
+        reporting_currency=None,
+        include_benchmark=True,
+        include_risk_free=False,
+        missing_data_policy="FAIL_FAST",
+    )
+
+
 def test_live_stateful_drawdown_reconciles_with_upstream_returns() -> None:
-    returns_payload = {
-        "portfolio_id": PORTFOLIO_ID,
-        "as_of_date": AS_OF_DATE,
-        "window": {"mode": "RELATIVE", "period": "YTD"},
-        "frequency": "DAILY",
-        "metric_basis": "NET",
-        "reporting_currency": None,
-        "series_selection": {
-            "include_portfolio": True,
-            "include_benchmark": True,
-            "include_risk_free": False,
-        },
-        "data_policy": {
-            "missing_data_policy": "FAIL_FAST",
-            "fill_method": "NONE",
-            "calendar_policy": "BUSINESS",
-        },
-        "input_mode": "stateful",
-        "stateful_input": {},
-    }
     drawdown_payload = {
         "input_mode": "stateful",
         "stateful_input": {
@@ -109,7 +107,7 @@ def test_live_stateful_drawdown_reconciles_with_upstream_returns() -> None:
 
     upstream_body = fetch_live_returns_series(
         base_url=PERFORMANCE_BASE_URL,
-        request_payload=returns_payload,
+        request_payload=_returns_request(),
     )
     with httpx.Client(timeout=30.0) as client:
         drawdown_response = client.post(
@@ -158,3 +156,36 @@ def test_live_stateful_drawdown_reconciles_with_upstream_returns() -> None:
     )
     assert drawdown_body["metadata"]["include_benchmark"] is True
     assert drawdown_body["metadata"]["include_underwater_series"] is True
+
+    source_evidence = drawdown_body["metadata"]["source_returns_evidence"]
+    assert source_evidence["source_service"] == upstream_body["source_service"]
+    assert source_evidence["contract_version"] == upstream_body["contract_version"] == "v1"
+    assert UUID(source_evidence["calculation_id"])
+    assert source_evidence["input_fingerprint"] == upstream_body["provenance"]["input_fingerprint"]
+    assert source_evidence["calculation_hash"] == upstream_body["provenance"]["calculation_hash"]
+    assert source_evidence["freshness"] == upstream_body["diagnostics"]["freshness"]
+    assert (
+        source_evidence["requested_points"]
+        == upstream_body["diagnostics"]["coverage"]["requested_points"]
+    )
+    assert (
+        source_evidence["returned_points"]
+        == upstream_body["diagnostics"]["coverage"]["returned_points"]
+    )
+    assert (
+        source_evidence["missing_points"]
+        == upstream_body["diagnostics"]["coverage"]["missing_points"]
+    )
+    assert source_evidence["coverage_ratio"] == pytest.approx(
+        upstream_body["diagnostics"]["coverage"]["coverage_ratio"], abs=1e-12
+    )
+    supportability = drawdown_body["metadata"]["calculation_supportability"]
+    expected_state = (
+        "stale"
+        if source_evidence["freshness"] == "stale"
+        else "degraded"
+        if source_evidence["missing_points"]
+        else "ready"
+    )
+    assert supportability["state"] == expected_state
+    assert supportability["freshness_bucket"] == source_evidence["freshness"]

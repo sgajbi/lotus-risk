@@ -11,6 +11,7 @@ from app.services.drawdown_mode_adapter import (
 )
 from tests.support.downstream_authority import admitted_test_authority
 from tests.support.lotus_performance_fakes import RecordingLotusPerformanceClient
+from tests.support.returns_series_payloads import build_returns_series_response
 
 
 def _stateful() -> DrawdownStatefulInput:
@@ -27,18 +28,11 @@ def _stateful() -> DrawdownStatefulInput:
 
 def test_drawdown_stateful_adapter_happy_path() -> None:
     client = RecordingLotusPerformanceClient(
-        response_payload={
-            "series": {
-                "portfolio_returns": [
-                    {"date": "2026-01-02", "return_value": "0.0100"},
-                    {"date": "2026-01-03", "return_value": "-0.0200"},
-                ],
-                "benchmark_returns": [
-                    {"date": "2026-01-02", "return_value": "0.0060"},
-                    {"date": "2026-01-03", "return_value": "-0.0100"},
-                ],
-            }
-        }
+        response_payload=build_returns_series_response(
+            portfolio_returns=(("2026-01-02", "0.0100"), ("2026-01-03", "-0.0200")),
+            benchmark_returns=(("2026-01-02", "0.0060"), ("2026-01-03", "-0.0100")),
+            as_of_date="2026-01-08",
+        )
     )
     response = asyncio.run(
         calculate_drawdown_stateful(
@@ -72,6 +66,8 @@ def test_drawdown_stateful_adapter_happy_path() -> None:
     assert list(response.metadata.upstream_request_fingerprints) == [
         "lotus-performance:/integration/returns/series"
     ]
+    assert response.metadata.source_returns_evidence is not None
+    assert response.metadata.source_returns_evidence.freshness == "current"
 
 
 def test_drawdown_stateful_adapter_requires_series_payload() -> None:
@@ -102,15 +98,11 @@ def test_drawdown_stateful_adapter_requires_portfolio_returns() -> None:
 
 def test_drawdown_stateful_adapter_requires_benchmark_when_policy_requires() -> None:
     client = RecordingLotusPerformanceClient(
-        response_payload={
-            "series": {
-                "portfolio_returns": [
-                    {"date": "2026-01-02", "return_value": "0.0100"},
-                    {"date": "2026-01-03", "return_value": "-0.0200"},
-                ],
-                "benchmark_returns": [],
-            }
-        }
+        response_payload=build_returns_series_response(
+            portfolio_returns=(("2026-01-02", "0.0100"), ("2026-01-03", "-0.0200")),
+            benchmark_returns=(),
+            as_of_date="2026-01-08",
+        )
     )
     with pytest.raises(ValueError, match="no benchmark returns"):
         asyncio.run(
@@ -156,17 +148,16 @@ def test_drawdown_stateful_adapter_rejects_invalid_portfolio_return_value() -> N
 
 def test_drawdown_stateful_adapter_skips_malformed_rows_and_allows_optional_benchmark() -> None:
     client = RecordingLotusPerformanceClient(
-        response_payload={
-            "series": {
-                "portfolio_returns": [
-                    "bad-row",
-                    {"date": 123, "return_value": "0.0100"},
-                    {"date": "2026-01-02", "return_value": "0.0100"},
-                ],
-                "benchmark_returns": None,
-            }
-        }
+        response_payload=build_returns_series_response(
+            portfolio_returns=(("2026-01-02", "0.0100"),),
+            as_of_date="2026-01-02",
+        )
     )
+    client.response_payload["series"]["portfolio_returns"] = [
+        "bad-row",
+        {"date": 123, "return_value": "0.0100"},
+        {"date": "2026-01-02", "return_value": "0.0100"},
+    ]
     response = asyncio.run(
         calculate_drawdown_stateful(
             DrawdownStatefulInput.model_validate(
@@ -188,3 +179,56 @@ def test_drawdown_stateful_adapter_skips_malformed_rows_and_allows_optional_benc
     assert "YTD" in response.results
     assert response.metadata.include_benchmark is False
     assert response.metadata.missing_benchmark_policy == "IGNORE"
+
+
+def test_drawdown_stateful_preserves_changed_performance_identity_for_same_numbers() -> None:
+    common_rows = (("2026-01-02", "0.0100"), ("2026-01-05", "-0.0200"))
+    baseline = asyncio.run(
+        calculate_drawdown_stateful(
+            DrawdownStatefulInput.model_validate(
+                {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-05",
+                    "periods": [{"type": "YTD"}],
+                }
+            ),
+            analysis_options=DrawdownAnalysisOptions.model_validate({}),
+            performance_client=RecordingLotusPerformanceClient(
+                response_payload=build_returns_series_response(portfolio_returns=common_rows)
+            ),
+            authority=admitted_test_authority(),
+        )
+    )
+    corrected = asyncio.run(
+        calculate_drawdown_stateful(
+            DrawdownStatefulInput.model_validate(
+                {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-05",
+                    "periods": [{"type": "YTD"}],
+                }
+            ),
+            analysis_options=DrawdownAnalysisOptions.model_validate({}),
+            performance_client=RecordingLotusPerformanceClient(
+                response_payload=build_returns_series_response(
+                    portfolio_returns=common_rows,
+                    calculation_id="00000000-0000-4000-8000-000000000002",
+                    calculation_hash="sha256:" + "3" * 64,
+                )
+            ),
+            authority=admitted_test_authority(),
+        )
+    )
+
+    assert baseline.metadata.request_fingerprint == corrected.metadata.request_fingerprint
+    assert baseline.results == corrected.results
+    assert baseline.metadata.source_returns_evidence is not None
+    assert corrected.metadata.source_returns_evidence is not None
+    assert (
+        baseline.metadata.source_returns_evidence.calculation_id
+        != corrected.metadata.source_returns_evidence.calculation_id
+    )
+    assert (
+        baseline.metadata.source_returns_evidence.calculation_hash
+        != corrected.metadata.source_returns_evidence.calculation_hash
+    )

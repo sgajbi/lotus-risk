@@ -20,7 +20,10 @@
 - Stateless mode: caller-provided `stateless_input.returns[]`.
 - Stateful mode: `lotus-risk` sources `series.portfolio_returns` from
   `lotus-performance` `/integration/returns/series` through the governed drawdown stateful
-  adapter.
+  adapter. Before accepting the series, Risk validates the supported source contract version,
+  stateful provenance, requested portfolio/date/frequency/basis identity, and reconciled source
+  coverage; it retains the source calculation ID, input fingerprint, calculation hash, freshness,
+  and coverage in `metadata.source_returns_evidence`.
 - `lotus-risk` owns the maximum-drawdown calculation after dated portfolio return series are
   resolved. It does not source portfolio returns from Workbench, Gateway, or manage.
 
@@ -98,6 +101,10 @@
   `total_days` only.
 - `analysis_options.top_n_episodes` and `analysis_options.minimum_episode_depth_bps` do not alter
   `summary.max_drawdown`.
+- A malformed, unsupported, or identity-mismatched Performance qualification is refused as an
+  upstream-invalid response before drawdown math. A stale qualified source produces stale
+  supportability; qualified missing source points produce degraded supportability. Neither state
+  changes the formula or converts source incompleteness into a locally current calculation.
 
 ## Configuration Options
 - `analysis_options.duration_unit`

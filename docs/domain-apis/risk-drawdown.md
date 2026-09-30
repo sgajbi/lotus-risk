@@ -39,6 +39,14 @@
     (`/integration/returns/series`, `input_mode=stateful`, empty `stateful_input` envelope),
     forwarding the admitted `X-Tenant-Id` on the submit and on every async status/result poll;
     lotus-performance enforces that tenant authority
+  - before calculating, lotus-risk validates that the returned Performance evidence is the
+    supported `v1` stateful response for the requested portfolio, business date, daily frequency,
+    and metric basis. It preserves Performance's calculation ID, input fingerprint, calculation
+    hash, freshness, and reconciled coverage rather than treating Risk's upstream-request
+    fingerprint as response identity
+  - malformed, unsupported, or mismatched source qualification refuses as
+    `UPSTREAM_INVALID_RESPONSE`; stale source evidence publishes `stale`, while incomplete source
+    coverage publishes `degraded` supportability even when the received numbers can be calculated
   - lotus-risk computes drawdown analytics on sourced series
 
 ### Simulation
@@ -87,6 +95,9 @@
   - `methodology_version`
   - applied analysis options
   - applied benchmark policy
+  - `source_returns_evidence` for stateful mode: Performance calculation identity, source
+    freshness, and reconciled requested/returned/missing coverage. It is `null` for stateless
+    caller-supplied returns.
 
 ## Upstream / Downstream Contracts
 

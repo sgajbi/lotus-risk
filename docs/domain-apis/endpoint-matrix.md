@@ -21,7 +21,7 @@ Status meanings:
 | `GET /ops` | Operational | consolidated operational diagnostics | operational | operational | runtime readiness + canonical dependency configuration and optional override status for lotus-core and lotus-performance | Dependency rows are configured-only by default, not live reachability probes |
 | `GET /integration/capabilities` | Integration | capability/workflow publication | integration metadata | full | internal typed constants and support metadata | query shaping by consumer/tenant is still intentionally absent |
 | `POST /analytics/risk/calculate` | Domain analytics | portfolio risk metrics | `stateless`, `stateful` | full | lotus-performance for portfolio/benchmark returns; direct lotus-core risk-free series when Sharpe is requested | simulation is intentionally unsupported |
-| `POST /analytics/risk/drawdown` | Domain analytics | realized drawdown analytics | `stateless`, `stateful` | full | stateful return sourcing via lotus-performance | simulation is intentionally unsupported |
+| `POST /analytics/risk/drawdown` | Domain analytics | realized drawdown analytics | `stateless`, `stateful` | full | stateful return sourcing via lotus-performance, with producer calculation identity, freshness, and coverage retained in response metadata | simulation is intentionally unsupported; source-qualified live producer acceptance remains separately evidenced |
 | `POST /analytics/risk/rolling-metrics` | Domain analytics | rolling historical risk diagnostics | `stateless`, `stateful` | full | lotus-performance for portfolio/benchmark returns; lotus-core for risk-free series and reporting-currency resolution | simulation is intentionally unsupported; broader enterprise archetype coverage still requires additional seeded live portfolios beyond the canonical baseline |
 | `POST /analytics/risk/historical-attribution` | Domain analytics | historical risk and active-risk attribution decomposition | `stateless`, `stateful` | partial | stateless caller-supplied returns/exposures; stateful sourcing uses lotus-performance for portfolio/benchmark returns and benchmark exposure context, and lotus-core for portfolio exposure history and instrument enrichment | stateful `ACTIVE_RISK` supports `POSITION`, `SECTOR`, `ASSET_CLASS`, and `ISSUER`; simulation is intentionally unsupported |
 | `POST /analytics/risk/concentration` | Domain analytics | concentration analytics and HHI metrics | `stateless`, `stateful`, `simulation` | full | lotus-core snapshot and simulation session contracts | non-empty simulation changes require `Idempotency-Key`; lotus-core owns replay/conflict enforcement for the propagated key and change-set fingerprint |
@@ -74,6 +74,8 @@ portfolio IDs and endpoint-specific evidence before they are counted as validate
 All analytics endpoint metadata now includes `lineage_version`, `request_fingerprint`,
 `source_services`, and `upstream_request_fingerprints`. Endpoint-specific metadata remains
 responsible for methodology version, observation counts, alignment policy, and coverage diagnostics.
+Stateful drawdown also exposes Performance's qualified response identity, freshness, and coverage
+as `source_returns_evidence`; it is not interchangeable with the upstream-request fingerprint.
 
 See `docs/domain-apis/risk-audit-lineage.md`.
 

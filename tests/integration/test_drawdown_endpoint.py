@@ -114,6 +114,110 @@ def test_drawdown_endpoint_stateful_uses_lotus_performance() -> None:
     assert body["results"]["YTD"]["relative_to_benchmark_context"]["applied"] is True
     assert body["results"]["YTD"]["relative_to_benchmark_context"]["reason"] == "APPLIED"
     assert body["results"]["YTD"]["relative_to_benchmark"]["time_under_water_days"] >= 0
+    assert body["metadata"]["source_returns_evidence"] == {
+        "source_service": "lotus-performance",
+        "calculation_id": "00000000-0000-4000-8000-000000000001",
+        "contract_version": "v1",
+        "input_fingerprint": "sha256:" + "1" * 64,
+        "calculation_hash": "sha256:" + "2" * 64,
+        "freshness": "current",
+        "requested_points": 3,
+        "returned_points": 3,
+        "missing_points": 0,
+        "coverage_ratio": 1.0,
+    }
+
+
+def test_drawdown_endpoint_stateful_preserves_stale_producer_qualification() -> None:
+    recorder = RecordingLotusPerformanceClient(
+        response_payload=build_returns_series_response(
+            portfolio_returns=JAN_2026_PORTFOLIO_RETURNS,
+            freshness="stale",
+        )
+    )
+    with override_app_runtime(lotus_performance_client=recorder):
+        response = TestClient(app).post(
+            "/analytics/risk/drawdown",
+            headers={"X-Tenant-Id": "tenant-a"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-06",
+                    "periods": [{"type": "YTD"}],
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    supportability = response.json()["metadata"]["calculation_supportability"]
+    assert supportability["state"] == "stale"
+    assert supportability["reason"] == "stale_source_observations"
+    assert supportability["freshness_bucket"] == "stale"
+    assert response.json()["metadata"]["source_returns_evidence"]["freshness"] == "stale"
+
+
+def test_drawdown_endpoint_stateful_preserves_partial_producer_qualification() -> None:
+    recorder = RecordingLotusPerformanceClient(
+        response_payload=build_returns_series_response(
+            portfolio_returns=JAN_2026_PORTFOLIO_RETURNS[:2],
+            as_of_date="2026-01-06",
+            requested_points=3,
+            returned_points=2,
+            missing_points=1,
+        )
+    )
+    with override_app_runtime(lotus_performance_client=recorder):
+        response = TestClient(app).post(
+            "/analytics/risk/drawdown",
+            headers={"X-Tenant-Id": "tenant-a"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-06",
+                    "periods": [{"type": "YTD"}],
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    supportability = response.json()["metadata"]["calculation_supportability"]
+    assert supportability["state"] == "degraded"
+    assert supportability["reason"] == "calculation_quality_issue"
+    assert supportability["degraded_metric_count"] == 0
+    assert response.json()["metadata"]["source_returns_evidence"]["missing_points"] == 1
+
+
+def test_drawdown_endpoint_stateful_rejects_missing_source_qualification() -> None:
+    recorder = RecordingLotusPerformanceClient(
+        response_payload={
+            "series": {
+                "portfolio_returns": [
+                    {"date": "2026-01-02", "return_value": "0.01"},
+                ]
+            }
+        }
+    )
+    with override_app_runtime(lotus_performance_client=recorder):
+        response = TestClient(app).post(
+            "/analytics/risk/drawdown",
+            headers={"X-Tenant-Id": "tenant-a", "X-Correlation-Id": "corr-source-missing"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-06",
+                    "periods": [{"type": "YTD"}],
+                },
+            },
+        )
+
+    assert response.status_code == 502
+    error = response.json()["error"]
+    assert error["code"] == "UPSTREAM_INVALID_RESPONSE"
+    assert error["details"]["field"] == "source_qualification"
+    assert error["correlation_id"] == "corr-source-missing"
 
 
 def test_drawdown_endpoint_maps_malformed_upstream_return_dates_to_502() -> None:

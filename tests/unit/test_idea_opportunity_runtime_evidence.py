@@ -14,6 +14,7 @@ from app.contracts.downstream_authority import DownstreamAuthority
 from app.evidence.idea_opportunity_constants import (
     CANONICAL_AS_OF_DATE,
     CANONICAL_CONTRACT_PROVENANCE,
+    CANONICAL_PORTFOLIO_ID,
     CONSUMER_BLOCKERS_SATISFIED,
     REMAINING_CERTIFICATION_BLOCKERS,
     SCHEMA_VERSION,
@@ -82,6 +83,8 @@ def _execute(route: str, payload: Mapping[str, Any]) -> tuple[int, Mapping[str, 
         response_payload=build_returns_series_response(
             portfolio_returns=_CANONICAL_RETURN_ROWS,
             benchmark_returns=_CANONICAL_BENCHMARK_ROWS,
+            portfolio_id=CANONICAL_PORTFOLIO_ID,
+            as_of_date=CANONICAL_AS_OF_DATE.isoformat(),
         )
     )
     core_client = _CanonicalCoreClient(

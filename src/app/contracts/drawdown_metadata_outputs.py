@@ -6,6 +6,7 @@ from pydantic import Field
 
 from app.contracts.audit import AuditMetadataFields
 from app.contracts.risk import RiskCalculationSupportability
+from app.contracts.stateful_returns_source_evidence import StatefulReturnsSourceEvidence
 
 
 class DrawdownMetadata(AuditMetadataFields):
@@ -89,6 +90,27 @@ class DrawdownMetadata(AuditMetadataFields):
                 "degraded_metric_count": 0,
                 "empty_period_count": 0,
                 "evaluated_period_count": 1,
+            }
+        },
+    )
+    source_returns_evidence: StatefulReturnsSourceEvidence | None = Field(
+        default=None,
+        description=(
+            "Validated lotus-performance returns-series identity, freshness, and coverage for "
+            "stateful drawdown. Null for caller-supplied stateless returns."
+        ),
+        json_schema_extra={
+            "example": {
+                "source_service": "lotus-performance",
+                "calculation_id": "00000000-0000-4000-8000-000000000001",
+                "contract_version": "v1",
+                "input_fingerprint": "sha256:" + "1" * 64,
+                "calculation_hash": "sha256:" + "2" * 64,
+                "freshness": "current",
+                "requested_points": 65,
+                "returned_points": 65,
+                "missing_points": 0,
+                "coverage_ratio": 1.0,
             }
         },
     )
