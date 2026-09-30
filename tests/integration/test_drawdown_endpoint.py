@@ -1,5 +1,5 @@
-from fastapi.testclient import TestClient
 import pytest
+from fastapi.testclient import TestClient
 
 from app.main import app
 from app.observability_contracts import RISK_CALCULATION_SUPPORTABILITY_METRIC_LABELS
