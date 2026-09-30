@@ -111,6 +111,12 @@
     auditability.
 
 ## Validation and Failure Behavior
+- For `WEEKLY` or `MONTHLY`, an empty bucket bounded by supplied source buckets in either the
+  portfolio or benchmark series returns `metrics.INFORMATION_RATIO.value = null` with
+  `details.error` beginning `Missing return observations in resampling buckets ending:`. The
+  bucket is not converted to a zero return or aligned sample. Explicit zero returns remain
+  observations; leading/trailing partial buckets remain eligible because Risk does not infer an
+  unprovided daily market calendar or source cadence.
 - Missing benchmark returns for `INFORMATION_RATIO` return `metrics.INFORMATION_RATIO.value = null`
   with `details.error = "Benchmark returns required for benchmark-dependent metric"`.
 - Fewer than two aligned observations after period filtering, resampling, and optional

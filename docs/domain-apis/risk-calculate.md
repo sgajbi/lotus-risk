@@ -145,6 +145,22 @@ the scalar detail's `peak_date`, `days_to_trough`, and peak-based `time_under_wa
 `null`; Risk does not manufacture a return date. Returns below `-100%` are retained as explicit
 negative-equity/leveraged paths rather than silently reset or treated as an inferred liquidation.
 
+## Weekly and Monthly Source-Bucket Coverage
+
+For `WEEKLY` and `MONTHLY` non-drawdown metrics, Risk compounds only buckets that contain at least
+one supplied source return. An empty bucket bounded by earlier and later source buckets fails the
+affected resampled metric closed with `details.error` beginning `Missing return observations in
+resampling buckets ending:`; it cannot become an observed `0%` return or increase estimator sample
+size. The response's `portfolio_observation_count` remains the supplied raw count, while a
+successful metric's own `details.observation_count` is its actual post-resampling count.
+
+An explicit supplied `0%` return is a real observation and is retained. A leading or trailing
+partial bucket is eligible when it contains an observation: Risk does not invent a daily market
+calendar or source cadence from a requested period boundary. The bucket check precedes optional
+log transformation and estimator sufficiency. Benchmark-dependent metrics apply the same rule to
+both portfolio and benchmark series before alignment. `DRAWDOWN` continues to use the raw dated
+portfolio series and is not made invalid by this statistical-series qualification.
+
 ## Alignment Assessment
 
 - Bounded context ownership: aligned (`lotus-risk` is correct owner per RFC-0065).

@@ -105,6 +105,12 @@
     expected-shortfall observation count, and horizon-scaled expected shortfall.
 
 ## Validation and Failure Behavior
+- For `WEEKLY` or `MONTHLY`, an empty calendar bucket bounded by supplied source buckets returns
+  `metrics.VAR.value = null` with `details.error` beginning `Missing return observations in
+  resampling buckets ending:`. The bucket is not converted to a zero return or counted as a sample.
+  An explicit zero is retained; leading/trailing partial buckets remain eligible because Risk does
+  not infer an unprovided daily market calendar or source cadence. This qualification is applied
+  before the method-specific estimator sufficiency checks.
 - Fewer than two portfolio observations after period filtering, frequency compounding, and optional
   transformation return `metrics.VAR.value = null` with `details.error = "Insufficient data"`.
 - Unsupported methods are rejected by request validation; the engine also fails closed with

@@ -92,6 +92,11 @@
     `details.annualized_excess_return` for auditability.
 
 ## Validation and Failure Behavior
+- For `WEEKLY` or `MONTHLY`, an empty calendar bucket bounded by supplied source buckets returns
+  `metrics.SHARPE.value = null` with `details.error` beginning `Missing return observations in
+  resampling buckets ending:`. The bucket is not converted to a zero return or counted as a sample.
+  An explicit zero is retained; leading/trailing partial buckets remain eligible because Risk does
+  not infer an unprovided daily market calendar or source cadence.
 - Fewer than two observations after period filtering, resampling, and optional transformation
   returns `metrics.SHARPE.value = null` with `details.error = "Insufficient data"`.
 - When `options.use_log_returns=true`, any compounded portfolio return less than or equal to

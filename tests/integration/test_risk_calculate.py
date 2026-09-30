@@ -86,6 +86,47 @@ def _request_payload() -> dict[str, object]:
     }
 
 
+def _monthly_resampling_payload(
+    *,
+    returns: list[dict[str, float | str]],
+    metrics: list[str],
+    use_log_returns: bool = False,
+    from_date: str = "2026-01-01",
+    to_date: str = "2026-05-05",
+    benchmark_returns: list[dict[str, float | str]] | None = None,
+) -> dict[str, object]:
+    stateless_input: dict[str, object] = {
+        "scope": {"as_of_date": to_date, "net_or_gross": "NET"},
+        "portfolio_open_date": "2026-01-01",
+        "periods": [
+            {
+                "type": "EXPLICIT",
+                "name": "Coverage",
+                "from_date": from_date,
+                "to_date": to_date,
+            }
+        ],
+        "metrics": metrics,
+        "options": {
+            "frequency": "MONTHLY",
+            "use_log_returns": use_log_returns,
+            "var": {
+                "method": "HISTORICAL",
+                "confidence": 0.95,
+                "horizon_days": 1,
+                "include_expected_shortfall": True,
+            },
+        },
+        "returns": returns,
+    }
+    if benchmark_returns is not None:
+        stateless_input["benchmark_returns"] = benchmark_returns
+    return {
+        "input_mode": "stateless",
+        "stateless_input": stateless_input,
+    }
+
+
 def test_risk_calculate_endpoint_happy_path_contract() -> None:
     client = TestClient(app)
     response = client.post("/analytics/risk/calculate", json=_request_payload())
@@ -137,6 +178,106 @@ def test_risk_calculate_endpoint_happy_path_contract() -> None:
     assert "base_expected_shortfall" in metrics["VAR"]["details"]
     assert metrics["VAR"]["details"]["expected_shortfall_observation_count"] >= 1
     assert "expected_shortfall" in metrics["VAR"]["details"]
+
+
+@pytest.mark.parametrize("use_log_returns", [False, True])
+def test_risk_calculate_refuses_missing_monthly_buckets_without_synthetic_samples(
+    use_log_returns: bool,
+) -> None:
+    client = TestClient(app)
+    response = client.post(
+        "/analytics/risk/calculate",
+        json=_monthly_resampling_payload(
+            metrics=["VOLATILITY", "SHARPE", "SORTINO", "VAR", "DRAWDOWN", "BETA"],
+            use_log_returns=use_log_returns,
+            returns=[
+                {"date": "2026-01-05", "value": -2.0},
+                {"date": "2026-02-05", "value": 1.0},
+                {"date": "2026-05-05", "value": 3.0},
+            ],
+            benchmark_returns=[
+                {"date": "2026-01-05", "value": -1.0},
+                {"date": "2026-02-05", "value": 0.5},
+                {"date": "2026-03-05", "value": 0.0},
+                {"date": "2026-04-05", "value": 0.0},
+                {"date": "2026-05-05", "value": 1.5},
+            ],
+        ),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    period = body["results"]["Coverage"]
+    error = "Missing return observations in resampling buckets ending: 2026-03-31, 2026-04-30"
+    assert period["portfolio_observation_count"] == 3
+    for metric_name in ("VOLATILITY", "SHARPE", "SORTINO", "VAR", "BETA"):
+        assert period["metrics"][metric_name] == {"value": None, "details": {"error": error}}
+    assert period["metrics"]["DRAWDOWN"]["value"] == pytest.approx(-2.0)
+    assert period["benchmark_context"] == {
+        "requested": True,
+        "available": True,
+        "aligned": False,
+        "reason": "PORTFOLIO_RETURN_SERIES_INVALID",
+        "requested_metric_count": 1,
+        "requested_metrics": ["BETA"],
+    }
+    supportability = body["metadata"]["calculation_supportability"]
+    assert supportability["state"] == "degraded"
+    assert supportability["reason"] == "calculation_quality_issue"
+    assert supportability["freshness_bucket"] == "current"
+    assert supportability["degraded_metric_count"] == 5
+    assert supportability["empty_period_count"] == 0
+    assert supportability["evaluated_period_count"] == 1
+
+
+def test_risk_calculate_keeps_explicit_zero_distinct_from_a_missing_monthly_bucket() -> None:
+    client = TestClient(app)
+    response = client.post(
+        "/analytics/risk/calculate",
+        json=_monthly_resampling_payload(
+            metrics=["VOLATILITY"],
+            returns=[
+                {"date": "2026-01-05", "value": -2.0},
+                {"date": "2026-02-05", "value": 1.0},
+                {"date": "2026-03-05", "value": 0.0},
+                {"date": "2026-04-05", "value": 0.0},
+                {"date": "2026-05-05", "value": 3.0},
+            ],
+        ),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    metric = body["results"]["Coverage"]["metrics"]["VOLATILITY"]
+    assert body["results"]["Coverage"]["portfolio_observation_count"] == 5
+    assert metric["value"] == pytest.approx(6.292853089020915)
+    assert metric["details"]["observation_count"] == 5
+    assert body["metadata"]["calculation_supportability"]["state"] == "ready"
+
+
+def test_risk_calculate_accepts_populated_partial_monthly_edge_buckets() -> None:
+    client = TestClient(app)
+    response = client.post(
+        "/analytics/risk/calculate",
+        json=_monthly_resampling_payload(
+            metrics=["VOLATILITY"],
+            from_date="2026-01-03",
+            to_date="2026-03-06",
+            returns=[
+                {"date": "2026-01-05", "value": -2.0},
+                {"date": "2026-02-05", "value": 1.0},
+                {"date": "2026-03-05", "value": 3.0},
+            ],
+        ),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    metric = body["results"]["Coverage"]["metrics"]["VOLATILITY"]
+    assert body["results"]["Coverage"]["portfolio_observation_count"] == 3
+    assert metric["value"] == pytest.approx(8.717797887081348)
+    assert metric["details"]["observation_count"] == 3
+    assert body["metadata"]["calculation_supportability"]["state"] == "ready"
 
 
 def test_risk_calculate_var_exposes_horizon_scaling_context() -> None:

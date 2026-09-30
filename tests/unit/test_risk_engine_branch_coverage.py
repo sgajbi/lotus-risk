@@ -9,6 +9,7 @@ from app.contracts.risk import RiskCalculationRequest, RiskRequestPeriod
 from app.main import app
 from app.services import risk_engine
 from app.services.risk import helpers as risk_helpers
+from app.services.risk.metric_calculators import align_and_resample_benchmark
 
 
 def _payload_all_metrics() -> dict[str, object]:
@@ -119,6 +120,83 @@ def test_resample_and_log_helpers_cover_empty_and_weekly() -> None:
     weekly = risk_helpers._resample_returns(weekly_input, "WEEKLY")
     assert not weekly.empty
     assert not risk_helpers._to_log_returns(weekly).empty
+
+
+@pytest.mark.parametrize(
+    ("frequency", "values", "dates", "missing_bucket_ends"),
+    [
+        (
+            "WEEKLY",
+            [-2.0, 1.0, 3.0],
+            ["2026-01-02", "2026-01-09", "2026-01-30"],
+            "2026-01-16, 2026-01-23",
+        ),
+        (
+            "MONTHLY",
+            [-2.0, 1.0, 3.0],
+            ["2026-01-05", "2026-02-05", "2026-05-05"],
+            "2026-03-31, 2026-04-30",
+        ),
+    ],
+)
+def test_resample_rejects_unobserved_internal_bucket_without_creating_a_zero_return(
+    frequency: str,
+    values: list[float],
+    dates: list[str],
+    missing_bucket_ends: str,
+) -> None:
+    source_input = pd.Series(values, index=pd.to_datetime(dates))
+
+    with pytest.raises(
+        ValueError,
+        match=(f"Missing return observations in resampling buckets ending: {missing_bucket_ends}"),
+    ):
+        risk_helpers._resample_returns(
+            source_input,
+            frequency,
+        )
+
+
+def test_resample_preserves_explicit_zero_and_populated_partial_edge_buckets() -> None:
+    monthly_input = pd.Series(
+        [-2.0, 1.0, 0.0, 0.0, 3.0],
+        index=pd.to_datetime(
+            ["2026-01-05", "2026-02-05", "2026-03-05", "2026-04-05", "2026-05-05"]
+        ),
+    )
+
+    monthly = risk_helpers._resample_returns(
+        monthly_input,
+        "MONTHLY",
+    )
+
+    assert pd.DatetimeIndex(monthly.index).strftime("%Y-%m-%d").tolist() == [
+        "2026-01-31",
+        "2026-02-28",
+        "2026-03-31",
+        "2026-04-30",
+        "2026-05-31",
+    ]
+    assert monthly.tolist() == pytest.approx([-2.0, 1.0, 0.0, 0.0, 3.0])
+
+
+def test_benchmark_resampling_rejects_an_internal_missing_bucket() -> None:
+    benchmark_df = pd.DataFrame(
+        {"value": [-2.0, 1.0, 3.0]},
+        index=pd.to_datetime(["2026-01-05", "2026-02-05", "2026-05-05"]),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=("Missing return observations in resampling buckets ending: 2026-03-31, 2026-04-30"),
+    ):
+        align_and_resample_benchmark(
+            benchmark_df=benchmark_df,
+            start=date(2026, 1, 1),
+            end=date(2026, 5, 5),
+            frequency="MONTHLY",
+            use_log_returns=False,
+        )
 
 
 def test_drawdown_empty_series_and_require_data_error() -> None:
