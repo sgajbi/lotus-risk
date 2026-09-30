@@ -8,10 +8,12 @@ from app.services.stateful_returns_series_parser import (
     decimal_return_to_percentage_points,
     extract_required_portfolio_returns,
     extract_series_payload,
+    extract_stateful_returns_source_evidence,
     is_trading_day,
     to_return_points,
 )
 from app.upstream_errors import UpstreamServiceError
+from tests.support.returns_series_payloads import build_returns_series_response
 
 
 def test_decimal_return_to_percentage_points_converts_decimal_returns() -> None:
@@ -94,3 +96,49 @@ def test_duplicate_upstream_return_dates_are_refused() -> None:
         )
     assert excinfo.value.code == "UPSTREAM_INVALID_RESPONSE"
     assert excinfo.value.details.get("date") == "2026-01-05"
+
+
+def test_stateful_source_evidence_requires_matching_identity_and_reconciled_coverage() -> None:
+    response = build_returns_series_response(
+        portfolio_returns=(("2026-01-02", "0.01"), ("2026-01-05", "-0.02")),
+        as_of_date="2026-01-05",
+    )
+
+    evidence = extract_stateful_returns_source_evidence(
+        response,
+        portfolio_id="DEMO_DPM_EUR_001",
+        as_of_date=date(2026, 1, 5),
+        metric_basis="NET",
+    )
+
+    assert str(evidence.calculation_id) == "00000000-0000-4000-8000-000000000001"
+    assert evidence.coverage_ratio == 1.0
+    response["metric_basis"] = "GROSS"
+    with pytest.raises(UpstreamServiceError) as excinfo:
+        extract_stateful_returns_source_evidence(
+            response,
+            portfolio_id="DEMO_DPM_EUR_001",
+            as_of_date=date(2026, 1, 5),
+            metric_basis="NET",
+        )
+    assert excinfo.value.code == "UPSTREAM_INVALID_RESPONSE"
+    assert excinfo.value.details["field"] == "metric_basis"
+
+
+def test_stateful_source_evidence_refuses_unsupported_contract_version() -> None:
+    response = build_returns_series_response(
+        portfolio_returns=(("2026-01-02", "0.01"),),
+        as_of_date="2026-01-02",
+    )
+    response["contract_version"] = "v2"
+
+    with pytest.raises(UpstreamServiceError) as excinfo:
+        extract_stateful_returns_source_evidence(
+            response,
+            portfolio_id="DEMO_DPM_EUR_001",
+            as_of_date=date(2026, 1, 2),
+            metric_basis="NET",
+        )
+
+    assert excinfo.value.code == "UPSTREAM_INVALID_RESPONSE"
+    assert excinfo.value.details["field"] == "source_qualification"

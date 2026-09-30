@@ -12,11 +12,13 @@ from app.contracts.drawdown import (
     DrawdownStatelessInput,
 )
 from app.contracts.risk import ReturnPoint, RiskRequestScope
+from app.contracts.stateful_returns_source_evidence import StatefulReturnsSourceEvidence
 from app.services.audit_lineage import ordered_source_services, upstream_request_fingerprint
 from app.services.drawdown_engine import calculate_drawdown
 from app.services.stateful_returns_request import build_stateful_returns_series_request
 from app.services.stateful_returns_series_parser import (
     extract_required_portfolio_returns,
+    extract_stateful_returns_source_evidence,
     to_return_points,
 )
 
@@ -34,6 +36,7 @@ class LotusPerformanceClientProtocol(Protocol):
 class _DrawdownSourceSeries:
     portfolio_points: list[ReturnPoint]
     benchmark_points: list[ReturnPoint]
+    evidence: StatefulReturnsSourceEvidence
 
 
 def _build_stateful_source_request(
@@ -76,9 +79,16 @@ def _parse_drawdown_source_series(
         raise ValueError(
             "lotus-performance returns-series returned no benchmark returns while benchmark was required"
         )
+    evidence = extract_stateful_returns_source_evidence(
+        source_response,
+        portfolio_id=stateful.portfolio_id,
+        as_of_date=stateful.as_of_date,
+        metric_basis=stateful.net_or_gross,
+    )
     return _DrawdownSourceSeries(
         portfolio_points=portfolio_points,
         benchmark_points=benchmark_points,
+        evidence=evidence,
     )
 
 
@@ -121,6 +131,7 @@ async def calculate_drawdown_stateful(
         analysis_options=analysis_options,
         include_benchmark=stateful.benchmark_policy.include_benchmark,
         missing_benchmark_policy=stateful.benchmark_policy.missing_benchmark_policy,
+        source_returns_evidence=source_series.evidence,
     )
     response.metadata.source_services = ordered_source_services("lotus-performance")
     response.metadata.upstream_request_fingerprints = upstream_request_fingerprint(

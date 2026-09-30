@@ -10,7 +10,9 @@ from app.contracts.risk import (
     RiskCalculationSupportability,
     RiskFreshnessBucket,
     RiskSupportabilityReason,
+    RiskSupportabilityState,
 )
+from app.contracts.stateful_returns_source_evidence import StatefulReturnsSourceEvidence
 from app.services.observability_ports import (
     record_analytics_freshness_bucket,
     record_calculation_supportability,
@@ -73,6 +75,45 @@ def supportability_from_period_results(
         freshness_bucket=freshness_bucket,
         assessment=assess_period_results(results),
         evaluated_period_count=len(results),
+    )
+
+
+def compose_returns_source_supportability(
+    *,
+    calculation_supportability: RiskCalculationSupportability,
+    source_evidence: StatefulReturnsSourceEvidence,
+) -> RiskCalculationSupportability:
+    """Compose source freshness and coverage with an already-calculated result.
+
+    Performance is authoritative for source freshness and completeness.  Risk
+    keeps its own period errors and their precedence, but never upgrades stale
+    or incomplete evidence merely because the numeric series can be calculated.
+    """
+    reasons: list[RiskSupportabilityReason] = []
+    if calculation_supportability.state != "ready":
+        reasons.append(calculation_supportability.reason)
+    if source_evidence.missing_points:
+        reasons.append("calculation_quality_issue")
+    if source_evidence.freshness == "stale":
+        reasons.append("stale_source_observations")
+    if not reasons:
+        return calculation_supportability
+
+    reason = select_supportability_reason(reasons)
+    state: RiskSupportabilityState = (
+        "stale" if reason == "stale_source_observations" else "degraded"
+    )
+    return RiskCalculationSupportability(
+        state=state,
+        reason=reason,
+        freshness_bucket=(
+            "stale"
+            if source_evidence.freshness == "stale"
+            else calculation_supportability.freshness_bucket
+        ),
+        degraded_metric_count=calculation_supportability.degraded_metric_count,
+        empty_period_count=calculation_supportability.empty_period_count,
+        evaluated_period_count=calculation_supportability.evaluated_period_count,
     )
 
 

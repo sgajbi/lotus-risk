@@ -59,7 +59,10 @@ Gateway, Workbench, reporting, and AI consumers must preserve:
 6. regime scenario-pack per-security contribution rows when present,
 7. risk-event affected-cohort source refs and impact scores,
 8. mandate risk health threshold posture and non-claim reason codes,
-9. lineage and upstream request-fingerprint metadata.
+9. lineage and upstream request-fingerprint metadata,
+10. stateful drawdown `source_returns_evidence`, including its calculation identity, source
+    freshness, and reconciled coverage. A Risk request fingerprint is not a substitute for this
+    producer response evidence.
 
 If those are dropped or flattened, a numerically correct response can still become product-wrong.
 
@@ -101,7 +104,9 @@ Use `lotus-risk` directly or through gateway with these rules:
 5. preserve regime scenario-pack contribution rows in proof packs and product surfaces when
    `exposure_components` were supplied,
 6. preserve audit and lineage metadata whenever responses are stored or passed onward,
-7. do not rewrite signed VaR into an always-positive loss figure unless the presentation layer explicitly records that sign-convention conversion.
+7. for stateful drawdown, treat stale or incomplete source evidence as the published
+   supportability state; do not relabel a calculable subset as current or complete,
+8. do not rewrite signed VaR into an always-positive loss figure unless the presentation layer explicitly records that sign-convention conversion.
 
 ## Integration Sources
 

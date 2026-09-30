@@ -11,8 +11,10 @@ from app.contracts.drawdown import (
     DrawdownStatelessInput,
 )
 from app.contracts.risk import RiskCalculationSupportability
+from app.contracts.stateful_returns_source_evidence import StatefulReturnsSourceEvidence
 from app.services.audit_lineage import fingerprint_model
 from app.services.calculation_supportability import (
+    compose_returns_source_supportability,
     record_operation_supportability,
     supportability_from_period_results,
 )
@@ -34,6 +36,7 @@ def _build_metadata(
     include_benchmark: bool | None,
     missing_benchmark_policy: Literal["IGNORE", "REQUIRE"] | None,
     calculation_supportability: RiskCalculationSupportability,
+    source_returns_evidence: StatefulReturnsSourceEvidence | None,
 ) -> DrawdownMetadata:
     return DrawdownMetadata(
         request_fingerprint=fingerprint_model(request),
@@ -46,6 +49,7 @@ def _build_metadata(
         include_benchmark=include_benchmark,
         missing_benchmark_policy=missing_benchmark_policy,
         calculation_supportability=calculation_supportability,
+        source_returns_evidence=source_returns_evidence,
     )
 
 
@@ -56,12 +60,18 @@ def _empty_response(
     analysis_options: DrawdownAnalysisOptions,
     include_benchmark: bool | None,
     missing_benchmark_policy: Literal["IGNORE", "REQUIRE"] | None,
+    source_returns_evidence: StatefulReturnsSourceEvidence | None,
 ) -> DrawdownResponse:
     calculation_supportability = supportability_from_period_results(
         returns=request.returns,
         as_of_date=request.scope.as_of_date,
         results={},
     )
+    if source_returns_evidence is not None:
+        calculation_supportability = compose_returns_source_supportability(
+            calculation_supportability=calculation_supportability,
+            source_evidence=source_returns_evidence,
+        )
     record_operation_supportability(
         operation="risk/drawdown",
         supportability=calculation_supportability,
@@ -76,6 +86,7 @@ def _empty_response(
             include_benchmark=include_benchmark,
             missing_benchmark_policy=missing_benchmark_policy,
             calculation_supportability=calculation_supportability,
+            source_returns_evidence=source_returns_evidence,
         ),
     )
 
@@ -88,12 +99,18 @@ def _drawdown_response(
     include_benchmark: bool | None,
     missing_benchmark_policy: Literal["IGNORE", "REQUIRE"] | None,
     results: dict[str, DrawdownPeriodResult],
+    source_returns_evidence: StatefulReturnsSourceEvidence | None,
 ) -> DrawdownResponse:
     calculation_supportability = supportability_from_period_results(
         returns=request.returns,
         as_of_date=request.scope.as_of_date,
         results=results,
     )
+    if source_returns_evidence is not None:
+        calculation_supportability = compose_returns_source_supportability(
+            calculation_supportability=calculation_supportability,
+            source_evidence=source_returns_evidence,
+        )
     record_operation_supportability(
         operation="risk/drawdown",
         supportability=calculation_supportability,
@@ -108,6 +125,7 @@ def _drawdown_response(
             include_benchmark=include_benchmark,
             missing_benchmark_policy=missing_benchmark_policy,
             calculation_supportability=calculation_supportability,
+            source_returns_evidence=source_returns_evidence,
         ),
     )
 
@@ -119,6 +137,7 @@ def calculate_drawdown(
     analysis_options: DrawdownAnalysisOptions,
     include_benchmark: bool | None = None,
     missing_benchmark_policy: Literal["IGNORE", "REQUIRE"] | None = None,
+    source_returns_evidence: StatefulReturnsSourceEvidence | None = None,
 ) -> DrawdownResponse:
     frames = build_input_frames(request)
     if frames.portfolio.empty:
@@ -128,6 +147,7 @@ def calculate_drawdown(
             analysis_options=analysis_options,
             include_benchmark=include_benchmark,
             missing_benchmark_policy=missing_benchmark_policy,
+            source_returns_evidence=source_returns_evidence,
         )
 
     return _drawdown_response(
@@ -142,4 +162,5 @@ def calculate_drawdown(
             analysis_options=analysis_options,
             include_benchmark=include_benchmark,
         ),
+        source_returns_evidence=source_returns_evidence,
     )

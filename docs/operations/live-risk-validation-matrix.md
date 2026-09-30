@@ -28,6 +28,12 @@ validated.
 | `sparse_benchmark` | pending seeded portfolio ID | Benchmark alignment, tracking error, and information-ratio gaps. |
 | `high_concentration` | pending seeded portfolio ID | Single-name/issuer concentration and HHI stress behavior. |
 
+The canonical record does not yet certify the source-qualified stateful drawdown contract introduced
+under Risk issue #314. Its local route and consumer-contract checks are not a substitute for a live
+Performance producer run. Record a successful producer acceptance against a registered tenant,
+portfolio, and business date before changing this statement; retain stale/partial or refusal
+captures as diagnostic evidence rather than validated coverage.
+
 ## Endpoint Coverage Target
 
 Each registered case should declare which endpoints it can validate:

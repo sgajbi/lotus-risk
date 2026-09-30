@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-09-13T08:12:28.268650+00:00",
+  "generatedAt": "2026-09-30T22:34:24.748993+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.affected_portfolios",
@@ -3671,6 +3671,34 @@
       ],
       "fieldPaths": [
         "source_request_fingerprint"
+      ]
+    },
+    {
+      "semanticId": "lotus.source_returns_evidence",
+      "canonicalTerm": "source_returns_evidence",
+      "preferredName": "source_returns_evidence",
+      "description": "Validated lotus-performance returns-series identity, freshness, and coverage for stateful drawdown. Null for caller-supplied stateless returns.",
+      "example": {
+        "calculation_hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "calculation_id": "00000000-0000-4000-8000-000000000001",
+        "contract_version": "v1",
+        "coverage_ratio": 1.0,
+        "freshness": "current",
+        "input_fingerprint": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "missing_points": 0,
+        "requested_points": 65,
+        "returned_points": 65,
+        "source_service": "lotus-performance"
+      },
+      "type": "object",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "object"
+      ],
+      "fieldPaths": [
+        "metadata.source_returns_evidence"
       ]
     },
     {
@@ -7676,6 +7704,14 @@
             "type": "integer",
             "semanticId": "lotus.evaluated_period_count",
             "attributeRef": "#/attributeCatalog/lotus.evaluated_period_count"
+          },
+          {
+            "name": "metadata.source_returns_evidence",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.source_returns_evidence",
+            "attributeRef": "#/attributeCatalog/lotus.source_returns_evidence"
           }
         ]
       }

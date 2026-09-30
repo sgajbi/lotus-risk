@@ -7,7 +7,11 @@ from typing import Any
 from fastapi.testclient import TestClient
 
 from app.contracts.downstream_authority import DownstreamAuthority
-from app.evidence.idea_opportunity_constants import CANONICAL_AS_OF_DATE, CANONICAL_TENANT_ID
+from app.evidence.idea_opportunity_constants import (
+    CANONICAL_AS_OF_DATE,
+    CANONICAL_PORTFOLIO_ID,
+    CANONICAL_TENANT_ID,
+)
 from app.evidence.idea_opportunity_runtime import (
     build_idea_opportunity_runtime_evidence,
     idea_opportunity_runtime_evidence_is_valid,
@@ -70,6 +74,8 @@ def test_idea_opportunity_runtime_evidence_executes_live_api_routes() -> None:
         response_payload=build_returns_series_response(
             portfolio_returns=_CANONICAL_RETURN_ROWS,
             benchmark_returns=_CANONICAL_BENCHMARK_ROWS,
+            portfolio_id=CANONICAL_PORTFOLIO_ID,
+            as_of_date=CANONICAL_AS_OF_DATE.isoformat(),
         )
     )
     core_client = _CanonicalCoreClient(

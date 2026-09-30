@@ -2,11 +2,14 @@
 
 This file provides repository-local engineering context for `lotus-risk`.
 
-For platform-wide truth, read:
+Use the startup sequence in `AGENTS.md`: repository contract, platform quickstart, this
+repository context, then the platform skill-routing map. Load wider engineering context only for
+cross-repository architecture or shared policy. Use the context reference map to locate a
+task-specific standard, contract, RFC, or runbook.
 
-1. `../lotus-platform/context/LOTUS-QUICKSTART-CONTEXT.md`
-2. `../lotus-platform/context/LOTUS-ENGINEERING-CONTEXT.md`
-3. `../lotus-platform/context/CONTEXT-REFERENCE-MAP.md`
+Platform-qualified paths resolve from the workspace root; when no sibling checkout exists, use
+the canonical `sgajbi/lotus-platform` source. This context records repository-local truth and
+does not replace the mandatory operating contract.
 
 ## Repository Role
 

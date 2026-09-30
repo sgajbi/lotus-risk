@@ -46,6 +46,14 @@ For stateful `risk/calculate`, Sharpe risk-free treatment uses a direct
 `lotus-performance:/integration/returns/series` fingerprint covers portfolio and benchmark returns
 only; it must not be used as implicit proof of risk-free source lineage.
 
+For stateful drawdown, `metadata.source_returns_evidence` is deliberately separate from the
+common upstream-request fingerprint. The latter identifies the normalized request Risk sent;
+the endpoint-specific evidence identifies and qualifies the exact Performance response Risk used:
+its calculation ID, supported contract version, input fingerprint, calculation hash, freshness,
+and reconciled requested/returned/missing coverage. Consumers must preserve both. A request
+fingerprint is not evidence that a returned calculation was current, complete, or for the requested
+source identity.
+
 For stateful and simulation concentration, the core snapshot lineage key is stable across portfolios
 and sessions:
 
