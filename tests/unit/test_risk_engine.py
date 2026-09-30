@@ -200,6 +200,7 @@ def test_drawdown_retains_opening_loss_without_fabricating_peak_timing() -> None
         .metrics["DRAWDOWN"]
     )
     assert metric.value == pytest.approx(-10.0)
+    assert metric.details is not None
     assert metric.details["max_drawdown"] == pytest.approx(-10.0)
     assert metric.details["peak_date"] is None
     assert metric.details["trough_date"] == "2026-01-02"
