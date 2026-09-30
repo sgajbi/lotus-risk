@@ -124,6 +124,114 @@ def test_drawdown_max_drawdown_matches_documented_decimal_output_contract() -> N
     assert period.underwater_series[1].drawdown == pytest.approx(-0.2)
 
 
+def test_drawdown_engine_retains_opening_wealth_loss_without_inventing_peak_date() -> None:
+    request = DrawdownStatelessInput.model_validate(
+        {
+            "scope": {"as_of_date": "2026-01-05", "net_or_gross": "NET"},
+            "periods": [{"type": "YTD", "name": "YTD"}],
+            "returns": [
+                {"date": "2026-01-02", "value": -10.0},
+                {"date": "2026-01-05", "value": 0.0},
+            ],
+            "benchmark_returns": [
+                {"date": "2026-01-02", "value": 0.0},
+                {"date": "2026-01-05", "value": 0.0},
+            ],
+        }
+    )
+
+    response = calculate_drawdown(
+        request,
+        input_mode=DrawdownInputMode.STATELESS,
+        analysis_options=DrawdownAnalysisOptions.model_validate(
+            {"include_underwater_series": True, "include_episode_list": True}
+        ),
+        include_benchmark=True,
+    )
+
+    period = response.results["YTD"]
+    assert period.summary is not None
+    assert period.summary.max_drawdown == pytest.approx(-0.1)
+    assert period.summary.max_drawdown_peak_date is None
+    assert str(period.summary.max_drawdown_trough_date) == "2026-01-02"
+    assert period.summary.max_drawdown_recovery_date is None
+    assert period.summary.is_recovered is False
+    assert period.summary.days_to_trough is None
+    assert period.summary.time_under_water_days == 2
+    assert period.episodes[0].peak_date is None
+    assert period.episodes[0].days_to_trough is None
+    assert period.episodes[0].total_days is None
+    assert period.underwater_series is not None
+    assert [point.drawdown for point in period.underwater_series] == pytest.approx([-0.1, -0.1])
+    assert period.relative_to_benchmark is not None
+    assert period.relative_to_benchmark.max_drawdown == pytest.approx(-0.1)
+    assert period.relative_to_benchmark.max_drawdown_peak_date is None
+
+
+def test_drawdown_engine_recovers_opening_loss_on_the_observed_recovery_date() -> None:
+    request = DrawdownStatelessInput.model_validate(
+        {
+            "scope": {"as_of_date": "2026-01-05", "net_or_gross": "NET"},
+            "periods": [{"type": "YTD", "name": "YTD"}],
+            "returns": [
+                {"date": "2026-01-02", "value": -10.0},
+                {"date": "2026-01-05", "value": 20.0},
+            ],
+        }
+    )
+    response = calculate_drawdown(
+        request,
+        input_mode=DrawdownInputMode.STATELESS,
+        analysis_options=DrawdownAnalysisOptions.model_validate({"include_episode_list": True}),
+    )
+    period = response.results["YTD"]
+    assert period.summary is not None
+    assert period.summary.max_drawdown == pytest.approx(-0.1)
+    assert period.summary.max_drawdown_peak_date is None
+    assert str(period.summary.max_drawdown_recovery_date) == "2026-01-05"
+    assert period.summary.is_recovered is True
+    assert period.summary.days_to_trough is None
+    assert period.summary.days_to_recovery == 1
+    assert period.episodes[0].peak_date is None
+    assert str(period.episodes[0].recovery_date) == "2026-01-05"
+
+
+@pytest.mark.parametrize(
+    ("returns", "expected", "underwater"),
+    [
+        ([-10.0, -10.0], -0.19, [-0.1, -0.19]),
+        ([-100.0, 0.0], -1.0, [-1.0, -1.0]),
+        ([-101.0, 0.0], -1.01, [-1.01, -1.01]),
+    ],
+)
+def test_drawdown_engine_preserves_total_and_negative_equity_paths(
+    returns: list[float], expected: float, underwater: list[float]
+) -> None:
+    request = DrawdownStatelessInput.model_validate(
+        {
+            "scope": {"as_of_date": "2026-01-05", "net_or_gross": "NET"},
+            "periods": [{"type": "YTD", "name": "YTD"}],
+            "returns": [
+                {"date": "2026-01-02", "value": returns[0]},
+                {"date": "2026-01-05", "value": returns[1]},
+            ],
+        }
+    )
+    response = calculate_drawdown(
+        request,
+        input_mode=DrawdownInputMode.STATELESS,
+        analysis_options=DrawdownAnalysisOptions.model_validate(
+            {"include_underwater_series": True}
+        ),
+    )
+    period = response.results["YTD"]
+    assert period.summary is not None
+    assert period.summary.max_drawdown == pytest.approx(expected)
+    assert period.summary.is_recovered is False
+    assert period.underwater_series is not None
+    assert [point.drawdown for point in period.underwater_series] == pytest.approx(underwater)
+
+
 def test_drawdown_average_drawdown_matches_documented_decimal_output_contract() -> None:
     request = DrawdownStatelessInput.model_validate(
         {

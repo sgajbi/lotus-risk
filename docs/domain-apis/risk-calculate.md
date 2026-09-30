@@ -139,6 +139,12 @@
           when benchmark history exists for the requested window but fewer than two aligned return
           observations remain after date alignment
 
+For `DRAWDOWN`, each resolved period begins from an undated unit opening wealth/peak. An initial
+loss is consequently retained instead of becoming a zero drawdown. When the baseline is the peak,
+the scalar detail's `peak_date`, `days_to_trough`, and peak-based `time_under_water_days` are
+`null`; Risk does not manufacture a return date. Returns below `-100%` are retained as explicit
+negative-equity/leveraged paths rather than silently reset or treated as an inferred liquidation.
+
 ## Alignment Assessment
 
 - Bounded context ownership: aligned (`lotus-risk` is correct owner per RFC-0065).

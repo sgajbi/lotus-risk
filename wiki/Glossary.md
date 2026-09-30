@@ -39,7 +39,7 @@ Realized drawdown analytics go beyond the single `DRAWDOWN` metric:
 
 | term | in one line |
 |---|---|
-| **maximum drawdown** | the worst peak-to-trough decline in the window |
+| **maximum drawdown** | the worst peak-to-trough decline in the window, measured from unit opening wealth before the first return; an opening-baseline peak has no invented date |
 | **relative maximum drawdown** | the same, measured against the benchmark |
 | **average drawdown** | the mean of every strictly underwater observation — not a mean of episode-level values, so a long episode weighs proportionally more |
 | **time under water** | the **count of underwater observations**, not elapsed time. Despite the `_days` suffix on `summary.time_under_water_days`, three underwater observations are three observations — not three days. |

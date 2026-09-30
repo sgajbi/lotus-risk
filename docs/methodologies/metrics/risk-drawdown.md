@@ -38,8 +38,9 @@
 - `r_t_pp`: portfolio return on date `t`, in percentage points after period filtering and optional
   frequency resampling.
 - `r_t_decimal`: `r_t_pp / 100`.
+- `W_0 = P_0 = 1`: undated unit opening wealth and peak for the resolved period.
 - `W_t`: cumulative wealth index through date `t`, `product(1 + r_i_decimal)` for `i <= t`.
-- `P_t`: running peak wealth through date `t`, `max(W_i)` for `i <= t`.
+- `P_t`: running peak wealth through date `t`, `max(W_0, W_i)` for `i <= t`.
 - `DD_t`: decimal drawdown ratio on date `t`, `W_t / P_t - 1`.
 - `T`: trough date where `DD_t` is minimal.
 - `P`: peak date selected from the maximum wealth value at or before `T`.
@@ -53,15 +54,16 @@
    `r_period_pp = (product(1 + r_i_pp / 100) - 1) * 100`.
 4. Do not apply `options.use_log_returns`; drawdown uses the simple percentage-point return series.
 5. Require at least two non-null observations.
-6. Build cumulative wealth:
+6. Set the undated opening wealth and peak to one, then build cumulative wealth:
    `W_t = product(1 + r_i_pp / 100)`.
 7. Build running peak wealth:
-   `P_t = max(W_i)` for `i <= t`.
+   `P_t = max(W_0, W_i)` for `i <= t`.
 8. Compute the drawdown path:
    `DD_t = W_t / P_t - 1`.
 9. Select the trough date:
    `T = argmin(DD_t)`.
-10. Select the peak date from the maximum wealth value at or before `T`.
+10. Select the peak date from the maximum observed wealth value at or before `T`; use `null` when
+    only the undated opening baseline is the peak.
 11. Map response value and details:
     `metrics.DRAWDOWN.value = details.max_drawdown = DD_T * 100`.
 
@@ -82,6 +84,12 @@
 - Fewer than two observations after period filtering and resampling returns
   `metrics.DRAWDOWN.value = null` with `details.error = "Insufficient data"`.
 - A non-loss path is valid and produces `metrics.DRAWDOWN.value = 0.0`.
+- An initial loss is evaluated against opening wealth one. When that opening baseline is the peak,
+  `details.peak_date`, `details.days_to_trough`, and peak-based
+  `details.time_under_water_days` are `null`; Risk does not manufacture a date. The trough and
+  recovery-from-trough fields remain available when evidenced by observations.
+- Returns below `-100%` are retained as explicitly supplied negative-equity/leveraged paths rather
+  than silently reset to zero; the service does not infer liquidation or a long-only restriction.
 - Non-numeric return values are rejected by request-contract validation before engine math.
 - No benchmark dependency is required for `DRAWDOWN`.
 - No risk-free dependency is required for `DRAWDOWN`.

@@ -37,7 +37,8 @@
 - `min_obs`: minimum observations required for a window result.
 - `k`: observation index inside the rolling window.
 - `C_k`: cumulative wealth path inside the window through index `k`.
-- `P_k`: running peak cumulative wealth through index `k`.
+- `C_0 = P_0 = 1`: undated unit opening wealth and peak for each independent rolling window.
+- `P_k`: running peak cumulative wealth through index `k`, including `P_0`.
 - `DD_k`: drawdown at index `k`.
 - `RMDD_t(W)`: rolling maximum drawdown for the window ending on date `t`.
 
@@ -47,11 +48,12 @@
 2. Resolve minimum observations:
    - `min_obs = W` when `min_observations_policy = STRICT`;
    - `min_obs = 2` when `min_observations_policy = ALLOW_PARTIAL`.
-3. For each date with at least `min_obs` observations in the rolling window, build the cumulative
+3. For each date with at least `min_obs` observations in the rolling window, set that window's
+   undated opening wealth and peak to one, then build the cumulative
    wealth path from the window's decimal returns:
    `C_k = product(1 + Rp_i)` for all observations from the start of the window through `k`.
 4. Compute the running peak:
-   `P_k = max(C_1 ... C_k)`.
+   `P_k = max(C_0, C_1 ... C_k)`.
 5. Compute the drawdown path:
    `DD_k = C_k / P_k - 1`.
 6. Select the minimum drawdown in the window:
@@ -74,6 +76,11 @@
   `error = "Insufficient data"` and no window results.
 - Window warm-up points are null until `min_obs` is met.
 - All-positive or non-declining wealth windows are valid and produce `0.0`.
+- An initial loss remains a loss against each window's unit opening peak: for returns `[-10%, 0%]`,
+  the two-observation window yields `-0.10`, not `0.0`. A window is reset independently; it does
+  not inherit a prior window's peak.
+- Returns below `-100%` are retained as explicitly supplied negative-equity/leveraged paths rather
+  than being reset to zero; their drawdown may be below `-1.0`.
 - Non-numeric return values are rejected by request-contract validation before engine math.
 - No benchmark or risk-free dependency is required for `ROLLING_MAX_DRAWDOWN`.
 - No denominator is used, so there is no zero-denominator quality flag for this metric.

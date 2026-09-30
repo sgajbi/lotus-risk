@@ -96,7 +96,7 @@ Current repository posture:
     `ROLLING_INFORMATION_RATIO`, and `ROLLING_MAX_DRAWDOWN`: the docs and tests pin
     percentage-point to decimal conversion, `ddof=1` sample standard deviation/covariance/variance
     behavior, annualization where used, rolling maximum drawdown cumulative-wealth/running-peak
-    behavior, annualized decimal volatility output, annualized decimal tracking-error output,
+    behavior including a unit opening peak independently reset for every rolling window, annualized decimal volatility output, annualized decimal tracking-error output,
     dimensionless Sharpe, beta, and information-ratio output, decimal drawdown-ratio output,
     warm-up/null behavior, source-owned risk-free/benchmark alignment posture, no-aligned
     dependency supportability posture, zero-excess-volatility Sharpe flagging,
@@ -104,7 +104,8 @@ Current repository posture:
 14. `DrawdownAnalyticsReport:v1` now has implementation-backed methodology truth for
     `MAX_DRAWDOWN`, `AVERAGE_DRAWDOWN`, `ULCER_INDEX`, and `TIME_UNDER_WATER_DAYS`: the docs and
     tests pin percentage-point input conventions, decimal cumulative-wealth/running-peak drawdown
-    behavior, decimal `summary.max_drawdown`, `summary.average_drawdown`, non-negative
+    behavior including an undated unit opening baseline (so an initial loss cannot be zeroed or
+    assigned an invented peak date), decimal `summary.max_drawdown`, `summary.average_drawdown`, non-negative
     `summary.ulcer_index`, and observation-count `summary.time_under_water_days` outputs, episode
     peak/trough/recovery semantics, strictly-underwater average-drawdown inclusion, full-path
     squared drawdown inclusion for ulcer index, strictly-underwater observation counting for time

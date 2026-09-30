@@ -13,7 +13,7 @@ class DrawdownRecovery:
     recovery_date: str | None
     is_recovered: bool
     days_to_recovery: int | None
-    time_under_water_days: int
+    time_under_water_days: int | None
 
 
 def empty_drawdown_details() -> dict[str, str | float | None]:
@@ -33,7 +33,7 @@ def empty_drawdown_details() -> dict[str, str | float | None]:
 def drawdown_recovery(
     *,
     wealth: pd.Series,
-    peak_idx: pd.Timestamp,
+    peak_idx: pd.Timestamp | None,
     trough_idx: pd.Timestamp,
     peak_value: float,  # monetary-float-allow: drawdown wealth ratio peak, not money.
 ) -> DrawdownRecovery:
@@ -47,40 +47,50 @@ def drawdown_recovery(
             recovery_date=None,
             is_recovered=False,
             days_to_recovery=None,
-            time_under_water_days=int((wealth.index[-1] - peak_idx).days),
+            time_under_water_days=(
+                int((wealth.index[-1] - peak_idx).days) if peak_idx is not None else None
+            ),
         )
     return DrawdownRecovery(
         recovery_date=str(recovery_idx.date()),
         is_recovered=True,
         days_to_recovery=int((recovery_idx - trough_idx).days),
-        time_under_water_days=int((recovery_idx - peak_idx).days),
+        time_under_water_days=(
+            int((recovery_idx - peak_idx).days) if peak_idx is not None else None
+        ),
     )
 
 
 def drawdown_details(returns: pd.Series) -> dict[str, str | float | None]:
     wealth = (1 + returns / 100).cumprod()
-    peak = wealth.cummax()
+    peak = wealth.cummax().clip(lower=1.0)
     drawdown = wealth / peak - 1
     if drawdown.empty:
         return empty_drawdown_details()
 
     trough_idx = cast(pd.Timestamp, drawdown.idxmin())
-    peak_idx = cast(pd.Timestamp, wealth.loc[:trough_idx].idxmax())
-    max_drawdown = as_number(cast(float, drawdown.loc[trough_idx] * 100))
     peak_value = as_number(
         cast(float, peak.loc[trough_idx])
     )  # monetary-float-allow: drawdown wealth ratio peak, not money.
+    observed_peak_candidates = wealth.loc[:trough_idx]
+    observed_peak_candidates = observed_peak_candidates[observed_peak_candidates >= peak_value]
+    peak_idx = (
+        cast(pd.Timestamp, observed_peak_candidates.index[0])
+        if not observed_peak_candidates.empty
+        else None
+    )
+    max_drawdown = as_number(cast(float, drawdown.loc[trough_idx] * 100))
     recovery = drawdown_recovery(
         wealth=wealth,
         peak_idx=peak_idx,
         trough_idx=trough_idx,
         peak_value=peak_value,
     )
-    days_to_trough = int((trough_idx - peak_idx).days)
+    days_to_trough = int((trough_idx - peak_idx).days) if peak_idx is not None else None
     trough_date = str(trough_idx.date())
     return {
         "max_drawdown": max_drawdown,
-        "peak_date": str(peak_idx.date()),
+        "peak_date": str(peak_idx.date()) if peak_idx is not None else None,
         "trough_date": trough_date,
         "max_drawdown_date": trough_date,
         "recovery_date": recovery.recovery_date,

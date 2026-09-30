@@ -18,7 +18,10 @@ def rolling_max_drawdown_metric(
 
 def rolling_max_drawdown(window_decimal_returns: np.ndarray) -> float:
     wealth = np.cumprod(1.0 + window_decimal_returns)
-    running_peak = np.maximum.accumulate(wealth)
+    # Every rolling window is an independent wealth interval with opening
+    # wealth/peak one.  Do not let a first-window loss disappear merely because
+    # the pre-window baseline has no observation date.
+    running_peak = np.maximum.accumulate(np.maximum(wealth, 1.0))
     drawdown = wealth / running_peak - 1.0
     return float(np.min(drawdown))
 

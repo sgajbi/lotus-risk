@@ -24,8 +24,9 @@
 - `Rb_t_pp`: benchmark return at `t` in percentage points.
 - `a_t_pp`: active return in percentage points (`a_t_pp = Rp_t_pp - Rb_t_pp`).
 - `a_t`: active return in decimal (`a_t = a_t_pp / 100`).
+- `AW_0 = AP_0 = 1`: undated unit opening active wealth and peak for the aligned period.
 - `AW_t`: active wealth index up to `t`.
-- `AP_t`: active running peak wealth up to `t`.
+- `AP_t`: active running peak wealth up to `t`, including `AP_0`.
 - `ADD_t`: active drawdown at `t`.
 - `REL_MAX_DD`: relative maximum drawdown value.
 
@@ -35,10 +36,10 @@
 `a_t_pp = Rp_t_pp - Rb_t_pp`.
 3. Convert active return to decimal:
 `a_t = a_t_pp / 100`.
-4. Build active wealth path:
-`AW_t = ∏_{i=1..t}(1 + a_i)`.
+4. Set the undated opening active wealth and peak to one, then build active wealth path:
+   `AW_t = ∏_{i=1..t}(1 + a_i)`.
 5. Build active running peak:
-`AP_t = max(AW_1, AW_2, ..., AW_t)`.
+`AP_t = max(AP_0, AW_1, AW_2, ..., AW_t)`.
 6. Build active drawdown path:
 `ADD_t = (AW_t / AP_t) - 1`.
 7. Relative maximum drawdown:
@@ -51,7 +52,9 @@
 4. Compute active return series (`a_t_pp`, then `a_t` decimal).
 5. Compute active wealth (`AW_t`), active running peak (`AP_t`), and active drawdown (`ADD_t`).
 6. Compute `REL_MAX_DD = min(ADD_t)`.
-7. Identify trough date (`argmin(ADD_t)`) and prior active-wealth peak date.
+7. Identify trough date (`argmin(ADD_t)`) and prior observed active-wealth peak date. If an
+   initial active loss is below the undated opening baseline, report the peak date and
+   peak-to-trough duration as `null` rather than inventing a source date.
 8. Map relative drawdown values and dates into `relative_to_benchmark` summary fields.
 
 ## Validation and Failure Behavior
@@ -59,6 +62,9 @@
 - If benchmark exists but no overlapping dates with portfolio series, relative summary is `null` (alignment-empty behavior).
 - Non-numeric return values are rejected by request-contract validation before engine math.
 - Relative drawdown value is non-positive by construction (`<= 0`).
+- The same explicit negative-equity policy applies to the compounded active-return path: values
+  below `-1.0` are retained when supplied arithmetic active returns imply them; the service does
+  not silently reset or infer liquidation.
 
 ## Configuration Options
 - Benchmark data must be present and date-alignable with portfolio returns.

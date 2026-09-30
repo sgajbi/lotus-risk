@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+import pytest
 
 from app.main import app
 from app.observability_contracts import RISK_CALCULATION_SUPPORTABILITY_METRIC_LABELS
@@ -60,6 +61,65 @@ def test_drawdown_endpoint_stateless_contract() -> None:
         "empty_period_count": 0,
         "evaluated_period_count": 1,
     }
+
+
+def test_drawdown_endpoint_retains_initial_loss_and_undated_opening_peak() -> None:
+    payload = _stateless_payload()
+    stateless_input = payload["stateless_input"]
+    assert isinstance(stateless_input, dict)
+    stateless_input["scope"] = {"as_of_date": "2026-01-05", "net_or_gross": "NET"}
+    stateless_input["returns"] = [
+        {"date": "2026-01-02", "value": -10.0},
+        {"date": "2026-01-05", "value": 0.0},
+    ]
+    stateless_input["benchmark_returns"] = [
+        {"date": "2026-01-02", "value": 0.0},
+        {"date": "2026-01-05", "value": 0.0},
+    ]
+    payload["benchmark_policy"] = {
+        "include_benchmark": True,
+        "missing_benchmark_policy": "REQUIRE",
+    }
+
+    response = TestClient(app).post("/analytics/risk/drawdown", json=payload)
+
+    assert response.status_code == 200
+    period = response.json()["results"]["YTD"]
+    summary = period["summary"]
+    assert summary["max_drawdown"] == pytest.approx(-0.1)
+    assert summary["max_drawdown_peak_date"] is None
+    assert summary["max_drawdown_trough_date"] == "2026-01-02"
+    assert summary["is_recovered"] is False
+    assert summary["days_to_trough"] is None
+    assert summary["time_under_water_days"] == 2
+    assert [point["drawdown"] for point in period["underwater_series"]] == pytest.approx(
+        [-0.1, -0.1]
+    )
+    assert period["episodes"][0]["peak_date"] is None
+    assert period["episodes"][0]["total_days"] is None
+    assert period["relative_to_benchmark"]["max_drawdown"] == pytest.approx(-0.1)
+    assert period["relative_to_benchmark"]["max_drawdown_peak_date"] is None
+
+
+def test_drawdown_endpoint_preserves_negative_equity_instead_of_zeroing_loss() -> None:
+    payload = _stateless_payload()
+    stateless_input = payload["stateless_input"]
+    assert isinstance(stateless_input, dict)
+    stateless_input["scope"] = {"as_of_date": "2026-01-05", "net_or_gross": "NET"}
+    stateless_input["returns"] = [
+        {"date": "2026-01-02", "value": -101.0},
+        {"date": "2026-01-05", "value": 0.0},
+    ]
+
+    response = TestClient(app).post("/analytics/risk/drawdown", json=payload)
+
+    assert response.status_code == 200
+    period = response.json()["results"]["YTD"]
+    assert period["summary"]["max_drawdown"] == pytest.approx(-1.01)
+    assert period["summary"]["is_recovered"] is False
+    assert [point["drawdown"] for point in period["underwater_series"]] == pytest.approx(
+        [-1.01, -1.01]
+    )
 
 
 def test_drawdown_endpoint_stateful_uses_lotus_performance() -> None:
