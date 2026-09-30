@@ -204,6 +204,35 @@ def test_rolling_metrics_endpoint_stateless_contract() -> None:
     assert summary["latest_observation_date"] == "2026-01-05"
 
 
+def test_rolling_endpoint_resets_unit_opening_peak_for_each_window() -> None:
+    payload = {
+        "input_mode": "stateless",
+        "stateless_input": {
+            "scope": {"as_of_date": "2026-01-04", "net_or_gross": "NET"},
+            "periods": [{"type": "YTD", "name": "YTD"}],
+            "returns": [
+                {"date": "2026-01-02", "value": -10.0},
+                {"date": "2026-01-03", "value": -10.0},
+                {"date": "2026-01-04", "value": 0.0},
+            ],
+            "rolling_options": {
+                "window_lengths": [2],
+                "metrics": ["ROLLING_MAX_DRAWDOWN"],
+                "min_observations_policy": "STRICT",
+                "include_time_series": True,
+            },
+        },
+    }
+
+    response = TestClient(app).post("/analytics/risk/rolling-metrics", json=payload)
+
+    assert response.status_code == 200
+    metric_series = response.json()["results"]["YTD"]["window_results"][0]["metric_series"]
+    observed = [point["metric_values"]["ROLLING_MAX_DRAWDOWN"] for point in metric_series]
+    assert observed[0] is None
+    assert observed[1:] == pytest.approx([-0.19, -0.1])
+
+
 def test_rolling_metrics_endpoint_supportability_marks_insufficient_period() -> None:
     client = TestClient(app)
     payload = _stateless_payload()

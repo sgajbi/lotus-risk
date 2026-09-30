@@ -310,6 +310,41 @@ def test_rolling_max_drawdown_matches_documented_decimal_methodology() -> None:
     assert latest_point.metric_values["ROLLING_MAX_DRAWDOWN"] == pytest.approx(summary.latest)
 
 
+@pytest.mark.parametrize(
+    ("returns", "expected_series"),
+    [
+        ([-10.0, 0.0], [None, -0.1]),
+        ([-10.0, -10.0], [None, -0.19]),
+        ([20.0, -10.0, 0.0], [None, -0.1, -0.1]),
+        ([-10.0, 20.0], [None, -0.1]),
+    ],
+)
+def test_rolling_max_drawdown_resets_unit_opening_peak_for_each_window(
+    returns: list[float], expected_series: list[float | None]
+) -> None:
+    payload = RollingStatelessInput.model_validate(
+        {
+            "scope": {"as_of_date": "2026-01-05", "net_or_gross": "NET"},
+            "periods": [{"type": "YTD", "name": "YTD"}],
+            "returns": [
+                {"date": f"2026-01-0{index + 2}", "value": value}
+                for index, value in enumerate(returns)
+            ],
+            "rolling_options": {
+                "window_lengths": [2],
+                "metrics": ["ROLLING_MAX_DRAWDOWN"],
+                "min_observations_policy": "STRICT",
+                "include_time_series": True,
+            },
+        }
+    )
+    response = calculate_rolling_metrics(payload, input_mode=RollingInputMode.STATELESS)
+    metric_series = response.results["YTD"].window_results[0].metric_series
+    assert metric_series is not None
+    observed = [point.metric_values["ROLLING_MAX_DRAWDOWN"] for point in metric_series]
+    assert observed == pytest.approx(expected_series)
+
+
 def test_rolling_engine_returns_period_error_when_insufficient_period_data() -> None:
     payload = {
         "scope": {"as_of_date": "2026-01-08", "net_or_gross": "NET"},

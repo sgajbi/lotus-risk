@@ -8,13 +8,13 @@ import numpy as np
 
 @dataclass
 class EpisodeRecord:
-    peak_date: date
+    peak_date: date | None
     trough_date: date
     recovery_date: date | None
     depth: float
-    days_to_trough: int
+    days_to_trough: int | None
     days_to_recovery: int | None
-    total_days: int
+    total_days: int | None
     is_recovered: bool
 
 
@@ -25,7 +25,7 @@ class DrawdownExtremeFields:
     trough_date: date | None
     recovery_date: date | None
     is_recovered: bool
-    days_to_trough: int
+    days_to_trough: int | None
     days_to_recovery: int | None
 
 
@@ -58,7 +58,7 @@ def build_episodes_from_values(
     episodes: list[EpisodeRecord] = []
     in_episode = False
     start_index = 0
-    peak_date = dates[0]
+    peak_date: date | None = dates[0]
     for idx, dd_value in enumerate(values):
         if not in_episode and dd_value < 0:
             in_episode = True
@@ -74,15 +74,18 @@ def build_episodes_from_values(
     return episodes
 
 
-def _episode_peak_date(dates: list[date], index: int) -> date:
-    return dates[index - 1] if index > 0 else dates[index]
+def _episode_peak_date(dates: list[date], index: int) -> date | None:
+    # The unit opening peak exists before the first supplied return, but its
+    # date is not supplied by the source.  Never relabel the first loss as a
+    # same-day peak just to populate a required field.
+    return dates[index - 1] if index > 0 else None
 
 
 def _append_episode_record(
     episodes: list[EpisodeRecord],
     context: _EpisodeBuildContext,
     start_index: int,
-    peak_date: date,
+    peak_date: date | None,
     recovery_index: int | None,
 ) -> None:
     episodes.append(
@@ -102,7 +105,7 @@ def episode_record_from_segment(
     dates: list[date],
     values: list[float],
     start_index: int,
-    peak_date: date,
+    peak_date: date | None,
     duration_unit: str,
     recovery_index: int | None,
 ) -> EpisodeRecord:
@@ -119,13 +122,21 @@ def episode_record_from_segment(
         trough_date=trough_date,
         recovery_date=recovery_date,
         depth=depth,
-        days_to_trough=duration_days(peak_date, trough_date, unit=duration_unit),
+        days_to_trough=(
+            duration_days(peak_date, trough_date, unit=duration_unit)
+            if peak_date is not None
+            else None
+        ),
         days_to_recovery=(
             duration_days(trough_date, recovery_date, unit=duration_unit)
             if recovery_date is not None
             else None
         ),
-        total_days=duration_days(peak_date, terminal_date, unit=duration_unit),
+        total_days=(
+            duration_days(peak_date, terminal_date, unit=duration_unit)
+            if peak_date is not None
+            else None
+        ),
         is_recovered=recovery_date is not None,
     )
 

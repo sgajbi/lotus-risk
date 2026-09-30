@@ -42,8 +42,10 @@
 - `t`: observation date.
 - `r_t_pp`: portfolio return on date `t`, in percentage points.
 - `r_t_decimal`: `r_t_pp / 100`.
+- `W_0`: unit opening wealth immediately before the resolved period; it has no return-observation
+  date.
 - `W_t`: cumulative wealth index through date `t`, `product(1 + r_i_decimal)` for `i <= t`.
-- `P_t`: running peak wealth through date `t`, `max(W_i)` for `i <= t`.
+- `P_t`: running peak wealth through date `t`, `max(W_0, W_i)` for `i <= t`.
 - `DD_t`: decimal drawdown ratio on date `t`, `W_t / P_t - 1`.
 - `E`: set of drawdown episodes, where an episode starts when `DD_t < 0` after a non-underwater
   observation and ends when `DD_t >= 0` or period end is reached.
@@ -58,21 +60,23 @@
    error `"Insufficient data"`.
 4. Convert percentage-point returns to decimal:
    `r_t_decimal = r_t_pp / 100`.
-5. Build cumulative wealth:
+5. Set the undated opening wealth and opening peak to `W_0 = P_0 = 1`.
+6. Build cumulative wealth:
    `W_t = product(1 + r_i_decimal)` for `i <= t`.
-6. Build running peak wealth:
-   `P_t = max(W_i)` for `i <= t`.
-7. Build decimal drawdown path:
+7. Build running peak wealth:
+   `P_t = max(W_0, W_i)` for `i <= t`.
+8. Build decimal drawdown path:
    `DD_t = W_t / P_t - 1`.
-8. Extract episodes from the drawdown path:
+9. Extract episodes from the drawdown path:
    - a new episode starts at the first underwater observation where `DD_t < 0`;
-   - `peak_date` is the previous observation date when one exists, otherwise the underwater date;
+   - `peak_date` is the previous observed date when one exists; it is `null` when the peak is the
+     undated opening baseline, rather than falsely assigning the first loss date as a peak;
    - `trough_date` is the date of the minimum `DD_t` in the episode;
    - `recovery_date` is the first date in that episode where `DD_t >= 0`; unrecovered episodes use
      `null`.
-9. Select the maximum-drawdown episode:
+10. Select the maximum-drawdown episode:
    `max_episode = argmin(depth_e)`.
-10. Map summary output:
+11. Map summary output:
     `summary.max_drawdown = depth_max_episode`.
 
 ## Step-by-Step Computation
@@ -97,6 +101,13 @@
 - Non-numeric return entries are rejected by request-contract validation before engine math.
 - Episode recovery not reached before period end emits `max_drawdown_recovery_date = null`,
   `is_recovered = false`, and `days_to_recovery = null`.
+- When the deepest episode begins at the unit opening baseline, `max_drawdown_peak_date`,
+  `days_to_trough`, and that episode's `peak_date`, `days_to_trough`, and `total_days` are `null`:
+  the source did not supply a date for the opening baseline. `trough_date`, recovery-from-trough,
+  and observation-count `time_under_water_days` remain meaningful.
+- Returns below `-100%` are preserved as explicitly supplied negative-equity/leveraged wealth paths;
+  Risk does not silently reset them to a zero-loss path or infer liquidation. Such paths can produce
+  drawdown below `-1.0` and cannot be described as recovered until wealth returns to the unit peak.
 - `analysis_options.duration_unit` changes `days_to_trough`, `days_to_recovery`, and episode
   `total_days` only.
 - `analysis_options.top_n_episodes` and `analysis_options.minimum_episode_depth_bps` do not alter

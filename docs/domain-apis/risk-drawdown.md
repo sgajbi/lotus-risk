@@ -140,6 +140,11 @@ The response metadata now echoes the applied drawdown configuration so consumers
   - `APPLIED`
 - `portfolio_observation_count` and `benchmark_observation_count` show how much realized history supported the period result and should be checked before over-interpreting short windows.
 - `time_under_water_days` counts observations below the running peak. It is a persistence signal, not simply the gap between peak and trough dates.
+- Every resolved period starts from undated unit opening wealth and a unit opening peak. An initial
+  loss therefore remains underwater; when that opening baseline is the peak, peak-date and
+  peak-based duration fields are `null` rather than assigned to the first loss date. A supplied
+  below-`-100%` return remains an explicit negative-equity/leveraged path (and can produce
+  drawdown below `-1.0`); Risk never converts it to a zero-loss or inferred-liquidation outcome.
 - `is_recovered = false` means the path had not returned to its prior peak by period end. In that case `max_drawdown_recovery_date` and `days_to_recovery` remain `null`.
 - `episodes[]` is filtered by `minimum_episode_depth_bps` and truncated by `top_n_episodes`, so it is a ranked decision support view rather than a full event ledger unless the caller requests it that way.
 

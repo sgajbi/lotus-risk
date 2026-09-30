@@ -57,6 +57,9 @@ Provide windowed historical risk diagnostics for PB/WM portfolios with instituti
 - when dependency series are supplied but do not align with portfolio dates inside the requested
   period, the endpoint still returns `200` and surfaces `NO_ALIGNED_OBSERVATIONS` in the period
   dependency contexts together with metric quality flags
+- `ROLLING_MAX_DRAWDOWN` starts every eligible window at undated unit opening wealth/peak. Thus a
+  first-window loss remains a loss, and each subsequent window resets its baseline independently;
+  no prior window peak is carried forward.
 
 ## Governed Workload Limits
 

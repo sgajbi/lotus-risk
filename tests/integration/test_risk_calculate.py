@@ -190,6 +190,32 @@ def test_risk_calculate_drawdown_exposes_recovery_context() -> None:
     assert details["time_under_water_days"] == 5
 
 
+def test_risk_calculate_drawdown_retains_initial_loss_without_peak_date() -> None:
+    client = TestClient(app)
+    payload = _request_payload()
+    stateless_input = payload["stateless_input"]
+    assert isinstance(stateless_input, dict)
+    stateless_input["metrics"] = ["DRAWDOWN"]
+    stateless_input["scope"] = {"as_of_date": "2025-01-05", "net_or_gross": "NET"}
+    stateless_input["portfolio_open_date"] = "2025-01-02"
+    stateless_input["periods"] = [{"type": "YTD", "name": "YTD"}]
+    stateless_input["returns"] = [
+        {"date": "2025-01-02", "value": -10.0},
+        {"date": "2025-01-05", "value": 0.0},
+    ]
+
+    response = client.post("/analytics/risk/calculate", json=payload)
+
+    assert response.status_code == 200
+    details = response.json()["results"]["YTD"]["metrics"]["DRAWDOWN"]["details"]
+    assert details["max_drawdown"] == pytest.approx(-10.0)
+    assert details["peak_date"] is None
+    assert details["trough_date"] == "2025-01-02"
+    assert details["is_recovered"] is False
+    assert details["days_to_trough"] is None
+    assert details["time_under_water_days"] is None
+
+
 def test_risk_calculate_sortino_exposes_downside_context() -> None:
     client = TestClient(app)
     payload = _request_payload()

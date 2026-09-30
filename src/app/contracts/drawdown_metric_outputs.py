@@ -11,8 +11,12 @@ class DrawdownEpisode(BaseModel):
         description="Stable drawdown episode identifier for this period response.",
         json_schema_extra={"example": "dd_0001"},
     )
-    peak_date: dt.date = Field(
-        description="Episode peak date before drawdown started.",
+    peak_date: dt.date | None = Field(
+        default=None,
+        description=(
+            "Observed episode peak date before drawdown started. Null when the peak is the "
+            "undated unit opening-wealth baseline."
+        ),
         json_schema_extra={"example": "2026-01-12"},
     )
     trough_date: dt.date = Field(
@@ -28,8 +32,12 @@ class DrawdownEpisode(BaseModel):
         description="Episode depth in decimal drawdown units (negative values).",
         json_schema_extra={"example": -0.124533},
     )
-    days_to_trough: int = Field(
-        description="Number of duration-unit days from peak to trough.",
+    days_to_trough: int | None = Field(
+        default=None,
+        description=(
+            "Number of duration-unit days from an observed peak to trough. Null when the "
+            "peak is the undated opening baseline."
+        ),
         json_schema_extra={"example": 16},
     )
     days_to_recovery: int | None = Field(
@@ -37,8 +45,12 @@ class DrawdownEpisode(BaseModel):
         description="Number of duration-unit days from trough to recovery, if recovered.",
         json_schema_extra={"example": 11},
     )
-    total_days: int = Field(
-        description="Total duration-unit days from peak to recovery (or period end if unrecovered).",
+    total_days: int | None = Field(
+        default=None,
+        description=(
+            "Total duration-unit days from an observed peak to recovery (or period end). Null "
+            "when the peak is the undated opening baseline."
+        ),
         json_schema_extra={"example": 34},
     )
     is_recovered: bool = Field(
@@ -65,7 +77,10 @@ class DrawdownSummary(BaseModel):
     )
     max_drawdown_peak_date: dt.date | None = Field(
         default=None,
-        description="Peak date associated with maximum drawdown.",
+        description=(
+            "Observed peak date associated with maximum drawdown. Null when the peak is the "
+            "undated unit opening-wealth baseline."
+        ),
         json_schema_extra={"example": "2026-01-12"},
     )
     max_drawdown_trough_date: dt.date | None = Field(
@@ -84,7 +99,10 @@ class DrawdownSummary(BaseModel):
     )
     days_to_trough: int | None = Field(
         default=None,
-        description="Duration-unit days from peak to trough for maximum drawdown episode.",
+        description=(
+            "Duration-unit days from an observed peak to trough for the maximum drawdown "
+            "episode. Null when the peak is the undated opening baseline."
+        ),
         json_schema_extra={"example": 16},
     )
     days_to_recovery: int | None = Field(
@@ -128,7 +146,10 @@ class RelativeDrawdownSummary(BaseModel):
     )
     max_drawdown_peak_date: dt.date | None = Field(
         default=None,
-        description="Peak date associated with relative maximum drawdown.",
+        description=(
+            "Observed peak date associated with relative maximum drawdown. Null when the peak "
+            "is the undated unit opening active-wealth baseline."
+        ),
         json_schema_extra={"example": "2026-01-11"},
     )
     max_drawdown_trough_date: dt.date | None = Field(
@@ -148,7 +169,10 @@ class RelativeDrawdownSummary(BaseModel):
     )
     days_to_trough: int | None = Field(
         default=None,
-        description="Number of duration-unit days from relative peak to trough.",
+        description=(
+            "Number of duration-unit days from an observed relative peak to trough. Null when "
+            "the peak is the undated opening active-wealth baseline."
+        ),
         json_schema_extra={"example": 15},
     )
     days_to_recovery: int | None = Field(

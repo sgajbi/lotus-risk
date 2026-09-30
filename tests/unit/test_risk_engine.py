@@ -182,6 +182,33 @@ def test_drawdown_matches_documented_signed_percentage_point_output_contract() -
     assert metric.details["time_under_water_days"] == 2
 
 
+def test_drawdown_retains_opening_loss_without_fabricating_peak_timing() -> None:
+    payload = {
+        "scope": {"as_of_date": "2026-01-05", "net_or_gross": "NET"},
+        "portfolio_open_date": "2026-01-02",
+        "periods": [{"type": "YTD", "name": "YTD"}],
+        "metrics": ["DRAWDOWN"],
+        "options": {"frequency": "DAILY"},
+        "returns": [
+            {"date": "2026-01-02", "value": -10.0},
+            {"date": "2026-01-05", "value": 0.0},
+        ],
+    }
+    metric = (
+        calculate_risk(RiskCalculationRequest.model_validate(payload))
+        .results["YTD"]
+        .metrics["DRAWDOWN"]
+    )
+    assert metric.value == pytest.approx(-10.0)
+    assert metric.details["max_drawdown"] == pytest.approx(-10.0)
+    assert metric.details["peak_date"] is None
+    assert metric.details["trough_date"] == "2026-01-02"
+    assert metric.details["recovery_date"] is None
+    assert metric.details["is_recovered"] is False
+    assert metric.details["days_to_trough"] is None
+    assert metric.details["time_under_water_days"] is None
+
+
 def test_log_return_mode_transforms_portfolio_metric_series() -> None:
     payload = {
         "scope": {"as_of_date": "2026-01-03", "net_or_gross": "NET"},

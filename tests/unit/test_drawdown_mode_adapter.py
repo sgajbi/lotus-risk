@@ -70,6 +70,42 @@ def test_drawdown_stateful_adapter_happy_path() -> None:
     assert response.metadata.source_returns_evidence.freshness == "current"
 
 
+def test_drawdown_stateful_adapter_retains_initial_loss_from_qualified_source() -> None:
+    client = RecordingLotusPerformanceClient(
+        response_payload=build_returns_series_response(
+            portfolio_returns=(("2026-01-02", "-0.1000"), ("2026-01-05", "0.0000")),
+            as_of_date="2026-01-05",
+        )
+    )
+    response = asyncio.run(
+        calculate_drawdown_stateful(
+            DrawdownStatefulInput.model_validate(
+                {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-05",
+                    "periods": [{"type": "YTD", "name": "YTD"}],
+                }
+            ),
+            analysis_options=DrawdownAnalysisOptions.model_validate(
+                {"include_underwater_series": True}
+            ),
+            performance_client=client,
+            authority=admitted_test_authority("corr-opening-loss"),
+        )
+    )
+    period = response.results["YTD"]
+    assert period.summary is not None
+    assert period.summary.max_drawdown == pytest.approx(-0.1)
+    assert period.summary.max_drawdown_peak_date is None
+    assert period.summary.is_recovered is False
+    assert period.underwater_series is not None
+    assert [point.drawdown for point in period.underwater_series] == pytest.approx([-0.1, -0.1])
+    assert response.metadata.source_returns_evidence is not None
+    assert str(response.metadata.source_returns_evidence.calculation_id) == (
+        "00000000-0000-4000-8000-000000000001"
+    )
+
+
 def test_drawdown_stateful_adapter_requires_series_payload() -> None:
     client = RecordingLotusPerformanceClient(response_payload={})
     with pytest.raises(ValueError, match="missing 'series' object"):

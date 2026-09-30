@@ -27,8 +27,19 @@ def _is_underwater(raw: object) -> bool:
 
 
 def drawdown_from_returns(returns: pd.Series) -> pd.Series:
+    """Return drawdown relative to the unit wealth present before a period starts.
+
+    A resolved drawdown period is a self-contained wealth interval.  Its opening
+    wealth and opening peak are both one, but that baseline is not an observed
+    return date.  Keeping it out of the index lets episode reporting distinguish
+    an unknown opening peak from a peak established by an observed return.
+
+    The function deliberately preserves values below -1.0 when callers supply
+    a below--100% return: that is an explicit negative-equity/leveraged path,
+    not a zero-loss reset or an inferred liquidation event.
+    """
     wealth = (1 + returns / 100.0).cumprod()
-    running_peak = wealth.cummax()
+    running_peak = wealth.cummax().clip(lower=1.0)
     return wealth / running_peak - 1.0
 
 
