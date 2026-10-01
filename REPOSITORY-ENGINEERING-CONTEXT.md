@@ -540,6 +540,9 @@ Most relevant current governance:
    before merge and `../lotus-platform/automation/Sync-RepoWikis.ps1 -Publish -Repository
    lotus-risk` after merge when repo-local wiki truth changes,
 9. RFC-0087 preparation should reuse repo-owned readiness, observability, and lineage signals before introducing any new trust publication surface.
+10. `make architecture-gate` invokes Import Linter's actual CLI entry point with `src` on the
+    import path; service code may import `app.upstream_errors` constructors but must not import
+    `httpx` directly or transitively. Transport classifiers belong to `app.integrations`.
 
 ## Context Maintenance Rule
 

@@ -20,6 +20,14 @@ forbidden_modules =
     prometheus_client
 allow_indirect_imports = True
 
+[importlinter:contract:services_do_not_depend_on_http_transport]
+name = Calculation services do not depend on HTTP transport
+type = forbidden
+source_modules =
+    app.services
+forbidden_modules =
+    httpx
+
 [importlinter:contract:services_use_observability_port_adapter]
 name = Services use the sanctioned observability port adapter
 type = forbidden

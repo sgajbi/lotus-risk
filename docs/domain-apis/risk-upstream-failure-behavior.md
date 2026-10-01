@@ -90,7 +90,12 @@ The following explicit downstream transport posture is defined in
 
 ## Validation Evidence
 
-The failure classification matrix is covered by `tests/unit/test_upstream_errors.py` and client-specific coverage in:
+The framework-free constructors and public `UpstreamServiceError` type remain in
+`app.upstream_errors`; the `httpx`-coupled failure classifiers live at the
+`app.integrations.upstream_error_classification` transport boundary. The response envelope,
+codes, categories, and retryability are unchanged. The failure classification matrix is covered
+by `tests/unit/test_upstream_errors.py`, the service import boundary by
+`tests/unit/test_http_transport_architecture_gate.py`, and client-specific coverage in:
 
 1. `tests/unit/test_lotus_core_client.py`,
 2. `tests/unit/test_lotus_performance_client.py`,

@@ -75,8 +75,11 @@ and deterministic for local and protected lanes.
 - `make api-vocabulary-gate` - API vocabulary inventory validation
 - `make no-alias-gate` - rejects Pydantic field aliases and `by_alias` serialisation under `src/`,
   so the wire contract is the field name and there is no second spelling of a payload
-- `make architecture-gate` - import-linter contracts from `.importlinter`, including that the domain
-  and service layers stay framework independent and never import FastAPI
+- `make architecture-gate` - executable import-linter contracts from `.importlinter`, including
+  that service modules do not depend directly or transitively on FastAPI or the `httpx` transport.
+  The HTTP failure classifiers live in `app.integrations.upstream_error_classification`; service
+  code imports only the framework-free constructors in `app.upstream_errors`. The guard is
+  mutation-tested for a forbidden service import and for an absent source tree.
 - `make github-actions-runtime-gate` - workflow action runtime posture, and reference forms that
   cannot resolve syntactically. This runs *first* in both `check` and `ci`. It was added after
   `aquasecurity/trivy-action@0.32.0` - a tag that does not exist - sat in `image-release.yml` and

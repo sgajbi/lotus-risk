@@ -7,12 +7,12 @@ from typing import NoReturn
 
 import httpx
 
-from app.observability import record_upstream_request
-from app.upstream_errors import (
-    UpstreamServiceError,
+from app.integrations.upstream_error_classification import (
     classify_upstream_http_error,
     classify_upstream_transport_error,
 )
+from app.observability import record_upstream_request
+from app.upstream_errors import UpstreamServiceError
 
 
 async def execute_downstream_request(

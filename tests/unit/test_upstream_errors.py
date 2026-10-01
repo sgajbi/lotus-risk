@@ -4,9 +4,11 @@ import httpx
 import pytest
 from fastapi import status
 
-from app.upstream_errors import (
+from app.integrations.upstream_error_classification import (
     classify_upstream_http_error,
     classify_upstream_transport_error,
+)
+from app.upstream_errors import (
     invalid_upstream_payload,
     missing_upstream_data,
 )

@@ -7,8 +7,10 @@
    infrastructure transport models.
 5. Infrastructure adapters sit behind narrow service-facing protocols.
 6. DTO contracts and persistence/transport models must not leak into domain calculation logic.
-7. Downstream errors map through `app.upstream_errors` and API errors map through the standard
-   error response envelope.
+7. Framework-free downstream error constructors and the public exception type live in
+   `app.upstream_errors`; HTTP-client failure classifiers live in
+   `app.integrations.upstream_error_classification`. Service imports of `httpx`, including
+   transitive imports, fail `make architecture-gate`. API errors retain the standard envelope.
 8. Every request must support and propagate correlation identity.
 9. Logs and metrics must use bounded labels and must not expose portfolio, client, trace,
    correlation, request-body, or response-body values as labels.
