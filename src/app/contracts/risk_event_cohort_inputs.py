@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 import math
+from collections import Counter
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -101,6 +102,18 @@ class RiskEventAffectedCohortRequest(BaseModel):
     def validate_candidate_portfolios(self) -> RiskEventAffectedCohortRequest:
         if not self.portfolios:
             raise ValueError("portfolios must contain at least one candidate portfolio")
+        duplicate_portfolio_ids = sorted(
+            portfolio_id
+            for portfolio_id, count in Counter(
+                portfolio.portfolio_id for portfolio in self.portfolios
+            ).items()
+            if count > 1
+        )
+        if duplicate_portfolio_ids:
+            raise ValueError(
+                "portfolios must contain unique portfolio_id values: "
+                + ", ".join(duplicate_portfolio_ids)
+            )
         return self
 
 

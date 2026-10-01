@@ -118,6 +118,62 @@ def test_risk_event_affected_cohort_refuses_non_finite_source_weights(
     assert body["error"]["details"][0]["loc"] == ["body", "portfolios", 0]
 
 
+@pytest.mark.parametrize(
+    "portfolios",
+    [
+        [
+            {
+                "portfolio_id": "REVIEW-COHORT-1",
+                "mandate_id": "MANDATE-A",
+                "portfolio_manager_id": "pm-a",
+                "exposure_weights": {"FIXED_INCOME": 1.0},
+            },
+            {
+                "portfolio_id": "REVIEW-COHORT-1",
+                "mandate_id": "MANDATE-B",
+                "portfolio_manager_id": "pm-b",
+                "exposure_weights": {"CASH": 1.0},
+            },
+        ],
+        [
+            {
+                "portfolio_id": "REVIEW-COHORT-1",
+                "mandate_id": "MANDATE-B",
+                "portfolio_manager_id": "pm-b",
+                "exposure_weights": {"CASH": 1.0},
+            },
+            {
+                "portfolio_id": "REVIEW-COHORT-1",
+                "mandate_id": "MANDATE-A",
+                "portfolio_manager_id": "pm-a",
+                "exposure_weights": {"FIXED_INCOME": 1.0},
+            },
+        ],
+    ],
+)
+def test_risk_event_affected_cohort_endpoint_refuses_ambiguous_duplicate_portfolio_identity(
+    portfolios: list[dict[str, object]],
+) -> None:
+    client = TestClient(app)
+
+    response = client.post(
+        "/analytics/risk/risk-event-cohorts/evaluate",
+        json={
+            "risk_event_id": "RISK_EVENT_2026_Q2_RATES_UP",
+            "as_of_date": "2026-05-10",
+            "minimum_impact_score": 0.05,
+            "portfolios": portfolios,
+        },
+    )
+
+    assert response.status_code == 422
+    detail = response.json()["error"]["details"][0]
+    assert detail["loc"] == ["body"]
+    assert detail["msg"] == (
+        "Value error, portfolios must contain unique portfolio_id values: REVIEW-COHORT-1"
+    )
+
+
 def test_capabilities_include_risk_event_cohort_workflow() -> None:
     client = TestClient(app)
 
