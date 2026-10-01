@@ -6,6 +6,7 @@ from prometheus_client import REGISTRY, generate_latest
 from pydantic import BaseModel
 
 from app.main import app
+from app.observability import record_scenario_job_execution
 from app.observability_contracts import (
     RISK_ANALYTICS_FRESHNESS_METRIC_LABELS,
     RISK_CALCULATION_SUPPORTABILITY_METRIC_LABELS,
@@ -192,6 +193,22 @@ def test_supportability_metrics_use_only_bounded_labels() -> None:
     for forbidden_label in FORBIDDEN_SUPPORTABILITY_METRIC_LABELS:
         assert f"{forbidden_label}=" not in supportability_line
         assert f"{forbidden_label}=" not in freshness_line
+
+
+def test_scenario_job_worker_metrics_expose_only_a_bounded_outcome() -> None:
+    record_scenario_job_execution(outcome="stale_claim", started_at=0.0)
+
+    metrics = generate_latest(REGISTRY).decode("utf-8")
+    execution_lines = [
+        line
+        for line in metrics.splitlines()
+        if line.startswith("lotus_risk_scenario_job_executions_total{")
+        and 'outcome="stale_claim"' in line
+    ]
+    assert execution_lines
+    assert "lotus_risk_scenario_job_execution_seconds_bucket" in metrics
+    for forbidden_label in FORBIDDEN_SUPPORTABILITY_METRIC_LABELS:
+        assert f"{forbidden_label}=" not in execution_lines[-1]
 
 
 def test_source_product_endpoints_emit_supportability_metrics_without_sensitive_labels() -> None:

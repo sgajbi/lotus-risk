@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from contextlib import AbstractContextManager
 from time import perf_counter
+from typing import Literal
 
 from prometheus_client import Counter, Histogram
 
@@ -56,6 +57,25 @@ RISK_METRIC_DURATION_SECONDS = Histogram(
     "Risk metric calculation duration by metric name.",
     ["metric_name"],
 )
+SCENARIO_JOB_EXECUTIONS_TOTAL = Counter(
+    "lotus_risk_scenario_job_executions_total",
+    "Durable scenario-job worker executions by bounded terminal or recovery outcome.",
+    ["outcome"],
+)
+SCENARIO_JOB_EXECUTION_SECONDS = Histogram(
+    "lotus_risk_scenario_job_execution_seconds",
+    "Durable scenario-job worker execution duration by bounded terminal or recovery outcome.",
+    ["outcome"],
+)
+
+ScenarioJobExecutionOutcome = Literal[
+    "idle",
+    "succeeded",
+    "qualified_failure",
+    "invalid_input",
+    "stale_claim",
+    "retryable_error",
+]
 
 
 def observation_start() -> float:
@@ -65,6 +85,15 @@ def observation_start() -> float:
 def record_risk_metric_requests(metrics: Sequence[str]) -> None:
     for metric in metrics:
         RISK_METRIC_REQUESTED_TOTAL.labels(metric_name=metric).inc()
+
+
+def record_scenario_job_execution(
+    *, outcome: ScenarioJobExecutionOutcome, started_at: float
+) -> None:
+    """Record one bounded worker attempt without exposing durable-job identities."""
+    elapsed = max(perf_counter() - started_at, 0.0)
+    SCENARIO_JOB_EXECUTIONS_TOTAL.labels(outcome=outcome).inc()
+    SCENARIO_JOB_EXECUTION_SECONDS.labels(outcome=outcome).observe(elapsed)
 
 
 def observe_risk_metric_duration(metric_name: str) -> AbstractContextManager[None]:

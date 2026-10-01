@@ -152,9 +152,16 @@ the durable primary and tenant/idempotency constraints before traffic; an older 
 store returns the documented unavailable response rather than an internal error. It never runs a
 migration from request handling, but compatible future schema additions remain admissible.
 
-The persistence boundary can claim the next `QUEUED` job, or safely recover a `RUNNING` job only
-after its lease expires. Every claim has a fresh opaque token; a stale claimant cannot persist a
-terminal failure after recovery. This slice does **not** execute the job, return results or
-contribution pages, run a worker, clean retained evidence, or establish production capacity.
+The worker claims at most one `QUEUED` job, or safely recovers a `RUNNING` job only after its lease
+expires. Every claim has a fresh opaque token; a stale claimant cannot persist either terminal
+failure or aggregate/contribution evidence after recovery. On success the worker atomically stores
+the aggregate response and every `(scenario_id, ordinal)` contribution row. The aggregate is
+returned by `GET /analytics/risk/regime-scenario-pack/jobs/{job_id}` without an unbounded embedded
+contribution array; `GET /analytics/risk/regime-scenario-pack/jobs/{job_id}/contributions` returns
+at most 250 stable rows per page for the owning tenant. The explicit worker command also performs
+bounded expiry cleanup.
+
 Consumers must not treat `QUEUED`, `RUNNING`, or `FAILED` as completed analysis; `FAILED` carries
-only the bounded terminal failure code when one has been durably recorded.
+only the bounded terminal failure code when one has been durably recorded. The implementation has
+no production capacity, worker-scheduling, throughput, horizontal-scaling, or consumer-acceptance
+claim until each deployment supplies measured evidence.

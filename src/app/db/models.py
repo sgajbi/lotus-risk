@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 
-from sqlalchemy import DateTime, String, Text, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -31,7 +31,30 @@ class ScenarioEvaluationJobModel(Base):
     attempt_count: Mapped[int] = mapped_column(nullable=False, default=0)
     failure_code: Mapped[str | None] = mapped_column(String(128), nullable=True)
     failure_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+    result_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    completed_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     submitted_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     expires_at: Mapped[dt.datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, index=True
     )
+
+
+class ScenarioEvaluationJobContributionModel(Base):
+    __tablename__ = "scenario_evaluation_job_contributions"
+    __table_args__ = (
+        UniqueConstraint(
+            "job_id", "scenario_id", "ordinal", name="uq_scenario_job_contribution_ordinal"
+        ),
+    )
+
+    job_id: Mapped[str] = mapped_column(
+        ForeignKey("scenario_evaluation_jobs.job_id", ondelete="CASCADE"), primary_key=True
+    )
+    scenario_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    ordinal: Mapped[int] = mapped_column(Integer, primary_key=True)
+    security_id: Mapped[str] = mapped_column(String(256), nullable=False)
+    display_name: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    bucket: Mapped[str] = mapped_column(String(128), nullable=False)
+    weight: Mapped[float] = mapped_column(nullable=False)
+    shock_pct: Mapped[float] = mapped_column(nullable=False)
+    contribution_loss_pct: Mapped[float] = mapped_column(nullable=False)

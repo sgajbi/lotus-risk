@@ -32,7 +32,7 @@ The governed monitoring contract lives at
 1. bounded Prometheus metric labels,
 2. the operator dashboard panels for endpoint, upstream, supportability, and HTTP status posture,
 3. alert definitions for endpoint failures, upstream dependency failures, degraded calculation
-   supportability, and HTTP 5xx responses,
+   supportability, HTTP 5xx responses, and retryable durable scenario-job worker errors,
 4. runbook anchors in `docs/runbooks/service-operations.md`.
 
 `make observability-contract-validate` verifies that declared metrics match the implementation,

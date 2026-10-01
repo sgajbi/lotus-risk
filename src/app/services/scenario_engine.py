@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
+from typing import cast
 
 from app.contracts.scenario import (
     SCENARIO_MAX_POSITION_CONTRIBUTION_ROWS,
@@ -15,6 +16,7 @@ from app.contracts.scenario import (
     ScenarioResult,
     ScenarioSupportabilityState,
 )
+from app.scenario_jobs.contracts import RegimeScenarioPackJobRequest
 
 # Deliberate public compatibility re-export from the historical scenario-engine facade.
 from app.services.scenario_governance import (
@@ -29,6 +31,8 @@ from app.services.scenario_pack_catalog import (
     SUPPORTED_BUCKETS,
     ScenarioDefinition,
 )
+
+ScenarioEvaluationRequest = RegimeScenarioPackRequest | RegimeScenarioPackJobRequest
 
 
 @dataclass(frozen=True)
@@ -51,7 +55,7 @@ class _ScenarioPackContext:
 
 
 def _scenario_pack_context(
-    request: RegimeScenarioPackRequest,
+    request: ScenarioEvaluationRequest,
 ) -> _ScenarioPackContext:
     scenario_pack = SCENARIO_PACKS[request.scenario_pack_id]
     exposure_by_bucket = {
@@ -63,7 +67,7 @@ def _scenario_pack_context(
         if unsupported_buckets
         else ScenarioSupportabilityState.READY
     )
-    governance = evaluate_governance_evidence(request)
+    governance = evaluate_governance_evidence(cast(RegimeScenarioPackRequest, request))
     supportability = most_severe_supportability(
         supportability,
         governance.supportability,
@@ -107,7 +111,7 @@ def _supportability_after_breach(
 
 
 def _evaluate_scenario_pack_context(
-    request: RegimeScenarioPackRequest,
+    request: ScenarioEvaluationRequest,
 ) -> _ScenarioPackEvaluation:
     context = _scenario_pack_context(request)
     scenario_results = _scenario_results(
@@ -143,6 +147,23 @@ def evaluate_regime_scenario_pack(
         raise ValueError(f"Unsupported scenario_pack_id: {request.scenario_pack_id}")
 
     _validate_position_contribution_row_bound(request)
+    return _response_from_evaluation(request)
+
+
+def evaluate_large_regime_scenario_job(
+    request: RegimeScenarioPackJobRequest,
+) -> RegimeScenarioPackResponse:
+    """Evaluate the durable-job allowance without applying the synchronous response-row cap.
+
+    The caller must persist and page the contribution rows transactionally; returning this object
+    here is an internal bounded-worker step, never a public unpaged HTTP response.
+    """
+    if request.scenario_pack_id not in SCENARIO_PACKS:
+        raise ValueError(f"Unsupported scenario_pack_id: {request.scenario_pack_id}")
+    return _response_from_evaluation(request)
+
+
+def _response_from_evaluation(request: ScenarioEvaluationRequest) -> RegimeScenarioPackResponse:
     evaluation = _evaluate_scenario_pack_context(request)
     return RegimeScenarioPackResponse(
         scenario_pack_id=request.scenario_pack_id,
@@ -155,7 +176,7 @@ def evaluate_regime_scenario_pack(
         governance_evidence=evaluation.governance_evidence,
         reason_codes=evaluation.reason_codes,
         metadata=ScenarioEvaluationMetadata(
-            request_fingerprint=_request_fingerprint(request),
+            request_fingerprint=_request_fingerprint(cast(RegimeScenarioPackRequest, request)),
             calculation_supportability=evaluation.supportability,
         ),
     )

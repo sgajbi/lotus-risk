@@ -41,6 +41,12 @@ def implemented_metric_contract() -> dict[str, tuple[str, ...]]:
         observability.ENDPOINT_EXECUTION_SECONDS._name: tuple(
             observability.ENDPOINT_EXECUTION_SECONDS._labelnames
         ),
+        f"{observability.SCENARIO_JOB_EXECUTIONS_TOTAL._name}_total": tuple(
+            observability.SCENARIO_JOB_EXECUTIONS_TOTAL._labelnames
+        ),
+        observability.SCENARIO_JOB_EXECUTION_SECONDS._name: tuple(
+            observability.SCENARIO_JOB_EXECUTION_SECONDS._labelnames
+        ),
         f"{observability.UPSTREAM_REQUESTS_TOTAL._name}_total": tuple(
             observability.UPSTREAM_REQUESTS_TOTAL._labelnames
         ),

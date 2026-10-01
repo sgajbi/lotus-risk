@@ -15,6 +15,8 @@ from app.contracts.scenario_request_field_examples import (
     SCENARIO_EXPOSURE_COMPONENTS_EXAMPLE,
     SCENARIO_EXPOSURES_EXAMPLE,
 )
+from app.contracts.scenario_response_outputs import RegimeScenarioPackResponse
+from app.contracts.scenario_result_outputs import ScenarioPositionContribution
 
 SCENARIO_JOB_MAX_EXPOSURE_COMPONENTS = 1_000
 
@@ -71,6 +73,7 @@ def _validate_exposure_components(
 class ScenarioEvaluationJobStatus(StrEnum):
     QUEUED = "QUEUED"
     RUNNING = "RUNNING"
+    SUCCEEDED = "SUCCEEDED"
     FAILED = "FAILED"
 
 
@@ -162,12 +165,57 @@ class ScenarioEvaluationJobStatusResponse(ScenarioEvaluationJobAccepted):
         ),
         json_schema_extra={"example": "SCENARIO_PACK_REVISION_UNAVAILABLE"},
     )
+    result: RegimeScenarioPackResponse | None = Field(
+        default=None,
+        description=(
+            "Immutable aggregate scenario evaluation after successful completion. Position "
+            "contributions are deliberately retrieved from the bounded contribution page route."
+        ),
+        json_schema_extra={"example": {}},
+    )
+
+
+class ScenarioEvaluationJobContribution(ScenarioPositionContribution):
+    scenario_id: str = Field(
+        description="Immutable governed scenario identity for this contribution row.",
+        json_schema_extra={"example": "growth_slowdown"},
+    )
+
+
+class ScenarioEvaluationJobContributionPage(BaseModel):
+    job_id: str = Field(
+        description="Stable identity of the completed scenario evaluation job.",
+        json_schema_extra={"example": "12db0287-38f2-4c29-a155-61499ea40b47"},
+    )
+    contributions: list[ScenarioEvaluationJobContribution] = Field(
+        description="One stable, bounded page of immutable source-owned contribution rows.",
+        json_schema_extra={
+            "example": [
+                {
+                    "scenario_id": "growth_slowdown",
+                    "security_id": "FO_EQ_AAPL_US",
+                    "display_name": "Apple Inc.",
+                    "bucket": "EQUITY",
+                    "weight": 0.18,
+                    "shock_pct": -0.12,
+                    "contribution_loss_pct": 0.0216,
+                }
+            ]
+        },
+    )
+    next_cursor: str | None = Field(
+        default=None,
+        description="Opaque cursor for the next stable page, or null when the result is exhausted.",
+        json_schema_extra={"example": "WyJncm93dGhfc2xvd2Rvd24iLDI0OV0"},
+    )
 
 
 __all__ = [
     "SCENARIO_JOB_MAX_EXPOSURE_COMPONENTS",
     "RegimeScenarioPackJobRequest",
     "ScenarioEvaluationJobAccepted",
+    "ScenarioEvaluationJobContribution",
+    "ScenarioEvaluationJobContributionPage",
     "ScenarioEvaluationJobStatus",
     "ScenarioEvaluationJobStatusResponse",
 ]

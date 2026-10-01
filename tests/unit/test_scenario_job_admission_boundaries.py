@@ -2,13 +2,16 @@ from __future__ import annotations
 
 import datetime as dt
 from pathlib import Path
+from typing import cast
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.engine.reflection import Inspector
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.main import app
 from app.scenario_jobs import service
+from app.scenario_jobs import service as scenario_job_service
 from app.scenario_jobs.contracts import (
     RegimeScenarioPackJobRequest,
     ScenarioEvaluationJobStatus,
@@ -66,6 +69,8 @@ def _record() -> ScenarioEvaluationJobRecord:
         attempt_count=0,
         failure_code=None,
         failure_detail=None,
+        result_json=None,
+        completed_at=None,
         submitted_at=dt.datetime(2026, 5, 3, 9, 30, tzinfo=dt.UTC),
         expires_at=dt.datetime(2026, 5, 6, 9, 30, tzinfo=dt.UTC),
     )
@@ -255,3 +260,47 @@ def test_status_mapping_is_tenant_scoped_and_read_store_failure_is_reported(
             headers={"X-Tenant-Id": "tenant-a"},
         )
     assert http_response.status_code == 503
+
+
+def test_cursor_and_schema_helpers_fail_closed_for_malformed_structures(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    from app.scenario_jobs import schema as scenario_job_schema
+
+    assert scenario_job_service._decode_contribution_cursor(
+        scenario_job_service._encode_contribution_cursor("growth_slowdown", 0)
+    ) == ("growth_slowdown", 0)
+    for cursor in ("not-base64", "W10", "WyIiLDAsMV0"):
+        with pytest.raises(ValueError, match="cursor is invalid"):
+            scenario_job_service._decode_contribution_cursor(cursor)
+    assert scenario_job_schema._constraint_columns({"column_names": "job_id"}) == frozenset()
+
+    class _NoContributionTableInspector:
+        def has_table(self, _: str) -> bool:
+            return False
+
+    assert not scenario_job_schema._has_required_contribution_table(
+        cast("Inspector", _NoContributionTableInspector())
+    )
+
+    store = SqlAlchemyScenarioJobStore(f"sqlite:///{(tmp_path / 'broken.db').as_posix()}")
+    try:
+        monkeypatch.setattr(
+            scenario_job_schema, "inspect", lambda _: (_ for _ in ()).throw(SQLAlchemyError())
+        )
+        assert not store.is_schema_ready()
+    finally:
+        store.close()
+
+
+def test_status_route_openapi_declares_its_required_tenant_authority() -> None:
+    """Generated clients must receive the same ownership requirement as the runtime."""
+    operation = app.openapi()["paths"]["/analytics/risk/regime-scenario-pack/jobs/{job_id}"]["get"]
+    tenant_parameter = next(
+        parameter
+        for parameter in operation["parameters"]
+        if parameter["in"] == "header" and parameter["name"] == "X-Tenant-Id"
+    )
+
+    assert tenant_parameter["required"] is True
+    assert tenant_parameter["schema"] == {"type": "string", "minLength": 1, "maxLength": 128}

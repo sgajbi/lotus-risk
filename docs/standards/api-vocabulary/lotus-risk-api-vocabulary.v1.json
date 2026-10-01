@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-10-01T05:24:38.476660+00:00",
+  "generatedAt": "2026-10-01T06:39:41.579822+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.affected_portfolios",
@@ -423,7 +423,8 @@
       "fieldPaths": [
         "exposures[].bucket",
         "exposure_components[].bucket",
-        "scenario_results[].position_contributions[].bucket"
+        "scenario_results[].position_contributions[].bucket",
+        "contributions[].bucket"
       ]
     },
     {
@@ -741,7 +742,35 @@
         "number"
       ],
       "fieldPaths": [
-        "scenario_results[].position_contributions[].contribution_loss_pct"
+        "scenario_results[].position_contributions[].contribution_loss_pct",
+        "contributions[].contribution_loss_pct"
+      ]
+    },
+    {
+      "semanticId": "lotus.contributions",
+      "canonicalTerm": "contributions",
+      "preferredName": "contributions",
+      "description": "One stable, bounded page of immutable source-owned contribution rows.",
+      "example": [
+        {
+          "bucket": "EQUITY",
+          "contribution_loss_pct": 0.0216,
+          "display_name": "Apple Inc.",
+          "scenario_id": "growth_slowdown",
+          "security_id": "FO_EQ_AAPL_US",
+          "shock_pct": -0.12,
+          "weight": 0.18
+        }
+      ],
+      "type": "array",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "array"
+      ],
+      "fieldPaths": [
+        "contributions"
       ]
     },
     {
@@ -881,6 +910,23 @@
       ],
       "fieldPaths": [
         "products[].current_routes"
+      ]
+    },
+    {
+      "semanticId": "lotus.cursor",
+      "canonicalTerm": "cursor",
+      "preferredName": "cursor",
+      "description": "Canonical cursor used by lotus-risk APIs.",
+      "example": null,
+      "type": "object",
+      "locations": [
+        "query"
+      ],
+      "observedTypes": [
+        "object"
+      ],
+      "fieldPaths": [
+        "cursor"
       ]
     },
     {
@@ -1162,7 +1208,8 @@
         "exposure_components[].display_name",
         "scenario_results[].display_name",
         "scenario_results[].position_contributions[].display_name",
-        "display_name"
+        "display_name",
+        "contributions[].display_name"
       ]
     },
     {
@@ -2114,6 +2161,23 @@
       ]
     },
     {
+      "semanticId": "lotus.limit",
+      "canonicalTerm": "limit",
+      "preferredName": "limit",
+      "description": "Canonical limit used by lotus-risk APIs.",
+      "example": null,
+      "type": "integer",
+      "locations": [
+        "query"
+      ],
+      "observedTypes": [
+        "integer"
+      ],
+      "fieldPaths": [
+        "limit"
+      ]
+    },
+    {
       "semanticId": "lotus.lineage_version",
       "canonicalTerm": "lineage_version",
       "preferredName": "lineage_version",
@@ -2475,6 +2539,23 @@
       ],
       "fieldPaths": [
         "scope.net_or_gross"
+      ]
+    },
+    {
+      "semanticId": "lotus.next_cursor",
+      "canonicalTerm": "next_cursor",
+      "preferredName": "next_cursor",
+      "description": "Opaque cursor for the next stable page, or null when the result is exhausted.",
+      "example": "WyJncm93dGhfc2xvd2Rvd24iLDI0OV0",
+      "type": "object",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "object"
+      ],
+      "fieldPaths": [
+        "next_cursor"
       ]
     },
     {
@@ -3112,6 +3193,23 @@
       ]
     },
     {
+      "semanticId": "lotus.result",
+      "canonicalTerm": "result",
+      "preferredName": "result",
+      "description": "Immutable aggregate scenario evaluation after successful completion. Position contributions are deliberately retrieved from the bounded contribution page route.",
+      "example": {},
+      "type": "object",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "object"
+      ],
+      "fieldPaths": [
+        "result"
+      ]
+    },
+    {
       "semanticId": "lotus.results",
       "canonicalTerm": "results",
       "preferredName": "results",
@@ -3402,7 +3500,8 @@
         "string"
       ],
       "fieldPaths": [
-        "scenario_results[].scenario_id"
+        "scenario_results[].scenario_id",
+        "contributions[].scenario_id"
       ]
     },
     {
@@ -3512,6 +3611,7 @@
       "fieldPaths": [
         "exposure_components[].security_id",
         "scenario_results[].position_contributions[].security_id",
+        "contributions[].security_id",
         "single_position_concentration.top_position_current.security_id",
         "single_position_concentration.top_position_proposed.security_id"
       ]
@@ -3587,7 +3687,8 @@
         "number"
       ],
       "fieldPaths": [
-        "scenario_results[].position_contributions[].shock_pct"
+        "scenario_results[].position_contributions[].shock_pct",
+        "contributions[].shock_pct"
       ]
     },
     {
@@ -4682,6 +4783,7 @@
         "exposures[].weight",
         "exposure_components[].weight",
         "scenario_results[].position_contributions[].weight",
+        "contributions[].weight",
         "single_position_concentration.top_position_current.weight",
         "single_position_concentration.top_position_proposed.weight",
         "issuer_concentration.top_issuer_current.weight",
@@ -4862,6 +4964,66 @@
       "allowedValues": [],
       "semanticId": "lotus.job_id",
       "attributeRef": "#/attributeCatalog/lotus.job_id"
+    },
+    {
+      "name": "x_tenant_id",
+      "kind": "request_option",
+      "location": "header",
+      "required": true,
+      "type": "string",
+      "description": "Exactly one admitted tenant authority that owns the durable job. Duplicate header values are refused.",
+      "example": "tenant-sg",
+      "allowedValues": [],
+      "semanticId": "lotus.x_tenant_id",
+      "attributeRef": "#/attributeCatalog/lotus.x_tenant_id"
+    },
+    {
+      "name": "job_id",
+      "kind": "request_option",
+      "location": "path",
+      "required": true,
+      "type": "string",
+      "description": "Canonical job id used by lotus-risk APIs.",
+      "example": "ENTITY_001",
+      "allowedValues": [],
+      "semanticId": "lotus.job_id",
+      "attributeRef": "#/attributeCatalog/lotus.job_id"
+    },
+    {
+      "name": "cursor",
+      "kind": "request_option",
+      "location": "query",
+      "required": false,
+      "type": "object",
+      "description": "Canonical cursor used by lotus-risk APIs.",
+      "example": "STANDARD_VALUE",
+      "allowedValues": [],
+      "semanticId": "lotus.cursor",
+      "attributeRef": "#/attributeCatalog/lotus.cursor"
+    },
+    {
+      "name": "limit",
+      "kind": "request_option",
+      "location": "query",
+      "required": false,
+      "type": "integer",
+      "description": "Canonical limit used by lotus-risk APIs.",
+      "example": 1,
+      "allowedValues": [],
+      "semanticId": "lotus.limit",
+      "attributeRef": "#/attributeCatalog/lotus.limit"
+    },
+    {
+      "name": "x_tenant_id",
+      "kind": "request_option",
+      "location": "header",
+      "required": true,
+      "type": "string",
+      "description": "Exactly one admitted tenant authority owning the durable job.",
+      "example": "tenant-sg",
+      "allowedValues": [],
+      "semanticId": "lotus.x_tenant_id",
+      "attributeRef": "#/attributeCatalog/lotus.x_tenant_id"
     },
     {
       "name": "x_tenant_id",
@@ -7257,6 +7419,14 @@
             "type": "string",
             "semanticId": "lotus.job_id",
             "attributeRef": "#/attributeCatalog/lotus.job_id"
+          },
+          {
+            "name": "X-Tenant-Id",
+            "location": "header",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.x_tenant_id",
+            "attributeRef": "#/attributeCatalog/lotus.x_tenant_id"
           }
         ]
       },
@@ -7317,6 +7487,141 @@
             "type": "object",
             "semanticId": "lotus.failure_code",
             "attributeRef": "#/attributeCatalog/lotus.failure_code"
+          },
+          {
+            "name": "result",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.result",
+            "attributeRef": "#/attributeCatalog/lotus.result"
+          }
+        ]
+      }
+    },
+    {
+      "domain": "risk_analytics",
+      "method": "GET",
+      "path": "/analytics/risk/regime-scenario-pack/jobs/{job_id}/contributions",
+      "operationId": "getRegimeScenarioPackEvaluationJobContributions",
+      "summary": "Read a stable page of completed scenario-job contributions",
+      "request": {
+        "fields": [
+          {
+            "name": "job_id",
+            "location": "path",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.job_id",
+            "attributeRef": "#/attributeCatalog/lotus.job_id"
+          },
+          {
+            "name": "cursor",
+            "location": "query",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.cursor",
+            "attributeRef": "#/attributeCatalog/lotus.cursor"
+          },
+          {
+            "name": "limit",
+            "location": "query",
+            "required": false,
+            "type": "integer",
+            "semanticId": "lotus.limit",
+            "attributeRef": "#/attributeCatalog/lotus.limit"
+          },
+          {
+            "name": "X-Tenant-Id",
+            "location": "header",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.x_tenant_id",
+            "attributeRef": "#/attributeCatalog/lotus.x_tenant_id"
+          }
+        ]
+      },
+      "response": {
+        "fields": [
+          {
+            "name": "job_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.job_id",
+            "attributeRef": "#/attributeCatalog/lotus.job_id"
+          },
+          {
+            "name": "contributions",
+            "location": "body",
+            "required": true,
+            "type": "array",
+            "semanticId": "lotus.contributions",
+            "attributeRef": "#/attributeCatalog/lotus.contributions"
+          },
+          {
+            "name": "contributions[].security_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.security_id",
+            "attributeRef": "#/attributeCatalog/lotus.security_id"
+          },
+          {
+            "name": "contributions[].display_name",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.display_name",
+            "attributeRef": "#/attributeCatalog/lotus.display_name"
+          },
+          {
+            "name": "contributions[].bucket",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.bucket",
+            "attributeRef": "#/attributeCatalog/lotus.bucket"
+          },
+          {
+            "name": "contributions[].weight",
+            "location": "body",
+            "required": true,
+            "type": "number",
+            "semanticId": "lotus.weight",
+            "attributeRef": "#/attributeCatalog/lotus.weight"
+          },
+          {
+            "name": "contributions[].shock_pct",
+            "location": "body",
+            "required": true,
+            "type": "number",
+            "semanticId": "lotus.shock_pct",
+            "attributeRef": "#/attributeCatalog/lotus.shock_pct"
+          },
+          {
+            "name": "contributions[].contribution_loss_pct",
+            "location": "body",
+            "required": true,
+            "type": "number",
+            "semanticId": "lotus.contribution_loss_pct",
+            "attributeRef": "#/attributeCatalog/lotus.contribution_loss_pct"
+          },
+          {
+            "name": "contributions[].scenario_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.scenario_id",
+            "attributeRef": "#/attributeCatalog/lotus.scenario_id"
+          },
+          {
+            "name": "next_cursor",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.next_cursor",
+            "attributeRef": "#/attributeCatalog/lotus.next_cursor"
           }
         ]
       }

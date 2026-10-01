@@ -80,6 +80,38 @@
       "source": "app.observability.record_endpoint_execution"
     },
     {
+      "name": "lotus_risk_scenario_job_executions_total",
+      "type": "counter",
+      "description": "Counts durable scenario-job worker executions by bounded terminal or recovery outcome.",
+      "labels": {
+        "outcome": [
+          "idle",
+          "succeeded",
+          "qualified_failure",
+          "invalid_input",
+          "stale_claim",
+          "retryable_error"
+        ]
+      },
+      "source": "app.observability.record_scenario_job_execution"
+    },
+    {
+      "name": "lotus_risk_scenario_job_execution_seconds",
+      "type": "histogram",
+      "description": "Measures durable scenario-job worker execution duration by bounded terminal or recovery outcome.",
+      "labels": {
+        "outcome": [
+          "idle",
+          "succeeded",
+          "qualified_failure",
+          "invalid_input",
+          "stale_claim",
+          "retryable_error"
+        ]
+      },
+      "source": "app.observability.record_scenario_job_execution"
+    },
+    {
       "name": "lotus_risk_upstream_requests_total",
       "type": "counter",
       "description": "Counts upstream dependency request outcomes by dependency, operation, outcome, and category.",
@@ -281,6 +313,9 @@
           "/analytics/risk/concentration",
           "/analytics/risk/mandate-health-context",
           "/analytics/risk/regime-scenario-pack/evaluate",
+          "/analytics/risk/regime-scenario-pack/jobs",
+          "/analytics/risk/regime-scenario-pack/jobs/{job_id}",
+          "/analytics/risk/regime-scenario-pack/jobs/{job_id}/contributions",
           "/analytics/risk/risk-event-cohorts/evaluate"
         ],
         "method": [
@@ -326,6 +361,20 @@
           "metric": "lotus_risk_endpoint_execution_seconds",
           "query": "histogram_quantile(0.95, sum by (endpoint, input_mode, le) (rate(lotus_risk_endpoint_execution_seconds_bucket[5m])))",
           "use_when": "Monitor endpoint latency trends by bounded endpoint and input mode; no alert threshold is declared until production telemetry establishes an SLO baseline."
+        },
+        {
+          "panel_id": "risk-scenario-job-worker-posture",
+          "title": "Durable Scenario Job Worker Outcomes",
+          "metric": "lotus_risk_scenario_job_executions_total",
+          "query": "sum by (outcome) (rate(lotus_risk_scenario_job_executions_total[5m]))",
+          "use_when": "Monitor completed work, stale-fence recovery, qualified refusals, and retryable worker errors without exposing job or tenant identifiers."
+        },
+        {
+          "panel_id": "risk-scenario-job-worker-latency",
+          "title": "Durable Scenario Job Worker Latency",
+          "metric": "lotus_risk_scenario_job_execution_seconds",
+          "query": "histogram_quantile(0.95, sum by (outcome, le) (rate(lotus_risk_scenario_job_execution_seconds_bucket[5m])))",
+          "use_when": "Track worker duration by bounded outcome; no production latency SLO is claimed until an operator establishes one from live evidence."
         },
         {
           "panel_id": "risk-upstream-latency",
@@ -383,6 +432,14 @@
       "query": "sum by (handler) (rate(http_requests_total{status=\"5xx\"}[5m])) > 0",
       "condition": "The service emits HTTP 5xx responses by handler.",
       "runbook": "docs/runbooks/service-operations.md#http-5xx-alert"
+    },
+    {
+      "alert_id": "lotus-risk-scenario-job-retryable-error",
+      "severity": "warning",
+      "metric": "lotus_risk_scenario_job_executions_total",
+      "query": "sum(rate(lotus_risk_scenario_job_executions_total{outcome=\"retryable_error\"}[5m])) > 0",
+      "condition": "A durable scenario-job worker reports an unexpected retryable error for five minutes.",
+      "runbook": "docs/runbooks/service-operations.md#scenario-job-retryable-error-alert"
     }
   ]
 }
