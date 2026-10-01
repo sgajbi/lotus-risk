@@ -38,10 +38,13 @@ def _tracking_error_health(
     *,
     annualized_tracking_error: Decimal | None,
     attention_threshold: Decimal,
+    unavailable_reason: str | None = None,
 ) -> _TrackingErrorHealth:
     reason_codes = ["RISK_METHODOLOGY_SOURCE_OWNED"]
     if annualized_tracking_error is None:
         reason_codes.append("MANDATE_RISK_HEALTH_TRACKING_ERROR_UNAVAILABLE")
+        if unavailable_reason is not None:
+            reason_codes.append(unavailable_reason)
         return _TrackingErrorHealth(
             health_state="unavailable",
             threshold_breached=None,
@@ -64,12 +67,16 @@ def evaluate_mandate_risk_health_context(
 ) -> MandateRiskHealthContextResponse:
     period_name = request.period.name or request.period.type
     risk_response = calculate_risk(_tracking_error_risk_request(request))
+    risk_period = risk_response.results.get(period_name)
     tracking_error_source = _tracking_error_source_metric(
-        risk_response.results[period_name].metrics["TRACKING_ERROR"].details or {}
+        (risk_period.metrics["TRACKING_ERROR"].details or {}) if risk_period is not None else {}
     )
     tracking_error_health = _tracking_error_health(
         annualized_tracking_error=tracking_error_source.annualized_tracking_error,
         attention_threshold=request.tracking_error_attention_threshold,
+        unavailable_reason=(
+            "MANDATE_RISK_HEALTH_PORTFOLIO_HISTORY_UNAVAILABLE" if risk_period is None else None
+        ),
     )
 
     return MandateRiskHealthContextResponse(

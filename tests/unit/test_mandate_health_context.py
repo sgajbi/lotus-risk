@@ -103,6 +103,46 @@ def test_mandate_risk_health_context_marks_unavailable_when_tracking_error_unava
     assert "MANDATE_RISK_HEALTH_TRACKING_ERROR_UNAVAILABLE" in response.reason_codes
 
 
+@pytest.mark.parametrize(
+    "both_series_empty",
+    [False, True],
+)
+def test_mandate_risk_health_context_marks_missing_portfolio_history_unavailable(
+    both_series_empty: bool,
+) -> None:
+    payload = _request_payload()
+    payload["returns"] = []
+    if both_series_empty:
+        payload["benchmark_returns"] = []
+
+    response = evaluate_mandate_risk_health_context(
+        MandateRiskHealthContextRequest.model_validate(payload)
+    )
+
+    assert response.health_state == "unavailable"
+    assert response.threshold_breached is None
+    assert response.source_metric.annualized_tracking_error is None
+    assert response.source_metric.aligned_observation_count == 0
+    assert response.request_fingerprint.startswith("sha256:")
+    assert response.source_request_fingerprint.startswith("sha256:")
+    assert "MANDATE_RISK_HEALTH_TRACKING_ERROR_UNAVAILABLE" in response.reason_codes
+    assert "MANDATE_RISK_HEALTH_PORTFOLIO_HISTORY_UNAVAILABLE" in response.reason_codes
+
+
+def test_mandate_risk_health_context_marks_one_aligned_observation_unavailable() -> None:
+    payload = _request_payload()
+    payload["benchmark_returns"] = [{"date": "2026-01-02", "value": 0.10}]
+
+    response = evaluate_mandate_risk_health_context(
+        MandateRiskHealthContextRequest.model_validate(payload)
+    )
+
+    assert response.health_state == "unavailable"
+    assert response.threshold_breached is None
+    assert response.source_metric.annualized_tracking_error is None
+    assert "MANDATE_RISK_HEALTH_PORTFOLIO_HISTORY_UNAVAILABLE" not in response.reason_codes
+
+
 def test_mandate_risk_health_context_endpoint_returns_source_product() -> None:
     client = TestClient(app)
 
@@ -115,6 +155,73 @@ def test_mandate_risk_health_context_endpoint_returns_source_product() -> None:
     assert body["methodology_posture"]["source_metrics_product"] == "RiskMetricsReport:v1"
     assert body["health_state"] == "attention"
     assert body["threshold_breached"] is True
+
+
+def test_mandate_risk_health_context_zero_tracking_error_at_zero_threshold_is_ready() -> None:
+    payload = _request_payload()
+    payload["returns"] = [
+        {"date": "2026-01-02", "value": 0.0},
+        {"date": "2026-01-03", "value": 0.0},
+        {"date": "2026-01-04", "value": 0.0},
+    ]
+    returns = payload["returns"]
+    assert isinstance(returns, list)
+    payload["benchmark_returns"] = list(returns)
+    payload["tracking_error_attention_threshold"] = "0"
+
+    response = TestClient(app).post("/analytics/risk/mandate-health-context", json=payload)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["health_state"] == "ready"
+    assert body["threshold_breached"] is False
+    assert body["source_metric"]["annualized_tracking_error"] == "0.0"
+
+
+@pytest.mark.parametrize("both_series_empty", [False, True])
+def test_mandate_risk_health_context_endpoint_returns_unavailable_for_empty_history(
+    both_series_empty: bool,
+) -> None:
+    payload = _request_payload()
+    payload["returns"] = []
+    if both_series_empty:
+        payload["benchmark_returns"] = []
+
+    response = TestClient(app, raise_server_exceptions=False).post(
+        "/analytics/risk/mandate-health-context", json=payload
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["health_state"] == "unavailable"
+    assert body["threshold_breached"] is None
+    assert body["source_metric"]["annualized_tracking_error"] is None
+    assert body["source_metric"]["aligned_observation_count"] == 0
+    assert "MANDATE_RISK_HEALTH_PORTFOLIO_HISTORY_UNAVAILABLE" in body["reason_codes"]
+
+
+def test_mandate_risk_health_context_endpoint_remains_unavailable_for_out_of_period_history() -> (
+    None
+):
+    payload = _request_payload()
+    payload["returns"] = [
+        {"date": "2025-12-20", "value": 0.25},
+        {"date": "2025-12-21", "value": -0.10},
+    ]
+    payload["benchmark_returns"] = [
+        {"date": "2025-12-20", "value": 0.10},
+        {"date": "2025-12-21", "value": 0.05},
+    ]
+
+    response = TestClient(app, raise_server_exceptions=False).post(
+        "/analytics/risk/mandate-health-context", json=payload
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["health_state"] == "unavailable"
+    assert body["threshold_breached"] is None
+    assert "MANDATE_RISK_HEALTH_PORTFOLIO_HISTORY_UNAVAILABLE" not in body["reason_codes"]
 
 
 @pytest.mark.parametrize("series_name", ["returns", "benchmark_returns"])
