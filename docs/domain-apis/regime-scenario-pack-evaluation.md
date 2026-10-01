@@ -3,6 +3,7 @@
 ## Endpoint
 
 - `POST /analytics/risk/regime-scenario-pack/evaluate`
+- `POST /analytics/risk/regime-scenario-pack/jobs` (durable admission only)
 
 ## Product Contract
 
@@ -130,3 +131,19 @@ different scenario methodology or replace the risk-owned contribution calculatio
 packs should retain `scenario_results`, `position_contributions`, `reason_codes`, and `metadata` as
 source-owned evidence. They should also retain `governance_evidence` instead of validating CIO
 approval, effective period, or portfolio applicability locally.
+
+## Large Evaluation Job Admission
+
+The existing synchronous endpoint remains bounded to 250 returned contribution rows. The separate
+job-admission endpoint accepts up to 1,000 reconciled component rows and requires an admitted
+`X-Tenant-Id` plus `Idempotency-Key`. It returns only a `QUEUED` identity, canonical request
+fingerprint, code-defined scenario-pack revision, and expiry after the immutable request commits.
+
+For one tenant and idempotency key, the same canonical input replays the original job; changed
+input is a conflict. A foreign tenant receives the same not-found response as an absent job.
+Admission is unavailable until the operator configures and migrates
+`LOTUS_RISK_SCENARIO_JOB_DATABASE_URL` and sets positive
+`LOTUS_RISK_SCENARIO_JOB_RETENTION_HOURS`.
+
+This slice does **not** execute the job, return results or contribution pages, claim work, recover
+leases, or establish production capacity. Consumers must not treat `QUEUED` as completed analysis.

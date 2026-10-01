@@ -48,15 +48,15 @@ def test_make_ci_is_pr_grade_local_gate() -> None:
     assert PR_GRADE_TARGETS <= _make_target_dependencies("ci")
 
 
-def test_migration_targets_enforce_active_no_schema_contract() -> None:
+def test_migration_targets_enforce_active_alembic_contract() -> None:
     makefile = MAKEFILE.read_text(encoding="utf-8")
 
     assert (
-        "migration-smoke:\n\tpython scripts/migration_contract_check.py --mode no-schema"
+        "migration-smoke:\n\tpython scripts/migration_contract_check.py --mode alembic-sql"
         in makefile
     )
     assert (
-        "migration-apply:\n\tpython scripts/migration_contract_check.py --mode no-schema"
+        "migration-apply:\n\tpython scripts/migration_contract_check.py --mode alembic-sql"
         in makefile
     )
     assert "MIGRATION_SMOKE_TESTS" not in makefile

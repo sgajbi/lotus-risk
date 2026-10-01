@@ -61,9 +61,14 @@ Current repository posture:
     `POST /analytics/risk/mandate-health-context`; it derives bounded mandate risk health posture
     from source-owned tracking-error methodology, returns threshold breach state, methodology
     posture, lineage fingerprints, and bounded reason codes for future `lotus-manage`
-    consumption, and explicitly does not create mandate actions, rebalance waves, client
-    communications, orders, or execution.
-12. `RiskMetricsReport:v1` now has implementation-backed methodology truth for `VOLATILITY`,
+   consumption, and explicitly does not create mandate actions, rebalance waves, client
+   communications, orders, or execution.
+12. `RegimeScenarioPackEvaluationJob:v1` is a partial durable-admission capability exposed through
+    `POST /analytics/risk/regime-scenario-pack/jobs`: it requires tenant authority and an
+    idempotency key, atomically persists immutable canonical input plus a code-defined pack
+    revision, and scopes reads to the submitting tenant. It does not yet execute jobs, expose
+    contribution pages, recover leases, clean expired evidence, or establish production capacity.
+13. `RiskMetricsReport:v1` now has implementation-backed methodology truth for `VOLATILITY`,
     `DRAWDOWN`, `SHARPE`, `SORTINO`, `VAR`, `BETA`, `TRACKING_ERROR`, and
     `INFORMATION_RATIO`: the docs and tests pin
     percentage-point input conventions, optional
@@ -91,7 +96,7 @@ Current repository posture:
     zero-benchmark-variance fail-closed posture for beta, zero-tracking-error fail-closed posture
     for information ratio, constant-active-return zero tracking-error posture, and
     insufficient-data / insufficient-aligned-observation failure behavior.
-13. `RollingRiskMetricsReport:v1` now has implementation-backed methodology truth for
+14. `RollingRiskMetricsReport:v1` now has implementation-backed methodology truth for
     `ROLLING_VOLATILITY`, `ROLLING_SHARPE`, `ROLLING_BETA`, `ROLLING_TRACKING_ERROR`,
     `ROLLING_INFORMATION_RATIO`, and `ROLLING_MAX_DRAWDOWN`: the docs and tests pin
     percentage-point to decimal conversion, `ddof=1` sample standard deviation/covariance/variance
@@ -101,7 +106,7 @@ Current repository posture:
     warm-up/null behavior, source-owned risk-free/benchmark alignment posture, no-aligned
     dependency supportability posture, zero-excess-volatility Sharpe flagging,
     zero-benchmark-variance beta flagging, and zero-tracking-error information-ratio flagging.
-14. `DrawdownAnalyticsReport:v1` now has implementation-backed methodology truth for
+15. `DrawdownAnalyticsReport:v1` now has implementation-backed methodology truth for
     `MAX_DRAWDOWN`, `AVERAGE_DRAWDOWN`, `ULCER_INDEX`, and `TIME_UNDER_WATER_DAYS`: the docs and
     tests pin percentage-point input conventions, decimal cumulative-wealth/running-peak drawdown
     behavior including an undated unit opening baseline (so an initial loss cannot be zeroed or
@@ -112,7 +117,7 @@ Current repository posture:
     under water, empty-period insufficient-data posture, never-underwater zero-drawdown posture,
     duration-unit day counter behavior, and episode-list filter isolation from the summary
     maximum, average, ulcer-index, and time-under-water drawdown values.
-15. `ConcentrationRiskReport:v1` now has implementation-backed methodology truth for
+16. `ConcentrationRiskReport:v1` now has implementation-backed methodology truth for
     `POSITION_HHI`, `TOP_POSITION_WEIGHT`, `TOP_N_CUMULATIVE_WEIGHT`, `ISSUER_HHI`, and
     `TOP_ISSUER_WEIGHT`: the docs and tests pin
     stateless, stateful, and simulation source resolution, positive numeric position-value
@@ -133,7 +138,7 @@ Current repository posture:
     risk-owned concentration evidence in opportunity-intelligence workflows without taking over
     concentration methodology, mesh certification, client publication, or supported-feature
     authority.
-16. `lotus-risk.idea-opportunity-runtime-evidence.v1` is a source-safe producer evidence pack for
+17. `lotus-risk.idea-opportunity-runtime-evidence.v1` is a source-safe producer evidence pack for
     `lotus-idea` RFC-0002 Slice 16/17. It executes the Risk HTTP API for
     `ConcentrationRiskReport:v1`, `RiskMetricsReport:v1`, and `DrawdownAnalyticsReport:v1`,
     using stateful canonical requests bound to `PB_SG_GLOBAL_BAL_001`,

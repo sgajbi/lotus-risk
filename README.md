@@ -48,7 +48,9 @@ Current primary workflows:
 Important posture limits:
 
 1. concentration is the only workflow that currently supports `simulation`,
-2. regime scenario-pack evaluation is stateless and consumes caller-supplied exposure weights
+2. regime scenario-pack evaluation is stateless and consumes caller-supplied exposure weights;
+   separately, large scenario job admission persists tenant-scoped immutable `QUEUED` input but
+   does not yet execute or return large evaluations
    against risk-owned CIO scenario definitions; optional `exposure_components` produce
    source-owned per-security scenario contribution rows that reconcile to the bucket exposures,
    and both bucket allocations and contribution rows are bounded before calculation, but the
@@ -200,9 +202,9 @@ Canonical direct local upstream URLs for live characterization and operator chec
 - `make idea-opportunity-runtime-evidence` - generate the Risk producer evidence pack against a
   running `lotus-risk` HTTP API; the proof uses stateful canonical requests for
   `PB_SG_GLOBAL_BAL_001`, `BMK_PB_GLOBAL_BALANCED_60_40`, and `2026-04-10`
-- `make migration-smoke` - CI migration smoke proof for the active no-schema contract
-- `make migration-apply` - governed no-schema migration contract validation; this service has no
-  persistent DPM schema to apply
+- `make migration-smoke` - CI Alembic SQL migration smoke proof for scenario-job admission
+- `make migration-apply` - governed Alembic SQL migration contract validation; it does not apply
+  a live database
 - `make image-supply-chain-gate` - image metadata, CI-only push, SBOM/signing/provenance, digest deployment, and no-secret ARG/ENV guard
 - `make docker-build` - Docker build validation with OCI provenance labels
 

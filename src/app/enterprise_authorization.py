@@ -21,6 +21,7 @@ SUPPORTED_WRITE_ROUTES = (
     ("POST", "/analytics/risk/historical-attribution"),
     ("POST", "/analytics/risk/mandate-health-context"),
     ("POST", "/analytics/risk/regime-scenario-pack/evaluate"),
+    ("POST", "/analytics/risk/regime-scenario-pack/jobs"),
     ("POST", "/analytics/risk/risk-event-cohorts/evaluate"),
     ("POST", "/analytics/risk/rolling-metrics"),
 )
