@@ -139,7 +139,7 @@ Bounded upstream operation values are:
 | `lotus-performance` | `/integration/returns/series` | Verify return-series request shape, benchmark/risk-free selection, and async accepted payload posture. | `lotus-performance` returns owner |
 | `lotus-performance` | `/integration/returns/series/status/{calculation_id}` | Verify async execution status and polling budget; calculation ID must not appear in the metric label. | `lotus-performance` returns async owner |
 | `lotus-performance` | `/integration/returns/series/results/{calculation_id}` | Verify async result availability and accepted `202`/`404` pending posture. | `lotus-performance` returns async owner |
-| `lotus-performance` | `/integration/benchmarks/exposure-context` | Verify benchmark exposure context coverage for the requested grouping dimension. | `lotus-performance` benchmark exposure owner |
+| `lotus-performance` | `/integration/benchmarks/exposure-context` | Verify grouping coverage and `metadata.exposure_source_quality.status=complete`; incomplete source evidence is a `data_gap`, never a partial attribution input. | `lotus-performance` benchmark exposure owner |
 
 Do not add concrete portfolio IDs, simulation IDs, currency query strings, or async calculation IDs
 to `lotus_risk_upstream_requests_total.operation`. Add new runtime operations through

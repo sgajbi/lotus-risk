@@ -42,7 +42,7 @@ Purpose:
 
 - return aligned historical return series for the requested portfolio scope.
 
-Minimum request contract expected by lotus-risk:
+Risk's request shape (Performance resolves the benchmark from the admitted portfolio):
 
 ```json
 {
@@ -115,7 +115,6 @@ Minimum request contract expected by lotus-risk:
 ```json
 {
   "portfolio_id": "PORT_ABC_001",
-  "benchmark_id": "BMK_PB_GLOBAL_BALANCED_60_40",
   "as_of_date": "2026-02-28",
   "window": {
     "start_date": "2026-01-02",
@@ -135,8 +134,16 @@ Minimum response contract required:
 
 ```json
 {
+  "calculation_id": "0d000004-1111-4222-8333-abcdefabcdef",
+  "source_service": "lotus-performance",
+  "contract_version": "v1",
+  "portfolio_id": "PORT_ABC_001",
   "benchmark_id": "BMK_PB_GLOBAL_BALANCED_60_40",
   "benchmark_version": "2026-02-28",
+  "as_of_date": "2026-02-28",
+  "window": {"start_date": "2026-01-02", "end_date": "2026-02-28"},
+  "frequency": "DAILY",
+  "reporting_currency": "USD",
   "rows": [
     {
       "valuation_date": "2026-01-02",
@@ -153,8 +160,16 @@ Minimum response contract required:
   "metadata": {
     "source_system": "lotus-core",
     "served_by": "lotus-performance",
-    "calculation_run_id": "PERF_RUN_20260228_001",
-    "contract_version": "v1"
+    "calculation_run_id": "0d000004-1111-4222-8333-abcdefabcdef",
+    "contract_version": "v1",
+    "exposure_source_quality": {
+      "status": "complete",
+      "omitted_component_count": 0,
+      "omitted_point_count": 0,
+      "reason_codes": [],
+      "omissions": [],
+      "omissions_truncated": false
+    }
   }
 }
 ```
@@ -165,7 +180,20 @@ Required behavior:
 2. `weight` must be a decimal fraction, not a percentage.
 3. `benchmark_id`, `benchmark_version`, and lineage metadata must be stable and auditable.
 4. Empty, partial, and invalid grouping responses must use deterministic Lotus error semantics.
-5. Correlation ID must be propagated end-to-end.
+5. `metadata.exposure_source_quality` is mandatory. `lotus-risk` consumes exposure rows only when
+   `status=complete` and every omission count and list is empty. It must refuse `status=incomplete`
+   as an upstream data gap (HTTP 424) rather than calculate with the remaining rows; a missing,
+   malformed, or internally contradictory `complete` object is an invalid upstream response (HTTP 502).
+   `lotus-performance` must not renormalize the usable subset.
+6. Correlation ID must be propagated end-to-end.
+7. Risk compares each page's portfolio, as-of date, window, frequency, and reporting currency
+   with the admitted request. Every row must be well formed and within the requested date and
+   grouping scope; malformed rows are rejected as HTTP 502, never silently dropped into a partial
+   calculation. It also requires valid pagination and matching calculation lineage on each page,
+   rejects duplicate row identities and benchmark identity changes across pages, and refuses
+   malformed pages as HTTP 502. A producer-declared `complete` source-quality object does not
+   override these checks. Performance's current page token is an offset, not a durable cross-page
+   source snapshot: live replay/correction stability needs separate producer evidence.
 
 ### B) lotus-core (Required)
 

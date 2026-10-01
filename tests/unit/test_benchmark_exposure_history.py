@@ -13,6 +13,7 @@ from app.services.benchmark_exposure_history import (
     _rows_to_exposure_points,
     fetch_benchmark_exposure_history,
 )
+from app.upstream_errors import UpstreamServiceError
 from tests.support.downstream_authority import admitted_test_authority
 from tests.support.historical_attribution_fakes import build_benchmark_exposure_context_response
 from tests.support.lotus_performance_fakes import RecordingLotusPerformanceClient
@@ -38,7 +39,7 @@ def _benchmark_request(
     return BenchmarkExposureHistoryRequest(
         performance_client=performance,
         portfolio_id="DEMO_DPM_EUR_001",
-        as_of_date=date(2026, 1, 4),
+        as_of_date=date(2026, 1, 6),
         start_date=date(2026, 1, 2),
         reporting_currency=reporting_currency,
         grouping_dimensions=grouping_dimensions or ["SECTOR"],
@@ -46,13 +47,13 @@ def _benchmark_request(
     )
 
 
-def _benchmark_rows(count: int) -> list[dict[str, object]]:
+def _benchmark_rows(count: int, *, offset: int = 0) -> list[dict[str, object]]:
     return [
         {
             "valuation_date": "2026-01-02",
             "component_id": None,
             "grouping_dimension": "SECTOR",
-            "group_key": f"SECTOR_{index}",
+            "group_key": f"SECTOR_{offset + index}",
             "group_label": f"Sector {index}",
             "weight": "0.0001",
         }
@@ -60,11 +61,9 @@ def _benchmark_rows(count: int) -> list[dict[str, object]]:
     ]
 
 
-def test_rows_to_exposure_points_parses_performance_context_rows_and_skips_bad_rows() -> None:
+def test_rows_to_exposure_points_parses_complete_performance_context_rows() -> None:
     points = _rows_to_exposure_points(
         [
-            "bad-row",
-            {"valuation_date": "2026-01-02", "grouping_dimension": "SECTOR", "weight": "0.1"},
             {
                 "valuation_date": "2026-01-02",
                 "grouping_dimension": "SECTOR",
@@ -88,8 +87,95 @@ def test_rows_to_exposure_points_parses_performance_context_rows_and_skips_bad_r
     ]
 
 
+@pytest.mark.parametrize(
+    "bad_row",
+    [
+        "not-an-object",
+        {"valuation_date": "2026-01-02", "grouping_dimension": "SECTOR", "weight": "0.1"},
+        {
+            "valuation_date": "2026-01-02",
+            "grouping_dimension": "SECTOR",
+            "group_key": "SECTOR_TECH",
+            "weight": "NaN",
+        },
+        {
+            "valuation_date": "2026-01-02",
+            "grouping_dimension": "SECTOR",
+            "group_key": "SECTOR_TECH",
+            "weight": "0.1",
+            "group_label": {"unexpected": "object"},
+        },
+        {
+            "valuation_date": "2026-01-02",
+            "grouping_dimension": "UNKNOWN_DIMENSION",
+            "group_key": "SECTOR_TECH",
+            "weight": "0.1",
+        },
+    ],
+)
+def test_fetch_benchmark_exposure_history_refuses_partial_rows_even_when_source_says_complete(
+    bad_row: object,
+) -> None:
+    payload = build_benchmark_exposure_context_response()
+    rows = list(payload["rows"])
+    rows[0] = bad_row
+    performance = _performance_client({**payload, "rows": rows})
+
+    with pytest.raises(UpstreamServiceError) as exc_info:
+        asyncio.run(fetch_benchmark_exposure_history(_benchmark_request(performance)))
+
+    assert exc_info.value.status_code == 502
+    assert exc_info.value.code == "UPSTREAM_INVALID_RESPONSE"
+
+
+@pytest.mark.parametrize(
+    ("field_name", "wrong_value"),
+    [
+        ("portfolio_id", "FOREIGN_PORTFOLIO"),
+        ("as_of_date", "2026-01-05"),
+        ("window", {"start_date": "2026-01-03", "end_date": "2026-01-06"}),
+        ("frequency", "MONTHLY"),
+        ("reporting_currency", "USD"),
+    ],
+)
+def test_fetch_benchmark_exposure_history_refuses_response_scope_mismatch(
+    field_name: str, wrong_value: object
+) -> None:
+    payload = build_benchmark_exposure_context_response()
+    performance = _performance_client({**payload, field_name: wrong_value})
+
+    with pytest.raises(UpstreamServiceError, match=field_name) as exc_info:
+        asyncio.run(fetch_benchmark_exposure_history(_benchmark_request(performance)))
+
+    assert exc_info.value.status_code == 502
+    assert exc_info.value.code == "UPSTREAM_INVALID_RESPONSE"
+
+
+@pytest.mark.parametrize(
+    ("field_name", "wrong_value"),
+    [
+        ("valuation_date", "2026-01-07"),
+        ("grouping_dimension", "ISSUER"),
+    ],
+)
+def test_fetch_benchmark_exposure_history_refuses_row_outside_requested_scope(
+    field_name: str, wrong_value: str
+) -> None:
+    payload = build_benchmark_exposure_context_response()
+    rows = list(payload["rows"])
+    rows[0] = {**rows[0], field_name: wrong_value}
+    performance = _performance_client({**payload, "rows": rows})
+
+    with pytest.raises(UpstreamServiceError, match="outside requested scope") as exc_info:
+        asyncio.run(fetch_benchmark_exposure_history(_benchmark_request(performance)))
+
+    assert exc_info.value.status_code == 502
+
+
 def test_fetch_benchmark_exposure_history_uses_performance_context_contract() -> None:
-    performance = _performance_client()
+    performance = _performance_client(
+        {**build_benchmark_exposure_context_response(), "reporting_currency": "USD"}
+    )
 
     points = asyncio.run(
         fetch_benchmark_exposure_history(
@@ -106,8 +192,8 @@ def test_fetch_benchmark_exposure_history_uses_performance_context_contract() ->
         {
             "request_payload": {
                 "portfolio_id": "DEMO_DPM_EUR_001",
-                "as_of_date": "2026-01-04",
-                "window": {"start_date": "2026-01-02", "end_date": "2026-01-04"},
+                "as_of_date": "2026-01-06",
+                "window": {"start_date": "2026-01-02", "end_date": "2026-01-06"},
                 "frequency": "DAILY",
                 "grouping_dimensions": ["SECTOR"],
                 "page": {"page_size": 1000, "page_token": None},
@@ -124,13 +210,13 @@ def test_fetch_benchmark_exposure_history_omits_currency_when_not_requested() ->
 
     asyncio.run(
         fetch_benchmark_exposure_history(
-            _benchmark_request(performance, grouping_dimensions=["POSITION"])
+            _benchmark_request(performance, grouping_dimensions=["SECTOR"])
         )
     )
 
     request_payload = performance.benchmark_exposure_context_calls[0]["request_payload"]
     assert "reporting_currency" not in request_payload
-    assert request_payload["grouping_dimensions"] == ["POSITION"]
+    assert request_payload["grouping_dimensions"] == ["SECTOR"]
 
 
 def test_fetch_benchmark_exposure_history_follows_performance_pagination() -> None:
@@ -176,6 +262,55 @@ def test_fetch_benchmark_exposure_history_follows_performance_pagination() -> No
     assert points
 
 
+@pytest.mark.parametrize("second_page_mutation", ["duplicate_rows", "changed_benchmark"])
+def test_fetch_benchmark_exposure_history_refuses_incoherent_pages(
+    second_page_mutation: str,
+) -> None:
+    class _TwoPagePerformanceClient(RecordingLotusPerformanceClient):
+        async def get_benchmark_exposure_context(
+            self,
+            *,
+            request_payload: dict[str, object],
+            authority: DownstreamAuthority,
+        ) -> dict[str, object]:
+            self.benchmark_exposure_context_calls.append(
+                {"request_payload": request_payload, "tenant_id": authority.tenant_id}
+            )
+            payload = build_benchmark_exposure_context_response()
+            rows = payload["rows"]
+            if len(self.benchmark_exposure_context_calls) == 1:
+                return {**payload, "rows": rows[:3], "page": {"next_page_token": "page-2"}}
+            if second_page_mutation == "duplicate_rows":
+                return {**payload, "rows": rows[:3], "page": {"next_page_token": None}}
+            return {
+                **payload,
+                "benchmark_id": "OTHER_BENCHMARK",
+                "rows": rows[3:],
+                "page": {"next_page_token": None},
+            }
+
+    performance = _TwoPagePerformanceClient(
+        response_payload=build_returns_series_response(portfolio_returns=[])
+    )
+
+    with pytest.raises(UpstreamServiceError) as exc_info:
+        asyncio.run(fetch_benchmark_exposure_history(_benchmark_request(performance)))
+
+    assert exc_info.value.status_code == 502
+    assert len(performance.benchmark_exposure_context_calls) == 2
+
+
+@pytest.mark.parametrize("page", [None, {}, {"next_page_token": 7}, {"next_page_token": ""}])
+def test_fetch_benchmark_exposure_history_refuses_malformed_pagination(page: object) -> None:
+    payload = build_benchmark_exposure_context_response()
+    performance = _performance_client({**payload, "page": page})
+
+    with pytest.raises(UpstreamServiceError, match="pagination|next_page_token") as exc_info:
+        asyncio.run(fetch_benchmark_exposure_history(_benchmark_request(performance)))
+
+    assert exc_info.value.status_code == 502
+
+
 def test_fetch_benchmark_exposure_history_accepts_issuer_grouping() -> None:
     performance = _performance_client(
         build_benchmark_exposure_context_response(grouping_dimension="ISSUER")
@@ -210,7 +345,7 @@ def test_fetch_benchmark_exposure_history_rejects_repeated_page_token() -> None:
                 }
             )
             payload = build_benchmark_exposure_context_response()
-            return {**payload, "page": {"next_page_token": "same-token"}}
+            return {**payload, "rows": [], "page": {"next_page_token": "same-token"}}
 
     performance = _RepeatingTokenPerformanceClient(
         response_payload=build_returns_series_response(portfolio_returns=[])
@@ -283,7 +418,11 @@ def test_fetch_benchmark_exposure_history_rejects_excessive_row_count() -> None:
             token = f"page-{len(self.benchmark_exposure_context_calls) + 1}"
             return {
                 **build_benchmark_exposure_context_response(),
-                "rows": _benchmark_rows(BENCHMARK_EXPOSURE_PAGE_SIZE),
+                "rows": _benchmark_rows(
+                    BENCHMARK_EXPOSURE_PAGE_SIZE,
+                    offset=(len(self.benchmark_exposure_context_calls) - 1)
+                    * BENCHMARK_EXPOSURE_PAGE_SIZE,
+                ),
                 "page": {"next_page_token": token},
             }
 
@@ -306,8 +445,78 @@ def test_fetch_benchmark_exposure_history_rejects_empty_performance_payload() ->
         asyncio.run(fetch_benchmark_exposure_history(_benchmark_request(performance)))
 
 
+def test_fetch_benchmark_exposure_history_refuses_incomplete_source_economics() -> None:
+    base_response = build_benchmark_exposure_context_response()
+    metadata = dict(base_response["metadata"])
+    metadata["exposure_source_quality"] = {
+        "status": "incomplete",
+        "omitted_component_count": 0,
+        "omitted_point_count": 1,
+        "reason_codes": ["MISSING_COMPONENT_WEIGHT"],
+        "omissions": [
+            {
+                "component_id": "IDX_GLOBAL_BONDS",
+                "series_date": "2026-01-02",
+                "reason_code": "MISSING_COMPONENT_WEIGHT",
+            }
+        ],
+        "omissions_truncated": False,
+    }
+    performance = _performance_client({**base_response, "metadata": metadata})
+
+    with pytest.raises(
+        UpstreamServiceError, match="incomplete economic source evidence"
+    ) as exc_info:
+        asyncio.run(fetch_benchmark_exposure_history(_benchmark_request(performance)))
+
+    assert exc_info.value.status_code == 424
+    assert exc_info.value.code == "FAILED_DEPENDENCY"
+
+
+@pytest.mark.parametrize(
+    "source_quality",
+    [
+        None,
+        {"status": "complete"},
+        {
+            "status": "complete",
+            "omitted_component_count": 1,
+            "omitted_point_count": 0,
+            "reason_codes": [],
+            "omissions": [],
+            "omissions_truncated": False,
+        },
+        {
+            "status": "complete",
+            "omitted_component_count": 0,
+            "omitted_point_count": 0,
+            "reason_codes": ["MISSING_COMPONENT_WEIGHT"],
+            "omissions": [],
+            "omissions_truncated": False,
+        },
+    ],
+)
+def test_fetch_benchmark_exposure_history_refuses_malformed_complete_source_quality(
+    source_quality: object,
+) -> None:
+    base_response = build_benchmark_exposure_context_response()
+    metadata = dict(base_response["metadata"])
+    metadata["exposure_source_quality"] = source_quality
+    performance = _performance_client({**base_response, "metadata": metadata})
+
+    with pytest.raises(UpstreamServiceError, match="exposure_source_quality") as exc_info:
+        asyncio.run(fetch_benchmark_exposure_history(_benchmark_request(performance)))
+
+    assert exc_info.value.status_code == 502
+    assert exc_info.value.code == "UPSTREAM_INVALID_RESPONSE"
+
+
 def test_fetch_benchmark_exposure_history_rejects_bad_performance_contract_shapes() -> None:
     base_response = build_benchmark_exposure_context_response()
+    invalid_calculation_metadata = dict(base_response["metadata"])
+    invalid_calculation_metadata["calculation_run_id"] = "22222222-2222-2222-2222-222222222222"
+    invalid_contract_metadata = dict(base_response["metadata"])
+    invalid_contract_metadata["contract_version"] = "v2"
     cases = [
         ({**base_response, "source_service": "lotus-core"}, "source_service=lotus-performance"),
         ({**base_response, "contract_version": "v2"}, "contract_version=v1"),
@@ -324,6 +533,10 @@ def test_fetch_benchmark_exposure_history_rejects_bad_performance_contract_shape
             "served_by=lotus-performance",
         ),
         ({**base_response, "rows": "bad"}, "payload missing 'rows' list"),
+        ({**base_response, "calculation_id": "not-a-uuid"}, "calculation lineage"),
+        ({**base_response, "metadata": invalid_calculation_metadata}, "calculation lineage"),
+        ({**base_response, "metadata": invalid_contract_metadata}, "metadata.contract_version=v1"),
+        ({**base_response, "benchmark_id": ""}, "benchmark identity"),
     ]
 
     for payload, expected in cases:
