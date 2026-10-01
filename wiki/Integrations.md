@@ -1,5 +1,18 @@
 # Integrations
 
+## Current Scope and Evidence
+
+This page describes the implemented Lotus Risk integration contracts and their fail-closed
+dependency behavior. Supported claims are anchored in the source routes, their OpenAPI contract,
+and the focused integration tests; availability of an upstream route is not evidence that its
+economic inputs are complete.
+
+| Reader | Use this page to decide | Evidence and next action |
+| --- | --- | --- |
+| Product and demo | Which Risk workflows preserve upstream truth | Start with [Primary Executable Contracts](#primary-executable-contracts) and the published capability contract. |
+| Operations and support | How to classify an upstream failure | Use [Upstream Dependency Failure Alert](#upstream-dependency-failure-alert); escalate only with the bounded operation and error category. |
+| Engineering | Ownership, tenant scope, and contract expectations | Review [Upstream Contract Families](#upstream-contract-families) and the linked domain API documents before changing a client. |
+
 ## Integration Model
 
 `lotus-risk` is primarily consumed through `lotus-gateway`, but the domain contract itself is owned
@@ -72,6 +85,17 @@ Stateful workflows depend on governed upstream inputs:
 
 1. `lotus-performance` for returns and benchmark exposure context,
 2. `lotus-core` for snapshots, simulation contracts, enrichment, and risk-free reference data.
+
+For stateful active-risk attribution, `lotus-risk` accepts benchmark exposure rows only when
+Performance declares `metadata.exposure_source_quality.status` as `complete` with zero omissions.
+An incomplete declaration maps to a bounded upstream data gap; missing or contradictory quality
+metadata maps to an invalid upstream response. It never renormalizes or calculates from a partial
+benchmark exposure subset. See the [historical attribution upstream contract](https://github.com/sgajbi/lotus-risk/blob/main/docs/domain-apis/lotus-core-performance-requirements-for-historical-attribution.md).
+Risk also binds each exposure page to the admitted portfolio/date/window/frequency/currency request
+and refuses malformed or out-of-scope rows, pagination, duplicate row identities, or changed
+benchmark identity as an invalid upstream response. It never silently drops a row from a
+producer-declared complete set. The current offset page token is not a durable source snapshot;
+live replay/correction stability remains a separate producer acceptance question.
 
 Admitted tenant authority (`X-Tenant-Id`) travels with every **tenant-owned** upstream request —
 returns-series submit and its async status/result polls, benchmark exposure context, core

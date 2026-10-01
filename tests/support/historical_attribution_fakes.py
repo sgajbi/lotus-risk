@@ -28,7 +28,7 @@ def build_stateful_attribution_returns_client() -> RecordingLotusPerformanceClie
 def build_benchmark_exposure_context_response(
     *,
     grouping_dimension: str = "SECTOR",
-) -> dict[str, object]:
+) -> dict[str, Any]:
     if grouping_dimension == "ISSUER":
         rows = [
             {
@@ -178,6 +178,14 @@ def build_benchmark_exposure_context_response(
             "contract_version": "v1",
             "generated_at": "2026-01-06T00:00:00Z",
             "retrieval_metadata": {"benchmark_market_series_chunk_count": 1},
+            "exposure_source_quality": {
+                "status": "complete",
+                "omitted_component_count": 0,
+                "omitted_point_count": 0,
+                "reason_codes": [],
+                "omissions": [],
+                "omissions_truncated": False,
+            },
         },
     }
 
