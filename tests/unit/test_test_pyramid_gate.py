@@ -1,4 +1,4 @@
-"""Hold the pyramid gate and its `governance` marker honest.
+"""Hold the pyramid gate and its exclusion markers honest.
 
 The gate deselects `pytest.mark.governance` so it measures the *product's* test shape. That makes
 the marker load-bearing in two directions, and both need holding:
@@ -10,11 +10,12 @@ the marker load-bearing in two directions, and both need holding:
   anything. Nothing here can detect that automatically, which is why the marker is explicit and
   reviewed rather than inferred.
 
-The completeness check below covers `tests/unit` only. A `tests/unit` module that never imports
+The governance completeness check below covers `tests/unit` only. A `tests/unit` module that never imports
 product code cannot be testing product behaviour, so the signal is sound there. It is deliberately
 not applied to `tests/integration` or `tests/e2e`, where exercising the service over HTTP without
 importing it is the normal shape - `tests/integration/test_concentration_live_characterization.py`
-is a product test by that route, and an automatic rule would mismark it.
+is a product test by that route. Its explicit live-admission marker excludes it only from the
+PR/main runnable-test ratio, and the collection check below verifies that scope exactly.
 """
 
 from __future__ import annotations
@@ -26,6 +27,9 @@ from pathlib import Path
 
 import pytest
 
+from scripts import test_pyramid_gate as gate
+from scripts.test_pyramid_gate import _collect_count
+
 pytestmark = pytest.mark.governance
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -33,6 +37,112 @@ GATE = ROOT / "scripts" / "test_pyramid_gate.py"
 
 MARKER_NAME = "governance"
 PRODUCT_PACKAGE = "app"
+LIVE_ENV_PREFIX = "LOTUS_RISK_RUN_LIVE_"
+
+
+def _selected_test_nodes(marker_expression: str) -> set[str]:
+    collected = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "tests/integration",
+            "--collect-only",
+            "-q",
+            "-m",
+            marker_expression,
+            "--no-header",
+            "-p",
+            "no:cacheprovider",
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert collected.returncode == 0, collected.stdout + collected.stderr
+    return {
+        line
+        for line in collected.stdout.splitlines()
+        if line.startswith("tests/integration/") and "::" in line
+    }
+
+
+def _uses_live_admission_flag(node: ast.AST) -> bool:
+    return (
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "getenv"
+        and isinstance(node.func.value, ast.Name)
+        and node.func.value.id == "os"
+        and bool(node.args)
+        and isinstance(node.args[0], ast.Constant)
+        and isinstance(node.args[0].value, str)
+        and node.args[0].value.startswith(LIVE_ENV_PREFIX)
+    )
+
+
+def test_live_characterization_marker_covers_exactly_the_env_gated_modules() -> None:
+    expected = {
+        path.relative_to(ROOT).as_posix()
+        for path in (ROOT / "tests/integration").glob("test_*.py")
+        if any(
+            _uses_live_admission_flag(node)
+            for node in ast.walk(ast.parse(path.read_text(encoding="utf-8")))
+        )
+    }
+    assert expected
+    live_nodes = _selected_test_nodes("live_characterization")
+    regular_nodes = _selected_test_nodes("not governance")
+    assert live_nodes == {node for node in regular_nodes if node.split("::", 1)[0] in expected}
+
+
+def test_pyramid_gate_counts_only_pr_lane_runnable_integration_tests() -> None:
+    output = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "tests/integration",
+            "--collect-only",
+            "-q",
+            "-m",
+            "not governance",
+            "--no-header",
+            "-p",
+            "no:cacheprovider",
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert output.returncode == 0, output.stdout + output.stderr
+    selected = [
+        line for line in output.stdout.splitlines() if line.startswith("tests/integration/")
+    ]
+    live_nodes = _selected_test_nodes("live_characterization")
+    live_count = len(
+        [
+            line
+            for line in output.stdout.splitlines()
+            if line.startswith("tests/integration/") and line in live_nodes
+        ]
+    )
+    assert live_count > 0
+    assert _collect_count("tests/integration") == len(selected) - live_count
+
+
+def test_pyramid_gate_accepts_runnable_baseline_and_fails_a_real_ratio_breach(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    counts = {"tests/unit": 795, "tests/integration": 243, "tests/e2e": 33}
+    monkeypatch.setattr(gate, "_collect_count", lambda path: counts[path])
+    assert gate.main() == 0
+
+    counts["tests/integration"] = 140
+    assert gate.main() == 1
+    assert "test pyramid gate failed for integration" in capsys.readouterr().err
 
 
 def _is_governance_mark(node: ast.expr) -> bool:

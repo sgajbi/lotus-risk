@@ -8,9 +8,11 @@ gate hostile to the very coverage it should encourage: every governance test add
 unit bucket up and squeezed the integration and e2e ratios down, so a repository could be
 blocked from asserting its own CI contracts. See issue #220.
 
-Governance tests declare themselves with `pytest.mark.governance` and are deselected here. The
-marker is the source of truth; `tests/unit/test_test_pyramid_gate.py` holds it honest by
-asserting that every `tests/unit` module which never touches product code carries it.
+Governance tests declare themselves with `pytest.mark.governance` and are deselected here.
+Live-characterization tests require an explicitly admitted multi-service runtime that PR/main
+lanes do not start; they carry `pytest.mark.live_characterization` and are also deselected from
+the lane's runnable-test population. `tests/unit/test_test_pyramid_gate.py` guards both marker
+boundaries against missing and over-broad classification.
 """
 
 from __future__ import annotations
@@ -24,8 +26,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
-# Tests that assert about the repository rather than the product. Deselected from every bucket.
-NON_PRODUCT_MARKER_EXPRESSION = "not governance"
+# Measure only tests runnable in the enforcing PR/main lane. The five live characterization
+# modules remain separately executable under their LOTUS_RISK_RUN_LIVE_* admission variables.
+LANE_TEST_MARKER_EXPRESSION = "not governance and not live_characterization"
 
 # Decimal places used when reporting a ratio. Displayed values are rounded *away* from the bound
 # they failed, so a failure message can never print a number that satisfies its own bound.
@@ -61,7 +64,7 @@ def _collect_count(path: str) -> int:
             "pytest",
             path,
             "-m",
-            NON_PRODUCT_MARKER_EXPRESSION,
+            LANE_TEST_MARKER_EXPRESSION,
             "--collect-only",
         ],
         check=False,
