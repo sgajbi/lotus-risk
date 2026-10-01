@@ -48,14 +48,15 @@ Current primary workflows:
 Important posture limits:
 
 1. concentration is the only workflow that currently supports `simulation`,
-2. regime scenario-pack evaluation is stateless and consumes caller-supplied exposure weights;
-   separately, large scenario-job admission persists tenant-scoped immutable input and a worker
-   claim may safely recover only an expired lease. It does not yet execute or return large
-   evaluations
+2. regime scenario-pack evaluation is stateless and consumes caller-supplied exposure weights
    against risk-owned CIO scenario definitions; optional `exposure_components` produce
    source-owned per-security scenario contribution rows that reconcile to the bucket exposures,
    and both bucket allocations and contribution rows are bounded before calculation, but the
    workflow does not forecast markets or accept UI-owned scenario methodology,
+   separately, large scenario jobs persist tenant-scoped immutable input. Their explicit worker
+   command claims only expired-recoverable work, atomically persists aggregate evidence plus
+   cursor-paged contributions, and runs bounded cleanup; capacity and consumer acceptance remain
+   outstanding,
 3. risk-event affected-cohort evaluation is stateless and consumes caller-supplied candidate
    portfolios and source-supplied exposure weights against risk-owned event definitions; it does
    not create rebalance waves or own campaign approval workflow, and candidate portfolios plus

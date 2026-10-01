@@ -48,6 +48,22 @@ dependency status overrides when an operator or higher-level runtime has injecte
 5. For stateful-only failures, validate `LOTUS_CORE_BASE_URL` and `LOTUS_PERFORMANCE_BASE_URL`
    before changing analytics code.
 
+## Durable Scenario Job Worker
+
+Run this from the repository root only after an operator has set
+`LOTUS_RISK_SCENARIO_JOB_DATABASE_URL` to the approved migrated relational database and
+`LOTUS_RISK_SCENARIO_JOB_RETENTION_HOURS` to a positive retention period:
+
+```powershell
+python -m app.scenario_jobs.worker --once --lease-seconds 300 --cleanup-limit 100
+```
+
+The command claims at most one `QUEUED` or expired-lease job, then deletes at most the declared
+number of already-expired records. It does not choose worker count, retry policy, database URL,
+or tenant authority. Schedule it through the existing service runtime only after recording a
+deployment-specific capacity budget; local execution and synthetic tests do not establish a
+production throughput or horizontal-scaling claim.
+
 ## Enterprise Deployment Security Checks
 
 Enterprise bank deployments must run with the security posture in
@@ -176,3 +192,17 @@ Alert id: `lotus-risk-http-5xx`
    failures from application failures.
 3. Check recent deploy and configuration changes, including enterprise authorization settings.
 4. Run `make check` locally for fast reproduction and `make ci` before opening a hotfix PR.
+
+## Scenario Job Retryable Error Alert
+
+Alert id: `lotus-risk-scenario-job-retryable-error`
+
+1. Inspect `lotus_risk_scenario_job_executions_total{outcome="retryable_error"}` and the paired
+   worker latency histogram; do not add job, tenant, or idempotency identities as metric labels.
+2. Verify the configured scenario-job database is reachable and fully migrated, then inspect
+   bounded worker logs using the request correlation context where present.
+3. Do not mark an in-flight job failed solely because this alert fired. The lease/reclaim boundary
+   preserves the immutable request; only the current claim token may publish a terminal result.
+4. Resume the explicitly scheduled worker after remediation and verify `succeeded`,
+   `qualified_failure`, or `stale_claim` outcomes according to the durable record rather than
+   inferring success from the process exit alone.

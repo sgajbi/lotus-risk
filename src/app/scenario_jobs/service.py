@@ -1,13 +1,18 @@
 from __future__ import annotations
 
 import datetime as dt
+import json
 import os
+from base64 import urlsafe_b64decode, urlsafe_b64encode
 
 from sqlalchemy.exc import SQLAlchemyError
 
+from app.contracts.scenario_response_outputs import RegimeScenarioPackResponse
 from app.scenario_jobs.contracts import (
     RegimeScenarioPackJobRequest,
     ScenarioEvaluationJobAccepted,
+    ScenarioEvaluationJobContribution,
+    ScenarioEvaluationJobContributionPage,
     ScenarioEvaluationJobStatusResponse,
 )
 from app.scenario_jobs.identity import canonical_request_fingerprint, scenario_pack_revision
@@ -100,6 +105,11 @@ def scenario_job_status_response(
     record = store.get_for_tenant(tenant_id=tenant_id, job_id=job_id)
     if record is None:
         return None
+    result = (
+        RegimeScenarioPackResponse.model_validate(json.loads(record.result_json))
+        if record.result_json is not None
+        else None
+    )
     return ScenarioEvaluationJobStatusResponse(
         job_id=record.job_id,
         status=record.status,
@@ -108,13 +118,74 @@ def scenario_job_status_response(
         expires_at=record.expires_at,
         submitted_at=record.submitted_at,
         failure_code=record.failure_code,
+        result=result,
     )
+
+
+def scenario_job_contribution_page(
+    *,
+    store: SqlAlchemyScenarioJobStore,
+    tenant_id: str,
+    job_id: str,
+    cursor: str | None,
+    limit: int,
+) -> ScenarioEvaluationJobContributionPage | None:
+    after = _decode_contribution_cursor(cursor) if cursor is not None else None
+    rows = store.contribution_page(tenant_id=tenant_id, job_id=job_id, after=after, limit=limit)
+    if rows is None:
+        return None
+    page_rows = rows[:limit]
+    next_cursor = (
+        _encode_contribution_cursor(page_rows[-1].scenario_id, page_rows[-1].ordinal)
+        if len(rows) > limit and page_rows
+        else None
+    )
+    return ScenarioEvaluationJobContributionPage(
+        job_id=job_id,
+        contributions=[
+            ScenarioEvaluationJobContribution(
+                scenario_id=row.scenario_id,
+                security_id=row.security_id,
+                display_name=row.display_name,
+                bucket=row.bucket,
+                weight=row.weight,
+                shock_pct=row.shock_pct,
+                contribution_loss_pct=row.contribution_loss_pct,
+            )
+            for row in page_rows
+        ],
+        next_cursor=next_cursor,
+    )
+
+
+def _encode_contribution_cursor(scenario_id: str, ordinal: int) -> str:
+    payload = json.dumps([scenario_id, ordinal], separators=(",", ":")).encode("utf-8")
+    return urlsafe_b64encode(payload).decode("ascii").rstrip("=")
+
+
+def _decode_contribution_cursor(cursor: str) -> tuple[str, int]:
+    padding = "=" * (-len(cursor) % 4)
+    try:
+        raw = json.loads(urlsafe_b64decode(cursor + padding).decode("utf-8"))
+    except (UnicodeDecodeError, ValueError, json.JSONDecodeError) as exc:
+        raise ValueError("scenario job contribution cursor is invalid") from exc
+    if (
+        not isinstance(raw, list)
+        or len(raw) != 2
+        or not isinstance(raw[0], str)
+        or not raw[0]
+        or not isinstance(raw[1], int)
+        or raw[1] < 0
+    ):
+        raise ValueError("scenario job contribution cursor is invalid")
+    return raw[0], raw[1]
 
 
 __all__ = [
     "ScenarioJobAdmissionConflict",
     "ScenarioJobStoreUnavailable",
     "configured_scenario_job_store",
+    "scenario_job_contribution_page",
     "scenario_job_status_response",
     "submit_scenario_job",
 ]

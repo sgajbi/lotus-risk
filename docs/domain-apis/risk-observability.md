@@ -29,6 +29,20 @@ records endpoint success. `lotus_risk_endpoint_execution_seconds` is available f
 panels, but no latency SLO alert threshold is declared until production telemetry establishes a
 baseline.
 
+## Durable Scenario Job Worker Metrics
+
+| Metric | Labels | Meaning |
+| --- | --- | --- |
+| `lotus_risk_scenario_job_executions_total` | `outcome` | Count of one-at-a-time durable scenario-job worker attempts. |
+| `lotus_risk_scenario_job_execution_seconds` | `outcome` | Duration histogram for one durable scenario-job worker attempt. |
+
+The sole label is bounded to `idle`, `succeeded`, `qualified_failure`, `invalid_input`,
+`stale_claim`, and `retryable_error`. It never includes a job ID, tenant, idempotency key,
+correlation ID, portfolio, or contribution data. `stale_claim` confirms that the durable fence
+rejected a worker that no longer owned the current claim; it is not a completed result. The
+`lotus-risk-scenario-job-retryable-error` alert covers unexpected retryable errors. Worker latency
+is diagnostic only until a deployment records its own workload budget and SLO.
+
 ## Upstream Dependency Metrics
 
 | Metric | Labels | Meaning |
@@ -135,7 +149,10 @@ Governed handler values are:
 12. `/analytics/risk/concentration`,
 13. `/analytics/risk/mandate-health-context`,
 14. `/analytics/risk/regime-scenario-pack/evaluate`,
-15. `/analytics/risk/risk-event-cohorts/evaluate`.
+15. `/analytics/risk/regime-scenario-pack/jobs`,
+16. `/analytics/risk/regime-scenario-pack/jobs/{job_id}`,
+17. `/analytics/risk/regime-scenario-pack/jobs/{job_id}/contributions`,
+18. `/analytics/risk/risk-event-cohorts/evaluate`.
 
 Governed methods are `GET`, `POST`, `PUT`, `DELETE`, and `OPTIONS`. Governed status classes are
 `1xx`, `2xx`, `3xx`, `4xx`, and `5xx`.

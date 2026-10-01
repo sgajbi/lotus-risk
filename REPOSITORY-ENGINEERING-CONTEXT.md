@@ -63,11 +63,13 @@ Current repository posture:
     posture, lineage fingerprints, and bounded reason codes for future `lotus-manage`
    consumption, and explicitly does not create mandate actions, rebalance waves, client
    communications, orders, or execution.
-12. `RegimeScenarioPackEvaluationJob:v1` is a partial durable-admission capability exposed through
+12. `RegimeScenarioPackEvaluationJob:v1` is a bounded durable scenario capability exposed through
     `POST /analytics/risk/regime-scenario-pack/jobs`: it requires tenant authority and an
     idempotency key, atomically persists immutable canonical input plus a code-defined pack
-    revision, and scopes reads to the submitting tenant. It does not yet execute jobs, expose
-    contribution pages, recover leases, clean expired evidence, or establish production capacity.
+    revision, and scopes reads to the submitting tenant. A fenced worker persists aggregate
+    evidence and stable contribution pages only from the immutable admitted request; bounded expiry
+    cleanup is implemented, while deployment retention policy, production capacity, and downstream
+    consumer acceptance remain unproven.
 13. `RiskMetricsReport:v1` now has implementation-backed methodology truth for `VOLATILITY`,
     `DRAWDOWN`, `SHARPE`, `SORTINO`, `VAR`, `BETA`, `TRACKING_ERROR`, and
     `INFORMATION_RATIO`: the docs and tests pin

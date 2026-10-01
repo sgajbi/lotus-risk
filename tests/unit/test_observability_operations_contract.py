@@ -50,12 +50,15 @@ def test_observability_contract_declares_dashboard_and_alert_evidence() -> None:
     assert {
         "risk-endpoint-latency",
         "risk-upstream-latency",
+        "risk-scenario-job-worker-posture",
+        "risk-scenario-job-worker-latency",
     } <= panel_ids
     assert {
         "lotus-risk-endpoint-failure-rate",
         "lotus-risk-upstream-dependency-failures",
         "lotus-risk-calculation-supportability-degraded",
         "lotus-risk-http-5xx",
+        "lotus-risk-scenario-job-retryable-error",
     } <= alert_ids
 
 
@@ -157,6 +160,7 @@ def test_observability_docs_link_contract_and_alert_validation() -> None:
         "## Upstream Dependency Failure Alert",
         "## Calculation Supportability Alert",
         "## HTTP 5xx Alert",
+        "## Scenario Job Retryable Error Alert",
     )
     for heading in required_runbook_anchors:
         assert heading in runbook_text

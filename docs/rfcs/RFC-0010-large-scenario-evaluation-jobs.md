@@ -55,10 +55,15 @@ readable until their stated expiry.
 
 ### Implementation progress
 
-Slices 1 and the persistence-only portion of slice 2 are implemented: admission, tenant-scoped
-status reads, transactional claim, expired-lease recovery, and stale-token failure fencing. The
-claim store is not a worker runtime. Evaluation, success persistence, contribution pages, cleanup,
-capacity measurement, and consumer acceptance remain explicitly outstanding.
+Slices 1 through the durable execution portion of slice 3 are implemented: admission,
+tenant-scoped status reads, transactional claim, expired-lease recovery, stale-token terminal
+fencing, one-at-a-time worker evaluation, atomic aggregate success publication, and stable
+tenant-scoped contribution pages. The synchronous route remains capped; the worker evaluates the
+persisted 1,000-component request against its stored pack revision and does not recompute pages.
+Bounded worker outcome and duration metrics distinguish idle, success, qualified refusal,
+invalid persisted input, stale-fence rejection, and retryable error without durable identities.
+Deployment retention policy, capacity measurement, deployment scheduling, and consumer acceptance
+remain explicitly outstanding.
 
 Before either job route receives traffic, operators must apply the current Alembic head. Runtime
 does not auto-migrate: it verifies the complete mapped job schema and durable primary/idempotency
