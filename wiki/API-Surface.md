@@ -28,6 +28,11 @@ compounding, benchmark alignment, drawdown, rolling-window construction, or risk
 | `POST /analytics/risk/historical-attribution` | which exposures drove a metric, over history |
 | `POST /analytics/risk/concentration` | concentration analytics, with simulation support |
 | `POST /analytics/risk/mandate-health-context` | mandate risk-health context for a portfolio |
+
+`mandate-health-context` treats empty portfolio history as source evidence unavailable, not as a
+flat return: it returns `200` with `health_state: unavailable`, null breach/metric values, and
+`MANDATE_RISK_HEALTH_PORTFOLIO_HISTORY_UNAVAILABLE`; it never returns a server error or certifies
+zero tracking error as ready.
 | `POST /analytics/risk/regime-scenario-pack/evaluate` | governed regime scenario-pack evaluation |
 | `POST /analytics/risk/risk-event-cohorts/evaluate` | which portfolios a risk event affects |
 
