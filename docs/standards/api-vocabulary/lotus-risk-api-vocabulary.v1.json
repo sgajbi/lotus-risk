@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-10-01T04:24:49.837123+00:00",
+  "generatedAt": "2026-10-01T04:49:50.285620+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.affected_portfolios",
@@ -1519,6 +1519,23 @@
       ],
       "fieldPaths": [
         "exposures"
+      ]
+    },
+    {
+      "semanticId": "lotus.failure_code",
+      "canonicalTerm": "failure_code",
+      "preferredName": "failure_code",
+      "description": "Qualified terminal failure code. This is absent while work is queued or running and does not expose another tenant's evidence.",
+      "example": "SCENARIO_PACK_REVISION_UNAVAILABLE",
+      "type": "object",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "object"
+      ],
+      "fieldPaths": [
+        "failure_code"
       ]
     },
     {
@@ -7312,6 +7329,14 @@
             "type": "string",
             "semanticId": "lotus.submitted_at",
             "attributeRef": "#/attributeCatalog/lotus.submitted_at"
+          },
+          {
+            "name": "failure_code",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.failure_code",
+            "attributeRef": "#/attributeCatalog/lotus.failure_code"
           }
         ]
       }

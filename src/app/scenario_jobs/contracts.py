@@ -70,6 +70,8 @@ def _validate_exposure_components(
 
 class ScenarioEvaluationJobStatus(StrEnum):
     QUEUED = "QUEUED"
+    RUNNING = "RUNNING"
+    FAILED = "FAILED"
 
 
 class RegimeScenarioPackJobRequest(BaseModel):
@@ -151,6 +153,14 @@ class ScenarioEvaluationJobStatusResponse(ScenarioEvaluationJobAccepted):
     submitted_at: dt.datetime = Field(
         description="UTC timestamp at the immutable admission transaction boundary.",
         json_schema_extra={"example": "2026-05-03T09:30:00Z"},
+    )
+    failure_code: str | None = Field(
+        default=None,
+        description=(
+            "Qualified terminal failure code. This is absent while work is queued or running and "
+            "does not expose another tenant's evidence."
+        ),
+        json_schema_extra={"example": "SCENARIO_PACK_REVISION_UNAVAILABLE"},
     )
 
 
