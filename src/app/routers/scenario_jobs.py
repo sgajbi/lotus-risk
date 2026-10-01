@@ -2,14 +2,13 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api_errors import STATEFUL_TENANT_ERROR_RESPONSES
 from app.contracts.downstream_authority import admit_downstream_authority
 from app.dependencies.request_context import (
     request_actor_id,
     request_correlation_id,
-    request_tenant_id,
 )
 from app.openapi_examples import REGIME_SCENARIO_EXAMPLES, request_body_examples
 from app.scenario_jobs.contracts import (
@@ -17,7 +16,7 @@ from app.scenario_jobs.contracts import (
     ScenarioEvaluationJobAccepted,
     ScenarioEvaluationJobStatusResponse,
 )
-from app.scenario_jobs.identity import normalize_idempotency_key
+from app.scenario_jobs.request_headers import scenario_job_idempotency_key, scenario_job_tenant_id
 from app.scenario_jobs.service import (
     ScenarioJobAdmissionConflict,
     ScenarioJobStoreUnavailable,
@@ -39,8 +38,9 @@ router = APIRouter(tags=["risk-analytics"])
     description=(
         "Admits a tenant-authorized, immutable large scenario evaluation input. A replay with the "
         "same tenant, Idempotency-Key and canonical request returns the original job; changed input "
-        "for that key is refused. Admission is unavailable until the configured relational store "
-        "has been migrated."
+        "for that key is refused. Exactly one non-blank tenant identity and replay key are required "
+        "before admission. Admission is unavailable until the configured relational store has been "
+        "migrated."
     ),
     openapi_extra={
         **request_body_examples(REGIME_SCENARIO_EXAMPLES),
@@ -49,7 +49,10 @@ router = APIRouter(tags=["risk-analytics"])
                 "name": "X-Tenant-Id",
                 "in": "header",
                 "required": True,
-                "description": "Admitted tenant authority owning the durable job and later reads.",
+                "description": (
+                    "Exactly one admitted tenant authority owning the durable job and later reads. "
+                    "Duplicate header values are refused."
+                ),
                 "schema": {"type": "string", "minLength": 1, "maxLength": 128},
                 "example": "tenant-sg",
             },
@@ -57,7 +60,10 @@ router = APIRouter(tags=["risk-analytics"])
                 "name": "Idempotency-Key",
                 "in": "header",
                 "required": True,
-                "description": "Tenant-scoped replay key for one immutable scenario job submission.",
+                "description": (
+                    "Exactly one tenant-scoped replay key for one immutable scenario job submission. "
+                    "Duplicate header values are refused."
+                ),
                 "schema": {"type": "string", "minLength": 1, "maxLength": 128},
                 "example": "scenario-job-001",
             },
@@ -66,13 +72,12 @@ router = APIRouter(tags=["risk-analytics"])
 )
 def submit_regime_scenario_pack_job(
     payload: RegimeScenarioPackJobRequest,
-    tenant_id: Annotated[str | None, Depends(request_tenant_id)],
+    tenant_id: Annotated[str | None, Depends(scenario_job_tenant_id)],
     actor_id: Annotated[str | None, Depends(request_actor_id)],
     correlation_id: Annotated[str | None, Depends(request_correlation_id)],
-    idempotency_key: Annotated[str | None, Header()],
+    idempotency_key: Annotated[str, Depends(scenario_job_idempotency_key)],
 ) -> ScenarioEvaluationJobAccepted:
     authority = admit_downstream_authority(tenant_id=tenant_id, correlation_id=correlation_id)
-    normalized_key = normalize_idempotency_key(idempotency_key)
     try:
         store = configured_scenario_job_store()
     except ScenarioJobStoreUnavailable as exc:
@@ -83,7 +88,7 @@ def submit_regime_scenario_pack_job(
         return submit_scenario_job(
             store=store,
             tenant_id=authority.tenant_id,
-            idempotency_key=normalized_key,
+            idempotency_key=idempotency_key,
             request=payload,
             actor_id=actor_id,
             correlation_id=authority.correlation_id,
@@ -101,13 +106,14 @@ def submit_regime_scenario_pack_job(
     operation_id="getRegimeScenarioPackEvaluationJob",
     summary="Read the submitting tenant's scenario evaluation job posture",
     description=(
-        "Returns one admitted job only to its submitting tenant. Unknown and foreign job ids both "
-        "return not found. A `QUEUED` record is retained admission evidence, not completed analysis."
+        "Returns one admitted job only to its submitting tenant. Exactly one non-blank tenant "
+        "identity is required. Unknown and foreign job ids both return not found. A `QUEUED` record "
+        "is retained admission evidence, not completed analysis."
     ),
 )
 def get_regime_scenario_pack_job(
     job_id: str,
-    tenant_id: Annotated[str | None, Depends(request_tenant_id)],
+    tenant_id: Annotated[str | None, Depends(scenario_job_tenant_id)],
     correlation_id: Annotated[str | None, Depends(request_correlation_id)],
 ) -> ScenarioEvaluationJobStatusResponse:
     authority = admit_downstream_authority(tenant_id=tenant_id, correlation_id=correlation_id)

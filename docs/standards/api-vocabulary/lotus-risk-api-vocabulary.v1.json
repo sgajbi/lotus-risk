@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-10-01T04:49:50.285620+00:00",
+  "generatedAt": "2026-10-01T05:24:38.476660+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.affected_portfolios",
@@ -1792,17 +1792,17 @@
       "preferredName": "idempotency_key",
       "description": "Canonical idempotency key used by lotus-risk APIs.",
       "example": null,
-      "type": "object",
+      "type": "string",
       "locations": [
         "header"
       ],
       "observedTypes": [
-        "object",
-        "string"
+        "string",
+        "object"
       ],
       "fieldPaths": [
-        "idempotency-key",
-        "Idempotency-Key"
+        "Idempotency-Key",
+        "idempotency-key"
       ]
     },
     {
@@ -4828,24 +4828,12 @@
   ],
   "controlsCatalog": [
     {
-      "name": "idempotency_key",
-      "kind": "request_option",
-      "location": "header",
-      "required": true,
-      "type": "object",
-      "description": "Canonical idempotency key used by lotus-risk APIs.",
-      "example": "STANDARD_VALUE",
-      "allowedValues": [],
-      "semanticId": "lotus.idempotency_key",
-      "attributeRef": "#/attributeCatalog/lotus.idempotency_key"
-    },
-    {
       "name": "x_tenant_id",
       "kind": "request_option",
       "location": "header",
       "required": true,
       "type": "string",
-      "description": "Admitted tenant authority owning the durable job and later reads.",
+      "description": "Exactly one admitted tenant authority owning the durable job and later reads. Duplicate header values are refused.",
       "example": "tenant-sg",
       "allowedValues": [],
       "semanticId": "lotus.x_tenant_id",
@@ -4857,7 +4845,7 @@
       "location": "header",
       "required": true,
       "type": "string",
-      "description": "Tenant-scoped replay key for one immutable scenario job submission.",
+      "description": "Exactly one tenant-scoped replay key for one immutable scenario job submission. Duplicate header values are refused.",
       "example": "scenario-job-001",
       "allowedValues": [],
       "semanticId": "lotus.idempotency_key",
@@ -7095,14 +7083,6 @@
       "summary": "Persist a large governed regime scenario evaluation job",
       "request": {
         "fields": [
-          {
-            "name": "idempotency-key",
-            "location": "header",
-            "required": true,
-            "type": "object",
-            "semanticId": "lotus.idempotency_key",
-            "attributeRef": "#/attributeCatalog/lotus.idempotency_key"
-          },
           {
             "name": "X-Tenant-Id",
             "location": "header",
