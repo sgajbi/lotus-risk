@@ -35,11 +35,11 @@ def _payload(*, maximum_allowed_loss_pct: float = 0.12) -> dict[str, object]:
     }
 
 
-def _apply_migration(database_url: str) -> None:
+def _apply_migration(database_url: str, revision: str = "head") -> None:
     environment = os.environ.copy()
     environment["LOTUS_RISK_SCENARIO_JOB_DATABASE_URL"] = database_url
     result = subprocess.run(
-        [sys.executable, "-m", "alembic", "upgrade", "head"],
+        [sys.executable, "-m", "alembic", "upgrade", revision],
         check=False,
         capture_output=True,
         text=True,
@@ -98,6 +98,118 @@ def test_sqlite_migrated_job_admission_replays_immutable_input_and_hides_foreign
         )
     assert after_restart.status_code == 200
     assert after_restart.json() == owner_read.json()
+
+
+def test_scenario_job_routes_refuse_the_previous_schema_until_operator_upgrade(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    """A table from the prior migration is not evidence that this ORM can serve job traffic."""
+    database_url = f"sqlite:///{(tmp_path / 'previous-schema.db').as_posix()}"
+    monkeypatch.setenv("LOTUS_RISK_SCENARIO_JOB_DATABASE_URL", database_url)
+    monkeypatch.setenv("LOTUS_RISK_SCENARIO_JOB_RETENTION_HOURS", "72")
+    _apply_migration(database_url, "20261001_01")
+    headers = {"X-Tenant-Id": "upgrade-tenant", "Idempotency-Key": "upgrade-001"}
+
+    with TestClient(app) as client:
+        unavailable_submit = client.post(
+            "/analytics/risk/regime-scenario-pack/jobs", json=_payload(), headers=headers
+        )
+        unavailable_read = client.get(
+            "/analytics/risk/regime-scenario-pack/jobs/not-present",
+            headers={"X-Tenant-Id": "upgrade-tenant"},
+        )
+
+    assert unavailable_submit.status_code == 503
+    assert unavailable_read.status_code == 503
+    from sqlalchemy import create_engine, text
+
+    with create_engine(database_url).connect() as connection:
+        assert (
+            connection.execute(text("select count(*) from scenario_evaluation_jobs")).scalar() == 0
+        )
+
+    _apply_migration(database_url)
+    with TestClient(app) as client:
+        admitted = client.post(
+            "/analytics/risk/regime-scenario-pack/jobs", json=_payload(), headers=headers
+        )
+        replay = client.post(
+            "/analytics/risk/regime-scenario-pack/jobs", json=_payload(), headers=headers
+        )
+        owner_read = client.get(
+            f"/analytics/risk/regime-scenario-pack/jobs/{admitted.json()['job_id']}",
+            headers={"X-Tenant-Id": "upgrade-tenant"},
+        )
+        foreign_read = client.get(
+            f"/analytics/risk/regime-scenario-pack/jobs/{admitted.json()['job_id']}",
+            headers={"X-Tenant-Id": "other-tenant"},
+        )
+
+    assert admitted.status_code == 202
+    assert replay.status_code == 202
+    assert replay.json() == admitted.json()
+    assert owner_read.status_code == 200
+    assert foreign_read.status_code == 404
+
+
+def test_schema_readiness_allows_a_compatible_future_addition(tmp_path: Path) -> None:
+    database_url = f"sqlite:///{(tmp_path / 'future-schema.db').as_posix()}"
+    _apply_migration(database_url)
+    from sqlalchemy import create_engine, text
+
+    from app.scenario_jobs.store import SqlAlchemyScenarioJobStore
+
+    engine = create_engine(database_url)
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "alter table scenario_evaluation_jobs add column future_producer_revision text"
+                )
+            )
+    finally:
+        engine.dispose()
+
+    store = SqlAlchemyScenarioJobStore(database_url)
+    try:
+        assert store.is_schema_ready()
+    finally:
+        store.close()
+
+
+def test_schema_readiness_refuses_job_columns_without_durable_key_constraints(
+    tmp_path: Path,
+) -> None:
+    database_url = f"sqlite:///{(tmp_path / 'missing-key-constraints.db').as_posix()}"
+    _apply_migration(database_url)
+    from sqlalchemy import create_engine, text
+
+    from app.scenario_jobs.store import SqlAlchemyScenarioJobStore
+
+    engine = create_engine(database_url)
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "create table scenario_evaluation_jobs_without_keys as "
+                    "select * from scenario_evaluation_jobs"
+                )
+            )
+            connection.execute(text("drop table scenario_evaluation_jobs"))
+            connection.execute(
+                text(
+                    "alter table scenario_evaluation_jobs_without_keys "
+                    "rename to scenario_evaluation_jobs"
+                )
+            )
+    finally:
+        engine.dispose()
+
+    store = SqlAlchemyScenarioJobStore(database_url)
+    try:
+        assert not store.is_schema_ready()
+    finally:
+        store.close()
 
 
 def test_job_admission_refuses_changed_payload_for_same_tenant_key_without_second_write(
@@ -440,6 +552,45 @@ def test_postgres_job_admission_replays_after_migration(monkeypatch: MonkeyPatch
         )
     finally:
         store.close()
+
+
+@pytest.mark.skipif(
+    not os.getenv("LOTUS_RISK_SCENARIO_JOB_POSTGRES_URL"),
+    reason="requires an explicitly provisioned isolated PostgreSQL URL",
+)
+def test_postgres_job_routes_refuse_the_previous_schema_until_operator_upgrade(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """PostgreSQL has the same no-traffic-before-migration refusal as SQLite."""
+    database_url = os.environ["LOTUS_RISK_SCENARIO_JOB_POSTGRES_URL"]
+    monkeypatch.setenv("LOTUS_RISK_SCENARIO_JOB_DATABASE_URL", database_url)
+    monkeypatch.setenv("LOTUS_RISK_SCENARIO_JOB_RETENTION_HOURS", "72")
+    _apply_migration(database_url, "20261001_01")
+    headers = {"X-Tenant-Id": "postgres-upgrade-tenant", "Idempotency-Key": "postgres-upgrade"}
+
+    with TestClient(app) as client:
+        unavailable_submit = client.post(
+            "/analytics/risk/regime-scenario-pack/jobs", json=_payload(), headers=headers
+        )
+        unavailable_read = client.get(
+            "/analytics/risk/regime-scenario-pack/jobs/not-present",
+            headers={"X-Tenant-Id": "postgres-upgrade-tenant"},
+        )
+
+    assert unavailable_submit.status_code == 503
+    assert unavailable_read.status_code == 503
+    _apply_migration(database_url)
+    with TestClient(app) as client:
+        admitted = client.post(
+            "/analytics/risk/regime-scenario-pack/jobs", json=_payload(), headers=headers
+        )
+        replay = client.post(
+            "/analytics/risk/regime-scenario-pack/jobs", json=_payload(), headers=headers
+        )
+
+    assert admitted.status_code == 202
+    assert replay.status_code == 202
+    assert replay.json() == admitted.json()
 
 
 @pytest.mark.skipif(
