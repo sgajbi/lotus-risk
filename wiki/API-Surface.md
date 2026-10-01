@@ -36,6 +36,11 @@ zero tracking error as ready.
 | `POST /analytics/risk/regime-scenario-pack/evaluate` | governed regime scenario-pack evaluation |
 | `POST /analytics/risk/risk-event-cohorts/evaluate` | which portfolios a risk event affects |
 
+Risk-event cohort candidates have one opaque source `portfolio_id` each. Repeated exact IDs —
+whether identical or conflicting in exposure, mandate, or manager values — return `422
+INVALID_REQUEST` before fingerprinting and scoring. Risk does not trim, case-fold, deduplicate, or
+select a row by order; the refusal is invariant when callers reverse duplicate records.
+
 ## Operational
 
 | operation | purpose |

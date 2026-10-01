@@ -162,6 +162,85 @@ def test_risk_event_cohort_rejects_duplicate_semantic_exposure_buckets() -> None
         _request(portfolios=[_portfolio(1, exposure_weights={"EQUITY": 0.50, "equity": 0.50})])
 
 
+@pytest.mark.parametrize(
+    "portfolios",
+    [
+        [
+            {
+                "portfolio_id": "REVIEW-COHORT-1",
+                "mandate_id": "MANDATE-A",
+                "portfolio_manager_id": "pm-a",
+                "exposure_weights": {"FIXED_INCOME": 1.0},
+            },
+            {
+                "portfolio_id": "REVIEW-COHORT-1",
+                "mandate_id": "MANDATE-B",
+                "portfolio_manager_id": "pm-b",
+                "exposure_weights": {"CASH": 1.0},
+            },
+        ],
+        [
+            {
+                "portfolio_id": "REVIEW-COHORT-1",
+                "mandate_id": "MANDATE-B",
+                "portfolio_manager_id": "pm-b",
+                "exposure_weights": {"CASH": 1.0},
+            },
+            {
+                "portfolio_id": "REVIEW-COHORT-1",
+                "mandate_id": "MANDATE-A",
+                "portfolio_manager_id": "pm-a",
+                "exposure_weights": {"FIXED_INCOME": 1.0},
+            },
+        ],
+    ],
+)
+def test_risk_event_cohort_rejects_conflicting_duplicate_portfolio_id_regardless_of_order(
+    portfolios: list[dict[str, object]],
+) -> None:
+    with pytest.raises(
+        ValueError,
+        match="portfolios must contain unique portfolio_id values: REVIEW-COHORT-1",
+    ):
+        _request(portfolios=portfolios)
+
+
+def test_risk_event_cohort_rejects_identical_duplicate_portfolio_id() -> None:
+    portfolio = _portfolio(1)
+
+    with pytest.raises(
+        ValueError,
+        match="portfolios must contain unique portfolio_id values: PB_SG_TEST_001",
+    ):
+        _request(portfolios=[portfolio, portfolio.copy()])
+
+
+def test_risk_event_cohort_retains_unique_candidate_membership_and_scores() -> None:
+    response = evaluate_risk_event_affected_cohort(
+        _request(
+            portfolios=[
+                {
+                    "portfolio_id": "REVIEW-COHORT-AFFECTED",
+                    "mandate_id": "MANDATE-AFFECTED",
+                    "exposure_weights": {"FIXED_INCOME": 1.0},
+                },
+                {
+                    "portfolio_id": "REVIEW-COHORT-EXCLUDED",
+                    "mandate_id": "MANDATE-EXCLUDED",
+                    "exposure_weights": {"CASH": 1.0},
+                },
+            ]
+        )
+    )
+
+    assert [
+        (member.portfolio_id, member.impact_score) for member in response.affected_portfolios
+    ] == [("REVIEW-COHORT-AFFECTED", 0.15)]
+    assert [
+        (member.portfolio_id, member.impact_score) for member in response.excluded_portfolios
+    ] == [("REVIEW-COHORT-EXCLUDED", 0.0)]
+
+
 def test_risk_event_cohort_accepts_near_limit_candidate_portfolio_count() -> None:
     request = _request(
         portfolios=[_portfolio(index) for index in range(RISK_EVENT_MAX_CANDIDATE_PORTFOLIOS)]

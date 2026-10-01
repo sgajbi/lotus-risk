@@ -36,7 +36,15 @@ The request is bounded before calculation starts:
 3. every exposure weight must be finite and between `0.0` and `1.0`; quoted `NaN` and infinity
    sentinels are rejected before normalization, allocation checking, fingerprinting, or scoring,
 4. every candidate portfolio allocation must sum to `1.0` within `0.000001`,
-5. affected plus excluded response rows are bounded by the 250 candidate-row limit.
+5. each source-supplied `portfolio_id` must occur exactly once; exact duplicate IDs, including
+   identical repeats and conflicting exposure, mandate, or manager values, are refused with
+   `422 INVALID_REQUEST` before fingerprinting or scoring,
+6. affected plus excluded response rows are bounded by the 250 candidate-row limit.
+
+`portfolio_id` is an opaque source identifier. The service does not trim, case-fold, collapse, or
+choose between records: source systems must supply one unambiguous literal identity per candidate.
+The same refusal applies if the duplicate input order is reversed, so a conflicting record cannot
+be made ready by ordering it last.
 
 The service evaluates those inputs against risk-owned event definitions in
 `src/app/services/risk_event_cohort_engine.py`.
