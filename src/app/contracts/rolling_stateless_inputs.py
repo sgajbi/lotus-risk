@@ -3,6 +3,7 @@ from __future__ import annotations
 from pydantic import BaseModel, Field, model_validator
 
 from app.contracts.risk import ReturnPoint, RiskRequestPeriod, RiskRequestScope
+from app.contracts.risk_common_inputs import validate_unique_return_dates
 from app.contracts.rolling_common_inputs import (
     ROLLING_BENCHMARK_METRICS,
     ROLLING_MAX_PERIODS,
@@ -84,6 +85,9 @@ class RollingStatelessInput(BaseModel):
     @model_validator(mode="after")
     def validate_semantics(self) -> RollingStatelessInput:
         validate_unique_period_names(self.periods)
+        validate_unique_return_dates(self.returns, series_name="returns")
+        validate_unique_return_dates(self.benchmark_returns, series_name="benchmark_returns")
+        validate_unique_return_dates(self.risk_free_returns, series_name="risk_free_returns")
         validate_rolling_time_series_workload(
             period_count=len(self.periods),
             window_count=len(self.rolling_options.window_lengths),

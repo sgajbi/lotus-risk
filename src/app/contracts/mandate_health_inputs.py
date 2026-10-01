@@ -3,9 +3,10 @@ from __future__ import annotations
 import datetime as dt
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.contracts.risk import ReturnPoint, RiskRequestPeriod, RiskRequestScope
+from app.contracts.risk_common_inputs import validate_unique_return_dates
 
 
 class MandateRiskHealthContextRequest(BaseModel):
@@ -50,3 +51,9 @@ class MandateRiskHealthContextRequest(BaseModel):
     )
 
     model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def validate_return_dates(self) -> MandateRiskHealthContextRequest:
+        validate_unique_return_dates(self.returns, series_name="returns")
+        validate_unique_return_dates(self.benchmark_returns, series_name="benchmark_returns")
+        return self

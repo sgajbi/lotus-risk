@@ -180,6 +180,107 @@ def test_risk_calculate_endpoint_happy_path_contract() -> None:
     assert "expected_shortfall" in metrics["VAR"]["details"]
 
 
+@pytest.mark.parametrize("frequency", ["DAILY", "WEEKLY", "MONTHLY"])
+@pytest.mark.parametrize("series_name", ["returns", "benchmark_returns"])
+def test_risk_calculate_refuses_non_adjacent_duplicate_source_dates(
+    frequency: str, series_name: str
+) -> None:
+    payload = _request_payload()
+    stateless_input = payload["stateless_input"]
+    assert isinstance(stateless_input, dict)
+    stateless_input["metrics"] = ["VOLATILITY", "BETA"]
+    options = stateless_input["options"]
+    assert isinstance(options, dict)
+    options["frequency"] = frequency
+    stateless_input["benchmark_returns"] = [
+        {"date": "2025-01-02", "value": 0.5},
+        {"date": "2025-01-03", "value": 0.0},
+        {"date": "2025-01-06", "value": 0.25},
+    ]
+    points = stateless_input[series_name]
+    assert isinstance(points, list)
+    points.append(dict(points[0]))
+
+    response = TestClient(app).post("/analytics/risk/calculate", json=payload)
+
+    assert response.status_code == 422
+    details = response.json()["error"]["details"]
+    assert details[0]["loc"] == ["body", "stateless_input"]
+    assert details[0]["msg"] == (
+        f"Value error, duplicate return observation date in {series_name}: 2025-01-02"
+    )
+
+
+def test_risk_calculate_accepts_unsorted_unique_daily_observations() -> None:
+    payload = _request_payload()
+    stateless_input = payload["stateless_input"]
+    assert isinstance(stateless_input, dict)
+    returns = stateless_input["returns"]
+    assert isinstance(returns, list)
+    stateless_input["returns"] = list(reversed(returns))
+
+    response = TestClient(app).post("/analytics/risk/calculate", json=payload)
+
+    assert response.status_code == 200
+
+
+def test_risk_calculate_unique_date_control_preserves_independent_statistics() -> None:
+    payload = {
+        "input_mode": "stateless",
+        "stateless_input": {
+            "scope": {"as_of_date": "2026-01-06", "net_or_gross": "NET"},
+            "portfolio_open_date": "2026-01-01",
+            "periods": [{"type": "YTD", "name": "YTD"}],
+            "metrics": ["VOLATILITY", "BETA", "TRACKING_ERROR", "INFORMATION_RATIO"],
+            "options": {"frequency": "DAILY"},
+            "returns": [
+                {"date": "2026-01-02", "value": -1.0},
+                {"date": "2026-01-05", "value": 1.0},
+                {"date": "2026-01-06", "value": 3.0},
+            ],
+            "benchmark_returns": [
+                {"date": "2026-01-02", "value": -1.0},
+                {"date": "2026-01-05", "value": 0.0},
+                {"date": "2026-01-06", "value": 1.0},
+            ],
+        },
+    }
+
+    response = TestClient(app).post("/analytics/risk/calculate", json=payload)
+
+    assert response.status_code == 200
+    period = response.json()["results"]["YTD"]
+    metrics = period["metrics"]
+    # Independently: std([-1, 1, 3]) = 2pp and std([0, 1, 2]) = 1pp;
+    # annualization uses sqrt(252), while the active-return mean is 1pp.
+    assert metrics["VOLATILITY"]["value"] == pytest.approx(31.74901573277509)
+    assert metrics["BETA"]["value"] == pytest.approx(2.0)
+    assert metrics["TRACKING_ERROR"]["value"] == pytest.approx(15.874507866387544)
+    assert metrics["INFORMATION_RATIO"]["value"] == pytest.approx(15.874507866387544)
+    assert period["portfolio_observation_count"] == 3
+    assert period["benchmark_observation_count"] == 3
+    assert period["aligned_benchmark_observation_count"] == 3
+
+
+def test_risk_calculate_refuses_duplicates_in_both_source_series() -> None:
+    payload = _request_payload()
+    stateless_input = payload["stateless_input"]
+    assert isinstance(stateless_input, dict)
+    stateless_input["benchmark_returns"] = [
+        {"date": "2025-01-02", "value": 0.5},
+        {"date": "2025-01-03", "value": 0.0},
+    ]
+    for series_name in ("returns", "benchmark_returns"):
+        points = stateless_input[series_name]
+        assert isinstance(points, list)
+        points.append(dict(points[0]))
+
+    response = TestClient(app).post("/analytics/risk/calculate", json=payload)
+
+    assert response.status_code == 422
+    assert "duplicate return observation date" in response.json()["error"]["details"][0]["msg"]
+
+
 @pytest.mark.parametrize("use_log_returns", [False, True])
 def test_risk_calculate_refuses_missing_monthly_buckets_without_synthetic_samples(
     use_log_returns: bool,

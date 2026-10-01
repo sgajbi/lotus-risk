@@ -204,6 +204,25 @@ def test_rolling_metrics_endpoint_stateless_contract() -> None:
     assert summary["latest_observation_date"] == "2026-01-05"
 
 
+@pytest.mark.parametrize("series_name", ["returns", "benchmark_returns", "risk_free_returns"])
+def test_rolling_metrics_endpoint_refuses_duplicate_source_dates(series_name: str) -> None:
+    payload = _stateless_payload()
+    stateless_input = payload["stateless_input"]
+    assert isinstance(stateless_input, dict)
+    points = stateless_input[series_name]
+    assert isinstance(points, list)
+    points.append(dict(points[1]))
+
+    response = TestClient(app).post("/analytics/risk/rolling-metrics", json=payload)
+
+    assert response.status_code == 422
+    details = response.json()["error"]["details"]
+    assert details[0]["loc"] == ["body", "stateless_input"]
+    assert details[0]["msg"] == (
+        f"Value error, duplicate return observation date in {series_name}: 2026-01-03"
+    )
+
+
 def test_rolling_endpoint_resets_unit_opening_peak_for_each_window() -> None:
     payload = {
         "input_mode": "stateless",

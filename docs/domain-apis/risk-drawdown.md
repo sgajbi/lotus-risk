@@ -74,6 +74,10 @@
   - `duration_unit`
 - `stateless_input` or `stateful_input` (mode-dependent)
 
+In stateless mode, portfolio and optional benchmark return series must each contain one observation
+per date. A duplicate is an ambiguous source interval, not another day of drawdown, and returns
+`422 INVALID_REQUEST` before wealth-path construction.
+
 ## Output Shape
 
 - `source_service`

@@ -10,6 +10,7 @@ from app.contracts.risk_common_inputs import (
     RiskRequestPeriod,
     RiskRequestScope,
     validate_unique_period_names,
+    validate_unique_return_dates,
 )
 from app.contracts.risk_options import RiskOptions, default_risk_options
 
@@ -69,6 +70,8 @@ class StatelessRiskInput(BaseModel):
     @model_validator(mode="after")
     def validate_unique_period_names(self) -> StatelessRiskInput:
         validate_unique_period_names(self.periods)
+        validate_unique_return_dates(self.returns, series_name="returns")
+        validate_unique_return_dates(self.benchmark_returns, series_name="benchmark_returns")
         return self
 
 

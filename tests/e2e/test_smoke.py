@@ -46,7 +46,6 @@ def _drawdown_payload() -> dict[str, object]:
                 {"date": "2026-01-02", "value": -1.2},
                 {"date": "2026-01-05", "value": 0.8},
                 {"date": "2026-01-06", "value": -0.4},
-                {"date": "2026-01-05", "value": 1.1},
             ],
         },
     }
@@ -62,19 +61,16 @@ def _rolling_payload() -> dict[str, object]:
                 {"date": "2026-01-02", "value": 1.0},
                 {"date": "2026-01-05", "value": -2.0},
                 {"date": "2026-01-06", "value": 0.5},
-                {"date": "2026-01-05", "value": 1.2},
             ],
             "benchmark_returns": [
                 {"date": "2026-01-02", "value": 0.8},
                 {"date": "2026-01-05", "value": -1.5},
                 {"date": "2026-01-06", "value": 0.4},
-                {"date": "2026-01-05", "value": 1.0},
             ],
             "risk_free_returns": [
                 {"date": "2026-01-02", "value": 0.01},
                 {"date": "2026-01-05", "value": 0.01},
                 {"date": "2026-01-06", "value": 0.01},
-                {"date": "2026-01-05", "value": 0.01},
             ],
             "rolling_options": {
                 "window_lengths": [3],
@@ -295,6 +291,23 @@ def test_e2e_risk_calculate_happy_path() -> None:
     assert metrics["VAR"]["value"] is not None
 
 
+def test_e2e_risk_calculate_refuses_duplicate_source_observation() -> None:
+    """A duplicated source interval must fail at the public request boundary."""
+    payload = _risk_payload()
+    stateless_input = payload["stateless_input"]
+    assert isinstance(stateless_input, dict)
+    returns = stateless_input["returns"]
+    assert isinstance(returns, list)
+    returns.append({"date": "2025-01-02", "value": 0.8})
+
+    response = TestClient(app).post("/analytics/risk/calculate", json=payload)
+
+    assert response.status_code == 422
+    body = response.json()
+    assert body["error"]["code"] == "INVALID_REQUEST"
+    assert "duplicate return observation date in returns: 2025-01-02" in str(body)
+
+
 def test_e2e_risk_calculate_volatility_public_contract() -> None:
     client = TestClient(app)
     response = client.post(
@@ -513,8 +526,8 @@ def test_e2e_rolling_active_risk_metrics_follow_methodology_contract() -> None:
 
     window = period["window_results"][0]
     summaries = window["metric_summaries"]
-    assert summaries["ROLLING_TRACKING_ERROR"]["latest"] == pytest.approx(0.23384610323886096)
-    assert summaries["ROLLING_INFORMATION_RATIO"]["latest"] == pytest.approx(10.776318121606494)
+    assert summaries["ROLLING_TRACKING_ERROR"]["latest"] == pytest.approx(0.06009991680526689)
+    assert summaries["ROLLING_INFORMATION_RATIO"]["latest"] == pytest.approx(-2.7953449676868325)
 
     latest_point = window["metric_series"][-1]
     assert latest_point["metric_values"]["ROLLING_TRACKING_ERROR"] == pytest.approx(

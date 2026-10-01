@@ -69,6 +69,11 @@
 - `stateless_input.returns[]: [{date, value}]`
 - `stateless_input.benchmark_returns[]: [{date, value}]` (required for benchmark-dependent metrics)
 
+Each supplied return series has exactly one observation per date. Repeated dates, whether values
+are identical or conflicting, are refused with `422 INVALID_REQUEST` before resampling, benchmark
+alignment, or statistical calculation. Distinct daily observations within the same weekly or monthly
+resampling bucket remain valid inputs.
+
 ## Stateful Inputs (Current)
 
 - `input_mode: "stateful"`

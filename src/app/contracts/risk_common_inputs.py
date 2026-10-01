@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+from collections.abc import Sequence
 from enum import Enum
 from typing import Any, ClassVar, Literal
 
@@ -162,6 +163,22 @@ class ReturnPoint(BaseModel):
     )
 
 
+def validate_unique_return_dates(returns: Sequence[ReturnPoint], *, series_name: str) -> None:
+    """Refuse ambiguous same-day return observations before any return-series math.
+
+    A return series represents one economic interval per date. Repeating an observation
+    double-counts that interval even when its value is identical, while conflicting values
+    leave no deterministic source-owned value to calculate from.
+    """
+    seen: set[dt.date] = set()
+    for point in returns:
+        if point.date in seen:
+            raise ValueError(
+                f"duplicate return observation date in {series_name}: {point.date.isoformat()}"
+            )
+        seen.add(point.date)
+
+
 def validate_unique_period_names(periods: list[RiskRequestPeriod]) -> None:
     resolved_names = [period.name or period.type for period in periods]
     duplicates = sorted({name for name in resolved_names if resolved_names.count(name) > 1})
@@ -183,4 +200,5 @@ __all__ = [
     "RiskSupportabilityReason",
     "RiskSupportabilityState",
     "validate_unique_period_names",
+    "validate_unique_return_dates",
 ]

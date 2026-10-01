@@ -63,6 +63,30 @@ def test_drawdown_endpoint_stateless_contract() -> None:
     }
 
 
+@pytest.mark.parametrize("series_name", ["returns", "benchmark_returns"])
+def test_drawdown_endpoint_refuses_duplicate_source_dates(series_name: str) -> None:
+    payload = _stateless_payload()
+    stateless_input = payload["stateless_input"]
+    assert isinstance(stateless_input, dict)
+    stateless_input["benchmark_returns"] = [
+        {"date": "2026-01-02", "value": 0.8},
+        {"date": "2026-01-05", "value": -1.0},
+        {"date": "2026-01-06", "value": 0.2},
+    ]
+    points = stateless_input[series_name]
+    assert isinstance(points, list)
+    points.append(dict(points[1]))
+
+    response = TestClient(app).post("/analytics/risk/drawdown", json=payload)
+
+    assert response.status_code == 422
+    details = response.json()["error"]["details"]
+    assert details[0]["loc"] == ["body", "stateless_input"]
+    assert details[0]["msg"] == (
+        f"Value error, duplicate return observation date in {series_name}: 2026-01-05"
+    )
+
+
 def test_drawdown_endpoint_retains_initial_loss_and_undated_opening_peak() -> None:
     payload = _stateless_payload()
     stateless_input = payload["stateless_input"]
