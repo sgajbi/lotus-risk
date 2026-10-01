@@ -110,7 +110,11 @@ and deterministic for local and protected lanes.
 - `make dependency-hygiene-gate` - deptry findings
 - `make test-pyramid-gate` - the *product* test shape. Tests marked `pytest.mark.governance` assert
   about the repository rather than product behaviour and are deselected, because counting them
-  distorted the shape and made the gate hostile to adding CI-contract coverage; see issue #220
+  distorted the shape and made the gate hostile to adding CI-contract coverage; see issue #220.
+  Integration tests marked `pytest.mark.live_characterization` require an explicit live-runtime
+  admission flag and are also excluded from the PR/main ratio; see issue #303. Those tests remain
+  product tests, but collection without their admitted runtime is not execution evidence. The
+  live characterization proof must be reported separately from the runnable-lane pyramid gate
 - `make test-unit` - unit suite
 - `make test-integration` - integration suite
 - `make test-e2e` - e2e suite

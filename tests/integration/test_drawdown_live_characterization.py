@@ -27,10 +27,13 @@ def _live_enabled() -> bool:
     return os.getenv("LOTUS_RISK_RUN_LIVE_DRAWDOWN") == "1"
 
 
-pytestmark = pytest.mark.skipif(
-    not _live_enabled(),
-    reason="set LOTUS_RISK_RUN_LIVE_DRAWDOWN=1 to run live drawdown reconciliation",
-)
+pytestmark = [
+    pytest.mark.live_characterization,
+    pytest.mark.skipif(
+        not _live_enabled(),
+        reason="set LOTUS_RISK_RUN_LIVE_DRAWDOWN=1 to run live drawdown reconciliation",
+    ),
+]
 
 
 RISK_BASE_URL = os.getenv("LOTUS_RISK_BASE_URL", "http://localhost:8130")

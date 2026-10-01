@@ -70,6 +70,7 @@ testpaths = ["tests"]
 # the gate hostile to adding CI-contract coverage. See issue #220.
 markers = [
     "governance: asserts about the repository rather than product behaviour; excluded from the test pyramid",
+    "live_characterization: product integration proof requiring an admitted multi-service runtime; excluded from the ordinary PR/main test pyramid",
 ]
 
 [tool.coverage.run]

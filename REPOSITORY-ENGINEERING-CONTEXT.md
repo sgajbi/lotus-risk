@@ -419,7 +419,10 @@ could silently skip unmarked async tests — but all 61 async tests here carry a
 
 Important validation expectations:
 
-1. no-alias, OpenAPI, vocabulary, and test-pyramid gates are active,
+1. no-alias, OpenAPI, vocabulary, and test-pyramid gates are active. The pyramid gate counts
+   PR/main-runnable product tests: `governance` tests and explicitly marked
+   `live_characterization` integration tests are excluded from its ratio. The latter need
+   separate admitted live-runtime execution; collection alone is not runtime evidence,
 2. security audit and migration smoke are required,
 3. split test suites plus coverage and Docker build are part of the merge gate,
 4. risk correctness and evidence posture must remain aligned with the product and gateway contract.

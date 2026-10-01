@@ -26,10 +26,13 @@ def _live_enabled() -> bool:
     return os.getenv("LOTUS_RISK_RUN_LIVE_ATTRIBUTION") == "1"
 
 
-pytestmark = pytest.mark.skipif(
-    not _live_enabled(),
-    reason="set LOTUS_RISK_RUN_LIVE_ATTRIBUTION=1 to run live attribution characterization",
-)
+pytestmark = [
+    pytest.mark.live_characterization,
+    pytest.mark.skipif(
+        not _live_enabled(),
+        reason="set LOTUS_RISK_RUN_LIVE_ATTRIBUTION=1 to run live attribution characterization",
+    ),
+]
 
 
 RISK_BASE_URL = os.getenv("LOTUS_RISK_BASE_URL", "http://localhost:8130")
