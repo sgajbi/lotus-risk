@@ -13,6 +13,7 @@ from app.integrations.lotus_performance_transport import (
 from app.integrations.lotus_performance_transport import (
     execute_benchmark_exposure_context_request,
     execute_contribution_request,
+    execute_group_return_evidence_request,
     execute_returns_series_request,
     resolve_lotus_performance_base_url,
 )
@@ -73,6 +74,20 @@ class LotusPerformanceClient:
             authority=authority,
             async_max_polls=self._async_max_polls,
             async_poll_interval_seconds=self._async_poll_interval_seconds,
+        )
+
+    async def get_group_return_evidence(
+        self,
+        *,
+        request_payload: dict[str, Any],
+        authority: DownstreamAuthority,
+    ) -> dict[str, Any]:
+        return await execute_group_return_evidence_request(
+            profile=self._profile,
+            client=self._http_client,
+            base_url=self._base_url,
+            request_payload=request_payload,
+            authority=authority,
         )
 
     async def get_benchmark_exposure_context(

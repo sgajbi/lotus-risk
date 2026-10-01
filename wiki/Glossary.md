@@ -3,8 +3,9 @@
 ## Current scope and evidence posture
 
 These are current contract terms, not a claim that every dependency is live. In historical
-attribution, per-set `risk_basis` distinguishes empirical `TOTAL_RISK` evidence from a
-`weight_proxy`; `ACTIVE_RISK` remains degraded until governed benchmark-group evidence exists.
+attribution, per-set `risk_basis` distinguishes empirical evidence from a `weight_proxy`.
+Gross stateful `ACTIVE_RISK` `SECTOR`/`ASSET_CLASS` can consume versioned benchmark-group
+evidence locally; other active sets remain degraded, and live joined acceptance is pending.
 
 The vocabulary `lotus-risk` uses. Metric *definitions* — formulas, conventions, inputs — are authored
 per metric under
@@ -100,7 +101,7 @@ branched on mechanically — branch on the one belonging to the endpoint you cal
 | **`insufficient_observations`** | not enough history |
 | **`insufficient_aligned_observations`** | portfolio and benchmark history did not overlap enough. A different problem, and a different fix. |
 | **`benchmark_unavailable`** | a benchmark-dependent metric was requested without a usable benchmark |
-| **`group_return_series_unavailable`** | at least one calculated attribution set is a `weight_proxy`, not measured group risk. Only `TOTAL_RISK` `VOLATILITY` `SECTOR` and `ASSET_CLASS` can currently be empirical, after contribution evidence covers the Core group universe and period calendar; `POSITION`, `ISSUER`, unsupported `TOTAL_RISK` metrics, and every `ACTIVE_RISK` set remain proxies. Core missing/null dimensions retain `UNKNOWN`; Performance's `Unclassified` producer bucket maps only to that identity, while foreign and colliding literal categories fail closed. It is not always the reported `reason`: an actionable failure outranks it by precedence, so a response that also failed a period reports that failure instead. Read every set's `risk_basis`, never the absence of this reason alone, to decide whether that set is empirical. A response whose calculated sets are all `empirical_group_returns` can be `ready`; an `empty` response reports `no_return_observations`, having had nothing to decompose. Not a property of the request — a source-evidence limitation this service states rather than implies |
+| **`group_return_series_unavailable`** | at least one calculated attribution set is a `weight_proxy`, not measured group risk. `TOTAL_RISK` `VOLATILITY` `SECTOR`/`ASSET_CLASS` can be empirical with complete Performance contribution evidence; stateful `ACTIVE_RISK` `TRACKING_ERROR` for those dimensions can be empirical with explicit gross basis, currency and complete v1 portfolio/benchmark evidence. `NET`, unspecified currency, stateless input, `POSITION`, `ISSUER`, and unsupported metrics remain proxies. Core missing/null dimensions retain `UNKNOWN`; Performance's `Unclassified` contribution bucket maps only to that identity, while foreign and colliding categories fail closed. An actionable failure can outrank this reason by precedence: inspect every set's `risk_basis`. An all-empirical response can be `ready`; an `empty` response reports `no_return_observations`. This is source-evidence posture, not a production acceptance claim. |
 | **`unsupported_input_mode`** | the request shape is not supported for this workflow — the answer `/integration/capabilities` would have given in advance |
 | **freshness bucket** | `current`, `same_day`, `stale`, `unknown` — how recent the underlying observations are |
 | **lineage** | the record of which upstream sources and versions produced an answer |

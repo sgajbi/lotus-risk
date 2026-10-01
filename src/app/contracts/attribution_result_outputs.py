@@ -33,13 +33,14 @@ class AttributionContributor(BaseModel):
             "minus benchmark, so it is negative for an underweight. It is a weight, "
             "not a contribution: it does not carry metric units and is not derived "
             "from the return series. "
-            "Averaged over the dates on which exposure was OBSERVED inside the "
-            "window, not over every return date -- exposure history may be sparser "
+            "For proxy sets, averaged over the dates on which exposure was OBSERVED "
+            "inside the window, not over every return date -- exposure history may be sparser "
             "than the return series, and a date with no observation is not a zero "
             "holding. Null when a group has no observed weight in the window at "
             "all. Zero is a zero AVERAGE and does not imply the group tracked the "
             "benchmark: a group overweight for part of the window and equally "
-            "underweight later averages to zero having never matched it."
+            "underweight later averages to zero having never matched it. Empirical "
+            "active sets use the producer's daily beginning-capital active weights."
         ),
         json_schema_extra={"example": 0.245},
     )
@@ -55,8 +56,8 @@ class AttributionContributor(BaseModel):
             "if the group's weight changed, and under constant weights it reports "
             "the same portfolio-level figure for every group rather than anything "
             "group-specific. Treating it as an actionable marginal will mislead. "
-            "A genuine sensitivity needs per-group return series -- see "
-            "lotus-risk#283. "
+            "Empirical group returns improve the component, but this quotient "
+            "remains a descriptive ratio, not a counterfactual weight sensitivity. "
             "Null when `weight_average` is zero or unobserved; the row is still "
             "returned with its component."
         ),
@@ -77,10 +78,10 @@ class AttributionContributor(BaseModel):
             "Their sum across contributors is `reconciled_sum / total_value`, which "
             "is 1.0 only when `residual` is zero -- do not assume it, and do not "
             "normalise to it. Under TOTAL_RISK it approaches 1.0 as the residual "
-            "approaches zero. Under ACTIVE_RISK it approaches ZERO for fully "
-            "allocated histories, because the values then carry active weights that "
-            "sum to zero. A consumer validating `sum == 1` will reject valid "
-            "responses. See lotus-risk#283."
+            "approaches zero. Under proxy ACTIVE_RISK it approaches zero for fully "
+            "allocated histories because active weights sum to zero; under admitted "
+            "empirical ACTIVE_RISK it approaches one when group active returns "
+            "reconcile. Inspect `risk_basis` and residual. See lotus-risk#283."
         ),
         json_schema_extra={"example": 0.1532},
     )
@@ -130,13 +131,11 @@ class AttributionSetResult(BaseModel):
             "larger one is reported as `grouping:<dim>:weight_not_sum_to_one` in "
             "`quality_flags`. Note that flag is advisory -- a set whose weights do "
             "not sum to one is still computed and returned. "
-            "Under ACTIVE_RISK, for FULLY ALLOCATED portfolio and benchmark "
-            "histories, the residual is the whole metric: active weights then sum "
-            "to zero, so the components do too and nothing is attributed. Where "
-            "either history is not fully allocated the active weights sum to the "
-            "difference and the residual is correspondingly smaller, which is not a "
-            "better decomposition -- only a less obvious one. See lotus-risk#283 "
-            "before presenting an active-risk decomposition."
+            "Under proxy ACTIVE_RISK with fully allocated histories, the residual "
+            "is the whole metric because active weights sum to zero. Admitted "
+            "empirical ACTIVE_RISK uses signed portfolio-minus-benchmark group "
+            "return contributions and can reconcile tracking error; any remaining "
+            "residual is reported, never normalized away. See lotus-risk#283."
         ),
         json_schema_extra={"example": 0.0004},
     )
@@ -166,10 +165,12 @@ class AttributionSetResult(BaseModel):
         description=(
             "Evidence basis of this set's decomposition. `empirical_group_returns` "
             "means every contributor's contribution series was built from validated "
-            "per-group return evidence sourced from lotus-performance (genuine group "
-            "returns joined with the beginning-capital weights that formed them, "
-            "complete over every portfolio return date in the period). `weight_proxy` "
-            "means the set decomposes weight paths against the portfolio return -- the "
+            "per-group return evidence sourced from lotus-performance (for total "
+            "risk: group returns with beginning-capital weights; for eligible active "
+            "risk: signed portfolio-minus-benchmark group contributions, complete "
+            "over every admitted return date). `weight_proxy` "
+            "means the set decomposes weight paths against an aggregate portfolio "
+            "return (total risk) or aggregate active return (active risk) -- the "
             "lotus-risk#291 limitation -- because no complete validated group-return "
             "evidence was available for this set; the reason is in `quality_flags` "
             "when the evidence was requested and declared incomplete. Consumers must "

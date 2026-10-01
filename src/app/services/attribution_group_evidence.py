@@ -35,6 +35,7 @@ from app.contracts.attribution import AttributionMetric, AttributionType, Groupi
 from app.contracts.downstream_authority import DownstreamAuthority
 from app.contracts.risk import ReturnPoint
 from app.integrations.upstream_operations import LOTUS_PERFORMANCE_CONTRIBUTION_OPERATION
+from app.services.attribution_active_group_evidence import ActiveGroupEvidence
 from app.services.attribution_contribution_response import extract_period_rows
 from app.upstream_errors import invalid_upstream_payload
 
@@ -60,8 +61,7 @@ EMPIRICAL_GROUPING_DIMENSION_FIELDS: Mapping[GroupingDimension, str] = {
 #: producer's group evidence and the portfolio return series it must decompose.
 RECONCILIATION_TOLERANCE_PP = 0.01
 
-#: Emission bounds: no threshold suppression, and a group count beyond this bound is a
-#: truncated hierarchy (an ``Other`` rollup row), which keeps the set degraded.
+#: A truncated hierarchy (an ``Other`` rollup row) keeps the set degraded.
 FLAG_TRUNCATED = "group_return_evidence:truncated"
 FLAG_PERIOD_MISSING = "group_return_evidence:period_missing"
 FLAG_RECONCILIATION_BREACH = "group_return_evidence:reconciliation_breach"
@@ -113,6 +113,7 @@ class GroupEvidencePack:
     series_by_group: Mapping[str, GroupReturnSeries]
     degradation_flags: tuple[str, ...]
     expected_group_keys: tuple[str, ...] = ()
+    active_evidence: ActiveGroupEvidence | None = None
 
     @property
     def empirical(self) -> bool:

@@ -62,6 +62,9 @@ class _StubPerformanceClient:
             authority=authority,
         )
 
+    async def get_group_return_evidence(self, **_: Any) -> dict[str, Any]:
+        raise AssertionError("legacy test client must not receive v1 group-return evidence")
+
     async def get_benchmark_exposure_context(
         self,
         *,
@@ -1033,8 +1036,7 @@ def test_build_issuer_map_skips_non_dict_and_missing_security_id_records() -> No
 
 
 def test_validate_stateful_groupings_refuses_custom_for_direct_service_callers() -> None:
-    """The HTTP contract already rejects CUSTOM at validation (422); this seam guards
-    non-route callers of the stateful resolver with the same rule."""
+    """Direct service callers refuse CUSTOM, matching HTTP validation."""
     from app.services.attribution_stateful_inputs import validate_stateful_groupings
 
     validate_stateful_groupings(["SECTOR", "ASSET_CLASS"])

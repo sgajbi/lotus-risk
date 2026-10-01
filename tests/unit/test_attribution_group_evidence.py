@@ -786,6 +786,26 @@ def _malformed_case(mutate: Callable[[list[dict[str, Any]]], object]) -> dict[st
             "missing_weight_basis",
             lambda rows: rows[0]["group_return"].__delitem__("weight_basis"),
         ),
+        (
+            "invalid_observation_date",
+            lambda rows: rows[0]["group_return"]["series"][0].__setitem__("date", "not-a-date"),
+        ),
+        (
+            "non_mapping_series_point",
+            lambda rows: rows[0]["group_return"]["series"].__setitem__(0, None),
+        ),
+        (
+            "empty_ready_series",
+            lambda rows: rows[0]["group_return"].__setitem__("series", []),
+        ),
+        (
+            "missing_hierarchy_key",
+            lambda rows: rows[0].__setitem__("key", None),
+        ),
+        (
+            "blank_hierarchy_key",
+            lambda rows: rows[0].__setitem__("key", {"sector": ""}),
+        ),
     ],
 )
 def test_malformed_producer_evidence_is_refused_before_covariance(
@@ -813,6 +833,32 @@ def test_duplicate_unavailable_group_rows_are_refused_not_collapsed() -> None:
         _pack(_contribution_response(rows))
 
     assert excinfo.value.code == "UPSTREAM_INVALID_RESPONSE"
+
+
+def test_source_aliases_cannot_count_twice_as_one_core_group() -> None:
+    rows = _scenario_rows(A_EQUITY, A_FIXED)
+    with pytest.raises(UpstreamServiceError, match="multiple hierarchy rows"):
+        _pack(
+            _contribution_response(rows),
+            expected_group_key_by_source_key={
+                "equity": "SECTOR_EQUITY",
+                "fixed_income": "SECTOR_EQUITY",
+                "cash": "SECTOR_CASH",
+            },
+        )
+
+
+def test_empty_hierarchy_is_a_named_gap_and_date_objects_are_valid() -> None:
+    empty = _pack(_contribution_response([]))
+    assert empty.degradation_flags == (FLAG_PERIOD_MISSING,)
+    rows = _scenario_rows(A_EQUITY, A_FIXED)
+    rows[0]["group_return"]["series"][0]["date"] = DATES[0]
+    assert _pack(_contribution_response(rows)).empirical
+
+
+def test_ready_group_without_portfolio_calendar_cannot_promote_empirical() -> None:
+    with pytest.raises(UpstreamServiceError, match="without portfolio return dates"):
+        _pack(_contribution_response(_scenario_rows(A_EQUITY, A_FIXED)), portfolio_returns=[])
 
 
 def test_mixed_currencies_across_groups_are_refused_when_no_currency_was_pinned() -> None:

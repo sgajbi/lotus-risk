@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from app.contracts.attribution import AttributionType
+from app.services.attribution_active_group_evidence import ActiveGroupEvidence
 from app.services.attribution_group_evidence import GroupEvidencePack
 
 
@@ -167,6 +168,49 @@ def empirical_total_risk_inputs(
         group_matrix=group_matrix,
         weight_matrix=weight_matrix,
         risk_total=float(returns_series.std(ddof=1) * sqrt(annualization_basis)),
+    )
+
+
+def empirical_active_risk_inputs(
+    *,
+    returns_series: pd.Series,
+    benchmark_series: pd.Series,
+    active_evidence: ActiveGroupEvidence,
+    annualization_basis: int,
+) -> AttributionCalculationInputs | None:
+    """Decompose tracking error from actual signed group active contributions."""
+    aligned = pd.merge(
+        returns_series.to_frame("portfolio"),
+        benchmark_series.to_frame("benchmark"),
+        left_index=True,
+        right_index=True,
+        how="inner",
+    )
+    if aligned.empty:
+        return None
+    metric_series = aligned["portfolio"] - aligned["benchmark"]
+    dates = [timestamp.date() for timestamp in metric_series.index]
+    observations = {
+        group_key: {point.observation_date: point for point in series}
+        for group_key, series in active_evidence.observations_by_group.items()
+    }
+    return AttributionCalculationInputs(
+        metric_series=metric_series,
+        group_matrix=pd.DataFrame(
+            {
+                key: [float(per_date[day].active_contribution) for day in dates]
+                for key, per_date in sorted(observations.items())
+            },
+            index=metric_series.index,
+        ),
+        weight_matrix=pd.DataFrame(
+            {
+                key: [float(per_date[day].active_weight) for day in dates]
+                for key, per_date in sorted(observations.items())
+            },
+            index=metric_series.index,
+        ),
+        risk_total=float(metric_series.std(ddof=1) * sqrt(annualization_basis)),
     )
 
 

@@ -22,6 +22,7 @@ from app.services.audit_lineage import (
 )
 
 CONTRIBUTION_REQUEST_SET_OPERATION = "/performance/contribution"
+ACTIVE_EVIDENCE_REQUEST_SET_OPERATION = "/integration/attribution/group-return-evidence/v1"
 
 
 def _attach_stateful_lineage(
@@ -29,6 +30,7 @@ def _attach_stateful_lineage(
     response: HistoricalAttributionResponse,
     returns_request: dict[str, Any],
     contribution_requests: tuple[dict[str, Any], ...],
+    active_evidence_requests: tuple[dict[str, Any], ...],
     calculation_input: dict[str, Any],
 ) -> HistoricalAttributionResponse:
     response.metadata.source_services = ordered_source_services(
@@ -49,6 +51,24 @@ def _attach_stateful_lineage(
                 {
                     "requests": sorted(
                         contribution_requests,
+                        key=fingerprint_payload,
+                    )
+                }
+            )
+        )
+    if active_evidence_requests:
+        upstream_fingerprints[f"lotus-performance:{ACTIVE_EVIDENCE_REQUEST_SET_OPERATION}"] = (
+            fingerprint_payload(
+                {
+                    "requests": sorted(
+                        (
+                            {
+                                key: value
+                                for key, value in request.items()
+                                if key != "calculation_id"
+                            }
+                            for request in active_evidence_requests
+                        ),
                         key=fingerprint_payload,
                     )
                 }
@@ -84,6 +104,7 @@ async def calculate_historical_attribution_stateful(
         response=response,
         returns_request=resolved_inputs.returns_request,
         contribution_requests=resolved_inputs.contribution_requests,
+        active_evidence_requests=resolved_inputs.active_evidence_requests,
         calculation_input={
             "stateless_input": resolved_inputs.stateless_input.model_dump(
                 mode="json",

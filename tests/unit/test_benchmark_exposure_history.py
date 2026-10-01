@@ -111,6 +111,24 @@ def test_rows_to_exposure_points_parses_complete_performance_context_rows() -> N
             "group_key": "SECTOR_TECH",
             "weight": "0.1",
         },
+        {
+            "valuation_date": "20260102",
+            "grouping_dimension": "SECTOR",
+            "group_key": "SECTOR_TECH",
+            "weight": "0.1",
+        },
+        {
+            "valuation_date": "not-a-date",
+            "grouping_dimension": "SECTOR",
+            "group_key": "SECTOR_TECH",
+            "weight": "0.1",
+        },
+        {
+            "valuation_date": "2026-01-02",
+            "grouping_dimension": "SECTOR",
+            "group_key": "SECTOR_TECH",
+            "weight": "1e9999",
+        },
     ],
 )
 def test_fetch_benchmark_exposure_history_refuses_partial_rows_even_when_source_says_complete(
@@ -478,6 +496,7 @@ def test_fetch_benchmark_exposure_history_refuses_incomplete_source_economics() 
     [
         None,
         {"status": "complete"},
+        {"status": "unknown"},
         {
             "status": "complete",
             "omitted_component_count": 1,
@@ -544,6 +563,16 @@ def test_fetch_benchmark_exposure_history_rejects_bad_performance_contract_shape
             asyncio.run(
                 fetch_benchmark_exposure_history(_benchmark_request(_performance_client(payload)))
             )
+
+    malformed_id = {
+        **base_response,
+        "calculation_id": "not-a-uuid",
+        "metadata": {**base_response["metadata"], "calculation_run_id": "not-a-uuid"},
+    }
+    with pytest.raises(UpstreamServiceError, match="invalid calculation lineage"):
+        asyncio.run(
+            fetch_benchmark_exposure_history(_benchmark_request(_performance_client(malformed_id)))
+        )
 
 
 def test_rows_to_exposure_points_rejects_invalid_weight() -> None:

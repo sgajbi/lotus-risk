@@ -358,6 +358,13 @@ def _validate_supported_grouping_dimensions(
 async def fetch_benchmark_exposure_history(
     request: BenchmarkExposureHistoryRequest,
 ) -> list[ExposurePoint]:
+    rows, _ = await fetch_benchmark_exposure_history_with_identity(request)
+    return rows
+
+
+async def fetch_benchmark_exposure_history_with_identity(
+    request: BenchmarkExposureHistoryRequest,
+) -> tuple[list[ExposurePoint], tuple[str, str]]:
     _validate_supported_grouping_dimensions(request.grouping_dimensions)
 
     page_token: str | None = None
@@ -411,7 +418,9 @@ async def fetch_benchmark_exposure_history(
                 "benchmark exposure context"
             ),
         )
-    return benchmark_exposures
+    if expected_benchmark_identity is None:
+        raise _invalid_benchmark_exposure_context("missing benchmark identity")
+    return benchmark_exposures, expected_benchmark_identity
 
 
 def _validate_page_identity_and_rows(

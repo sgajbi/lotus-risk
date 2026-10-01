@@ -6,6 +6,7 @@ from collections.abc import Collection, Mapping
 from typing import Any
 
 from app.contracts.attribution import AttributionMetric, AttributionType, GroupingDimension
+from app.services.attribution_active_group_evidence import ActiveGroupEvidence
 from app.services.attribution_group_evidence import (
     GroupEvidencePack,
     group_evidence_applies_to_set,
@@ -36,6 +37,11 @@ def canonical_group_evidence_payload(
                 "expected_group_keys": list(pack.expected_group_keys),
                 "degradation_flags": list(pack.degradation_flags),
                 "series_by_group": _empirical_series_payload(pack),
+                **(
+                    {"active_evidence": _active_evidence_payload(pack.active_evidence)}
+                    if pack.active_evidence is not None
+                    else {}
+                ),
             }
             for dimension, pack in sorted(per_dimension.items())
         }
@@ -52,7 +58,7 @@ def _has_supported_empirical_set(
         group_evidence_applies_to_set(attribution_type=attribution_type, metric=metric)
         for attribution_type in attribution_types
         for metric in metrics
-    )
+    ) or ("ACTIVE_RISK" in attribution_types and "TRACKING_ERROR" in metrics)
 
 
 def _empirical_series_payload(pack: GroupEvidencePack) -> dict[str, Any]:
@@ -72,6 +78,25 @@ def _empirical_series_payload(pack: GroupEvidencePack) -> dict[str, Any]:
             ],
         }
         for group_key, series in sorted(pack.series_by_group.items())
+    }
+
+
+def _active_evidence_payload(evidence: ActiveGroupEvidence) -> dict[str, Any]:
+    return {
+        "source_cut_id": evidence.source_cut_id,
+        "benchmark_id": evidence.benchmark_id,
+        "reporting_currency": evidence.reporting_currency,
+        "observations_by_group": {
+            group_key: [
+                {
+                    "date": point.observation_date.isoformat(),
+                    "active_contribution": str(point.active_contribution),
+                    "active_weight": str(point.active_weight),
+                }
+                for point in observations
+            ]
+            for group_key, observations in sorted(evidence.observations_by_group.items())
+        },
     }
 
 
