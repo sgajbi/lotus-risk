@@ -83,7 +83,8 @@
    - `sigma_a_pp = std(A_used_pp, ddof=1)`.
 9. Require `sigma_a_pp` to be non-zero under `np.isclose`.
 10. Resolve annualization factor:
-    - `AF = options.annualization_factor` when supplied;
+    - `AF = options.annualization_factor` when supplied as a positive integer; zero, negative, or
+      non-integer overrides refuse request validation before calculation;
     - otherwise `AF = 252` for `DAILY`, `52` for `WEEKLY`, and `12` for `MONTHLY`.
 11. Convert details to decimal ratios:
     - `mu_a_decimal = mu_a_pp / 100`;

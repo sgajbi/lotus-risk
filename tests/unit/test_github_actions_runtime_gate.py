@@ -32,6 +32,9 @@ def test_github_actions_runtime_gate_accepts_node24_artifact_minimums(tmp_path: 
     workflows_dir.mkdir()
     _write_workflow(workflows_dir / "upload.yml", "actions/upload-artifact@v6")
     _write_workflow(workflows_dir / "download.yml", "actions/download-artifact@v7")
+    _write_workflow(workflows_dir / "buildx.yml", "docker/setup-buildx-action@v4")
+    _write_workflow(workflows_dir / "build.yml", "docker/build-push-action@v7")
+    _write_workflow(workflows_dir / "login.yml", "docker/login-action@v4")
 
     assert validate_workflows(workflows_dir) == []
 
@@ -49,6 +52,23 @@ def test_github_actions_runtime_gate_rejects_node20_artifact_majors(tmp_path: Pa
         "actions/upload-artifact",
     ]
     assert [violation.minimum_major for violation in violations] == [7, 6]
+
+
+def test_github_actions_runtime_gate_rejects_node20_docker_action_majors(tmp_path: Path) -> None:
+    workflows_dir = tmp_path / "workflows"
+    workflows_dir.mkdir()
+    _write_workflow(workflows_dir / "build.yml", "docker/build-push-action@v6")
+    _write_workflow(workflows_dir / "buildx.yml", "docker/setup-buildx-action@v3")
+    _write_workflow(workflows_dir / "login.yml", "docker/login-action@v3")
+
+    violations = validate_workflows(workflows_dir)
+
+    assert [violation.slug for violation in violations] == [
+        "docker/build-push-action",
+        "docker/setup-buildx-action",
+        "docker/login-action",
+    ]
+    assert [violation.minimum_major for violation in violations] == [7, 4, 4]
 
 
 def test_github_actions_runtime_gate_rejects_unparseable_and_quoted_refs(tmp_path: Path) -> None:

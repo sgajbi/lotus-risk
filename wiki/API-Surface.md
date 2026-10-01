@@ -113,6 +113,11 @@ the API accepts.
 Three metrics depend on benchmark inputs — **`BETA`, `TRACKING_ERROR` and `INFORMATION_RATIO`**.
 `VAR` does not: it is computed from the portfolio series alone.
 
+When `options.annualization_factor` is omitted or `null`, Risk uses `252` for daily, `52` for
+weekly, and `12` for monthly metric sampling. A supplied override must be a positive integer;
+zero, negative, fractional, or non-finite values refuse with `422 INVALID_REQUEST` before any
+calculation rather than selecting a hidden convention or producing a metric math error.
+
 `CORNISH_FISHER` VaR needs at least four prepared portfolio observations because its sample skew
 and excess-kurtosis estimators are undefined below that boundary. Two or three observations return
 the usual `null` metric with `details.error: "Insufficient data"` and degraded supportability;

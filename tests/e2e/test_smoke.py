@@ -308,6 +308,28 @@ def test_e2e_risk_calculate_refuses_duplicate_source_observation() -> None:
     assert "duplicate return observation date in returns: 2025-01-02" in str(body)
 
 
+def test_e2e_risk_calculate_refuses_zero_annualization_without_substituting_a_default() -> None:
+    payload = _risk_payload()
+    stateless_input = payload["stateless_input"]
+    assert isinstance(stateless_input, dict)
+    stateless_input["options"] = {"annualization_factor": 0}
+
+    response = TestClient(app).post(
+        "/analytics/risk/calculate",
+        json=payload,
+        headers={"X-Correlation-Id": "e2e-annualization-zero"},
+    )
+
+    assert response.status_code == 422
+    error = response.json()["error"]
+    assert error["code"] == "INVALID_REQUEST"
+    assert error["correlation_id"] == "e2e-annualization-zero"
+    assert any(
+        detail["loc"] == ["body", "stateless_input", "options", "annualization_factor"]
+        for detail in error["details"]
+    )
+
+
 def test_e2e_risk_calculate_volatility_public_contract() -> None:
     client = TestClient(app)
     response = client.post(

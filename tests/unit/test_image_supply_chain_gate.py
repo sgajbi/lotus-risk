@@ -228,6 +228,19 @@ def test_image_release_scans_before_registry_authentication_and_publication() ->
     )
 
 
+def test_image_release_contract_rejects_deprecated_build_action(tmp_path: Path) -> None:
+    workflow_path = tmp_path / "image-release.yml"
+    current = Path(".github/workflows/image-release.yml").read_text(encoding="utf-8")
+    workflow_path.write_text(
+        current.replace("docker/build-push-action@v7", "docker/build-push-action@v6"),
+        encoding="utf-8",
+    )
+
+    issues = validate_ci_image_release_workflow(workflow_path)
+
+    assert f"{workflow_path}: missing Docker build/push action" in issues
+
+
 def test_image_release_order_guard_rejects_publication_before_scan(tmp_path: Path) -> None:
     workflow_path = tmp_path / "image-release.yml"
     workflow = "\n".join(

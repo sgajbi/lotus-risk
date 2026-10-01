@@ -62,7 +62,8 @@
    - when `use_log_returns=false`, `r_used_t_pp = r_resampled_t_pp`;
    - when `use_log_returns=true`, `r_used_t_pp = ln(1 + r_resampled_t_pp / 100) * 100`.
 5. Resolve annualization factor:
-   - use `options.annualization_factor` when supplied;
+   - use `options.annualization_factor` when supplied as a positive integer; zero, negative, or
+     non-integer overrides refuse request validation before calculation;
    - otherwise `AF = 252` for `DAILY`, `52` for `WEEKLY`, and `12` for `MONTHLY`.
 6. Convert annual MAR to periodic MAR:
    `MAR_periodic = (1 + MAR_annual)^(1 / AF) - 1`.

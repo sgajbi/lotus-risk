@@ -26,14 +26,14 @@ RiskFreeContextReason = Literal["NOT_REQUESTED", "ZERO_RATE", "ANNUAL_RATE_APPLI
 
 
 def derive_annualization_factor(request: RiskStatelessCalculationInput) -> int:
-    return (
-        request.options.annualization_factor
-        or {
-            "DAILY": 252,
-            "WEEKLY": 52,
-            "MONTHLY": 12,
-        }[request.options.frequency]
-    )
+    override = request.options.annualization_factor
+    if override is not None:
+        return override
+    return {
+        "DAILY": 252,
+        "WEEKLY": 52,
+        "MONTHLY": 12,
+    }[request.options.frequency]
 
 
 def resolve_periodic_rates(

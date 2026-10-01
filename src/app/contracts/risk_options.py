@@ -49,7 +49,11 @@ class RiskOptions(BaseModel):
     )
     annualization_factor: int | None = Field(
         default=None,
-        description="Optional annualization factor override.",
+        gt=0,
+        description=(
+            "Optional positive annualization factor override. Omit or send null to use the "
+            "frequency default."
+        ),
         json_schema_extra={"example": 252},
     )
     use_log_returns: bool = Field(
