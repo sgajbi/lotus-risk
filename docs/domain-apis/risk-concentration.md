@@ -160,6 +160,11 @@ Optional display fields may also be provided on positions:
 
 - `security_name`
 
+Issuer identity is resolved per effective state. Current-row identity determines baseline issuer
+metrics; an explicit projected-row identity determines proposed issuer metrics. When a projected
+row omits identity, its matching current-row identity is retained. A projected identity can never
+rewrite baseline issuer concentration.
+
 #### `stateful` / `simulation`
 
 Caller can provide `issuer_mappings[]` keyed by `security_id`, while lotus-core `instrument_enrichment` remains the primary source of canonical issuer enrichment.

@@ -24,7 +24,7 @@ from app.services.concentration.parsing import (
     _to_weighted_values,
 )
 from app.services.concentration.ports import LotusCoreClientProtocol
-from app.services.concentration.stateless_issuer_mapping import stateless_issuer_map
+from app.services.concentration.stateless_issuer_mapping import stateless_issuer_maps
 
 
 @dataclass(frozen=True)
@@ -44,17 +44,18 @@ def _weighted_stateless_state(
     *,
     current_rows: list[PositionEntry],
     proposed_rows: list[PositionEntry],
-    issuer_by_security: dict[str, IssuerIdentity],
+    current_issuer_by_security: dict[str, IssuerIdentity],
+    proposed_issuer_by_security: dict[str, IssuerIdentity],
     issuer_note: str | None,
     projection_supplied: bool,
 ) -> _WeightedConcentrationState:
     current_positions, current_issuers, covered_current, total_current = _to_weighted_values(
         current_rows,
-        issuer_by_security=issuer_by_security,
+        issuer_by_security=current_issuer_by_security,
     )
     proposed_positions, proposed_issuers, covered_proposed, total_proposed = _to_weighted_values(
         proposed_rows,
-        issuer_by_security=issuer_by_security,
+        issuer_by_security=proposed_issuer_by_security,
     )
     if (
         issuer_note is None
@@ -137,7 +138,11 @@ async def resolve_stateless(
 
     current_rows, proposed_rows = _extract_values_from_stateless_payload(stateless_input)
     all_rows = [*current_rows, *proposed_rows]
-    issuer_by_security, issuer_note = await stateless_issuer_map(
+    (
+        current_issuer_by_security,
+        proposed_issuer_by_security,
+        issuer_note,
+    ) = await stateless_issuer_maps(
         request,
         rows=all_rows,
         core_client=core_client,
@@ -146,7 +151,8 @@ async def resolve_stateless(
     weighted_state = _weighted_stateless_state(
         current_rows=current_rows,
         proposed_rows=proposed_rows,
-        issuer_by_security=issuer_by_security,
+        current_issuer_by_security=current_issuer_by_security,
+        proposed_issuer_by_security=proposed_issuer_by_security,
         issuer_note=issuer_note,
         projection_supplied="projected_positions" in stateless_input.model_fields_set,
     )

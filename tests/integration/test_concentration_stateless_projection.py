@@ -1,6 +1,97 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+
+
+@pytest.mark.parametrize(
+    ("grouping_level", "current_issuer", "projected_issuer"),
+    [
+        ("legal_issuer", "I2", "I1"),
+        ("ultimate_parent", "P2", "P1"),
+    ],
+)
+def test_projected_issuer_metadata_cannot_rewrite_baseline_concentration(
+    grouping_level: str,
+    current_issuer: str,
+    projected_issuer: str,
+) -> None:
+    """The independent current oracle is two 50% issuer buckets: HHI 5,000."""
+    client = TestClient(app)
+    response = client.post(
+        "/analytics/risk/concentration",
+        headers={"X-Tenant-Id": "synthetic-issuer-review"},
+        json={
+            "input_mode": "stateless",
+            "enrichment_policy": "use_caller_only",
+            "issuer_grouping_level": grouping_level,
+            "stateless_input": {
+                "current_positions": [
+                    {
+                        "security_id": "A",
+                        "market_value_base": 100,
+                        "issuer_id": "I1",
+                        "ultimate_parent_issuer_id": "P1",
+                    },
+                    {
+                        "security_id": "B",
+                        "market_value_base": 100,
+                        "issuer_id": current_issuer,
+                        "ultimate_parent_issuer_id": current_issuer,
+                    },
+                ],
+                "projected_positions": [
+                    {
+                        "security_id": "A",
+                        "projected_market_value_base": 100,
+                        "issuer_id": "I1",
+                        "ultimate_parent_issuer_id": "P1",
+                    },
+                    {
+                        "security_id": "B",
+                        "projected_market_value_base": 100,
+                        "issuer_id": projected_issuer,
+                        "ultimate_parent_issuer_id": projected_issuer,
+                    },
+                ],
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    issuer = response.json()["issuer_concentration"]
+    assert issuer["hhi_current"] == 5000.0
+    assert issuer["top_issuer_current"]["weight"] == 0.5
+    assert issuer["hhi_proposed"] == 10000.0
+    assert issuer["hhi_delta"] == 5000.0
+
+
+def test_projected_row_without_issuer_metadata_keeps_current_issuer_identity() -> None:
+    client = TestClient(app)
+    response = client.post(
+        "/analytics/risk/concentration",
+        json={
+            "input_mode": "stateless",
+            "enrichment_policy": "use_caller_only",
+            "issuer_grouping_level": "legal_issuer",
+            "stateless_input": {
+                "current_positions": [
+                    {"security_id": "A", "market_value_base": 100, "issuer_id": "I1"},
+                    {"security_id": "B", "market_value_base": 100, "issuer_id": "I2"},
+                ],
+                "projected_positions": [
+                    {"security_id": "A", "projected_market_value_base": 100},
+                    {"security_id": "B", "projected_market_value_base": 100},
+                ],
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    issuer = response.json()["issuer_concentration"]
+    assert issuer["hhi_current"] == 5000.0
+    assert issuer["hhi_proposed"] == 5000.0
+    assert issuer["hhi_delta"] == 0.0
 
 
 def test_concentration_preserves_explicit_zero_projected_book() -> None:

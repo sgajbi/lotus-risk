@@ -48,13 +48,15 @@
 
 ## Variable Dictionary
 - `G`: requested issuer grouping level, either legal issuer or ultimate-parent issuer.
-- `M`: resolved issuer map keyed by `security_id` after enrichment-policy precedence.
+- `M_C`, `M_P`: resolved current and proposed issuer maps keyed by `security_id` after
+  enrichment-policy precedence. `M_P` starts with current caller identity only where a projected
+  row omits identity; explicit projected identity never changes `M_C`.
 - `C`: current extracted positive numeric position rows.
 - `P`: proposed extracted positive numeric position rows.
 - `x_i`: one extracted positive current position value in `C`.
 - `y_i`: one extracted positive proposed position value in `P`.
-- `issuer(i, G, M)`: issuer bucket selected for position `i` under grouping level `G` from map
-  `M`.
+- `issuer(i, G, M_state)`: issuer bucket selected for position `i` under grouping level `G` from
+  that state's map.
 - `K_C`: issuer buckets with at least one covered current position.
 - `K_P`: issuer buckets with at least one covered proposed position.
 - `I_{C,k} = sum(abs(x_i)) for covered current positions mapped to issuer bucket k`.

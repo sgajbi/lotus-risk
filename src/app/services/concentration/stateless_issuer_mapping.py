@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any, cast
+from typing import Any
 
 from app.contracts.concentration import (
     ConcentrationRequest,
@@ -17,29 +17,47 @@ from app.services.concentration.parsing import (
 from app.services.concentration.ports import LotusCoreClientProtocol
 
 
-def stateless_caller_issuer_map(
-    request: ConcentrationRequest,
+def _issuer_map_from_positions(
+    positions: list[Any],
+    *,
+    grouping_level: IssuerGroupingLevel,
 ) -> dict[str, IssuerIdentity]:
-    stateless_input = request.stateless_input
-    if stateless_input is None:
-        raise ValueError("stateless_input is required when input_mode=stateless")
-
-    caller_issuer_map: dict[str, IssuerIdentity] = {}
-    positions = cast(
-        Sequence[Any],
-        [*stateless_input.current_positions, *stateless_input.projected_positions],
-    )
+    """Resolve caller issuer authority for one effective portfolio state only."""
+    issuer_by_security: dict[str, IssuerIdentity] = {}
     for position in positions:
         issuer_key = _issuer_key_from_position(
             issuer_id=position.issuer_id,
             issuer_name=None,
             ultimate_parent_issuer_id=position.ultimate_parent_issuer_id,
             ultimate_parent_issuer_name=None,
-            grouping_level=request.issuer_grouping_level,
+            grouping_level=grouping_level,
         )
         if issuer_key:
-            caller_issuer_map[position.security_id] = issuer_key
-    return caller_issuer_map
+            issuer_by_security[position.security_id] = issuer_key
+    return issuer_by_security
+
+
+def stateless_caller_issuer_maps(
+    request: ConcentrationRequest,
+) -> tuple[dict[str, IssuerIdentity], dict[str, IssuerIdentity]]:
+    """Keep baseline and projected row authority separate.
+
+    A projected row can express a future issuer relationship, but it must never rewrite the
+    baseline issuer evidence used to calculate the current concentration result.
+    """
+    stateless_input = request.stateless_input
+    if stateless_input is None:
+        raise ValueError("stateless_input is required when input_mode=stateless")
+    current_map = _issuer_map_from_positions(
+        stateless_input.current_positions, grouping_level=request.issuer_grouping_level
+    )
+    projected_map = dict(current_map)
+    projected_map.update(
+        _issuer_map_from_positions(
+            stateless_input.projected_positions, grouping_level=request.issuer_grouping_level
+        )
+    )
+    return current_map, projected_map
 
 
 def stateless_security_ids(
@@ -109,31 +127,37 @@ async def stateless_core_issuer_map(
     )
 
 
-async def stateless_issuer_map(
+async def stateless_issuer_maps(
     request: ConcentrationRequest,
     *,
     rows: Sequence[PositionEntry],
     core_client: LotusCoreClientProtocol | None,
     correlation_id: str | None,
-) -> tuple[dict[str, IssuerIdentity], str | None]:
+) -> tuple[dict[str, IssuerIdentity], dict[str, IssuerIdentity], str | None]:
     core_issuer_map, issuer_note = await stateless_core_issuer_map(
         request,
         rows=rows,
         core_client=core_client,
         correlation_id=correlation_id,
     )
-    issuer_by_security = _merge_issuer_maps(
-        caller_map=stateless_caller_issuer_map(request),
+    current_caller_map, proposed_caller_map = stateless_caller_issuer_maps(request)
+    current_issuer_by_security = _merge_issuer_maps(
+        caller_map=current_caller_map,
         core_map=core_issuer_map,
         policy=request.enrichment_policy,
     )
-    return issuer_by_security, issuer_note
+    proposed_issuer_by_security = _merge_issuer_maps(
+        caller_map=proposed_caller_map,
+        core_map=core_issuer_map,
+        policy=request.enrichment_policy,
+    )
+    return current_issuer_by_security, proposed_issuer_by_security, issuer_note
 
 
 __all__ = [
     "issuer_map_from_core_records",
-    "stateless_caller_issuer_map",
+    "stateless_caller_issuer_maps",
     "stateless_core_issuer_map",
-    "stateless_issuer_map",
+    "stateless_issuer_maps",
     "stateless_security_ids",
 ]
