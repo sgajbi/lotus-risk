@@ -28,7 +28,7 @@ install-ci:
 pre-commit:
 	pre-commit run --all-files
 
-check: github-actions-runtime-gate lint no-alias-gate personal-path-gate typecheck openapi-gate openapi-artifact-gate api-vocabulary-gate mesh-contract-validate domain-data-product-gate idea-opportunity-evidence-gate image-supply-chain-gate source-size-gate test
+check: github-actions-runtime-gate lint architecture-gate no-alias-gate personal-path-gate typecheck openapi-gate openapi-artifact-gate api-vocabulary-gate mesh-contract-validate domain-data-product-gate idea-opportunity-evidence-gate image-supply-chain-gate source-size-gate test
 
 ci: github-actions-runtime-gate lint check-deps architecture-gate no-alias-gate typecheck openapi-gate openapi-artifact-gate api-vocabulary-gate mesh-contract-validate domain-data-product-gate idea-opportunity-evidence-gate image-supply-chain-gate complexity-gate source-size-gate dependency-hygiene-gate dead-code-gate migration-smoke test-pyramid-gate test-all security-audit docker-build
 
@@ -132,7 +132,7 @@ lint:
 	$(MAKE) monetary-float-guard
 
 architecture-gate:
-	python -m importlinter.cli check .importlinter
+	python -c "import sys; from pathlib import Path; any(Path('src/app').rglob('*.py')) or sys.exit('source root src/app is absent or empty'); sys.path.insert(0, 'src'); from importlinter.cli import lint_imports_command; lint_imports_command()" --config .importlinter
 
 complexity-gate:
 	python scripts/python_complexity_inventory.py --limit 15 --max-cc 24 --max-high-complexity 1 --max-medium-complexity 6
