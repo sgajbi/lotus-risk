@@ -592,6 +592,39 @@ def test_e2e_concentration_stateless_payload() -> None:
     assert body["risk_proxy"]["hhi_proposed"] == 6250.0
 
 
+def test_e2e_concentration_stateless_explicit_liquidation() -> None:
+    client = TestClient(app)
+    response = client.post(
+        "/analytics/risk/concentration",
+        json={
+            "input_mode": "stateless",
+            "enrichment_policy": "use_caller_only",
+            "stateless_input": {
+                "current_positions": [
+                    {"security_id": "A", "quantity": 100, "issuer_id": "I1"},
+                    {"security_id": "B", "quantity": 100, "issuer_id": "I1"},
+                    {"security_id": "C", "quantity": 200, "issuer_id": "I2"},
+                ],
+                "projected_positions": [
+                    {"security_id": "A", "proposed_quantity": 0, "issuer_id": "I1"},
+                    {"security_id": "B", "proposed_quantity": 0, "issuer_id": "I1"},
+                    {"security_id": "C", "proposed_quantity": 0, "issuer_id": "I2"},
+                ],
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["input_mode"] == "stateless"
+    assert body["risk_proxy"] == {
+        "hhi_current": 3750.0,
+        "hhi_proposed": 0.0,
+        "hhi_delta": -3750.0,
+    }
+    assert body["issuer_concentration"]["total_position_count_proposed"] == 0
+
+
 def test_e2e_concentration_stateful_mode() -> None:
     with override_app_runtime(
         lotus_core_client=SimulationLotusCoreClient(
