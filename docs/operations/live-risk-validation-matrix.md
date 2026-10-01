@@ -9,7 +9,7 @@ The default live characterization suite validates one canonical portfolio:
 
 | Archetype | Portfolio ID | As Of Date | Status | Notes |
 | --- | --- | --- | --- | --- |
-| `global_balanced` | `PB_SG_GLOBAL_BAL_001` | `2026-03-31` | validated | Canonical private-banking portfolio used for the current live analytics baseline. Live proof includes concentration stateful HHI, top-position, top-issuer, and issuer-coverage reconciliation; rolling-metrics stateful `ROLLING_SHARPE` plus adjacent rolling volatility, beta, tracking error, information ratio, max drawdown, and multi-window time-series emission; and historical-attribution stateful `TOTAL_RISK` plus supported `ACTIVE_RISK` groupings `POSITION`, `SECTOR`, `ASSET_CLASS`, and `ISSUER`. |
+| `global_balanced` | `PB_SG_GLOBAL_BAL_001` | `2026-03-31` | validated with active-risk gap | Canonical private-banking portfolio used for the current live analytics baseline. Live proof includes source-qualified stateful drawdown against live Performance returns, including portfolio and benchmark-relative maximum drawdown, ulcer index, time under water, source calculation identity, freshness and coverage; concentration stateful HHI, top-position, top-issuer, and issuer-coverage reconciliation; rolling-metrics stateful `ROLLING_SHARPE` plus adjacent rolling volatility, beta, tracking error, information ratio, max drawdown, and multi-window time-series emission; and historical-attribution stateful `TOTAL_RISK`. The supported `ACTIVE_RISK` groupings remain a separately recorded live integration gap. |
 
 This is strong canonical evidence, but it is not a complete enterprise portfolio universe.
 Additional archetypes must be backed by real seeded portfolio IDs before they can be counted as
@@ -28,11 +28,20 @@ validated.
 | `sparse_benchmark` | pending seeded portfolio ID | Benchmark alignment, tracking error, and information-ratio gaps. |
 | `high_concentration` | pending seeded portfolio ID | Single-name/issuer concentration and HHI stress behavior. |
 
-The canonical record does not yet certify the source-qualified stateful drawdown contract introduced
-under Risk issue #314. Its local route and consumer-contract checks are not a substitute for a live
-Performance producer run. Record a successful producer acceptance against a registered tenant,
-portfolio, and business date before changing this statement; retain stale/partial or refusal
-captures as diagnostic evidence rather than validated coverage.
+The source-qualified stateful drawdown acceptance for the canonical portfolio is recorded under
+Risk issue #314. It exercises a live admitted `tenant-sg` Performance returns request and the
+registered Risk route, then independently recomputes both portfolio and active-return drawdown
+from the returned decimal series using the unit opening-wealth baseline. This is canonical-path
+evidence only: it does not validate the pending enterprise archetypes, certify deployment or
+production operation, or turn stale/partial/refusal captures into validated coverage.
+
+Historical-attribution `TOTAL_RISK` is live-executed for this portfolio. The 2026-10-01
+`ACTIVE_RISK` characterization under Risk issue #311 correctly refused with `424 FAILED_DEPENDENCY`
+for `POSITION`, `SECTOR`, `ASSET_CLASS`, and `ISSUER`: direct Performance exposure-context probes
+returned rows, but the full Risk consumer flow could not establish the required benchmark-exposure
+data. This is an attributable Performance dependency gap, not permission to invent exposure dates
+or downgrade the refusal. Re-run the full characterization after the Performance owner supplies
+complete compatible evidence.
 
 ## Endpoint Coverage Target
 

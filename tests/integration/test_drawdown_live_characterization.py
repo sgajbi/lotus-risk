@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import math
 import os
-from collections.abc import Sequence
 from datetime import date
 from uuid import UUID
 
@@ -11,6 +9,12 @@ import pytest
 
 from app.contracts.risk import RiskRequestPeriod
 from app.services.stateful_returns_request import build_stateful_returns_series_request
+from tests.support.live_drawdown_reconciliation import (
+    max_drawdown,
+    time_under_water,
+    ulcer_index,
+    wealth_drawdown,
+)
 from tests.support.live_portfolio_matrix import (
     live_as_of_date,
     live_portfolio_id,
@@ -33,31 +37,6 @@ RISK_BASE_URL = os.getenv("LOTUS_RISK_BASE_URL", "http://localhost:8130")
 PERFORMANCE_BASE_URL = os.getenv("LOTUS_PERFORMANCE_BASE_URL", "http://localhost:8002")
 PORTFOLIO_ID = live_portfolio_id()
 AS_OF_DATE = live_as_of_date()
-
-
-def _wealth_drawdown(return_series: Sequence[float]) -> list[float]:
-    wealth = 1.0
-    running_peak: float | None = None
-    drawdowns: list[float] = []
-    for daily_return in return_series:
-        wealth *= 1.0 + daily_return
-        running_peak = wealth if running_peak is None else max(running_peak, wealth)
-        drawdowns.append(wealth / running_peak - 1.0)
-    return drawdowns
-
-
-def _max_drawdown(drawdowns: Sequence[float]) -> float:
-    return min(drawdowns) if drawdowns else 0.0
-
-
-def _ulcer_index(drawdowns: Sequence[float]) -> float:
-    if not drawdowns:
-        return 0.0
-    return math.sqrt(sum(value * value for value in drawdowns) / len(drawdowns))
-
-
-def _time_under_water(drawdowns: Sequence[float]) -> int:
-    return sum(1 for value in drawdowns if value < 0.0)
 
 
 def _business_day_returns(rows: list[tuple[str, float]]) -> list[tuple[str, float]]:
@@ -128,14 +107,14 @@ def test_live_stateful_drawdown_reconciles_with_upstream_returns() -> None:
     assert len(portfolio_returns) <= len(upstream_portfolio_returns)
     assert all(date.fromisoformat(date_value).weekday() < 5 for date_value, _ in portfolio_returns)
 
-    portfolio_drawdowns = _wealth_drawdown([value for _, value in portfolio_returns])
+    portfolio_drawdowns = wealth_drawdown([value for _, value in portfolio_returns])
     benchmark_by_date = {date_value: value for date_value, value in benchmark_returns}
     active_returns = [
         portfolio_value - benchmark_by_date[date_value]
         for date_value, portfolio_value in portfolio_returns
         if date_value in benchmark_by_date
     ]
-    active_drawdowns = _wealth_drawdown(active_returns)
+    active_drawdowns = wealth_drawdown(active_returns)
 
     period = drawdown_body["results"]["YTD"]
     summary = period["summary"]
@@ -143,11 +122,11 @@ def test_live_stateful_drawdown_reconciles_with_upstream_returns() -> None:
 
     assert period["portfolio_observation_count"] == len(portfolio_returns)
     assert period["benchmark_observation_count"] == len(benchmark_returns)
-    assert summary["max_drawdown"] == pytest.approx(_max_drawdown(portfolio_drawdowns), abs=1e-12)
-    assert summary["ulcer_index"] == pytest.approx(_ulcer_index(portfolio_drawdowns), abs=1e-12)
-    assert summary["time_under_water_days"] == _time_under_water(portfolio_drawdowns)
-    assert relative["max_drawdown"] == pytest.approx(_max_drawdown(active_drawdowns), abs=1e-12)
-    assert relative["time_under_water_days"] == _time_under_water(active_drawdowns)
+    assert summary["max_drawdown"] == pytest.approx(max_drawdown(portfolio_drawdowns), abs=1e-12)
+    assert summary["ulcer_index"] == pytest.approx(ulcer_index(portfolio_drawdowns), abs=1e-12)
+    assert summary["time_under_water_days"] == time_under_water(portfolio_drawdowns)
+    assert relative["max_drawdown"] == pytest.approx(max_drawdown(active_drawdowns), abs=1e-12)
+    assert relative["time_under_water_days"] == time_under_water(active_drawdowns)
     assert period["relative_to_benchmark_context"]["requested"] is True
     assert period["relative_to_benchmark_context"]["applied"] is True
     assert period["relative_to_benchmark_context"]["reason"] == "APPLIED"
@@ -176,8 +155,8 @@ def test_live_stateful_drawdown_reconciles_with_upstream_returns() -> None:
         source_evidence["missing_points"]
         == upstream_body["diagnostics"]["coverage"]["missing_points"]
     )
-    assert source_evidence["coverage_ratio"] == pytest.approx(
-        upstream_body["diagnostics"]["coverage"]["coverage_ratio"], abs=1e-12
+    assert float(source_evidence["coverage_ratio"]) == pytest.approx(
+        float(upstream_body["diagnostics"]["coverage"]["coverage_ratio"]), abs=1e-12
     )
     supportability = drawdown_body["metadata"]["calculation_supportability"]
     expected_state = (
