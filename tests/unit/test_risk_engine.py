@@ -76,6 +76,42 @@ def test_calculate_risk_var_methods() -> None:
     assert len(set(results)) >= 2
 
 
+@pytest.mark.parametrize(
+    ("values", "expected_error"),
+    [
+        ([-2.0, 0.0], "Insufficient data"),
+        ([-2.0, 0.0, 1.0], "Insufficient data"),
+        ([-2.0, 0.0, 1.0, 3.0], None),
+    ],
+)
+def test_cornish_fisher_qualifies_undefined_small_samples(
+    values: list[float], expected_error: str | None
+) -> None:
+    payload = _base_payload()
+    payload["scope"]["as_of_date"] = "2025-01-05"
+    payload["metrics"] = ["VAR"]
+    payload["options"]["var"]["method"] = "CORNISH_FISHER"
+    payload["returns"] = [
+        {"date": f"2025-01-{index + 2:02d}", "value": value} for index, value in enumerate(values)
+    ]
+
+    response = calculate_risk(RiskCalculationRequest.model_validate(payload))
+    metric = response.results["YTD"].metrics["VAR"]
+    supportability = response.metadata.calculation_supportability
+    assert metric.details is not None
+
+    if expected_error is not None:
+        assert metric.value is None
+        assert metric.details["error"] == expected_error
+        assert supportability.state == "degraded"
+        assert supportability.degraded_metric_count == 1
+    else:
+        assert metric.value == pytest.approx(-2.907629763515028)
+        assert "error" not in metric.details
+        assert supportability.state == "ready"
+        assert supportability.degraded_metric_count == 0
+
+
 def test_var_matches_documented_signed_percentage_point_output_contract() -> None:
     payload = {
         "scope": {"as_of_date": "2026-01-05", "net_or_gross": "NET"},

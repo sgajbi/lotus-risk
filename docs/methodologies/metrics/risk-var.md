@@ -92,7 +92,8 @@
 3. Compound returns to the requested frequency when frequency is not `DAILY`.
 4. Apply optional log-return transformation.
 5. Require at least two observations after filtering, frequency compounding, and optional
-   transformation.
+   transformation; `CORNISH_FISHER` additionally requires at least four observations because its
+   sample skew and excess-kurtosis estimators are undefined below that boundary.
 6. Read VaR method, confidence, horizon days, and expected-shortfall flag.
 7. Compute one-day `base_var` through the selected method.
 8. Compute `horizon_scale_factor = sqrt(horizon_days)`.
@@ -113,6 +114,10 @@
   before the method-specific estimator sufficiency checks.
 - Fewer than two portfolio observations after period filtering, frequency compounding, and optional
   transformation return `metrics.VAR.value = null` with `details.error = "Insufficient data"`.
+- `CORNISH_FISHER` with two or three observations after that same preparation returns
+  `metrics.VAR.value = null` with `details.error = "Insufficient data"`; it never reports a null
+  value as ready. A non-finite Cornish-Fisher result also returns a deterministic undefined-sample
+  error rather than a ready metric.
 - Unsupported methods are rejected by request validation; the engine also fails closed with
   `details.error = "Unsupported VaR method: <method>"` if an invalid method reaches calculation.
 - `options.var.confidence` must be greater than `0` and less than `1` by request-contract

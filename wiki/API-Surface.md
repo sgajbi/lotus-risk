@@ -113,6 +113,12 @@ the API accepts.
 Three metrics depend on benchmark inputs — **`BETA`, `TRACKING_ERROR` and `INFORMATION_RATIO`**.
 `VAR` does not: it is computed from the portfolio series alone.
 
+`CORNISH_FISHER` VaR needs at least four prepared portfolio observations because its sample skew
+and excess-kurtosis estimators are undefined below that boundary. Two or three observations return
+the usual `null` metric with `details.error: "Insufficient data"` and degraded supportability;
+they are never certified as `calculation_complete`. Historical and Gaussian VaR retain their
+documented two-observation minimum.
+
 ### Weekly and monthly source-bucket coverage
 
 For weekly/monthly risk metrics, an empty calendar bucket between supplied source buckets is missing
