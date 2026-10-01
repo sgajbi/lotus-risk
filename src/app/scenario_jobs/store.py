@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass
 from uuid import uuid4
 
 from sqlalchemy import and_, create_engine, inspect, or_, select
 from sqlalchemy.engine import Engine
+from sqlalchemy.engine.reflection import Inspector
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -16,6 +18,31 @@ from app.scenario_jobs.contracts import ScenarioEvaluationJobStatus
 
 class ScenarioJobIdempotencyConflict(ValueError):
     """A tenant reused its idempotency key with different immutable input."""
+
+
+_REQUIRED_JOB_COLUMNS = frozenset(
+    {
+        "job_id",
+        "tenant_id",
+        "idempotency_key",
+        "request_fingerprint",
+        "scenario_pack_id",
+        "scenario_pack_revision",
+        "immutable_request_json",
+        "status",
+        "actor_id",
+        "correlation_id",
+        "claim_token",
+        "lease_expires_at",
+        "attempt_count",
+        "failure_code",
+        "failure_detail",
+        "submitted_at",
+        "expires_at",
+    }
+)
+_REQUIRED_PRIMARY_KEY = frozenset({"job_id"})
+_REQUIRED_UNIQUE_KEYS = frozenset({frozenset({"tenant_id", "idempotency_key"})})
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,9 +77,23 @@ class SqlAlchemyScenarioJobStore:
         self._engine.dispose()
 
     def is_schema_ready(self) -> bool:
-        """Refuse admission until the exact store is reachable and its job table exists."""
+        """Refuse admission until the store can uphold the current durable-job contract.
+
+        Request handling never upgrades a database.  Instead it requires every mapped column plus
+        the primary and tenant/idempotency uniqueness constraints that make replay safe.  This is a
+        minimum structural contract, not an Alembic revision equality check: a future migration may
+        add compatible columns or indexes without making this application unavailable.
+        """
         try:
-            return inspect(self._engine).has_table(ScenarioEvaluationJobModel.__tablename__)
+            inspector = inspect(self._engine)
+            table_name = ScenarioEvaluationJobModel.__tablename__
+            if not inspector.has_table(table_name):
+                return False
+            return (
+                _has_required_job_columns(inspector, table_name)
+                and _has_required_primary_key(inspector, table_name)
+                and _has_required_unique_keys(inspector, table_name)
+            )
         except SQLAlchemyError:
             return False
 
@@ -197,6 +238,36 @@ class SqlAlchemyScenarioJobStore:
             model.failure_detail = failure_detail
             session.flush()
             return True
+
+
+def _has_required_job_columns(inspector: Inspector, table_name: str) -> bool:
+    available_columns = {column["name"] for column in inspector.get_columns(table_name)}
+    return _REQUIRED_JOB_COLUMNS.issubset(available_columns)
+
+
+def _has_required_primary_key(inspector: Inspector, table_name: str) -> bool:
+    primary_key = _constraint_columns(inspector.get_pk_constraint(table_name))
+    return primary_key == _REQUIRED_PRIMARY_KEY
+
+
+def _has_required_unique_keys(inspector: Inspector, table_name: str) -> bool:
+    unique_keys = {
+        _constraint_columns(constraint)
+        for constraint in inspector.get_unique_constraints(table_name)
+    }
+    unique_keys.update(
+        _constraint_columns(index)
+        for index in inspector.get_indexes(table_name)
+        if index.get("unique")
+    )
+    return _REQUIRED_UNIQUE_KEYS.issubset(unique_keys)
+
+
+def _constraint_columns(constraint: Mapping[str, object]) -> frozenset[str]:
+    column_names = constraint.get("column_names") or constraint.get("constrained_columns") or ()
+    if not isinstance(column_names, (list, tuple)):
+        return frozenset()
+    return frozenset(column for column in column_names if isinstance(column, str))
 
 
 def _get_by_key(

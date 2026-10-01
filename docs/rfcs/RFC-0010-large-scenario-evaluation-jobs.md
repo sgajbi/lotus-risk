@@ -60,6 +60,12 @@ status reads, transactional claim, expired-lease recovery, and stale-token failu
 claim store is not a worker runtime. Evaluation, success persistence, contribution pages, cleanup,
 capacity measurement, and consumer acceptance remain explicitly outstanding.
 
+Before either job route receives traffic, operators must apply the current Alembic head. Runtime
+does not auto-migrate: it verifies the complete mapped job schema and durable primary/idempotency
+constraints, returning the documented unavailable response for an older or unreachable store.
+Compatible future schema additions are accepted; revision labels are not used as an availability
+shortcut.
+
 ## Non-goals
 
 This does not ingest core-bank holdings, create orders, replace CIO scenario methodology, infer

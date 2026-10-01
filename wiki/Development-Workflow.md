@@ -42,7 +42,10 @@ Use a small, truthful backend loop:
 `make migration-smoke` and `make migration-apply` both validate the Alembic SQL migration contract
 for scenario-evaluation job admission. They do not apply a live bank database. Operators apply the
 single head with `LOTUS_RISK_SCENARIO_JOB_DATABASE_URL=<approved-url> python -m alembic upgrade head`
-before enabling job admission.
+before enabling job admission. The job routes then require the complete mapped schema and durable
+tenant/idempotency key constraints, returning their structured unavailable response until that
+minimum exists; request handling never runs migrations. Compatible future schema additions remain
+admissible.
 
 `make ci-local-docker` runs the split-suite `ci-local` coverage loop in an isolated container. Use
 it when a shared developer Python environment is polluted by other editable Lotus applications; use

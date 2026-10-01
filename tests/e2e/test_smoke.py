@@ -1,3 +1,8 @@
+import os
+import subprocess
+import sys
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -160,6 +165,38 @@ def _historical_attribution_payload() -> dict[str, object]:
             },
         },
     }
+
+
+def _scenario_job_payload() -> dict[str, object]:
+    return {
+        "scenario_pack_id": "CIO_REGIME_2026_Q2",
+        "portfolio_id": "PB_SG_GLOBAL_BAL_001",
+        "as_of_date": "2026-05-03",
+        "exposures": [
+            {"bucket": "EQUITY", "weight": 0.55},
+            {"bucket": "FIXED_INCOME", "weight": 0.35},
+            {"bucket": "CASH", "weight": 0.10},
+        ],
+        "exposure_components": [
+            {"security_id": "EQ-1", "bucket": "EQUITY", "weight": 0.55},
+            {"security_id": "FI-1", "bucket": "FIXED_INCOME", "weight": 0.35},
+            {"security_id": "CASH-1", "bucket": "CASH", "weight": 0.10},
+        ],
+        "maximum_allowed_loss_pct": 0.12,
+    }
+
+
+def _upgrade_scenario_job_database(database_url: str, revision: str) -> None:
+    environment = os.environ.copy()
+    environment["LOTUS_RISK_SCENARIO_JOB_DATABASE_URL"] = database_url
+    result = subprocess.run(
+        [sys.executable, "-m", "alembic", "upgrade", revision],
+        check=False,
+        capture_output=True,
+        text=True,
+        env=environment,
+    )
+    assert result.returncode == 0, result.stderr
 
 
 def test_e2e_smoke() -> None:
@@ -411,6 +448,58 @@ def test_e2e_regime_scenario_pack_preserves_governance_evidence() -> None:
         "portfolio_applicability_ref": ("CIO-REGIME-2026-Q2-APPROVAL-APP-PB_SG_GLOBAL_BAL_001"),
         "methodology_ref": "docs/methodologies/metrics/regime-scenario-pack-evaluation.md",
     }
+
+
+def test_e2e_scenario_job_refuses_partial_schema_until_operator_upgrade(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The public job journey does not expose a 500 while an operator upgrade is incomplete."""
+    database_url = f"sqlite:///{(tmp_path / 'scenario-job-e2e.db').as_posix()}"
+    monkeypatch.setenv("LOTUS_RISK_SCENARIO_JOB_DATABASE_URL", database_url)
+    monkeypatch.setenv("LOTUS_RISK_SCENARIO_JOB_RETENTION_HOURS", "72")
+    _upgrade_scenario_job_database(database_url, "20261001_01")
+    headers = {"X-Tenant-Id": "e2e-upgrade-tenant", "Idempotency-Key": "e2e-upgrade-key"}
+
+    with TestClient(app) as client:
+        unavailable_submit = client.post(
+            "/analytics/risk/regime-scenario-pack/jobs",
+            json=_scenario_job_payload(),
+            headers=headers,
+        )
+        unavailable_read = client.get(
+            "/analytics/risk/regime-scenario-pack/jobs/not-present",
+            headers={"X-Tenant-Id": "e2e-upgrade-tenant"},
+        )
+
+    assert unavailable_submit.status_code == 503
+    assert unavailable_read.status_code == 503
+
+    _upgrade_scenario_job_database(database_url, "head")
+    with TestClient(app) as client:
+        admitted = client.post(
+            "/analytics/risk/regime-scenario-pack/jobs",
+            json=_scenario_job_payload(),
+            headers=headers,
+        )
+        replay = client.post(
+            "/analytics/risk/regime-scenario-pack/jobs",
+            json=_scenario_job_payload(),
+            headers=headers,
+        )
+        owner_read = client.get(
+            f"/analytics/risk/regime-scenario-pack/jobs/{admitted.json()['job_id']}",
+            headers={"X-Tenant-Id": "e2e-upgrade-tenant"},
+        )
+        foreign_read = client.get(
+            f"/analytics/risk/regime-scenario-pack/jobs/{admitted.json()['job_id']}",
+            headers={"X-Tenant-Id": "other-tenant"},
+        )
+
+    assert admitted.status_code == 202
+    assert replay.status_code == 202
+    assert replay.json() == admitted.json()
+    assert owner_read.status_code == 200
+    assert foreign_read.status_code == 404
 
 
 def test_e2e_risk_calculate_stateful_mode() -> None:

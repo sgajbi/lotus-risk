@@ -147,7 +147,10 @@ Status reads also require exactly one tenant header; ambiguous tenant input is r
 store lookup, so it cannot select an owner based on intermediary header ordering.
 Admission is unavailable until the operator configures and migrates
 `LOTUS_RISK_SCENARIO_JOB_DATABASE_URL` and sets positive
-`LOTUS_RISK_SCENARIO_JOB_RETENTION_HOURS`.
+`LOTUS_RISK_SCENARIO_JOB_RETENTION_HOURS`. The service checks the complete mapped job schema plus
+the durable primary and tenant/idempotency constraints before traffic; an older or unreachable
+store returns the documented unavailable response rather than an internal error. It never runs a
+migration from request handling, but compatible future schema additions remain admissible.
 
 The persistence boundary can claim the next `QUEUED` job, or safely recover a `RUNNING` job only
 after its lease expires. Every claim has a fresh opaque token; a stale claimant cannot persist a
