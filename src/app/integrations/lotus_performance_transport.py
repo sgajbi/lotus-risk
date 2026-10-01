@@ -27,11 +27,13 @@ from app.integrations.upstream_operations import (
     LOTUS_PERFORMANCE_CONTRIBUTION_OPERATION,
     LOTUS_PERFORMANCE_CONTRIBUTION_RESULT_OPERATION,
     LOTUS_PERFORMANCE_CONTRIBUTION_STATUS_OPERATION,
+    LOTUS_PERFORMANCE_GROUP_RETURN_EVIDENCE_OPERATION,
 )
 from app.observability import observation_start, record_upstream_request
 
 DEFAULT_LOTUS_PERFORMANCE_BASE_URL = "http://performance.dev.lotus"
 BENCHMARK_EXPOSURE_CONTEXT_OPERATION = LOTUS_PERFORMANCE_BENCHMARK_EXPOSURE_CONTEXT_OPERATION
+GROUP_RETURN_EVIDENCE_OPERATION = LOTUS_PERFORMANCE_GROUP_RETURN_EVIDENCE_OPERATION
 CONTRIBUTION_OPERATION = LOTUS_PERFORMANCE_CONTRIBUTION_OPERATION
 
 CONTRIBUTION_ASYNC_OPERATIONS = AsyncExecutionOperations(
@@ -218,6 +220,57 @@ async def execute_benchmark_exposure_context_request(
         )
 
 
+async def execute_group_return_evidence_request(
+    *,
+    profile: DownstreamClientProfile,
+    client: httpx.AsyncClient | None,
+    base_url: str,
+    request_payload: dict[str, Any],
+    authority: DownstreamAuthority,
+) -> dict[str, Any]:
+    """Read one admitted-tenant, producer-reconciled active group source cut."""
+    headers = downstream_authority_headers(authority)
+    url = f"{base_url}{GROUP_RETURN_EVIDENCE_OPERATION}"
+    started_at = observation_start()
+    if client is not None:
+        return await _execute_group_return_evidence_with_client(
+            client=client,
+            url=url,
+            request_payload=request_payload,
+            headers=headers,
+            started_at=started_at,
+        )
+    async with profile.make_client() as owned_client:
+        return await _execute_group_return_evidence_with_client(
+            client=owned_client,
+            url=url,
+            request_payload=request_payload,
+            headers=headers,
+            started_at=started_at,
+        )
+
+
+async def _execute_group_return_evidence_with_client(
+    *,
+    client: httpx.AsyncClient,
+    url: str,
+    request_payload: dict[str, Any],
+    headers: dict[str, str],
+    started_at: float,
+) -> dict[str, Any]:
+    return await execute_downstream_request_json(
+        dependency="lotus-performance",
+        operation=GROUP_RETURN_EVIDENCE_OPERATION,
+        started_at=started_at,
+        request_factory=lambda: client.post(url, json=request_payload, headers=headers),
+        parse_response=lambda response: ensure_dict_payload(
+            response,
+            operation=GROUP_RETURN_EVIDENCE_OPERATION,
+            invalid_message="lotus-performance returned invalid group-return evidence payload",
+        ),
+    )
+
+
 async def _execute_benchmark_exposure_context_request_with_client(
     *,
     client: httpx.AsyncClient,
@@ -245,6 +298,7 @@ __all__ = [
     "DEFAULT_LOTUS_PERFORMANCE_BASE_URL",
     "execute_benchmark_exposure_context_request",
     "execute_contribution_request",
+    "execute_group_return_evidence_request",
     "execute_returns_series_request",
     "resolve_lotus_performance_base_url",
 ]

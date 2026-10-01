@@ -56,8 +56,16 @@ Provide decomposition of historical realized risk and active risk into transpare
     bases) refuses as `UPSTREAM_INVALID_RESPONSE` rather than silently falling back. `POSITION`
     and `ISSUER` `TOTAL_RISK` stay weight-proxy because their contribution identities cannot be
     safely joined to the Core grouping universe (recorded residual on lotus-risk#291). Unsupported
-    `TOTAL_RISK` metrics do not request contribution evidence; `ACTIVE_RISK` remains a weight proxy
-    because portfolio-only group returns cannot supply benchmark-group economics.
+    `TOTAL_RISK` metrics do not request contribution evidence. For `ACTIVE_RISK` +
+    `TRACKING_ERROR`, `SECTOR` and `ASSET_CLASS` with explicit `GROSS` and a three-letter
+    reporting currency request Performance's v1 group-return evidence per resolved period.
+    Risk binds the admitted tenant through transport, checks request and source-cut lineage,
+    exact scope, complete calendar, group identity, group arithmetic, and both aggregate
+    return paths before using the signed group active contributions in tracking-error
+    covariance. Invalid, partial, foreign, or unreconciled evidence refuses the request;
+    it never silently enters the empirical calculation. The v1 producer is gross-only:
+    `NET`, unspecified currency, stateless input, `POSITION`, and `ISSUER` retain their
+    explicitly degraded `weight_proxy` basis under #283, pending compatible evidence.
   - `ACTIVE_RISK` stateful path is implemented for `POSITION`, `SECTOR`, `ASSET_CLASS`, and `ISSUER` grouping dimensions through the lotus-performance benchmark exposure context derived view
   - `ACTIVE_RISK` + `ISSUER` consumes lotus-performance benchmark exposure context issuer rows sourced from lotus-core index-catalog issuer labels
   - `CUSTOM` grouping remains unsupported in stateful mode and is rejected at request validation
@@ -106,6 +114,9 @@ Provide decomposition of historical realized risk and active risk into transpare
   - benchmark series
   - lineage/alignment metadata for return series
   - benchmark exposure context used to align benchmark returns and benchmark exposure weights
+  - v1 gross portfolio/benchmark group-return evidence for admitted stateful active-risk
+    `SECTOR`/`ASSET_CLASS` requests; Performance owns economics and durable source-cut
+    identity, while Risk owns independent consumer reconciliation and decomposition
 
 - lotus-core:
   - canonical exposure snapshots by date/grouping dimension (system of record)

@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 from typing import Any, Protocol
 
 from app.contracts.attribution import (
-    AttributionMetric,
-    AttributionType,
     ExposurePoint,
     GroupingDimension,
     HistoricalAttributionStatefulInput,
@@ -19,7 +17,14 @@ from app.services.attribution_active_benchmark_exposure import (
     BenchmarkExposureClientProtocol,
     fetch_active_benchmark_exposure_history,
 )
+from app.services.attribution_active_group_fetch import fetch_active_group_evidence
 from app.services.attribution_contribution_request import build_contribution_request
+from app.services.attribution_evidence_selection import (
+    active_evidence_available,
+    evidence_grouping_dimensions,
+    total_evidence_available,
+    window_return_points,
+)
 from app.services.attribution_exposure_history import (
     fetch_stateful_exposure_history,
 )
@@ -28,7 +33,6 @@ from app.services.attribution_group_evidence import (
     PERFORMANCE_UNCLASSIFIED_GROUP_LABEL,
     GroupEvidencePack,
     LotusPerformanceContributionClientProtocol,
-    group_evidence_applies_to_set,
     parse_group_evidence,
 )
 from app.services.attribution_period_results import GroupEvidenceByPeriod, period_name
@@ -59,7 +63,12 @@ class LotusPerformanceClientProtocol(
     LotusPerformanceContributionClientProtocol,
     Protocol,
 ):
-    pass
+    async def get_group_return_evidence(
+        self,
+        *,
+        request_payload: dict[str, Any],
+        authority: DownstreamAuthority,
+    ) -> dict[str, Any]: ...
 
 
 class LotusCoreClientProtocol(Protocol):
@@ -86,18 +95,21 @@ class ResolvedStatefulAttributionInputs:
     returns_request: dict[str, Any]
     group_evidence: GroupEvidenceByPeriod | None = None
     contribution_requests: tuple[dict[str, Any], ...] = ()
+    active_evidence_requests: tuple[dict[str, Any], ...] = ()
 
 
 @dataclass(frozen=True)
 class ResolvedGroupEvidence:
     group_evidence: GroupEvidenceByPeriod
     contribution_requests: tuple[dict[str, Any], ...]
+    active_evidence_requests: tuple[dict[str, Any], ...] = ()
 
 
 @dataclass(frozen=True)
 class _StatefulExposureHistories:
     exposure_history: list[ExposurePoint]
     benchmark_exposure_history: list[ExposurePoint]
+    benchmark_identity: tuple[str, str] | None
 
 
 def validate_stateful_groupings(grouping_dimensions: list[GroupingDimension]) -> None:
@@ -146,7 +158,7 @@ async def _stateful_exposure_histories(
         grouping_dimensions=grouping_dimensions,
         authority=authority,
     )
-    benchmark_exposure_history = (
+    benchmark_history_and_identity = (
         await fetch_active_benchmark_exposure_history(
             stateful=stateful,
             performance_client=performance_client,
@@ -156,44 +168,27 @@ async def _stateful_exposure_histories(
             authority=authority,
         )
         if requires_active
-        else []
+        else ([], None)
     )
     return _StatefulExposureHistories(
         exposure_history=exposure_history,
-        benchmark_exposure_history=benchmark_exposure_history,
+        benchmark_exposure_history=benchmark_history_and_identity[0],
+        benchmark_identity=benchmark_history_and_identity[1],
     )
-
-
-def _evidence_grouping_dimensions(
-    options_grouping_dimensions: list[GroupingDimension],
-    attribution_types: list[AttributionType],
-    metrics: list[AttributionMetric],
-) -> list[GroupingDimension]:
-    """Dimensions whose TOTAL_RISK sets can use producer group-return evidence.
-
-    ISSUER has no producer-side dimension on the contribution surface and stays a
-    weight-proxy decomposition (recorded residual on lotus-risk#291).
-    """
-    if not any(
-        group_evidence_applies_to_set(attribution_type=attribution_type, metric=metric)
-        for attribution_type in attribution_types
-        for metric in metrics
-    ):
-        return []
-    return [
-        dimension
-        for dimension in options_grouping_dimensions
-        if dimension in EMPIRICAL_GROUPING_DIMENSION_FIELDS
-    ]
 
 
 async def fetch_group_evidence(
     *,
     stateful: HistoricalAttributionStatefulInput,
-    performance_client: LotusPerformanceContributionClientProtocol,
+    performance_client: LotusPerformanceClientProtocol,
     portfolio_returns: list[ReturnPoint],
+    benchmark_returns: list[ReturnPoint],
     exposure_history: list[ExposurePoint],
+    benchmark_exposure_history: list[ExposurePoint],
+    benchmark_identity: tuple[str, str] | None,
     evidence_dimensions: list[GroupingDimension],
+    needs_total: bool,
+    needs_active: bool,
     authority: DownstreamAuthority,
 ) -> ResolvedGroupEvidence:
     """Fetch and validate per-group return evidence per resolved period and dimension.
@@ -207,6 +202,7 @@ async def fetch_group_evidence(
     open_date = min(point.date for point in portfolio_returns)
     evidence: dict[str, dict[GroupingDimension, GroupEvidencePack]] = {}
     contribution_requests: list[dict[str, Any]] = []
+    active_evidence_requests: list[dict[str, Any]] = []
     for period in stateful.periods:
         start_date, end_date = resolve_period(
             period.type,
@@ -216,45 +212,70 @@ async def fetch_group_evidence(
             from_date=period.from_date,
             to_date=period.to_date,
         )
-        windowed = [point for point in portfolio_returns if start_date <= point.date <= end_date]
+        windowed = window_return_points(portfolio_returns, start_date, end_date)
         if len(windowed) < 2:
             continue
         per_dimension: dict[GroupingDimension, GroupEvidencePack] = {}
         for dimension in evidence_dimensions:
-            dimension_field = EMPIRICAL_GROUPING_DIMENSION_FIELDS[dimension]
-            expected_group_key_by_source_key = _expected_group_key_by_source_key(
-                exposure_history=exposure_history,
+            pack = GroupEvidencePack(
                 grouping_dimension=dimension,
-                start_date=start_date,
-                end_date=end_date,
+                series_by_group={},
+                degradation_flags=(),
             )
-            request_payload = build_contribution_request(
-                portfolio_id=stateful.portfolio_id,
-                start_date=start_date,
-                end_date=end_date,
-                dimension_field=dimension_field,
-                metric_basis=stateful.net_or_gross,
-                reporting_currency=stateful.reporting_currency,
-            )
-            response = await performance_client.get_contribution(
-                request_payload=request_payload,
-                authority=authority,
-            )
-            contribution_requests.append(request_payload)
-            per_dimension[dimension] = parse_group_evidence(
-                response,
-                grouping_dimension=dimension,
-                dimension_field=dimension_field,
-                expected_currency=stateful.reporting_currency,
-                portfolio_returns=windowed,
-                period_start=start_date,
-                period_end=end_date,
-                expected_group_key_by_source_key=expected_group_key_by_source_key,
-            )
+            if total_evidence_available(dimension, needs_total):
+                dimension_field = EMPIRICAL_GROUPING_DIMENSION_FIELDS[dimension]
+                expected_group_key_by_source_key = _expected_group_key_by_source_key(
+                    exposure_history=exposure_history,
+                    grouping_dimension=dimension,
+                    start_date=start_date,
+                    end_date=end_date,
+                )
+                request_payload = build_contribution_request(
+                    portfolio_id=stateful.portfolio_id,
+                    start_date=start_date,
+                    end_date=end_date,
+                    dimension_field=dimension_field,
+                    metric_basis=stateful.net_or_gross,
+                    reporting_currency=stateful.reporting_currency,
+                )
+                response = await performance_client.get_contribution(
+                    request_payload=request_payload,
+                    authority=authority,
+                )
+                contribution_requests.append(request_payload)
+                pack = parse_group_evidence(
+                    response,
+                    grouping_dimension=dimension,
+                    dimension_field=dimension_field,
+                    expected_currency=stateful.reporting_currency,
+                    portfolio_returns=windowed,
+                    period_start=start_date,
+                    period_end=end_date,
+                    expected_group_key_by_source_key=expected_group_key_by_source_key,
+                )
+            # v1 is explicitly gross and requires a common source currency.
+            if active_evidence_available(stateful, dimension, needs_active):
+                active_pack, active_request = await fetch_active_group_evidence(
+                    stateful=stateful,
+                    performance_client=performance_client,
+                    portfolio_returns=windowed,
+                    benchmark_returns=window_return_points(benchmark_returns, start_date, end_date),
+                    exposure_history=exposure_history,
+                    benchmark_exposure_history=benchmark_exposure_history,
+                    benchmark_identity=benchmark_identity,
+                    grouping_dimension=dimension,
+                    start_date=start_date,
+                    end_date=end_date,
+                    authority=authority,
+                )
+                active_evidence_requests.append(active_request)
+                pack = replace(pack, active_evidence=active_pack)
+            per_dimension[dimension] = pack
         evidence[period_name(period)] = per_dimension
     return ResolvedGroupEvidence(
         group_evidence=evidence,
         contribution_requests=tuple(contribution_requests),
+        active_evidence_requests=tuple(active_evidence_requests),
     )
 
 
@@ -350,7 +371,7 @@ async def resolve_stateful_attribution_inputs(
         requires_active=requires_active,
         authority=authority,
     )
-    evidence_dimensions = _evidence_grouping_dimensions(
+    evidence_dimensions = evidence_grouping_dimensions(
         requested_groupings,
         list(options.attribution_types),
         list(options.metrics),
@@ -360,8 +381,15 @@ async def resolve_stateful_attribution_inputs(
             stateful=stateful,
             performance_client=performance_client,
             portfolio_returns=returns_context.portfolio_returns,
+            benchmark_returns=returns_context.benchmark_returns,
             exposure_history=exposure_histories.exposure_history,
+            benchmark_exposure_history=exposure_histories.benchmark_exposure_history,
+            benchmark_identity=exposure_histories.benchmark_identity,
             evidence_dimensions=evidence_dimensions,
+            needs_total="TOTAL_RISK" in options.attribution_types
+            and "VOLATILITY" in options.metrics,
+            needs_active="ACTIVE_RISK" in options.attribution_types
+            and "TRACKING_ERROR" in options.metrics,
             authority=authority,
         )
         if evidence_dimensions
@@ -380,5 +408,8 @@ async def resolve_stateful_attribution_inputs(
         ),
         contribution_requests=(
             resolved_group_evidence.contribution_requests if resolved_group_evidence else ()
+        ),
+        active_evidence_requests=(
+            resolved_group_evidence.active_evidence_requests if resolved_group_evidence else ()
         ),
     )

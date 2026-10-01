@@ -69,6 +69,52 @@ def _ok_response(
 
 
 @pytest.mark.asyncio
+async def test_group_return_evidence_transport_carries_admitted_authority() -> None:
+    requests: list[httpx.Request] = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(200, json={"contract_version": "v1"}, request=request)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as pooled:
+        client = LotusPerformanceClient(
+            base_url="http://performance.local",
+            http_client=pooled,
+        )
+        result = await client.get_group_return_evidence(
+            request_payload={"portfolio_id": "portfolio-a"},
+            authority=admitted_test_authority("group-evidence-correlation"),
+        )
+    assert result == {"contract_version": "v1"}
+    assert len(requests) == 1
+    assert requests[0].method == "POST"
+    assert requests[0].url.path == "/integration/attribution/group-return-evidence/v1"
+    assert requests[0].headers["X-Tenant-Id"] == "tenant-a"
+    assert requests[0].headers["X-Correlation-Id"] == "group-evidence-correlation"
+
+
+@pytest.mark.asyncio
+async def test_group_return_evidence_owned_client_preserves_admitted_authority(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(httpx, "AsyncClient", _FakeAsyncClient)
+    _FakeAsyncClient.requests = []
+    _FakeAsyncClient.response_factory = lambda **_: _ok_response({"contract_version": "v1"})
+    client = LotusPerformanceClient(base_url="http://performance.local")
+    result = await client.get_group_return_evidence(
+        request_payload={"portfolio_id": "portfolio-a"},
+        authority=admitted_test_authority("owned-group-evidence"),
+    )
+    assert result == {"contract_version": "v1"}
+    assert _FakeAsyncClient.last_request is not None
+    assert _FakeAsyncClient.last_request["url"] == (
+        "http://performance.local/integration/attribution/group-return-evidence/v1"
+    )
+    assert _FakeAsyncClient.last_request["headers"]["X-Tenant-Id"] == "tenant-a"
+    assert _FakeAsyncClient.last_request["headers"]["X-Correlation-Id"] == ("owned-group-evidence")
+
+
+@pytest.mark.asyncio
 async def test_client_builds_headers_and_payload_for_returns_series(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

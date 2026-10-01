@@ -64,10 +64,11 @@ are:
 9. `/integration/returns/series/status/{calculation_id}`,
 10. `/integration/returns/series/results/{calculation_id}`,
 11. `/integration/benchmarks/exposure-context`,
-12. `/performance/contribution`,
-13. `/performance/executions/{calculation_id}`,
-14. `/performance/contribution/results/{calculation_id}`,
-15. `unknown`.
+12. `/integration/attribution/group-return-evidence/v1`,
+13. `/performance/contribution`,
+14. `/performance/executions/{calculation_id}`,
+15. `/performance/contribution/results/{calculation_id}`,
+16. `unknown`.
 
 `category="ok"` means the upstream call returned a usable response. Failure categories are derived
 from deterministic upstream error classification:

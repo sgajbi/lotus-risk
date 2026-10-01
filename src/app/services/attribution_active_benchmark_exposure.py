@@ -12,7 +12,7 @@ from app.contracts.downstream_authority import DownstreamAuthority
 from app.contracts.risk import ReturnPoint
 from app.services.benchmark_exposure_history import (
     BenchmarkExposureHistoryRequest,
-    fetch_benchmark_exposure_history,
+    fetch_benchmark_exposure_history_with_identity,
 )
 from app.upstream_errors import missing_upstream_data
 
@@ -54,8 +54,11 @@ async def fetch_active_benchmark_exposure_history(
     start_date: date,
     grouping_dimensions: list[GroupingDimension],
     authority: DownstreamAuthority,
-) -> list[ExposurePoint]:
-    benchmark_exposure_history = await fetch_benchmark_exposure_history(
+) -> tuple[list[ExposurePoint], tuple[str, str]]:
+    (
+        benchmark_exposure_history,
+        benchmark_identity,
+    ) = await fetch_benchmark_exposure_history_with_identity(
         BenchmarkExposureHistoryRequest(
             performance_client=performance_client,
             portfolio_id=stateful.portfolio_id,
@@ -70,7 +73,7 @@ async def fetch_active_benchmark_exposure_history(
         benchmark_returns=benchmark_returns,
         benchmark_exposure_history=benchmark_exposure_history,
     )
-    return benchmark_exposure_history
+    return benchmark_exposure_history, benchmark_identity
 
 
 __all__ = [

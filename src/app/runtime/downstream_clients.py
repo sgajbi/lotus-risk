@@ -23,6 +23,13 @@ class LotusPerformanceClientProtocol(Protocol):
         authority: DownstreamAuthority,
     ) -> dict[str, Any]: ...
 
+    async def get_group_return_evidence(
+        self,
+        *,
+        request_payload: dict[str, Any],
+        authority: DownstreamAuthority,
+    ) -> dict[str, Any]: ...
+
     async def get_benchmark_exposure_context(
         self,
         *,

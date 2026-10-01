@@ -57,7 +57,8 @@ This matters because:
    exposure components,
 7. risk-event affected-cohort evaluation and mandate risk health context are stateless first-wave
    products,
-8. stateful `ACTIVE_RISK + ISSUER` is supported through lotus-performance benchmark exposure context issuer groups.
+8. stateful `ACTIVE_RISK + ISSUER` is supported through lotus-performance benchmark exposure context issuer groups,
+9. only explicit gross/currency stateful `ACTIVE_RISK + TRACKING_ERROR` for `SECTOR`/`ASSET_CLASS` can consume Performance v1 group-return evidence as empirical; other active sets remain labelled proxies, and live joined replay/correction acceptance is pending under [Risk #283](https://github.com/sgajbi/lotus-risk/issues/283).
 
 ## Downstream Preservation Rules
 

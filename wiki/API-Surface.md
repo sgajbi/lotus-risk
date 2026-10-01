@@ -4,9 +4,9 @@
 
 This page describes the API contract generated from `main`; it is not a claim that every upstream
 dependency is live in an operator environment. Historical attribution consumes admitted tenant
-authority and may use verified empirical group-return evidence for `TOTAL_RISK`; malformed or
-incomplete evidence is reported through the response supportability block, while `ACTIVE_RISK`
-remains explicitly degraded pending governed benchmark-group evidence.
+authority and may use verified empirical group-return evidence for `TOTAL_RISK` and bounded
+gross `ACTIVE_RISK` sets. Invalid active source evidence refuses at the upstream boundary;
+other active sets retain a labelled proxy, and live joined acceptance is still pending.
 
 Every operation `lotus-risk` publishes, taken from the generated OpenAPI document on `main`. There
 are **17**: eight risk analytics operations and nine operational.
@@ -184,7 +184,7 @@ Applies to `calculate`, `drawdown`, `rolling-metrics`, `historical-attribution` 
 the lotus-risk#291 consumer slice it is **evidence-driven rather than unconditional**. Each
 `TOTAL_RISK` attribution set now declares its evidence basis in `risk_basis`:
 
-- `empirical_group_returns` — available only for `TOTAL_RISK` `VOLATILITY` `SECTOR` and `ASSET_CLASS` sets
+- `empirical_group_returns` — available for `TOTAL_RISK` `VOLATILITY` `SECTOR` and `ASSET_CLASS` sets
   whose validated lotus-performance contribution evidence covers the Core-sourced group universe:
   the group's own returns joined with the
   beginning-capital weights that formed them, complete over every portfolio return date in the
@@ -193,12 +193,23 @@ the lotus-risk#291 consumer slice it is **evidence-driven rather than unconditio
   the canonical `UNKNOWN` identity; Performance's documented `Unclassified` output is accepted
   only as that producer alias. A foreign group or a literal Core `Unclassified` category colliding
   with `UNKNOWN` fails closed rather than being renamed or silently merged.
-- `weight_proxy` — the set decomposes weight paths against the portfolio return: the covariance
-  can only recover the weights (under constant weights `percent_contribution` reproduces the
-  group weight exactly). A bounded `group_return_evidence:*` quality flag names why evidence was
-  not usable when it was requested. Every `ACTIVE_RISK` set is a weight proxy — no benchmark-group
-  return series exists — and so are `POSITION` and `ISSUER` `TOTAL_RISK` (no safely joinable
-  producer identity). Unsupported `TOTAL_RISK` metrics do not request portfolio group-return
+  It is also available for stateful `ACTIVE_RISK` `TRACKING_ERROR` `SECTOR`/`ASSET_CLASS`
+  with an explicit `GROSS` basis and reporting currency: Risk consumes Performance's
+  versioned portfolio/benchmark group-return contract, independently checks exact scope,
+  lineage, complete calendar, group identities, source and group arithmetic, and uses
+  each signed group `active_contribution` for tracking-error covariance. A malformed,
+  incomplete, foreign, or unreconciled source response refuses instead of being labelled
+  empirical. This is consumer code and local-route proof; live joined replay/correction
+  acceptance remains open under [Risk #283](https://github.com/sgajbi/lotus-risk/issues/283).
+- `weight_proxy` — the set decomposes weight paths against the aggregate portfolio return
+  (`TOTAL_RISK`) or aggregate portfolio-minus-benchmark return (`ACTIVE_RISK`): the covariance
+  cannot recover group-specific economics (under constant total-risk weights
+  `percent_contribution` reproduces the group weight exactly). A bounded
+  `group_return_evidence:*` quality flag names why evidence was
+  not usable when it was requested. `ACTIVE_RISK` remains a proxy for `NET`, unspecified
+  currency, stateless input, `POSITION` and `ISSUER`; v1 producer economics are gross and
+  cover only the named joinable dimensions. `POSITION` and `ISSUER` `TOTAL_RISK` also lack
+  a safely joinable producer identity. Unsupported `TOTAL_RISK` metrics do not request portfolio group-return
   evidence. A
   date absent from a group's evidence is unknown, never zero: incomplete evidence keeps the whole
   set on the proxy rather than zero-filling or dropping dates.
@@ -224,8 +235,10 @@ proxy decomposition, because the limitation is not a failure — `degraded` with
 is `ready` with the same zero count. Do not activate a risk-attribution surface from these values;
 the supported scope is metric levels, group weights, freshness, the per-set basis, and this posture.
 Tracked in `lotus-risk#291`; empirical TOTAL_RISK/VOLATILITY consumes the delivered
-lotus-performance contribution contract, while ACTIVE_RISK remains explicitly degraded pending
-benchmark-group evidence. Performance corrected differing base/report-currency `BASE_ONLY`
+lotus-performance contribution contract; the bounded empirical ACTIVE_RISK slice consumes
+Performance's [v1 group-return evidence](https://github.com/sgajbi/lotus-performance/blob/main/docs/technical/group-return-evidence-endpoint-certification.md)
+without converting gross evidence into NET. Other active sets remain explicitly degraded.
+Performance corrected differing base/report-currency `BASE_ONLY`
 contribution labels under [lotus-performance#527](https://github.com/sgajbi/lotus-performance/issues/527)
 on main `f597e4d`; joint Risk consumer acceptance remains a separate proof. Risk retains its
 currency-mismatch refusal and makes no FX or relabeling claim.

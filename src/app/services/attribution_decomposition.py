@@ -16,6 +16,7 @@ from app.contracts.attribution_result_outputs import RiskAttributionBasis
 from app.services.attribution_calculation import (
     AttributionCalculationInputs,
     attribution_calculation_inputs,
+    empirical_active_risk_inputs,
     empirical_total_risk_inputs,
 )
 from app.services.attribution_group_evidence import (
@@ -148,6 +149,24 @@ def _attribution_calculation_precalculation(
     *,
     request: AttributionSetBuildRequest,
 ) -> AttributionPrecalculation:
+    if request.attribution_type == "ACTIVE_RISK" and request.metric == "TRACKING_ERROR":
+        active_evidence = (
+            request.group_evidence.active_evidence if request.group_evidence is not None else None
+        )
+        if active_evidence is not None:
+            return _attribution_set_precalculation_result(
+                attribution_type=request.attribution_type,
+                metric=request.metric,
+                grouping_dimension=request.grouping_dimension,
+                calculation_inputs=empirical_active_risk_inputs(
+                    returns_series=request.returns_series,
+                    benchmark_series=request.benchmark_series,
+                    active_evidence=active_evidence,
+                    annualization_basis=request.annualization_basis,
+                ),
+                quality_flags=request.quality_flags,
+                risk_basis="empirical_group_returns",
+            )
     evidence = _empirical_evidence_for_set(request)
     if evidence is not None and evidence.empirical:
         return _attribution_set_precalculation_result(

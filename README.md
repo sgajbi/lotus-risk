@@ -70,8 +70,9 @@ Important posture limits:
    evidence basis — `empirical_group_returns` only for `SECTOR` and `ASSET_CLASS` when validated
    per-group return evidence from lotus-performance covers the Core-sourced group universe and
    every portfolio date in the period, `weight_proxy` otherwise — and
-   `ACTIVE_RISK` sets remain weight-proxy decompositions until benchmark-group return evidence
-   exists (lotus-risk#291),
+   stateful `ACTIVE_RISK` + `TRACKING_ERROR` can also use Performance's v1 portfolio/benchmark
+   group evidence for `SECTOR`/`ASSET_CLASS` with explicit gross basis and currency; other active
+   sets remain labelled proxies. Live joined replay/correction acceptance is still open (#283),
 6. live validation defaults to canonical portfolio `PB_SG_GLOBAL_BAL_001`,
 7. broader enterprise-bank claims require more seeded archetypes and attached evidence.
 
