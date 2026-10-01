@@ -15,8 +15,12 @@ dependencies = [
   "pydantic>=2.12.0",
   "prometheus-client>=0.25.0",
   "httpx>=0.28.0",
+  "alembic>=1.16.0",
   "numpy==2.5.1",
-  "pandas==3.0.3"
+  "pandas==3.0.3",
+  # SQLAlchemy selects this production driver dynamically for `postgresql+psycopg` URLs.
+  "psycopg[binary]>=3.2.10",
+  "sqlalchemy>=2.0.44"
 ]
 
 [project.optional-dependencies]
@@ -87,4 +91,4 @@ optional_dependencies_dev_groups = ["dev"]
 # and `packaging`, imported by scripts/run_typecheck_hook.py -- itself dev
 # tooling that runs only from pre-commit and is not shipped -- to read this
 # file's own pins with a standards-aware parser instead of a regex.
-per_rule_ignores = { DEP002 = ["uvicorn"], DEP004 = ["coverage", "packaging"] }
+per_rule_ignores = { DEP002 = ["uvicorn", "psycopg"], DEP004 = ["coverage", "packaging"] }

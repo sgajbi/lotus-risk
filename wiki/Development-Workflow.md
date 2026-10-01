@@ -39,8 +39,10 @@ Use a small, truthful backend loop:
 - `make image-supply-chain-gate`
 - `make docker-build`
 
-`make migration-smoke` and `make migration-apply` both validate the governed no-schema migration
-contract. `lotus-risk` currently has no persistent DPM schema or Postgres migration to apply.
+`make migration-smoke` and `make migration-apply` both validate the Alembic SQL migration contract
+for scenario-evaluation job admission. They do not apply a live bank database. Operators apply the
+single head with `LOTUS_RISK_SCENARIO_JOB_DATABASE_URL=<approved-url> python -m alembic upgrade head`
+before enabling job admission.
 
 `make ci-local-docker` runs the split-suite `ci-local` coverage loop in an isolated container. Use
 it when a shared developer Python environment is polluted by other editable Lotus applications; use

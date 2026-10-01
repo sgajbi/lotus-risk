@@ -114,9 +114,9 @@ and deterministic for local and protected lanes.
 - `make test-unit` - unit suite
 - `make test-integration` - integration suite
 - `make test-e2e` - e2e suite
-- `make migration-smoke` - CI migration smoke proof for the active no-schema contract
-- `make migration-apply` - governed no-schema migration contract validation; this service has no
-  persistent DPM schema to apply
+- `make migration-smoke` - CI Alembic SQL migration smoke proof for scenario-job admission
+- `make migration-apply` - governed Alembic SQL migration contract validation; it does not apply
+  a live database
 - `make docker-build` - Docker build validation
 
 ## What `make check` Protects
@@ -137,7 +137,7 @@ and deterministic for local and protected lanes.
 
 `make ci` is the local PR-grade gate. It adds:
 
-1. no-schema migration contract smoke,
+1. Alembic SQL migration contract smoke,
 2. test-pyramid validation,
 3. security audit,
 4. split unit, integration, and e2e suites,

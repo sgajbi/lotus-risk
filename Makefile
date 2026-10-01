@@ -121,10 +121,10 @@ api-vocabulary-gate:
 	python scripts/api_vocabulary_inventory.py --validate-only
 
 migration-smoke:
-	python scripts/migration_contract_check.py --mode no-schema
+	python scripts/migration_contract_check.py --mode alembic-sql
 
 migration-apply:
-	python scripts/migration_contract_check.py --mode no-schema
+	python scripts/migration_contract_check.py --mode alembic-sql
 
 lint:
 	python -m ruff check .

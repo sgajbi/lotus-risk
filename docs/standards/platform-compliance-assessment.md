@@ -29,7 +29,7 @@
 - `python -m mypy --config-file mypy.ini`
 - `python -m pytest -q --cov=src --cov-report=term-missing`
 - `python scripts/openapi_quality_gate.py`
-- `python scripts/migration_contract_check.py --mode no-schema`
+- `python scripts/migration_contract_check.py --mode alembic-sql`
 - `python scripts/check_monetary_float_usage.py`
 - `python scripts/test_pyramid_gate.py`
 

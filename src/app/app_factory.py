@@ -14,6 +14,7 @@ from app.routers.historical_attribution import router as historical_attribution_
 from app.routers.operational import router as operational_router
 from app.routers.risk_calculation import router as risk_calculation_router
 from app.routers.rolling import router as rolling_router
+from app.routers.scenario_jobs import router as scenario_jobs_router
 from app.routers.source_products import router as source_products_router
 from app.service_metadata import SERVICE_NAME, SERVICE_VERSION
 
@@ -27,6 +28,7 @@ def create_app() -> FastAPI:
     register_exception_handlers(risk_app)
     risk_app.include_router(operational_router)
     risk_app.include_router(source_products_router)
+    risk_app.include_router(scenario_jobs_router)
     risk_app.include_router(risk_calculation_router)
     risk_app.include_router(drawdown_router)
     risk_app.include_router(rolling_router)

@@ -6,7 +6,9 @@
 ## Durability Core Entities
 
 - Core entities in risk workflows include position snapshots, valuation outputs, and reference data used for deterministic risk analytics.
-- The service is read-only for core portfolio writes and does not persist transaction, cash, or ledger state.
+- The service is read-only for core portfolio writes and does not persist transaction, cash, or
+  ledger state. It does persist tenant-scoped immutable scenario-job admission records when the
+  explicitly configured relational store is migrated.
 - Fail fast and explicit failure behavior is required for invalid input and contract violations.
 
 ## Consistency Classification
@@ -16,13 +18,17 @@
 
 ## Transaction and Atomicity Boundaries
 
-- Atomicity boundary is a single request/response unit of work.
-- No multi-step commit/rollback orchestration is performed because there is no persistent write transaction in lotus-risk.
-- Compensation and retry semantics are delegated to upstream orchestrators.
+- Stateless calculations retain a single request/response atomicity boundary. Scenario-job
+  admission atomically commits tenant/key identity, canonical request digest, immutable JSON,
+  code-defined pack revision, retention expiry, and initial `QUEUED` status in one transaction.
+- A same-key changed digest is refused; a same-key same-digest replay returns the original job.
+  The admission slice does not yet claim worker execution, retry, result persistence, or cleanup.
 
 ## Idempotency for Write APIs
 
-- Future write endpoints must require `Idempotency-Key` and enforce idempotency semantics for replay protection.
+- Scenario-job admission requires both admitted `X-Tenant-Id` and `Idempotency-Key`; process-local
+  replay caches are prohibited. The configured store is unavailable-by-default until an operator
+  supplies a migrated database URL and explicit retention duration.
 - Most analytics endpoints are read-oriented computations with no persistent side effects.
 - Concentration simulation is the current exception: when `simulation_input.simulation_changes[]`
   is non-empty, `POST /analytics/risk/concentration` requires `Idempotency-Key` and forwards that

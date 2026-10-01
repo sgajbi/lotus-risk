@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-10-01T02:18:29.118037+00:00",
+  "generatedAt": "2026-10-01T04:24:49.837123+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.affected_portfolios",
@@ -1424,6 +1424,23 @@
       ]
     },
     {
+      "semanticId": "lotus.expires_at",
+      "canonicalTerm": "expires_at",
+      "preferredName": "expires_at",
+      "description": "Configured expiry of retained immutable admission evidence.",
+      "example": "2026-05-06T09:30:00Z",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ],
+      "fieldPaths": [
+        "expires_at"
+      ]
+    },
+    {
       "semanticId": "lotus.exposure_components",
       "canonicalTerm": "exposure_components",
       "preferredName": "exposure_components",
@@ -1763,10 +1780,12 @@
         "header"
       ],
       "observedTypes": [
-        "object"
+        "object",
+        "string"
       ],
       "fieldPaths": [
-        "idempotency-key"
+        "idempotency-key",
+        "Idempotency-Key"
       ]
     },
     {
@@ -2023,6 +2042,24 @@
       "fieldPaths": [
         "issuer_concentration.top_issuer_current.issuer_name",
         "issuer_concentration.top_issuer_proposed.issuer_name"
+      ]
+    },
+    {
+      "semanticId": "lotus.job_id",
+      "canonicalTerm": "job_id",
+      "preferredName": "job_id",
+      "description": "Stable tenant-scoped immutable scenario job identity.",
+      "example": "12db0287-38f2-4c29-a155-61499ea40b47",
+      "type": "string",
+      "locations": [
+        "body",
+        "path"
+      ],
+      "observedTypes": [
+        "string"
+      ],
+      "fieldPaths": [
+        "job_id"
       ]
     },
     {
@@ -3369,6 +3406,23 @@
       ]
     },
     {
+      "semanticId": "lotus.scenario_pack_revision",
+      "canonicalTerm": "scenario_pack_revision",
+      "preferredName": "scenario_pack_revision",
+      "description": "SHA-256 revision of the exact code-defined scenario pack admitted.",
+      "example": "sha256:2c7b69ddccf6ea6fdfbe09de286c2c853baa1698f1d36f10cbf64fcde8d3fa82",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ],
+      "fieldPaths": [
+        "scenario_pack_revision"
+      ]
+    },
+    {
       "semanticId": "lotus.scenario_results",
       "canonicalTerm": "scenario_results",
       "preferredName": "scenario_results",
@@ -3899,6 +3953,40 @@
       ],
       "fieldPaths": [
         "stateless_input"
+      ]
+    },
+    {
+      "semanticId": "lotus.status",
+      "canonicalTerm": "status",
+      "preferredName": "status",
+      "description": "Canonical status used by lotus-risk APIs.",
+      "example": "QUEUED",
+      "type": "ScenarioEvaluationJobStatus",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "ScenarioEvaluationJobStatus"
+      ],
+      "fieldPaths": [
+        "status"
+      ]
+    },
+    {
+      "semanticId": "lotus.submitted_at",
+      "canonicalTerm": "submitted_at",
+      "preferredName": "submitted_at",
+      "description": "UTC timestamp at the immutable admission transaction boundary.",
+      "example": "2026-05-03T09:30:00Z",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ],
+      "fieldPaths": [
+        "submitted_at"
       ]
     },
     {
@@ -4722,6 +4810,54 @@
     }
   ],
   "controlsCatalog": [
+    {
+      "name": "idempotency_key",
+      "kind": "request_option",
+      "location": "header",
+      "required": true,
+      "type": "object",
+      "description": "Canonical idempotency key used by lotus-risk APIs.",
+      "example": "STANDARD_VALUE",
+      "allowedValues": [],
+      "semanticId": "lotus.idempotency_key",
+      "attributeRef": "#/attributeCatalog/lotus.idempotency_key"
+    },
+    {
+      "name": "x_tenant_id",
+      "kind": "request_option",
+      "location": "header",
+      "required": true,
+      "type": "string",
+      "description": "Admitted tenant authority owning the durable job and later reads.",
+      "example": "tenant-sg",
+      "allowedValues": [],
+      "semanticId": "lotus.x_tenant_id",
+      "attributeRef": "#/attributeCatalog/lotus.x_tenant_id"
+    },
+    {
+      "name": "idempotency_key",
+      "kind": "request_option",
+      "location": "header",
+      "required": true,
+      "type": "string",
+      "description": "Tenant-scoped replay key for one immutable scenario job submission.",
+      "example": "scenario-job-001",
+      "allowedValues": [],
+      "semanticId": "lotus.idempotency_key",
+      "attributeRef": "#/attributeCatalog/lotus.idempotency_key"
+    },
+    {
+      "name": "job_id",
+      "kind": "request_option",
+      "location": "path",
+      "required": true,
+      "type": "string",
+      "description": "Canonical job id used by lotus-risk APIs.",
+      "example": "ENTITY_001",
+      "allowedValues": [],
+      "semanticId": "lotus.job_id",
+      "attributeRef": "#/attributeCatalog/lotus.job_id"
+    },
     {
       "name": "x_tenant_id",
       "kind": "request_option",
@@ -6930,6 +7066,252 @@
             "type": "RiskEventCohortSupportabilityState",
             "semanticId": "lotus.calculation_supportability",
             "attributeRef": "#/attributeCatalog/lotus.calculation_supportability"
+          }
+        ]
+      }
+    },
+    {
+      "domain": "risk_analytics",
+      "method": "POST",
+      "path": "/analytics/risk/regime-scenario-pack/jobs",
+      "operationId": "submitRegimeScenarioPackEvaluationJob",
+      "summary": "Persist a large governed regime scenario evaluation job",
+      "request": {
+        "fields": [
+          {
+            "name": "idempotency-key",
+            "location": "header",
+            "required": true,
+            "type": "object",
+            "semanticId": "lotus.idempotency_key",
+            "attributeRef": "#/attributeCatalog/lotus.idempotency_key"
+          },
+          {
+            "name": "X-Tenant-Id",
+            "location": "header",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.x_tenant_id",
+            "attributeRef": "#/attributeCatalog/lotus.x_tenant_id"
+          },
+          {
+            "name": "Idempotency-Key",
+            "location": "header",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.idempotency_key",
+            "attributeRef": "#/attributeCatalog/lotus.idempotency_key"
+          },
+          {
+            "name": "scenario_pack_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.scenario_pack_id",
+            "attributeRef": "#/attributeCatalog/lotus.scenario_pack_id"
+          },
+          {
+            "name": "portfolio_id",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.portfolio_id",
+            "attributeRef": "#/attributeCatalog/lotus.portfolio_id"
+          },
+          {
+            "name": "as_of_date",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.as_of_date"
+          },
+          {
+            "name": "exposures",
+            "location": "body",
+            "required": true,
+            "type": "array",
+            "semanticId": "lotus.exposures",
+            "attributeRef": "#/attributeCatalog/lotus.exposures"
+          },
+          {
+            "name": "exposures[].bucket",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.bucket",
+            "attributeRef": "#/attributeCatalog/lotus.bucket"
+          },
+          {
+            "name": "exposures[].weight",
+            "location": "body",
+            "required": true,
+            "type": "number",
+            "semanticId": "lotus.weight",
+            "attributeRef": "#/attributeCatalog/lotus.weight"
+          },
+          {
+            "name": "exposure_components",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.exposure_components",
+            "attributeRef": "#/attributeCatalog/lotus.exposure_components"
+          },
+          {
+            "name": "exposure_components[].security_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.security_id",
+            "attributeRef": "#/attributeCatalog/lotus.security_id"
+          },
+          {
+            "name": "exposure_components[].display_name",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.display_name",
+            "attributeRef": "#/attributeCatalog/lotus.display_name"
+          },
+          {
+            "name": "exposure_components[].bucket",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.bucket",
+            "attributeRef": "#/attributeCatalog/lotus.bucket"
+          },
+          {
+            "name": "exposure_components[].weight",
+            "location": "body",
+            "required": true,
+            "type": "number",
+            "semanticId": "lotus.weight",
+            "attributeRef": "#/attributeCatalog/lotus.weight"
+          },
+          {
+            "name": "maximum_allowed_loss_pct",
+            "location": "body",
+            "required": true,
+            "type": "number",
+            "semanticId": "lotus.maximum_allowed_loss_pct",
+            "attributeRef": "#/attributeCatalog/lotus.maximum_allowed_loss_pct"
+          }
+        ]
+      },
+      "response": {
+        "fields": [
+          {
+            "name": "job_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.job_id",
+            "attributeRef": "#/attributeCatalog/lotus.job_id"
+          },
+          {
+            "name": "status",
+            "location": "body",
+            "required": true,
+            "type": "ScenarioEvaluationJobStatus",
+            "semanticId": "lotus.status",
+            "attributeRef": "#/attributeCatalog/lotus.status"
+          },
+          {
+            "name": "request_fingerprint",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.request_fingerprint",
+            "attributeRef": "#/attributeCatalog/lotus.request_fingerprint"
+          },
+          {
+            "name": "scenario_pack_revision",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.scenario_pack_revision",
+            "attributeRef": "#/attributeCatalog/lotus.scenario_pack_revision"
+          },
+          {
+            "name": "expires_at",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.expires_at",
+            "attributeRef": "#/attributeCatalog/lotus.expires_at"
+          }
+        ]
+      }
+    },
+    {
+      "domain": "risk_analytics",
+      "method": "GET",
+      "path": "/analytics/risk/regime-scenario-pack/jobs/{job_id}",
+      "operationId": "getRegimeScenarioPackEvaluationJob",
+      "summary": "Read the submitting tenant's scenario evaluation job posture",
+      "request": {
+        "fields": [
+          {
+            "name": "job_id",
+            "location": "path",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.job_id",
+            "attributeRef": "#/attributeCatalog/lotus.job_id"
+          }
+        ]
+      },
+      "response": {
+        "fields": [
+          {
+            "name": "job_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.job_id",
+            "attributeRef": "#/attributeCatalog/lotus.job_id"
+          },
+          {
+            "name": "status",
+            "location": "body",
+            "required": true,
+            "type": "ScenarioEvaluationJobStatus",
+            "semanticId": "lotus.status",
+            "attributeRef": "#/attributeCatalog/lotus.status"
+          },
+          {
+            "name": "request_fingerprint",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.request_fingerprint",
+            "attributeRef": "#/attributeCatalog/lotus.request_fingerprint"
+          },
+          {
+            "name": "scenario_pack_revision",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.scenario_pack_revision",
+            "attributeRef": "#/attributeCatalog/lotus.scenario_pack_revision"
+          },
+          {
+            "name": "expires_at",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.expires_at",
+            "attributeRef": "#/attributeCatalog/lotus.expires_at"
+          },
+          {
+            "name": "submitted_at",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.submitted_at",
+            "attributeRef": "#/attributeCatalog/lotus.submitted_at"
           }
         ]
       }
