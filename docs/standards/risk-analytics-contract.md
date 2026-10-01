@@ -42,6 +42,15 @@
 - `YEAR`: requires `year`.
 - Canonical: `MTD`, `QTD`, `YTD`, `1Y`, `3Y`, `5Y`, `SI`.
 
+## Return-Series Integrity
+- Every caller-supplied portfolio, benchmark, or risk-free return series has one observation per
+  date. A repeated date is ambiguous source evidence even when its numeric value is identical.
+- Stateless endpoints refuse duplicate dates with `422 INVALID_REQUEST` before aggregation,
+  benchmark alignment, compounding, drawdown wealth-path construction, rolling-window formation,
+  or attribution decomposition. They never average, select, or double-count a duplicate.
+- This rule is distinct from frequency resampling: distinct daily observations inside one weekly or
+  monthly bucket remain valid and are compounded under the selected methodology.
+
 ## Compatibility Normalization
 - Accepted aliases normalized internally:
 - `CUSTOM` -> `EXPLICIT`

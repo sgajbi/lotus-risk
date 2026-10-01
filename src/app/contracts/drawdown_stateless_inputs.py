@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field, model_validator
 
 from app.contracts.drawdown_common_inputs import validate_unique_period_names
 from app.contracts.risk import ReturnPoint, RiskRequestPeriod, RiskRequestScope
+from app.contracts.risk_common_inputs import validate_unique_return_dates
 
 
 class DrawdownStatelessInput(BaseModel):
@@ -34,6 +35,8 @@ class DrawdownStatelessInput(BaseModel):
     @model_validator(mode="after")
     def validate_unique_period_names(self) -> DrawdownStatelessInput:
         validate_unique_period_names(self.periods)
+        validate_unique_return_dates(self.returns, series_name="returns")
+        validate_unique_return_dates(self.benchmark_returns, series_name="benchmark_returns")
         return self
 
 

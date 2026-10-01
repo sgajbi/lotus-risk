@@ -10,6 +10,13 @@ This index provides one methodology document per Lotus-Risk metric with formulas
 - Determinism:
   - each metric doc reflects current implementation behavior in `lotus-risk` `main`.
   - deterministic error behaviors are documented for data insufficiency and missing dependencies.
+- Return-series integrity:
+  - every caller-supplied portfolio, benchmark, and risk-free series contains one observation per
+    date before any formula, alignment, resampling, or rolling window is formed.
+  - duplicate dates, including identical numeric duplicates, are rejected with `422 INVALID_REQUEST`;
+    Lotus does not select, average, or double-count an ambiguous source interval.
+  - distinct daily observations in a weekly or monthly resampling bucket remain valid and are
+    compounded according to the metric methodology.
 - Domain ownership:
   - `lotus-risk` computes metrics only.
   - upstream systems provide canonical inputs:

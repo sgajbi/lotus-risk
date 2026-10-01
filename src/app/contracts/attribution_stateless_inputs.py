@@ -9,6 +9,7 @@ from app.contracts.attribution_common_inputs import (
     validate_unique_period_names,
 )
 from app.contracts.risk import ReturnPoint, RiskRequestPeriod, RiskRequestScope
+from app.contracts.risk_common_inputs import validate_unique_return_dates
 
 
 def validate_active_attribution_inputs(
@@ -108,19 +109,6 @@ class HistoricalAttributionStatelessInput(BaseModel):
             benchmark_exposure_history=self.benchmark_exposure_history,
         )
         return self
-
-
-def validate_unique_return_dates(returns: list[ReturnPoint], *, series_name: str) -> None:
-    """Two observations for one date are contradictory economics (#291): which return
-    applies is undecidable, and both entering covariance double-counts the day —
-    equal values included."""
-    seen: set[object] = set()
-    for point in returns:
-        if point.date in seen:
-            raise ValueError(
-                f"duplicate return observation date in {series_name}: {point.date.isoformat()}"
-            )
-        seen.add(point.date)
 
 
 __all__ = [

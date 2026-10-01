@@ -25,6 +25,8 @@ orders, or execution instructions.
 - optional `tracking_error_attention_threshold` as an annualized decimal ratio
 
 Return observations use the same percentage-point convention as `POST /analytics/risk/calculate`.
+Portfolio and benchmark series each require one observation per date; repeated dates refuse with
+`422 INVALID_REQUEST` before tracking-error alignment or health classification.
 
 ## Output Contract
 

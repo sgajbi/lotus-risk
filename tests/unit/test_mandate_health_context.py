@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.contracts.mandate_health import (
@@ -114,6 +115,25 @@ def test_mandate_risk_health_context_endpoint_returns_source_product() -> None:
     assert body["methodology_posture"]["source_metrics_product"] == "RiskMetricsReport:v1"
     assert body["health_state"] == "attention"
     assert body["threshold_breached"] is True
+
+
+@pytest.mark.parametrize("series_name", ["returns", "benchmark_returns"])
+def test_mandate_risk_health_context_endpoint_refuses_duplicate_source_dates(
+    series_name: str,
+) -> None:
+    payload = _request_payload()
+    points = payload[series_name]
+    assert isinstance(points, list)
+    points.append(dict(points[1]))
+
+    response = TestClient(app).post("/analytics/risk/mandate-health-context", json=payload)
+
+    assert response.status_code == 422
+    details = response.json()["error"]["details"]
+    assert details[0]["loc"] == ["body"]
+    assert details[0]["msg"] == (
+        f"Value error, duplicate return observation date in {series_name}: 2026-01-03"
+    )
 
 
 def test_capabilities_include_mandate_risk_health_context_workflow() -> None:

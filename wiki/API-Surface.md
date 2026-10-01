@@ -16,6 +16,10 @@ are **17**: eight risk analytics operations and nine operational.
 All eight are `POST` — a risk calculation takes a body of returns, exposures and options, not a
 query string.
 
+For every stateless endpoint that accepts a return series, each series has one observation per
+date. Identical and conflicting duplicate dates both refuse with `422 INVALID_REQUEST` before
+compounding, benchmark alignment, drawdown, rolling-window construction, or risk classification.
+
 | operation | answers |
 |---|---|
 | `POST /analytics/risk/calculate` | the core risk metrics for a portfolio over a window |

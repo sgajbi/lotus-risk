@@ -80,6 +80,8 @@ Provide decomposition of historical realized risk and active risk into transpare
 - portfolio returns
 - exposure history by grouping dimensions
 - benchmark returns/exposures when active attribution is requested
+- portfolio and benchmark return series have one observation per date; duplicate source dates are
+  rejected before covariance decomposition rather than averaged or treated as extra intervals
 
 3. Stateful:
 - `portfolio_id`
