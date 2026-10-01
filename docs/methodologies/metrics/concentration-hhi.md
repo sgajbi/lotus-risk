@@ -99,8 +99,10 @@ with `HHI_proposed_raw = 0.0`.
 
 ## Validation and Failure Behavior
 - Empty current values produce `risk_proxy.hhi_current = 0.0`.
-- Empty stateless/stateful proposed values fall back to current HHI. Empty simulation projected
-  positions produce proposed HHI `0.0`; missing or invalid simulation projected sections return
+- An omitted stateless projected-position field retains the compatibility fallback to current HHI.
+  An explicitly supplied empty or all-zero stateless projected book produces proposed HHI `0.0`;
+  it never silently reuses current holdings. Empty simulation projected positions also produce
+  proposed HHI `0.0`; missing or invalid simulation projected sections return
   `UPSTREAM_INVALID_RESPONSE`.
 - Missing, non-numeric, zero, and negative values are excluded from the value vector.
 - A single valid position produces HHI `10000.0`.

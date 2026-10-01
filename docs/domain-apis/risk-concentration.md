@@ -8,6 +8,12 @@
 
 Compute portfolio concentration analytics from current and proposed holdings using one canonical contract across:
 
+For stateless input, omitting `projected_positions` retains the compatibility interpretation of an
+unchanged proposed book. Supplying `projected_positions`, including an empty list or rows whose
+proposed values are all zero, is an explicit proposed universe: it produces zero proposed HHI,
+weights, coverage counts, and null top-driver identities rather than falling back to current
+holdings.
+
 - `stateless`
 - `stateful`
 - `simulation`

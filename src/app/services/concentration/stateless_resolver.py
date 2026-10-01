@@ -41,6 +41,7 @@ def _weighted_stateless_state(
     proposed_rows: list[PositionEntry],
     issuer_by_security: dict[str, IssuerIdentity],
     issuer_note: str | None,
+    projection_supplied: bool,
 ) -> _WeightedConcentrationState:
     current_positions, current_issuers, covered_current, total_current = _to_weighted_values(
         current_rows,
@@ -59,13 +60,13 @@ def _weighted_stateless_state(
 
     return _WeightedConcentrationState(
         current_positions=current_positions,
-        proposed_positions=proposed_positions if proposed_positions else current_positions,
+        proposed_positions=proposed_positions if projection_supplied else current_positions,
         current_issuers=current_issuers,
-        proposed_issuers=proposed_issuers if proposed_issuers else current_issuers,
+        proposed_issuers=proposed_issuers if projection_supplied else current_issuers,
         covered_current=covered_current,
-        covered_proposed=covered_proposed if proposed_positions else covered_current,
+        covered_proposed=covered_proposed if projection_supplied else covered_current,
         total_current=total_current,
-        total_proposed=total_proposed if proposed_positions else total_current,
+        total_proposed=total_proposed if projection_supplied else total_current,
         issuer_note=issuer_note,
     )
 
@@ -88,6 +89,9 @@ def _stateless_computation_input(
         covered_position_count_proposed=weighted_state.covered_proposed,
         total_position_count_current=weighted_state.total_current,
         total_position_count_proposed=weighted_state.total_proposed,
+        use_current_state_when_proposed_empty=(
+            "projected_positions" not in stateless_input.model_fields_set
+        ),
         issuer_note=weighted_state.issuer_note,
         metadata=build_metadata(
             request=request,
@@ -121,6 +125,7 @@ async def resolve_stateless(
         proposed_rows=proposed_rows,
         issuer_by_security=issuer_by_security,
         issuer_note=issuer_note,
+        projection_supplied="projected_positions" in stateless_input.model_fields_set,
     )
     return _stateless_computation_input(
         request=request,

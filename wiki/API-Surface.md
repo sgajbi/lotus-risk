@@ -119,6 +119,10 @@ the usual `null` metric with `details.error: "Insufficient data"` and degraded s
 they are never certified as `calculation_complete`. Historical and Gaussian VaR retain their
 documented two-observation minimum.
 
+For stateless concentration, omitting `projected_positions` means unchanged for compatibility.
+An explicitly supplied empty or all-zero projected book is a full liquidation proposal: proposed
+HHI and weights are zero, proposed coverage counts are zero, and no current holding is reused.
+
 ### Weekly and monthly source-bucket coverage
 
 For weekly/monthly risk metrics, an empty calendar bucket between supplied source buckets is missing
