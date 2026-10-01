@@ -93,6 +93,7 @@ def _resolved_stateful_inputs(
     *,
     stateful: RollingStatefulInput,
     include_risk_free: bool,
+    core_snapshot_request: dict[str, Any] | None,
     source_responses: StatefulSourceResponses,
     parsed_series: _ParsedRollingSourceSeries,
     risk_free_points: list[ReturnPoint],
@@ -101,6 +102,7 @@ def _resolved_stateful_inputs(
         stateful=stateful,
         include_risk_free=include_risk_free,
         source_payload=source_responses.source_payload,
+        core_snapshot_request=core_snapshot_request,
         risk_free_request=source_responses.risk_free_request,
         portfolio_points=parsed_series.portfolio_points,
         benchmark_points=parsed_series.benchmark_points,
@@ -181,6 +183,7 @@ async def resolve_stateful_rolling_inputs(
     return _resolved_stateful_inputs(
         stateful=dependency_selection.stateful,
         include_risk_free=dependency_selection.include_risk_free,
+        core_snapshot_request=dependency_selection.core_snapshot_request,
         source_responses=source_resolution.source_responses,
         parsed_series=source_resolution.parsed_series,
         risk_free_points=risk_free_points,

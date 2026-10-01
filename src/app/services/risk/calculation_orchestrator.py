@@ -10,6 +10,7 @@ from app.contracts.risk import (
     RiskCalculationRequest,
     RiskCalculationSupportability,
     RiskFreeContext,
+    RiskOptions,
     RiskPeriodResult,
     RiskResponseMetadata,
     RiskStatelessCalculationInput,
@@ -21,19 +22,22 @@ from app.services.risk.metric_timing import MetricDurationObserver
 from app.services.risk.period_results import build_period_results as _build_period_results
 
 BENCHMARK_METRICS = risk_helpers.BENCHMARK_METRICS
-RISK_FREE_METRICS = risk_helpers.RISK_METRICS_REQUIRING_RISK_FREE
 RiskFreeContextReason = Literal["NOT_REQUESTED", "ZERO_RATE", "ANNUAL_RATE_APPLIED"]
 
 
-def derive_annualization_factor(request: RiskStatelessCalculationInput) -> int:
-    override = request.options.annualization_factor
+def annualization_factor_for_options(options: RiskOptions) -> int:
+    override = options.annualization_factor
     if override is not None:
         return override
     return {
         "DAILY": 252,
         "WEEKLY": 52,
         "MONTHLY": 12,
-    }[request.options.frequency]
+    }[options.frequency]
+
+
+def derive_annualization_factor(request: RiskStatelessCalculationInput) -> int:
+    return annualization_factor_for_options(request.options)
 
 
 def resolve_periodic_rates(
@@ -87,7 +91,7 @@ def _risk_free_request_context(
     *,
     periodic_rf: float,
 ) -> RiskFreeContext:
-    requested = any(metric in RISK_FREE_METRICS for metric in request.metrics)
+    requested = risk_helpers.requires_risk_free(request.metrics)
     return RiskFreeContext(
         requested=requested,
         applied=requested,

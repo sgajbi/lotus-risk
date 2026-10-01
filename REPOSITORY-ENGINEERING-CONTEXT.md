@@ -324,6 +324,12 @@ Boundary rules:
     internal driver values from `src/app/services/concentration/datamodels.py` to public Pydantic
     response DTOs in `src/app/services/concentration/response_builder.py`; extend that pattern when
     migrating risk, rolling, drawdown, attribution, or remaining concentration helpers.
+31. Stateful Risk Sharpe and rolling Sharpe use the same omitted-currency selection: a
+    tenant-admitted Core baseline snapshot supplies portfolio/reporting currency before requesting
+    Performance returns and Core risk-free reference data. Explicit caller currency takes
+    precedence. Performance's returns-series response does not contract a currency echo and must
+    not become the fallback authority. Invalid Core currency is an upstream contract failure,
+    and snapshot request identity belongs in response lineage.
 
 Canonical direct local validation ports:
 

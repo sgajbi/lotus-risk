@@ -38,6 +38,11 @@
     `lotus-core:/integration/reference/risk-free-series` upstream request fingerprint.
     Core admits the per-request caller `X-Tenant-Id`, while the reference series remains
     globally scoped with no tenant business filter.
+  - when Sharpe omits `reporting_currency`, lotus-risk first resolves it from a tenant-admitted
+    Core baseline snapshot. The resolved currency is sent to both Performance returns-series and
+    Core risk-free series; Performance's returns response is not a currency authority. An explicit
+    caller currency takes precedence and skips the snapshot. Missing Core currency is an invalid
+    upstream response, and the snapshot request has its own lineage fingerprint.
   - sourced risk-free period returns are converted into the existing annual-rate risk-engine option so `metadata.risk_free_context.reason` becomes `ANNUAL_RATE_APPLIED`; missing sourced risk-free returns fail closed instead of silently using a zero-rate convention.
   - lotus-risk computes with the same risk engine used by stateless mode.
 
@@ -100,7 +105,7 @@ resampling bucket remain valid inputs.
 
 | Input Needed | Preferred Source App | Availability | Notes |
 |---|---|---|---|
-| Portfolio baseline snapshot (`portfolioId`, holdings, valuation context) | lotus-core (`/integration/portfolios/{id}/core-snapshot`) | Exists | Already used by other services. |
+| Portfolio baseline snapshot (`portfolioId`, holdings, valuation context) | lotus-core (`/integration/portfolios/{id}/core-snapshot`) | Exists | Resolves omitted stateful Sharpe currency under admitted tenant authority. |
 | Raw valuation/performance input points | lotus-core (`/integration/portfolios/{id}/performance-input`) | Exists | Provides valuation points and metadata. |
 | Daily return series normalized for risk engine | lotus-performance (`/integration/returns/series` with `input_mode=stateful`) | Exists | Implemented stateful path in lotus-risk; upstream decimal returns are filtered to trading days and converted to percentage-point risk engine input. |
 | Benchmark return series | lotus-performance (`/integration/returns/series` with `include_benchmark=true` and optional `benchmark.benchmark_id`) | Exists | Used by stateful beta, tracking error, information ratio, and benchmark-relative drawdown paths; aligned by trading date inside lotus-risk. |

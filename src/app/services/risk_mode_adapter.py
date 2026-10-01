@@ -13,12 +13,15 @@ from app.contracts.risk import (
     RiskStatelessCalculationInput,
     StatefulRiskInput,
 )
+from app.integrations.upstream_operations import LOTUS_CORE_SNAPSHOT_OPERATION
 from app.services.audit_lineage import ordered_source_services, upstream_request_fingerprint
+from app.services.core_portfolio_currency import resolve_portfolio_reporting_currency
 from app.services.core_risk_free_series import (
     build_risk_free_series_request,
     to_risk_free_return_points,
 )
 from app.services.risk import helpers as risk_helpers
+from app.services.risk.calculation_orchestrator import annualization_factor_for_options
 from app.services.risk_engine import calculate_risk
 from app.services.stateful_returns_request import build_stateful_returns_series_request
 from app.services.stateful_returns_series_parser import (
@@ -38,6 +41,14 @@ class LotusPerformanceClientProtocol(Protocol):
 
 
 class LotusCoreClientProtocol(Protocol):
+    async def get_core_snapshot(
+        self,
+        *,
+        portfolio_id: str,
+        request_payload: dict[str, Any],
+        authority: DownstreamAuthority,
+    ) -> dict[str, Any]: ...
+
     async def get_risk_free_series(
         self,
         *,
@@ -47,12 +58,12 @@ class LotusCoreClientProtocol(Protocol):
 
 
 _BENCHMARK_METRICS = risk_helpers.BENCHMARK_METRICS
-_RISK_FREE_METRICS = risk_helpers.RISK_METRICS_REQUIRING_RISK_FREE
 
 
 @dataclass(frozen=True)
 class _StatefulRiskSource:
     source_payload: dict[str, Any]
+    core_snapshot_request: dict[str, Any] | None
     risk_free_request: dict[str, Any] | None
     reporting_currency: str | None
     portfolio_points: list[ReturnPoint]
@@ -100,58 +111,7 @@ def _requires_benchmark(stateful: StatefulRiskInput) -> bool:
 
 
 def _requires_risk_free(stateful: StatefulRiskInput) -> bool:
-    return any(metric in _RISK_FREE_METRICS for metric in stateful.metrics)
-
-
-def _annualization_factor(options: RiskOptions) -> int:
-    override = options.annualization_factor
-    if override is not None:
-        return override
-    return {
-        "DAILY": 252,
-        "WEEKLY": 52,
-        "MONTHLY": 12,
-    }[options.frequency]
-
-
-def _as_non_empty_str(value: Any) -> str | None:
-    if not isinstance(value, str):
-        return None
-    normalized = value.strip()
-    return normalized or None
-
-
-def _currency_from_context(raw_context: Any) -> str | None:
-    if not isinstance(raw_context, dict):
-        return None
-    return _as_non_empty_str(raw_context.get("reporting_currency")) or _as_non_empty_str(
-        raw_context.get("portfolio_currency")
-    )
-
-
-def _risk_free_currency(
-    *,
-    stateful: StatefulRiskInput,
-    source_response: dict[str, Any],
-) -> str:
-    explicit_currency = _as_non_empty_str(stateful.reporting_currency)
-    if explicit_currency:
-        return explicit_currency
-
-    for raw_context in (
-        source_response.get("valuation_context"),
-        source_response.get("metadata", {}).get("valuation_context")
-        if isinstance(source_response.get("metadata"), dict)
-        else None,
-    ):
-        resolved_currency = _currency_from_context(raw_context)
-        if resolved_currency:
-            return resolved_currency
-
-    raise ValueError(
-        "reporting_currency is required for stateful Sharpe risk-free sourcing when "
-        "lotus-performance does not return valuation currency context"
-    )
+    return risk_helpers.requires_risk_free(stateful.metrics)
 
 
 def _risk_free_window_bounds(portfolio_points: list[ReturnPoint]) -> tuple[date, date]:
@@ -162,14 +122,15 @@ def _risk_free_window_bounds(portfolio_points: list[ReturnPoint]) -> tuple[date,
 def _build_stateful_risk_free_request(
     *,
     stateful: StatefulRiskInput,
-    source_response: dict[str, Any],
     portfolio_points: list[ReturnPoint],
 ) -> dict[str, Any] | None:
     if not _requires_risk_free(stateful):
         return None
+    if stateful.reporting_currency is None:
+        raise ValueError("reporting currency is required for stateful risk-free sourcing")
     start_date, end_date = _risk_free_window_bounds(portfolio_points)
     return build_risk_free_series_request(
-        currency=_risk_free_currency(stateful=stateful, source_response=source_response),
+        currency=stateful.reporting_currency,
         as_of_date=stateful.as_of_date,
         start_date=start_date,
         end_date=end_date,
@@ -209,6 +170,7 @@ async def _fetch_stateful_risk_source(
     stateful: StatefulRiskInput,
     performance_client: LotusPerformanceClientProtocol,
     core_client: LotusCoreClientProtocol | None,
+    core_snapshot_request: dict[str, Any] | None,
     authority: DownstreamAuthority,
 ) -> _StatefulRiskSource:
     source_payload = _build_stateful_source_request(stateful)
@@ -220,7 +182,6 @@ async def _fetch_stateful_risk_source(
     series, portfolio_points = extract_required_portfolio_returns(source_response)
     risk_free_request = _build_stateful_risk_free_request(
         stateful=stateful,
-        source_response=source_response,
         portfolio_points=portfolio_points,
     )
     # Reference facts are global, but Core still admits the caller's tenant context.
@@ -238,7 +199,7 @@ async def _fetch_stateful_risk_source(
     if risk_free_request is not None and risk_free_response is not None:
         risk_free_points = to_risk_free_return_points(
             risk_free_response,
-            annualization_basis=_annualization_factor(stateful.options),
+            annualization_basis=annualization_factor_for_options(stateful.options),
         )
         if not risk_free_points:
             raise missing_upstream_data(
@@ -249,12 +210,9 @@ async def _fetch_stateful_risk_source(
 
     return _StatefulRiskSource(
         source_payload=source_payload,
+        core_snapshot_request=core_snapshot_request,
         risk_free_request=risk_free_request,
-        reporting_currency=(
-            _risk_free_currency(stateful=stateful, source_response=source_response)
-            if risk_free_request is not None
-            else stateful.reporting_currency
-        ),
+        reporting_currency=stateful.reporting_currency,
         portfolio_points=portfolio_points,
         benchmark_points=benchmark_points,
         risk_free_points=risk_free_points,
@@ -268,7 +226,7 @@ def _options_with_sourced_risk_free(
 ) -> RiskOptions:
     risk_free_annual_rate = _annualized_rate_from_risk_free_returns(
         risk_free_points,
-        annualization_factor=_annualization_factor(options),
+        annualization_factor=annualization_factor_for_options(options),
     )
     if risk_free_annual_rate is None:
         return options
@@ -311,6 +269,7 @@ def _attach_stateful_risk_lineage(
     *,
     response: RiskResponse,
     source: _StatefulRiskSource,
+    portfolio_id: str,
 ) -> RiskResponse:
     response.metadata.source_services = ordered_source_services(
         "lotus-performance",
@@ -321,6 +280,17 @@ def _attach_stateful_risk_lineage(
         operation="/integration/returns/series",
         payload=source.source_payload,
     )
+    if source.core_snapshot_request is not None:
+        response.metadata.upstream_request_fingerprints.update(
+            upstream_request_fingerprint(
+                service="lotus-core",
+                operation=LOTUS_CORE_SNAPSHOT_OPERATION,
+                payload={
+                    "portfolio_id": portfolio_id,
+                    "request_payload": source.core_snapshot_request,
+                },
+            )
+        )
     if source.risk_free_request is not None:
         response.metadata.upstream_request_fingerprints.update(
             upstream_request_fingerprint(
@@ -339,10 +309,23 @@ async def calculate_risk_stateful(
     core_client: LotusCoreClientProtocol | None = None,
     authority: DownstreamAuthority,
 ) -> RiskResponse:
+    resolved_currency = await resolve_portfolio_reporting_currency(
+        portfolio_id=stateful.portfolio_id,
+        as_of_date=stateful.as_of_date,
+        requested_currency=stateful.reporting_currency,
+        requires_risk_free=_requires_risk_free(stateful),
+        core_client=core_client,
+        authority=authority,
+    )
+    if resolved_currency.reporting_currency != stateful.reporting_currency:
+        stateful = stateful.model_copy(
+            update={"reporting_currency": resolved_currency.reporting_currency}
+        )
     source = await _fetch_stateful_risk_source(
         stateful=stateful,
         performance_client=performance_client,
         core_client=core_client,
+        core_snapshot_request=resolved_currency.snapshot_request,
         authority=authority,
     )
     response = calculate_risk(
@@ -354,4 +337,5 @@ async def calculate_risk_stateful(
     return _attach_stateful_risk_lineage(
         response=response,
         source=source,
+        portfolio_id=stateful.portfolio_id,
     )

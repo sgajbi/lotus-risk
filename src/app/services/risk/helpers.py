@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import date
 from statistics import NormalDist
 from typing import cast
@@ -29,6 +30,13 @@ from app.services.risk.period_resolution import (
 )
 
 RISK_METRICS_REQUIRING_RISK_FREE = {"SHARPE"}
+
+
+def requires_risk_free(metrics: Sequence[str]) -> bool:
+    """Keep transport and source selection bound to the domain metric registry."""
+    return any(metric in RISK_METRICS_REQUIRING_RISK_FREE for metric in metrics)
+
+
 _CORNISH_FISHER_MINIMUM_OBSERVATIONS = 4
 LOG_RETURN_UNDEFINED_ERROR = "Log returns are undefined for returns less than or equal to -100%"
 RESAMPLING_GAP_ERROR_PREFIX = "Missing return observations in resampling buckets ending"

@@ -55,6 +55,7 @@ class ResolvedStatefulRollingInputs:
     stateful: RollingStatefulInput
     include_risk_free: bool
     source_payload: dict[str, Any]
+    core_snapshot_request: dict[str, Any] | None
     risk_free_request: dict[str, Any] | None
     portfolio_points: list[ReturnPoint]
     benchmark_points: list[ReturnPoint]

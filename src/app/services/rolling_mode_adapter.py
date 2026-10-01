@@ -15,6 +15,7 @@ from app.contracts.rolling_common_inputs import (
     ROLLING_MAX_STATELESS_OBSERVATIONS,
     validate_rolling_time_series_workload,
 )
+from app.integrations.upstream_operations import LOTUS_CORE_SNAPSHOT_OPERATION
 from app.services.audit_lineage import (
     ordered_source_services,
     upstream_request_fingerprint,
@@ -113,6 +114,8 @@ def _attach_stateful_lineage(
     *,
     include_risk_free: bool,
     source_payload: dict[str, Any],
+    portfolio_id: str,
+    core_snapshot_request: dict[str, Any] | None,
     risk_free_request: dict[str, Any] | None,
 ) -> RollingResponse:
     dependency_services = ["lotus-performance"]
@@ -124,6 +127,17 @@ def _attach_stateful_lineage(
         operation="/integration/returns/series",
         payload=source_payload,
     )
+    if core_snapshot_request is not None:
+        response.metadata.upstream_request_fingerprints.update(
+            upstream_request_fingerprint(
+                service="lotus-core",
+                operation=LOTUS_CORE_SNAPSHOT_OPERATION,
+                payload={
+                    "portfolio_id": portfolio_id,
+                    "request_payload": core_snapshot_request,
+                },
+            )
+        )
     if risk_free_request is not None:
         response.metadata.upstream_request_fingerprints.update(
             upstream_request_fingerprint(
@@ -162,5 +176,7 @@ async def calculate_rolling_metrics_stateful(
         _calculate_stateful_response(resolved_inputs),
         include_risk_free=resolved_inputs.include_risk_free,
         source_payload=resolved_inputs.source_payload,
+        portfolio_id=resolved_inputs.stateful.portfolio_id,
+        core_snapshot_request=resolved_inputs.core_snapshot_request,
         risk_free_request=resolved_inputs.risk_free_request,
     )

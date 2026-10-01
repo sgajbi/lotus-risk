@@ -148,6 +148,7 @@ def test_stateful_adapter_happy_path() -> None:
     assert response.metadata.request_fingerprint.startswith("sha256:")
     assert set(response.metadata.upstream_request_fingerprints) == {
         "lotus-performance:/integration/returns/series",
+        "lotus-core:/integration/portfolios/{portfolio_id}/core-snapshot",
         "lotus-core:/integration/reference/risk-free-series",
     }
 
@@ -290,7 +291,7 @@ def test_stateful_adapter_rejects_invalid_return_value() -> None:
 
 def test_stateful_adapter_requires_core_snapshot_when_sharpe_needs_reporting_currency() -> None:
     client = RecordingLotusPerformanceClient(response_payload=_portfolio_only_payload())
-    with pytest.raises(ValueError, match="reporting_currency is required for rolling Sharpe"):
+    with pytest.raises(ValueError, match="lotus-core client is required"):
         asyncio.run(
             calculate_rolling_metrics_stateful(
                 _stateful_input(["ROLLING_SHARPE"]),
@@ -353,7 +354,7 @@ def test_stateful_adapter_uses_portfolio_currency_when_reporting_currency_missin
 
 def test_stateful_adapter_rejects_missing_valuation_context() -> None:
     client = RecordingLotusPerformanceClient(response_payload=_portfolio_only_payload())
-    with pytest.raises(ValueError, match="missing valuation_context"):
+    with pytest.raises(UpstreamServiceError) as exc_info:
         asyncio.run(
             calculate_rolling_metrics_stateful(
                 _stateful_input(["ROLLING_SHARPE"]),
@@ -362,11 +363,14 @@ def test_stateful_adapter_rejects_missing_valuation_context() -> None:
                 authority=admitted_test_authority(),
             )
         )
+    assert exc_info.value.code == "UPSTREAM_INVALID_RESPONSE"
+    assert exc_info.value.status_code == 502
+    assert client.calls == []
 
 
 def test_stateful_adapter_rejects_missing_portfolio_and_reporting_currency() -> None:
     client = RecordingLotusPerformanceClient(response_payload=_portfolio_only_payload())
-    with pytest.raises(ValueError, match="missing portfolio/reporting currency"):
+    with pytest.raises(UpstreamServiceError) as exc_info:
         asyncio.run(
             calculate_rolling_metrics_stateful(
                 _stateful_input(["ROLLING_SHARPE"]),
@@ -375,6 +379,9 @@ def test_stateful_adapter_rejects_missing_portfolio_and_reporting_currency() -> 
                 authority=admitted_test_authority(),
             )
         )
+    assert exc_info.value.code == "UPSTREAM_INVALID_RESPONSE"
+    assert exc_info.value.status_code == 502
+    assert client.calls == []
 
 
 def test_stateful_adapter_rejects_unknown_risk_free_value_convention() -> None:
