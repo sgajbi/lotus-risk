@@ -147,6 +147,7 @@ def test_var_matches_documented_signed_percentage_point_output_contract() -> Non
     assert metric.details["tail_probability"] == pytest.approx(0.05)
     assert metric.details["base_horizon_days"] == 1
     assert metric.details["horizon_days"] == 4
+    assert metric.details["sampling_frequency"] == "DAILY"
     assert metric.details["horizon_scale_method"] == "SQRT_TIME"
     assert metric.details["horizon_scale_factor"] == pytest.approx(2.0)
     assert metric.details["include_expected_shortfall"] is True

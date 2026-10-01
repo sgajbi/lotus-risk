@@ -141,6 +141,11 @@ does not invent a daily market calendar or source cadence from a period boundary
 applies to both portfolio and benchmark series before benchmark alignment; drawdown retains its
 separate raw-return path.
 
+VaR and expected shortfall retain the daily return distribution regardless of the response's
+weekly/monthly reporting-frequency option. Their details expose `sampling_frequency: DAILY`,
+`base_horizon_days`, `horizon_days`, and the square-root scale factor, so consumers cannot compare
+a compounded period loss as though it were a one-day threshold.
+
 **The two surfaces handle a missing benchmark differently, and the difference is the HTTP contract:**
 
 | surface | behaviour without benchmark data |

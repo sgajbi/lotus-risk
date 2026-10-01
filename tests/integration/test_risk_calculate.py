@@ -169,6 +169,7 @@ def test_risk_calculate_endpoint_happy_path_contract() -> None:
     assert metrics["VAR"]["details"]["tail_probability"] == pytest.approx(0.05)
     assert metrics["VAR"]["details"]["base_horizon_days"] == 1
     assert metrics["VAR"]["details"]["horizon_days"] == 1
+    assert metrics["VAR"]["details"]["sampling_frequency"] == "DAILY"
     assert metrics["VAR"]["details"]["horizon_scale_method"] == "SQRT_TIME"
     assert metrics["VAR"]["details"]["horizon_scale_factor"] == pytest.approx(1.0)
     assert metrics["VAR"]["details"]["include_expected_shortfall"] is True
@@ -401,6 +402,7 @@ def test_risk_calculate_var_exposes_horizon_scaling_context() -> None:
     details = response.json()["results"]["Explicit"]["metrics"]["VAR"]["details"]
     assert details["base_horizon_days"] == 1
     assert details["horizon_days"] == 4
+    assert details["sampling_frequency"] == "DAILY"
     assert details["horizon_scale_method"] == "SQRT_TIME"
     assert details["horizon_scale_factor"] == pytest.approx(2.0)
     assert details["expected_shortfall"] == pytest.approx(

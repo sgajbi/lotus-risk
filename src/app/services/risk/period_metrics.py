@@ -49,7 +49,8 @@ class PeriodMetricCalculationRequest:
 
 def _build_non_benchmark_calculators(
     *,
-    period_returns: pd.Series,
+    metric_series: pd.Series,
+    var_series: pd.Series,
     drawdown_series: pd.Series,
     request: RiskStatelessCalculationInput,
     annual_factor: int,
@@ -58,29 +59,30 @@ def _build_non_benchmark_calculators(
 ) -> dict[str, Callable[[], RiskValue]]:
     return {
         "VOLATILITY": lambda: calculate_volatility(
-            metric_series=period_returns,
+            metric_series=metric_series,
             annual_factor=annual_factor,
         ),
         "DRAWDOWN": lambda: calculate_drawdown(
             drawdown_series=drawdown_series,
         ),
         "SHARPE": lambda: calculate_sharpe(
-            metric_series=period_returns,
+            metric_series=metric_series,
             periodic_rf=periodic_rf,
             annual_factor=annual_factor,
         ),
         "SORTINO": lambda: calculate_sortino(
-            metric_series=period_returns,
+            metric_series=metric_series,
             periodic_mar=periodic_mar,
             annual_factor=annual_factor,
             mar_annual_rate=request.options.mar_annual_rate,
         ),
         "VAR": lambda: calculate_var(
-            metric_series=period_returns,
+            metric_series=var_series,
             method=request.options.var.method,
             confidence=request.options.var.confidence,
             horizon_days=request.options.var.horizon_days,
             include_expected_shortfall=request.options.var.include_expected_shortfall,
+            sampling_frequency="DAILY",
         ),
     }
 
@@ -132,6 +134,11 @@ def _period_non_benchmark_metrics(
         frequency=request.options.frequency,
         use_log_returns=request.options.use_log_returns,
     )
+    var_series_resolution = resolve_metric_return_series(
+        period_returns=period_returns,
+        frequency="DAILY",
+        use_log_returns=request.options.use_log_returns,
+    )
     if metric_series_resolution.error is not None:
         metric_map = _drawdown_metric_map(
             request=request,
@@ -149,20 +156,27 @@ def _period_non_benchmark_metrics(
             metric_map=metric_map,
             metric_series_error=metric_series_resolution.error,
         )
+    non_benchmark_calculators = _build_non_benchmark_calculators(
+        metric_series=metric_series_resolution.series,
+        var_series=var_series_resolution.series,
+        drawdown_series=period_returns,
+        request=request,
+        annual_factor=annual_factor,
+        periodic_rf=periodic_rf,
+        periodic_mar=periodic_mar,
+    )
+    if var_series_resolution.error is not None:
+        non_benchmark_calculators.pop("VAR")
+    metric_map = _calculate_requested_non_benchmark_metrics(
+        request=request,
+        non_benchmark_calculators=non_benchmark_calculators,
+        observe_metric_duration=observe_metric_duration,
+    )
+    if "VAR" in request.metrics and var_series_resolution.error is not None:
+        metric_map["VAR"] = metric_error(var_series_resolution.error)
     return _PeriodNonBenchmarkMetrics(
         metric_series=metric_series_resolution.series,
-        metric_map=_calculate_requested_non_benchmark_metrics(
-            request=request,
-            non_benchmark_calculators=_build_non_benchmark_calculators(
-                period_returns=metric_series_resolution.series,
-                drawdown_series=period_returns,
-                request=request,
-                annual_factor=annual_factor,
-                periodic_rf=periodic_rf,
-                periodic_mar=periodic_mar,
-            ),
-            observe_metric_duration=observe_metric_duration,
-        ),
+        metric_map=metric_map,
     )
 
 

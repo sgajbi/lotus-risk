@@ -114,6 +114,7 @@ def calculate_var(
     confidence: float,
     horizon_days: int,
     include_expected_shortfall: bool,
+    sampling_frequency: str,
 ) -> RiskValue:
     risk_helpers._require_data(metric_series)
     base_var = risk_helpers._calculate_var_by_method(metric_series, method, confidence)
@@ -126,6 +127,7 @@ def calculate_var(
         "tail_probability": risk_helpers._as_number(1.0 - confidence),
         "base_horizon_days": 1,
         "horizon_days": horizon_days,
+        "sampling_frequency": sampling_frequency,
         "horizon_scale_method": "SQRT_TIME",
         "horizon_scale_factor": horizon_scale_factor,
         "include_expected_shortfall": include_expected_shortfall,
