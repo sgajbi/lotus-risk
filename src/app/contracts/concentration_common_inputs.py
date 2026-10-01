@@ -34,13 +34,19 @@ class CurrentPosition(BaseModel):
     )
     quantity: float | None = Field(
         default=None,
-        description="Baseline quantity for the position.",
+        description=(
+            "Baseline quantity for the position. Stateless concentration accepts it only when "
+            "every current position uses the quantity-proxy basis."
+        ),
         json_schema_extra={"example": 1000.0},
     )
     market_value_base: float | None = (  # monetary-float-allow: concentration DTO.
         Field(
             default=None,
-            description="Optional baseline market value in reporting currency.",
+            description=(
+                "Baseline market value in reporting currency. Stateless concentration accepts it "
+                "only when every current position uses the market-value basis."
+            ),
             json_schema_extra={"example": 19500.25},
         )
     )
@@ -73,13 +79,19 @@ class ProjectedPosition(BaseModel):
     )
     proposed_quantity: float | None = Field(
         default=None,
-        description="Projected quantity for simulation or concentration what-if analysis.",
+        description=(
+            "Projected quantity. Stateless concentration accepts it only when every projected "
+            "position uses the quantity-proxy basis."
+        ),
         json_schema_extra={"example": 1200.0},
     )
     projected_market_value_base: float | None = (  # monetary-float-allow: concentration DTO.
         Field(
             default=None,
-            description="Optional projected market value in reporting currency.",
+            description=(
+                "Projected market value in reporting currency. Stateless concentration accepts it "
+                "only when every projected position uses the market-value basis."
+            ),
             json_schema_extra={"example": 23400.3},
         )
     )

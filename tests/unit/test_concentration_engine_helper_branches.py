@@ -136,20 +136,16 @@ def test_helper_issuer_key_resolution_covers_legal_issuer_and_missing_ids() -> N
     )
 
 
-def test_extract_values_with_issuer_handles_fallback_and_non_dict_rows() -> None:
+def test_extract_values_with_issuer_rejects_missing_market_values() -> None:
     rows: list[Any] = [
         {"security_id": "SEC_A", "market_value_base": None, "quantity": "10"},
-        "bad-row",
-        {"security_id": "SEC_B", "market_value_base": None, "quantity": None},
     ]
-    values, issuer_values, covered, total = _extract_values_with_issuer_from_snapshot(
-        cast(list[dict[str, Any]] | None, rows),
-        {"SEC_A": IssuerIdentity(issuer_id="ISSUER_A", issuer_name=None)},
-    )
-    assert values == [PositionEntry(security_id="SEC_A", security_name=None, value=10.0)]
-    assert issuer_values == [IssuerEntry(issuer_id="ISSUER_A", issuer_name=None, value=10.0)]
-    assert covered == 1
-    assert total == 1
+
+    with pytest.raises(ValueError, match="missing_market_value_base"):
+        _extract_values_with_issuer_from_snapshot(
+            cast(list[dict[str, Any]] | None, rows),
+            {"SEC_A": IssuerIdentity(issuer_id="ISSUER_A", issuer_name=None)},
+        )
 
 
 def test_extract_values_with_issuer_aggregates_multiple_positions_for_same_issuer() -> None:

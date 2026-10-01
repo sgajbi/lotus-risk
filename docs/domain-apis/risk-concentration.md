@@ -50,10 +50,17 @@ Caller provides:
 - `stateless_input.current_positions`
 - `stateless_input.projected_positions`
 
-`lotus-risk` computes concentration directly from caller-supplied values. Position values use:
+`lotus-risk` computes concentration directly from caller-supplied values, but never combines a
+valuation and quantity in one HHI denominator. Each non-empty current or proposed book is either:
 
-1. `market_value_base` when present
-2. `quantity` as fallback
+1. complete `market_value_base` / `projected_market_value_base`, or
+2. complete `quantity` / `proposed_quantity`, labelled as `quantity_proxy` in
+   `valuation_context`.
+
+Partial valuation books, missing exposure rows, and a current/proposed basis mismatch return
+`422`. An explicit zero market value remains a zero market-value row; it cannot fall back to
+quantity. The quantity proxy is a caller-supplied relative-exposure measure, not a currency
+valuation for client reporting or advice.
 
 ### `stateful`
 
@@ -70,6 +77,11 @@ the baseline portfolio state. Core requires the admitted tenant in both the `X-T
 and snapshot body; Risk binds both from one admitted authority and declares
 `consumer_system=lotus-risk` for policy and lineage. A conflicting internal body scope refuses
 before Core I/O.
+
+Risk requests `market_value_base` and `total_market_value_base` from Core. A snapshot row without
+a valid `market_value_base` is an upstream-contract failure (`502 UPSTREAM_INVALID_RESPONSE`),
+not an invitation to use Core quantity as a valuation proxy. The same requirement applies to
+simulation baseline and projected snapshots.
 
 ### `simulation`
 

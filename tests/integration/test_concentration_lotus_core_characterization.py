@@ -228,6 +228,12 @@ def test_stateful_api_characterizes_lotus_core_snapshot_payload_contract() -> No
     assert body["metadata"]["enrichment_policy"] == "core_only"
     assert body["metadata"]["include_cash_positions"] is False
     assert body["metadata"]["include_zero_quantity_positions"] is True
+    assert body["valuation_context"] == {
+        "portfolio_currency": "EUR",
+        "reporting_currency": "USD",
+        "position_basis": "market_value_base",
+        "weight_basis": "total_market_value_base",
+    }
     assert body["single_position_concentration"]["top_position_current"] == {
         "security_id": "SEC_A",
         "security_name": "Alpha Global Equity",
@@ -266,6 +272,35 @@ def test_stateful_api_maps_invalid_core_snapshot_payload_to_upstream_response() 
         response.json(),
         operation="/integration/portfolios/{portfolio_id}/core-snapshot",
         reason="missing_sections",
+        snapshot_mode="BASELINE",
+    )
+
+
+def test_stateful_api_refuses_core_quantity_fallback_snapshot_rows() -> None:
+    core_client = _RecordingLotusCoreClient(
+        baseline_snapshot_response={
+            "sections": {"positions_baseline": [{"security_id": "SEC_A", "quantity": "100"}]}
+        }
+    )
+    with override_app_runtime(lotus_core_client=core_client):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/concentration",
+            headers={"X-Tenant-Id": "tenant-a"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-02-27",
+                },
+            },
+        )
+
+    assert response.status_code == 502
+    _assert_upstream_invalid_response(
+        response.json(),
+        operation="/integration/portfolios/{portfolio_id}/core-snapshot",
+        reason="missing_market_value_base",
         snapshot_mode="BASELINE",
     )
 
@@ -635,6 +670,42 @@ def test_simulation_api_maps_invalid_snapshot_payload_to_upstream_response() -> 
         response.json(),
         operation="/integration/portfolios/{portfolio_id}/core-snapshot",
         reason="missing_sections",
+        snapshot_mode="SIMULATION",
+    )
+
+
+def test_simulation_api_refuses_core_quantity_fallback_projected_rows() -> None:
+    core_client = _RecordingLotusCoreClient(
+        simulation_snapshot_response={
+            "simulation": {"session_id": "SIM_EXISTING", "version": 7},
+            "sections": {
+                "positions_baseline": [{"security_id": "SEC_A", "market_value_base": "100"}],
+                "positions_projected": [{"security_id": "SEC_A", "quantity": "100"}],
+            },
+        }
+    )
+    with override_app_runtime(lotus_core_client=core_client):
+        client = TestClient(app)
+        response = client.post(
+            "/analytics/risk/concentration",
+            headers={"X-Tenant-Id": "tenant-a"},
+            json={
+                "input_mode": "simulation",
+                "simulation_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-02-27",
+                    "session_id": "SIM_EXISTING",
+                    "start_new_session": False,
+                    "simulation_changes": [],
+                },
+            },
+        )
+
+    assert response.status_code == 502
+    _assert_upstream_invalid_response(
+        response.json(),
+        operation="/integration/portfolios/{portfolio_id}/core-snapshot",
+        reason="missing_market_value_base",
         snapshot_mode="SIMULATION",
     )
 

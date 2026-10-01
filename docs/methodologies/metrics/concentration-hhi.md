@@ -30,14 +30,21 @@
 
 ## Unit Conventions
 - Position inputs are portfolio amount-like values, not return percentages.
-- Stateless current rows use `market_value_base` when present; otherwise they fall back to
-  `quantity`.
-- Stateless projected rows use `projected_market_value_base` when present; otherwise they fall
-  back to `proposed_quantity`.
-- Stateful and simulation snapshot rows use `market_value_base` when present; otherwise they fall
-  back to `quantity`.
-- Values are parsed through Decimal from the source value's string representation. Missing,
-  non-numeric, zero, and negative values are excluded before weight construction.
+- Every non-empty stateless state uses one complete basis. A complete `market_value_base` /
+  `projected_market_value_base` book is a monetary-value basis; otherwise every row must provide
+  `quantity` / `proposed_quantity`, which is an explicitly labelled quantity proxy. Mixed rows and
+  current/proposed states using different bases are rejected with `422` rather than combined.
+- Explicit zero market values remain market-value rows and are excluded from the
+  positive-value vector; it never falls back to quantity. This makes a `[10000, 0]` market-value
+  book a `10000.0` HHI, not a mixed-unit result.
+- Stateful and simulation snapshot rows require `market_value_base`. A missing or malformed
+  source value returns `UPSTREAM_INVALID_RESPONSE` rather than using quantity as a substitute
+  valuation.
+- Values are parsed through Decimal from the source value's string representation. Zero and
+  negative values are excluded before weight construction after their declared basis is selected.
+- `valuation_context.position_basis` / `weight_basis` state whether a stateless response is
+  `market_value_base` / `total_market_value_base` or `quantity_proxy` /
+  `total_quantity_proxy`. A quantity proxy is not a reporting-currency valuation.
 - Position weights are decimal ratios in `[0, 1]`.
 - `risk_proxy.hhi_*` values are emitted on the conventional Herfindahl-Hirschman `0..10000`
   scale and rounded to six decimal places by the service response.
@@ -59,8 +66,8 @@
 ## Methodology and Formulas
 For each state:
 
-1. Extract one positive numeric value per usable position row according to the mode-specific
-   field precedence.
+1. Establish one declared basis for every non-empty state, then extract one positive numeric value
+   per usable row from that basis only.
 2. Compute the denominator:
    `V = sum(abs(v_i))`.
 3. If `V <= 0`, set the state HHI to `0.0`.
@@ -89,8 +96,8 @@ with `HHI_proposed_raw = 0.0`.
    - stateless: caller projected positions,
    - stateful: same baseline positions as current,
    - simulation: required lotus-core projected positions; an explicit empty list remains empty.
-4. For each row, parse the preferred value field, fall back to the secondary value field, and keep
-   only positive numeric values.
+4. For each row, parse only the established basis field and keep positive numeric values. Never
+   substitute quantity for an explicit, missing, or invalid market value.
 5. Compute current HHI from current values.
 6. Compute proposed HHI from proposed values; reuse current HHI only for modes that intentionally
    use current state when proposed values are empty.
@@ -104,7 +111,11 @@ with `HHI_proposed_raw = 0.0`.
   it never silently reuses current holdings. Empty simulation projected positions also produce
   proposed HHI `0.0`; missing or invalid simulation projected sections return
   `UPSTREAM_INVALID_RESPONSE`.
-- Missing, non-numeric, zero, and negative values are excluded from the value vector.
+- Stateless partial valuation books, a row without either allowed stateless exposure field, and
+  mixed current/proposed bases return `422` before calculation. Core snapshot rows lacking a
+  usable `market_value_base` return `502 UPSTREAM_INVALID_RESPONSE` with a bounded reason.
+- Zero and negative values are excluded from the value vector only after their basis has been
+  established; no row can change basis as a consequence.
 - A single valid position produces HHI `10000.0`.
 - Equal weights across `N` valid positions produce `10000 / N`.
 - HHI is bounded in `[0, 10000]` for the implemented positive-value extraction path.

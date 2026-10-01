@@ -28,12 +28,11 @@
 
 ## Unit Conventions
 - Position inputs are portfolio amount-like values, not return percentages.
-- Stateless current rows use `market_value_base` when present; otherwise they fall back to
-  `quantity`.
-- Stateless projected rows use `projected_market_value_base` when present; otherwise they fall
-  back to `proposed_quantity`.
-- Stateful and simulation snapshot rows use `market_value_base` when present; otherwise they fall
-  back to `quantity`.
+- Every non-empty stateless state uses one complete basis: market values, or an explicitly labelled
+  quantity proxy. Mixed rows and cross-state bases are rejected with `422`.
+- Explicit zero market values remain market-value rows and never fall back to quantity.
+- Stateful and simulation snapshot rows require `market_value_base`; missing or malformed source
+  values return `UPSTREAM_INVALID_RESPONSE` rather than using quantity.
 - Values are parsed through Decimal from the source value's string representation. Missing,
   non-numeric, zero, and negative values are excluded before weight construction.
 - Output weights are decimal ratios in `[0, 1]` and are rounded to six decimal places by the
@@ -91,8 +90,7 @@ with `TOP_N_proposed_raw = 0.0`.
    - stateless: caller projected positions,
    - stateful: same baseline positions as current,
    - simulation: required lotus-core projected positions; an explicit empty list remains empty.
-4. For each row, parse the preferred value field, fall back to the secondary value field, and keep
-   only positive numeric values.
+4. For each row, parse only the established basis field and keep positive numeric values.
 5. Normalize current values into current position weights.
 6. Normalize proposed values into proposed position weights; reuse current top-N cumulative weight
    only for modes that intentionally use current state when proposed values are empty.
@@ -109,7 +107,8 @@ with `TOP_N_proposed_raw = 0.0`.
 - Empty stateless/stateful proposed values fall back to current top-N cumulative weight. Empty
   simulation projected positions produce proposed top-N cumulative weight `0.0`; missing or
   invalid simulation projected sections return `UPSTREAM_INVALID_RESPONSE`.
-- Missing, non-numeric, zero, and negative values are excluded from the value vector.
+- After one basis is established, zero and negative values are excluded from the value vector;
+  missing or non-numeric declared-basis values are refused rather than substituted.
 - A single valid position produces top-N cumulative weight `1.0` for any valid `N`.
 - If `N` exceeds the number of valid positions, the service sums all available sorted weights.
 - Equal weights across `M` valid positions produce top-N cumulative weight `min(N, M) / M`.

@@ -8,6 +8,10 @@ from app.contracts.concentration import (
     ConcentrationValuationContext,
     StatelessConcentrationInput,
 )
+from app.contracts.concentration_stateless_inputs import (
+    StatelessExposureBasis,
+    stateless_exposure_basis,
+)
 from app.services.concentration.datamodels import IssuerEntry, IssuerIdentity, PositionEntry
 from app.services.concentration.issuer_mapping import (
     _caller_issuer_map,
@@ -51,9 +55,22 @@ def _to_decimal(value: Any) -> Decimal | None:
         decimal_value = Decimal(str(value))
     except (InvalidOperation, ValueError):
         return None
-    if decimal_value <= 0:
+    if not decimal_value.is_finite() or decimal_value <= 0:
         return None
     return decimal_value
+
+
+def _snapshot_market_value(position: dict[str, Any]) -> Decimal | None:
+    raw_market_value = position.get("market_value_base")
+    if raw_market_value is None:
+        raise ValueError("missing_market_value_base")
+    try:
+        market_value = Decimal(str(raw_market_value))
+    except (InvalidOperation, ValueError) as error:
+        raise ValueError("invalid_market_value_base") from error
+    if not market_value.is_finite():
+        raise ValueError("invalid_market_value_base")
+    return market_value if market_value > 0 else None
 
 
 def _to_exposure_value(
@@ -65,11 +82,14 @@ def _to_exposure_value(
 def _extract_values_from_stateless_payload(
     payload: StatelessConcentrationInput,
 ) -> tuple[list[PositionEntry], list[PositionEntry]]:
+    exposure_basis = stateless_exposure_basis(payload)
     current_rows: list[PositionEntry] = []
     for position in payload.current_positions:
-        candidate = _to_decimal(position.market_value_base)
-        if candidate is None:
-            candidate = _to_decimal(position.quantity)
+        candidate = _to_decimal(
+            position.market_value_base
+            if exposure_basis == StatelessExposureBasis.MARKET_VALUE_BASE
+            else position.quantity
+        )
         if candidate is not None:
             current_rows.append(
                 PositionEntry(
@@ -81,9 +101,11 @@ def _extract_values_from_stateless_payload(
 
     proposed_rows: list[PositionEntry] = []
     for projected_position in payload.projected_positions:
-        candidate = _to_decimal(projected_position.projected_market_value_base)
-        if candidate is None:
-            candidate = _to_decimal(projected_position.proposed_quantity)
+        candidate = _to_decimal(
+            projected_position.projected_market_value_base
+            if exposure_basis == StatelessExposureBasis.MARKET_VALUE_BASE
+            else projected_position.proposed_quantity
+        )
         if candidate is not None:
             proposed_rows.append(
                 PositionEntry(
@@ -97,9 +119,7 @@ def _extract_values_from_stateless_payload(
 
 
 def _snapshot_position_entry(position: dict[str, Any]) -> PositionEntry | None:
-    candidate = _to_decimal(position.get("market_value_base"))
-    if candidate is None:
-        candidate = _to_decimal(position.get("quantity"))
+    candidate = _snapshot_market_value(position)
     if candidate is None:
         return None
     return PositionEntry(
@@ -121,7 +141,7 @@ def _extract_values_with_issuer_from_snapshot(
     total = 0
     for position in positions:
         if not isinstance(position, dict):
-            continue
+            raise TypeError("invalid_position_row")
         position_entry = _snapshot_position_entry(position)
         if position_entry is None:
             continue
@@ -154,6 +174,18 @@ def _extract_valuation_context(raw_context: Any) -> ConcentrationValuationContex
     )
 
 
+def _market_value_valuation_context(raw_context: Any) -> ConcentrationValuationContext | None:
+    context = _extract_valuation_context(raw_context)
+    if context is None:
+        return None
+    return context.model_copy(
+        update={
+            "position_basis": "market_value_base",
+            "weight_basis": "total_market_value_base",
+        }
+    )
+
+
 __all__ = [
     "_apply_snapshot_display_names",
     "_as_datetime",
@@ -166,6 +198,7 @@ __all__ = [
     "_extract_values_with_issuer_from_snapshot",
     "_issuer_key_from_mapping",
     "_issuer_key_from_position",
+    "_market_value_valuation_context",
     "_merge_issuer_maps",
     "_to_exposure_value",
     "_to_weighted_values",

@@ -149,7 +149,6 @@ async def test_position_hhi_matches_documented_stateless_methodology_example() -
                     {"security_id": "A", "projected_market_value_base": 60},
                     {"security_id": "B", "projected_market_value_base": 25},
                     {"security_id": "C", "projected_market_value_base": 15},
-                    {"security_id": "IGNORED_MISSING"},
                 ],
                 "top_n": 2,
             },
