@@ -53,7 +53,8 @@
    - when `options.use_log_returns=false`, `r_t_used_pp = r_t_pp`;
    - when `options.use_log_returns=true`, `r_t_used_pp = ln(1 + r_t_pp / 100) * 100`.
 5. Resolve annualization factor:
-   - `AF = options.annualization_factor` when supplied;
+   - `AF = options.annualization_factor` when supplied as a positive integer; zero, negative, or
+     non-integer overrides refuse request validation before calculation;
    - otherwise `AF = 252` for `DAILY`, `52` for `WEEKLY`, and `12` for `MONTHLY`.
 6. Require at least two non-null observations.
 7. Compute sample standard deviation:

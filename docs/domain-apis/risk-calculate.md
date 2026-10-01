@@ -64,7 +64,10 @@
 - `stateless_input.metrics[]`
   - `VOLATILITY|DRAWDOWN|SHARPE|SORTINO|BETA|TRACKING_ERROR|INFORMATION_RATIO|VAR`
 - `stateless_input.options`
-  - frequency/log-return/risk-free/MAR/annualization/benchmark/VaR method config
+  - frequency/log-return/risk-free/MAR/annualization/benchmark/VaR method config; an omitted or
+    `null` annualization override uses the frequency default (`252` daily, `52` weekly, `12`
+    monthly), while a supplied override must be a positive integer and otherwise refuses `422
+    INVALID_REQUEST` before calculation.
 - `stateless_input.portfolio_open_date: date`
 - `stateless_input.returns[]: [{date, value}]`
 - `stateless_input.benchmark_returns[]: [{date, value}]` (required for benchmark-dependent metrics)

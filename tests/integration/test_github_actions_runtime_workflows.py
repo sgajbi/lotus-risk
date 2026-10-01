@@ -35,3 +35,11 @@ def test_governed_workflows_enforce_node24_artifact_runtime_posture() -> None:
         workflow = (WORKFLOW_DIR / workflow_name).read_text(encoding="utf-8")
         assert "actions/upload-artifact@v4" not in workflow, workflow_name
         assert "actions/download-artifact@v4" not in workflow, workflow_name
+
+    image_release = (WORKFLOW_DIR / "image-release.yml").read_text(encoding="utf-8")
+    assert "docker/setup-buildx-action@v4" in image_release
+    assert "docker/build-push-action@v7" in image_release
+    assert "docker/login-action@v4" in image_release
+    assert "docker/setup-buildx-action@v3" not in image_release
+    assert "docker/build-push-action@v6" not in image_release
+    assert "docker/login-action@v3" not in image_release

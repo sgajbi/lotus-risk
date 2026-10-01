@@ -104,14 +104,14 @@ def _requires_risk_free(stateful: StatefulRiskInput) -> bool:
 
 
 def _annualization_factor(options: RiskOptions) -> int:
-    return (
-        options.annualization_factor
-        or {
-            "DAILY": 252,
-            "WEEKLY": 52,
-            "MONTHLY": 12,
-        }[options.frequency]
-    )
+    override = options.annualization_factor
+    if override is not None:
+        return override
+    return {
+        "DAILY": 252,
+        "WEEKLY": 52,
+        "MONTHLY": 12,
+    }[options.frequency]
 
 
 def _as_non_empty_str(value: Any) -> str | None:

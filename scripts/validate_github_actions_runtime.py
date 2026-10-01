@@ -14,18 +14,31 @@ DEFAULT_WORKFLOWS_DIR = REPO_ROOT / ".github" / "workflows"
 ACTION_MINIMUM_MAJOR_BY_SLUG = {
     "actions/upload-artifact": 6,
     "actions/download-artifact": 7,
+    "docker/setup-buildx-action": 4,
+    "docker/build-push-action": 7,
+    "docker/login-action": 4,
 }
 
 ACTION_RUNTIME_RATIONALE_BY_SLUG = {
     "actions/upload-artifact": "v6 is the first upload-artifact major using the Node 24 runtime.",
     "actions/download-artifact": "v7 is the first download-artifact major using the Node 24 runtime.",
+    "docker/setup-buildx-action": (
+        "v4 is the first setup-buildx-action major using the Node 24 runtime."
+    ),
+    "docker/build-push-action": (
+        "v7 is the first build-push-action major using the Node 24 runtime."
+    ),
+    "docker/login-action": "v4 is the first login-action major using the Node 24 runtime.",
 }
 
 ACTION_USE_PATTERN = re.compile(
     r"""
     \buses\s*:\s*
     (?P<quote>["']?)
-    (?P<slug>actions/(?:upload|download)-artifact)
+    (?P<slug>
+        actions/(?:upload|download)-artifact
+        |docker/(?:setup-buildx-action|build-push-action|login-action)
+    )
     @
     (?P<ref>[A-Za-z0-9_.-]+)
     (?P=quote)

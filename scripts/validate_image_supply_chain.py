@@ -314,7 +314,7 @@ def validate_ci_image_release_workflow(
         "id-token: write": "keyless signing/provenance permission",
         "attestations: write": "provenance attestation permission",
         "security-events: write": "vulnerability scan upload permission",
-        "docker/build-push-action@v6": "Docker build/push action",
+        "docker/build-push-action@v7": "Docker build/push action",
         "push: false": "local-only image build before validation",
         "load: true": "locally loaded image for pre-publication scanning",
         "docker push": "post-scan CI-only image push",
