@@ -104,6 +104,16 @@ Current governed default:
 
 This is strong canonical evidence, but not a full enterprise archetype matrix.
 
+The canonical record includes one source-qualified stateful drawdown reconciliation under Risk
+issue #314: an admitted `tenant-sg` Performance returns response and the registered Risk route
+agree on portfolio and benchmark-relative drawdown when independently calculated from unit opening
+wealth. It does not certify deployment or production operation. Historical-attribution `TOTAL_RISK`
+is live-executed, but `ACTIVE_RISK` is not accepted in this runtime: Risk issue #311 records the
+bounded `424 FAILED_DEPENDENCY` response when the full consumer flow cannot establish compatible
+Performance benchmark-exposure data. Do not replace that refusal with inferred dates or treat
+direct producer rows as a complete consumer acceptance; consult the live validation matrix for the
+current owner and recheck trigger.
+
 ## Diagnostic Sources
 
 Use:
