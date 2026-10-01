@@ -27,7 +27,11 @@ Provide windowed historical risk diagnostics for PB/WM portfolios with instituti
 - Caller provides identifiers and options; lotus-risk sources portfolio and benchmark return series from lotus-performance.
 - lotus-risk resolves the longest required source window from the requested periods and sends an explicit `window` to lotus-performance unless `SI` is requested.
 - when `ROLLING_SHARPE` is requested, lotus-risk sources risk-free reference series from lotus-core.
-- when `ROLLING_SHARPE` is requested and `reporting_currency` is omitted, lotus-risk resolves portfolio/reporting currency from lotus-core core-snapshot before fetching risk-free series.
+- when `ROLLING_SHARPE` is requested and `reporting_currency` is omitted, lotus-risk resolves
+  portfolio/reporting currency from a tenant-admitted lotus-core baseline snapshot before the
+  Performance returns and Core risk-free requests. This is the same authority as stateful Risk
+  Sharpe; an explicit caller currency skips the snapshot. Missing Core currency fails as an
+  invalid upstream response, and the snapshot request is fingerprinted in lineage.
 
 ### Simulation
 

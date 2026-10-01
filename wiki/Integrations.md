@@ -109,6 +109,12 @@ snapshots and position timeseries declare `consumer_system=lotus-risk` instead o
 Performance default. A conflicting internal scope refuses before I/O. The discriminator is
 recorded at the transports and every client port.
 
+Stateful Risk Sharpe and rolling Sharpe share one currency rule: an explicit caller
+`reporting_currency` is used as supplied; otherwise a tenant-admitted Core baseline snapshot
+selects portfolio/reporting currency before Performance returns and Core risk-free requests. The
+Performance returns response is not a currency authority. A missing Core currency is an invalid
+upstream response, and the Core snapshot request is retained in lineage.
+
 Use:
 
 - `docs/domain-apis/RFC-0082-upstream-contract-family-map.md`

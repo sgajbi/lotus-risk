@@ -19,6 +19,10 @@
 - Stateless mode: caller-provided `returns`.
 - Stateful mode: `lotus-performance` portfolio return series fetched through the governed
   risk-calculate integration path.
+- For omitted stateful `reporting_currency`, a tenant-admitted `lotus-core` baseline snapshot
+  supplies the currency used for both the Performance returns request and Core risk-free series.
+  An explicit caller currency takes precedence; Performance's response does not supply currency
+  authority. Missing Core currency fails closed before return sourcing.
 - Stateful Sharpe can derive risk-free evidence through the governed risk-free source path when
   the stateful adapter receives risk-free points; the engine itself consumes only the resolved
   `options.risk_free_mode` and `options.risk_free_annual_rate`.

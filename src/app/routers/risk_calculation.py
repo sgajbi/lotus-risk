@@ -9,6 +9,7 @@ from app.dependencies.request_context import request_correlation_id, request_ten
 from app.openapi_examples import RISK_CALCULATE_EXAMPLES, stateful_request_openapi_extra
 from app.runtime.downstream_clients import RuntimeDownstreamClients, runtime_downstream_clients
 from app.services.endpoint_observation import observed_endpoint
+from app.services.risk.helpers import requires_risk_free
 from app.services.risk_engine import calculate_risk
 from app.services.risk_mode_adapter import calculate_risk_stateful
 
@@ -64,9 +65,9 @@ async def analytics_risk_calculate(
             operation=lambda: calculate_risk_stateful(
                 stateful_input,
                 performance_client=runtime_clients.lotus_performance(),
-                core_client=(
-                    runtime_clients.lotus_core() if "SHARPE" in stateful_input.metrics else None
-                ),
+                core_client=runtime_clients.lotus_core()
+                if requires_risk_free(stateful_input.metrics)
+                else None,
                 authority=authority,
             ),
         )

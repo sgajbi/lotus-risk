@@ -1,8 +1,27 @@
 from collections.abc import Iterator
 from contextlib import contextmanager
 
+import pytest
+
 from app.contracts.risk import RiskCalculationRequest
+from app.contracts.risk_options import RiskOptions
 from app.services.risk import calculation_orchestrator
+
+
+@pytest.mark.parametrize(
+    ("frequency", "override", "expected"),
+    [
+        ("DAILY", None, 252),
+        ("WEEKLY", None, 52),
+        ("MONTHLY", None, 12),
+        ("MONTHLY", 260, 260),
+    ],
+)
+def test_shared_risk_annualization_options(
+    frequency: str, override: int | None, expected: int
+) -> None:
+    options = RiskOptions.model_validate({"frequency": frequency, "annualization_factor": override})
+    assert calculation_orchestrator.annualization_factor_for_options(options) == expected
 
 
 def test_period_calculation_reports_requested_metrics_through_timing_port() -> None:

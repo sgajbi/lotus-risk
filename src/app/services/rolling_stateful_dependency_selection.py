@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from app.contracts.downstream_authority import DownstreamAuthority
 from app.contracts.rolling import ROLLING_BENCHMARK_METRICS, RollingStatefulInput
+from app.services.core_portfolio_currency import resolve_portfolio_reporting_currency
 from app.services.rolling_metric_series import ROLLING_SHARPE_METRIC
 from app.services.rolling_stateful_models import LotusCoreClientProtocol
 
@@ -13,6 +14,7 @@ class RollingStatefulDependencySelection:
     stateful: RollingStatefulInput
     include_risk_free: bool
     reporting_currency: str | None
+    core_snapshot_request: dict[str, object] | None
 
 
 def requires_risk_free(stateful: RollingStatefulInput) -> bool:
@@ -23,47 +25,6 @@ def requires_benchmark(stateful: RollingStatefulInput) -> bool:
     return any(metric in ROLLING_BENCHMARK_METRICS for metric in stateful.rolling_options.metrics)
 
 
-async def _resolve_reporting_currency(
-    *,
-    stateful: RollingStatefulInput,
-    include_risk_free: bool,
-    core_client: LotusCoreClientProtocol | None,
-    authority: DownstreamAuthority,
-) -> str | None:
-    if stateful.reporting_currency:
-        return stateful.reporting_currency
-    if not include_risk_free:
-        return None
-    if core_client is None:
-        raise ValueError(
-            "reporting_currency is required for rolling Sharpe in stateful mode when lotus-core is unavailable"
-        )
-
-    snapshot = await core_client.get_core_snapshot(
-        portfolio_id=stateful.portfolio_id,
-        request_payload={
-            "snapshot_mode": "BASELINE",
-            "as_of_date": stateful.as_of_date.isoformat(),
-            "sections": ["portfolio_totals"],
-        },
-        authority=authority,
-    )
-    valuation_context = snapshot.get("valuation_context")
-    if not isinstance(valuation_context, dict):
-        # The upstream JSON value violates its domain contract; this is not a caller type error.
-        raise ValueError(  # noqa: TRY004
-            "lotus-core core-snapshot payload missing valuation_context"
-        )
-    resolved_reporting_currency = valuation_context.get("reporting_currency")
-    if not isinstance(resolved_reporting_currency, str) or not resolved_reporting_currency:
-        resolved_reporting_currency = valuation_context.get("portfolio_currency")
-    if not isinstance(resolved_reporting_currency, str) or not resolved_reporting_currency:
-        raise ValueError(
-            "lotus-core core-snapshot payload missing portfolio/reporting currency required for rolling Sharpe"
-        )
-    return resolved_reporting_currency
-
-
 async def resolve_stateful_dependency_selection(
     stateful: RollingStatefulInput,
     *,
@@ -71,18 +32,21 @@ async def resolve_stateful_dependency_selection(
     authority: DownstreamAuthority,
 ) -> RollingStatefulDependencySelection:
     include_risk_free = requires_risk_free(stateful)
-    resolved_reporting_currency = await _resolve_reporting_currency(
-        stateful=stateful,
-        include_risk_free=include_risk_free,
+    resolved = await resolve_portfolio_reporting_currency(
+        portfolio_id=stateful.portfolio_id,
+        as_of_date=stateful.as_of_date,
+        requested_currency=stateful.reporting_currency,
+        requires_risk_free=include_risk_free,
         core_client=core_client,
         authority=authority,
     )
-    if resolved_reporting_currency != stateful.reporting_currency:
-        stateful = stateful.model_copy(update={"reporting_currency": resolved_reporting_currency})
+    if resolved.reporting_currency != stateful.reporting_currency:
+        stateful = stateful.model_copy(update={"reporting_currency": resolved.reporting_currency})
     return RollingStatefulDependencySelection(
         stateful=stateful,
         include_risk_free=include_risk_free,
-        reporting_currency=resolved_reporting_currency,
+        reporting_currency=resolved.reporting_currency,
+        core_snapshot_request=resolved.snapshot_request,
     )
 
 

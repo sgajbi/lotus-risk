@@ -156,6 +156,8 @@ def test_calculate_risk_stateful_applies_sourced_risk_free_for_sharpe() -> None:
 
     assert performance_client.request_payload is not None
     assert performance_client.request_payload["series_selection"]["include_risk_free"] is False
+    assert performance_client.request_payload["reporting_currency"] == "USD"
+    assert core_client.snapshot_calls == []
     assert core_client.risk_free_calls
     risk_free_request = core_client.risk_free_calls[0]["request_payload"]
     assert risk_free_request == {
@@ -184,7 +186,7 @@ def test_calculate_risk_stateful_applies_sourced_risk_free_for_sharpe() -> None:
     assert periodic_risk_free_rate > 0
 
 
-def test_calculate_risk_stateful_uses_source_currency_when_reporting_currency_missing() -> None:
+def test_calculate_risk_stateful_uses_core_currency_not_uncontracted_returns_context() -> None:
     stateful = _stateful_input().model_copy(
         update={"metrics": ["SHARPE"], "reporting_currency": None}
     )
@@ -195,9 +197,12 @@ def test_calculate_risk_stateful_uses_source_currency_when_reporting_currency_mi
             ("2025-01-06", "0.0030"),
         ],
     )
-    source_response["valuation_context"] = {"reporting_currency": "EUR"}
+    source_response["valuation_context"] = {"reporting_currency": "CHF"}
     performance_client = RecordingLotusPerformanceClient(response_payload=source_response)
-    core_client = RecordingLotusCoreReferenceClient(risk_free_response=_risk_free_payload())
+    core_client = RecordingLotusCoreReferenceClient(
+        snapshot_response={"valuation_context": {"reporting_currency": "EUR"}},
+        risk_free_response=_risk_free_payload(),
+    )
 
     response = asyncio.run(
         calculate_risk_stateful(
@@ -210,7 +215,42 @@ def test_calculate_risk_stateful_uses_source_currency_when_reporting_currency_mi
 
     risk_free_request = cast(dict[str, Any], core_client.risk_free_calls[0]["request_payload"])
     assert risk_free_request["currency"] == "EUR"
+    assert performance_client.request_payload is not None
+    assert performance_client.request_payload["reporting_currency"] == "EUR"
+    assert core_client.snapshot_calls[0]["tenant_id"] == "tenant-a"
     assert response.scope.reporting_currency == "EUR"
+    assert set(response.metadata.upstream_request_fingerprints) == {
+        "lotus-performance:/integration/returns/series",
+        "lotus-core:/integration/portfolios/{portfolio_id}/core-snapshot",
+        "lotus-core:/integration/reference/risk-free-series",
+    }
+
+
+def test_calculate_risk_stateful_refuses_missing_core_currency_before_returns() -> None:
+    stateful = _stateful_input().model_copy(
+        update={"metrics": ["SHARPE"], "reporting_currency": None}
+    )
+    performance_client = RecordingLotusPerformanceClient(
+        response_payload=build_returns_series_response(portfolio_returns=[("2025-01-02", "0.0100")])
+    )
+    core_client = RecordingLotusCoreReferenceClient(
+        snapshot_response={"valuation_context": {"reporting_currency": "  "}}
+    )
+
+    with pytest.raises(UpstreamServiceError) as exc_info:
+        asyncio.run(
+            calculate_risk_stateful(
+                stateful,
+                performance_client=performance_client,
+                core_client=core_client,
+                authority=admitted_test_authority("corr-risk-missing-currency"),
+            )
+        )
+
+    assert exc_info.value.code == "UPSTREAM_INVALID_RESPONSE"
+    assert exc_info.value.status_code == 502
+    assert performance_client.calls == []
+    assert core_client.risk_free_calls == []
 
 
 def test_calculate_risk_stateful_sources_risk_free_after_si_returns_resolve_window() -> None:
