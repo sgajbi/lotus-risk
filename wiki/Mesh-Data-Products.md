@@ -75,8 +75,8 @@ time-under-water drawdown values.
 `ConcentrationRiskReport:v1` now has auditable source-owner methodology truth for position HHI,
 top-position weight, top-N cumulative weight, issuer HHI, and top issuer weight.
 The methodology is tied to the implemented `/analytics/risk/concentration` engine and states the
-stateless, stateful, and simulation source paths, positive numeric value extraction, market-value
-versus quantity fallback precedence, decimal position-weight construction, conventional `0..10000`
+stateless, stateful, and simulation source paths, positive numeric value extraction, an explicit
+whole-book market-value versus quantity-proxy basis, decimal position-weight construction, conventional `0..10000`
 Herfindahl-Hirschman scaling for HHI, decimal `0..1` top-position and top-N cumulative weight
 output, six-decimal response rounding, proposed-state fallback to current values when projected
 values are unavailable, deterministic top-position driver selection, top-N cumulative summation,

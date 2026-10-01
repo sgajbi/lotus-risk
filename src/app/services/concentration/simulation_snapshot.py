@@ -16,8 +16,8 @@ from app.services.concentration.parsing import (
     _apply_snapshot_display_names,
     _caller_issuer_map,
     _extract_issuer_map,
-    _extract_valuation_context,
     _extract_values_with_issuer_from_snapshot,
+    _market_value_valuation_context,
     _merge_issuer_maps,
 )
 from app.services.concentration.upstream_contracts import invalid_core_snapshot_payload
@@ -79,14 +79,20 @@ def simulation_snapshot_state(
             snapshot_mode="SIMULATION",
             reason="invalid_positions_projected",
         )
-    baseline_positions, baseline_issuers, covered_baseline, total_baseline = (
-        _extract_values_with_issuer_from_snapshot(
-            sections.get("positions_baseline"), issuer_by_security
+    try:
+        baseline_positions, baseline_issuers, covered_baseline, total_baseline = (
+            _extract_values_with_issuer_from_snapshot(
+                sections.get("positions_baseline"), issuer_by_security
+            )
         )
-    )
-    projected_positions, projected_issuers, covered_projected, total_projected = (
-        _extract_values_with_issuer_from_snapshot(raw_projected_positions, issuer_by_security)
-    )
+        projected_positions, projected_issuers, covered_projected, total_projected = (
+            _extract_values_with_issuer_from_snapshot(raw_projected_positions, issuer_by_security)
+        )
+    except (TypeError, ValueError) as error:
+        raise invalid_core_snapshot_payload(
+            snapshot_mode="SIMULATION",
+            reason=str(error),
+        ) from error
 
     return SimulationSnapshotState(
         baseline_positions=baseline_positions,
@@ -98,7 +104,7 @@ def simulation_snapshot_state(
         total_baseline=total_baseline,
         total_projected=total_projected,
         issuer_note=issuer_note,
-        valuation_context=_extract_valuation_context(snapshot.get("valuation_context")),
+        valuation_context=_market_value_valuation_context(snapshot.get("valuation_context")),
     )
 
 

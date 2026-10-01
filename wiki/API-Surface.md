@@ -123,6 +123,13 @@ For stateless concentration, omitting `projected_positions` means unchanged for 
 An explicitly supplied empty or all-zero projected book is a full liquidation proposal: proposed
 HHI and weights are zero, proposed coverage counts are zero, and no current holding is reused.
 
+Each non-empty stateless concentration book has one explicit exposure basis: complete market
+values, or a complete caller-supplied quantity proxy. The API rejects partial valuation books and
+cross-basis current/proposed comparisons rather than combining units. `valuation_context` labels
+the returned basis; `quantity_proxy` is not a reporting-currency valuation. Stateful and
+simulation Core snapshots require `market_value_base`; a missing value returns a bounded upstream
+invalid-response error rather than falling back to quantity.
+
 ### Weekly and monthly source-bucket coverage
 
 For weekly/monthly risk metrics, an empty calendar bucket between supplied source buckets is missing

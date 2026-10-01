@@ -5,7 +5,12 @@ from dataclasses import dataclass
 from app.contracts.concentration import (
     ConcentrationInputMode,
     ConcentrationRequest,
+    ConcentrationValuationContext,
     StatelessConcentrationInput,
+)
+from app.contracts.concentration_stateless_inputs import (
+    StatelessExposureBasis,
+    stateless_exposure_basis,
 )
 from app.services.concentration.datamodels import (
     ConcentrationComputationInput,
@@ -78,6 +83,7 @@ def _stateless_computation_input(
     weighted_state: _WeightedConcentrationState,
     correlation_id: str | None,
 ) -> ConcentrationComputationInput:
+    exposure_basis = stateless_exposure_basis(stateless_input)
     return ConcentrationComputationInput(
         input_mode=ConcentrationInputMode.STATELESS,
         current_positions=weighted_state.current_positions,
@@ -93,6 +99,7 @@ def _stateless_computation_input(
             "projected_positions" not in stateless_input.model_fields_set
         ),
         issuer_note=weighted_state.issuer_note,
+        valuation_context=_stateless_valuation_context(exposure_basis),
         metadata=build_metadata(
             request=request,
             correlation_id=correlation_id,
@@ -100,6 +107,22 @@ def _stateless_computation_input(
             include_zero_quantity_positions=None,
         ),
     )
+
+
+def _stateless_valuation_context(
+    exposure_basis: StatelessExposureBasis | None,
+) -> ConcentrationValuationContext | None:
+    if exposure_basis == StatelessExposureBasis.MARKET_VALUE_BASE:
+        return ConcentrationValuationContext(
+            position_basis="market_value_base",
+            weight_basis="total_market_value_base",
+        )
+    if exposure_basis == StatelessExposureBasis.QUANTITY_PROXY:
+        return ConcentrationValuationContext(
+            position_basis="quantity_proxy",
+            weight_basis="total_quantity_proxy",
+        )
+    return None
 
 
 async def resolve_stateless(

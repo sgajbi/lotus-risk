@@ -34,12 +34,11 @@
 
 ## Unit Conventions
 - Position inputs are portfolio amount-like values, not return percentages.
-- Stateless current rows use `market_value_base` when present; otherwise they fall back to
-  `quantity`.
-- Stateless projected rows use `projected_market_value_base` when present; otherwise they fall
-  back to `proposed_quantity`.
-- Stateful and simulation snapshot rows use `market_value_base` when present; otherwise they fall
-  back to `quantity`.
+- Every non-empty stateless state uses one complete basis: market values, or an explicitly labelled
+  quantity proxy. Mixed rows and cross-state bases are rejected with `422`.
+- Explicit zero market values remain market-value rows and never fall back to quantity.
+- Stateful and simulation snapshot rows require `market_value_base`; missing or malformed source
+  values return `UPSTREAM_INVALID_RESPONSE` rather than using quantity.
 - Values are parsed through Decimal from the source value's string representation. Missing,
   non-numeric, zero, and negative values are excluded before issuer aggregation and coverage
   counting.
@@ -122,8 +121,7 @@ missing or invalid `positions_projected` is an upstream invalid response, while 
    - simulation: required lotus-core projected positions; an explicit empty list remains empty.
 4. Resolve issuer identities from stateless row fields, caller `issuer_mappings`, and/or lotus-core
    enrichment according to grouping and enrichment policy.
-5. Parse each state's preferred value field, fall back to the secondary value field, and keep only
-   positive numeric values.
+5. Parse only each state's established basis field and keep positive numeric values.
 6. Aggregate only covered position values by issuer bucket.
 7. Normalize current and proposed issuer aggregates into covered-issuer weights.
 8. Select current and proposed top issuer weight from the maximum covered-issuer weight.
@@ -137,8 +135,8 @@ missing or invalid `positions_projected` is an upstream invalid response, while 
     alongside top issuer weight.
 
 ## Validation and Failure Behavior
-- Missing, non-numeric, zero, and negative values are excluded before issuer aggregation and before
-  issuer coverage counts.
+- After one basis is established, zero and negative values are excluded before issuer aggregation
+  and issuer coverage counts; missing or non-numeric declared-basis values are refused.
 - Positions without resolved issuer identity are excluded from top issuer weight but included in
   issuer coverage totals.
 - Empty current issuer buckets produce `issuer_concentration.top_issuer_weight_current = 0.0` and

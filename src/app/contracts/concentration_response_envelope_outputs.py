@@ -45,7 +45,10 @@ class ConcentrationResponse(BaseModel):
     )
     valuation_context: ConcentrationValuationContext | None = Field(
         default=None,
-        description="Valuation context sourced from lotus-core for stateful/simulation mode.",
+        description=(
+            "Declared valuation or quantity-proxy basis for concentration weights; stateful and "
+            "simulation context is sourced from lotus-core."
+        ),
         json_schema_extra={"example": CONCENTRATION_VALUATION_CONTEXT_EXAMPLE},
     )
     metadata: ConcentrationMetadata | None = Field(

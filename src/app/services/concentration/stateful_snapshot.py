@@ -20,8 +20,8 @@ from app.services.concentration.parsing import (
     _apply_snapshot_display_names,
     _caller_issuer_map,
     _extract_issuer_map,
-    _extract_valuation_context,
     _extract_values_with_issuer_from_snapshot,
+    _market_value_valuation_context,
     _merge_issuer_maps,
 )
 from app.services.concentration.ports import LotusCoreClientProtocol
@@ -95,17 +95,23 @@ async def fetch_stateful_snapshot_state(
         sections=sections,
         issuer_by_security=issuer_by_security,
         issuer_note=issuer_note,
-        valuation_context=_extract_valuation_context(snapshot.get("valuation_context")),
+        valuation_context=_market_value_valuation_context(snapshot.get("valuation_context")),
     )
 
 
 def stateful_baseline_values(
     snapshot_state: StatefulSnapshotState,
 ) -> StatefulBaselineValues:
-    positions, issuers, covered_count, total_count = _extract_values_with_issuer_from_snapshot(
-        snapshot_state.sections.get("positions_baseline"),
-        snapshot_state.issuer_by_security,
-    )
+    try:
+        positions, issuers, covered_count, total_count = _extract_values_with_issuer_from_snapshot(
+            snapshot_state.sections.get("positions_baseline"),
+            snapshot_state.issuer_by_security,
+        )
+    except (TypeError, ValueError) as error:
+        raise invalid_core_snapshot_payload(
+            snapshot_mode="BASELINE",
+            reason=str(error),
+        ) from error
     return StatefulBaselineValues(
         positions=positions,
         issuers=issuers,

@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-09-30T22:34:24.748993+00:00",
+  "generatedAt": "2026-10-01T02:18:29.118037+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.affected_portfolios",
@@ -4456,7 +4456,7 @@
       "semanticId": "lotus.valuation_context",
       "canonicalTerm": "valuation_context",
       "preferredName": "valuation_context",
-      "description": "Valuation context sourced from lotus-core for stateful/simulation mode.",
+      "description": "Declared valuation or quantity-proxy basis for concentration weights; stateful and simulation context is sourced from lotus-core.",
       "example": {
         "portfolio_currency": "EUR",
         "position_basis": "market_value_base",

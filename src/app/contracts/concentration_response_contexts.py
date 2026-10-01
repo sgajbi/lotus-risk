@@ -16,12 +16,15 @@ class ConcentrationValuationContext(BaseModel):
     )
     position_basis: str | None = Field(
         default=None,
-        description="Position basis used by lotus-core snapshot response.",
+        description=(
+            "Declared position basis used by this calculation. Stateless quantity_proxy is "
+            "a caller-supplied proxy, not a reporting-currency valuation."
+        ),
         json_schema_extra={"example": "market_value_base"},
     )
     weight_basis: str | None = Field(
         default=None,
-        description="Weight basis used by lotus-core snapshot response.",
+        description="Declared denominator basis used to normalize concentration weights.",
         json_schema_extra={"example": "total_market_value_base"},
     )
 
