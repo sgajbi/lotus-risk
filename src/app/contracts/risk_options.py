@@ -25,7 +25,10 @@ class VaROptions(BaseModel):
     horizon_days: int = Field(
         default=1,
         gt=0,
-        description="Time horizon (in days) used for VaR scaling.",
+        description=(
+            "Target horizon in days for square-root-of-time scaling from the daily VaR/ES "
+            "distribution."
+        ),
         json_schema_extra={"example": 1},
     )
     include_expected_shortfall: bool = Field(
@@ -38,7 +41,10 @@ class VaROptions(BaseModel):
 class RiskOptions(BaseModel):
     frequency: Literal["DAILY", "WEEKLY", "MONTHLY"] = Field(
         default="DAILY",
-        description="Return sampling frequency.",
+        description=(
+            "Return sampling frequency for resampled metrics. VaR and expected shortfall always "
+            "use the retained daily return distribution and expose that basis in metric details."
+        ),
         json_schema_extra={"example": "DAILY"},
     )
     annualization_factor: int | None = Field(

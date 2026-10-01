@@ -11,8 +11,9 @@
 ## Inputs
 - Portfolio return observations in percentage points.
 - Request periods resolved by the risk calculation contract.
-- `options.frequency` for optional return compounding before metric calculation.
-- `options.use_log_returns` for optional log-return transformation after frequency compounding.
+- `options.frequency` for optional return compounding of non-VaR metrics in the same request.
+- `options.use_log_returns` for optional log-return transformation of the retained daily VaR
+  distribution.
 - `options.var.method`: `HISTORICAL`, `GAUSSIAN`, or `CORNISH_FISHER`.
 - `options.var.confidence`: confidence level, strictly between `0` and `1`.
 - `options.var.horizon_days`: positive integer horizon for square-root-of-time scaling.
@@ -26,7 +27,8 @@
 
 ## Unit Conventions
 - Return inputs are percentage points: `1.0` means `+1%`.
-- Frequency resampling compounds percentage-point returns before metric calculation:
+- Frequency resampling compounds percentage-point returns for metrics that use the requested
+  frequency:
   `r_resampled_pp = ((product(1 + r_raw_pp / 100)) - 1) * 100`.
 - When log returns are enabled, the transformed return remains in percentage points:
   `r_log_pp = ln(1 + r_pp / 100) * 100`.
@@ -34,12 +36,17 @@
   `details.expected_shortfall` are signed return thresholds in percentage points.
 - Negative values indicate lower-tail loss thresholds. Positive values can occur when the selected
   period's lower-tail return threshold remains positive.
+- VaR and expected shortfall always use the retained daily return distribution. `WEEKLY` and
+  `MONTHLY` must not relabel compounded weekly/monthly observations as one-day losses.
+- `details.sampling_frequency` is therefore always `DAILY` for successful VaR/ES, while
+  `details.base_horizon_days=1`, `details.horizon_days`, and `details.horizon_scale_factor`
+  declare the daily base and requested target horizon.
 
 ## Variable Dictionary
 - `t`: observation index in chronological order.
 - `r_raw_t_pp`: raw portfolio return at `t`, in percentage points.
-- `r_used_t_pp`: portfolio return used by the metric after frequency compounding and optional
-  log-return transformation, in percentage points.
+- `r_used_t_pp`: retained daily portfolio return used by VaR/ES after optional daily log-return
+  transformation, in percentage points.
 - `N`: count of portfolio observations used by the metric.
 - `c`: confidence level from `options.var.confidence`.
 - `alpha`: tail probability, `1 - c`.
@@ -60,13 +67,12 @@
 ## Methodology and Formulas
 1. Resolve the requested period window.
 2. Filter portfolio returns to the period window.
-3. Apply `options.frequency`:
-   - `DAILY`: use daily observations as supplied.
-   - `WEEKLY`: compound observations into Friday-ending weekly returns.
-   - `MONTHLY`: compound observations into month-end returns.
-4. Apply optional log-return transformation:
-   - when `use_log_returns=false`, `r_used_t_pp = r_resampled_t_pp`;
-   - when `use_log_returns=true`, `r_used_t_pp = ln(1 + r_resampled_t_pp / 100) * 100`.
+3. Retain the daily observation distribution for VaR/ES regardless of `options.frequency`.
+   Weekly/monthly compounding remains applicable to other metrics in the same request, not to the
+   day-based VaR/ES distribution.
+4. Apply optional daily log-return transformation:
+   - when `use_log_returns=false`, `r_used_t_pp = r_raw_t_pp`;
+   - when `use_log_returns=true`, `r_used_t_pp = ln(1 + r_raw_t_pp / 100) * 100`.
 5. Compute tail probability:
    `alpha = 1 - c`.
 6. Compute one-day base VaR using the selected method:
@@ -89,9 +95,10 @@
 ## Step-by-Step Computation
 1. Resolve the period start/end dates from the request period and portfolio open date.
 2. Select portfolio returns within the resolved period.
-3. Compound returns to the requested frequency when frequency is not `DAILY`.
-4. Apply optional log-return transformation.
-5. Require at least two observations after filtering, frequency compounding, and optional
+3. Retain daily returns for VaR/ES even when other requested metrics use weekly/monthly
+   compounding.
+4. Apply optional daily log-return transformation.
+5. Require at least two observations after filtering and optional
    transformation; `CORNISH_FISHER` additionally requires at least four observations because its
    sample skew and excess-kurtosis estimators are undefined below that boundary.
 6. Read VaR method, confidence, horizon days, and expected-shortfall flag.
@@ -99,9 +106,9 @@
 8. Compute `horizon_scale_factor = sqrt(horizon_days)`.
 9. Compute `metrics.VAR.value = base_var * horizon_scale_factor`.
 10. Count tail observations where `r_used_t_pp <= base_var`.
-11. Populate core details: method, confidence, tail probability, base horizon, horizon days,
-    horizon scale method, horizon scale factor, expected-shortfall flag, base VaR, observation
-    count, and tail observation count.
+11. Populate core details: method, confidence, tail probability, `sampling_frequency=DAILY`, base
+    horizon, horizon days, horizon scale method, horizon scale factor, expected-shortfall flag,
+    base VaR, observation count, and tail observation count.
 12. When expected shortfall is enabled, compute and populate base expected shortfall,
     expected-shortfall observation count, and horizon-scaled expected shortfall.
 
@@ -112,7 +119,7 @@
   An explicit zero is retained; leading/trailing partial buckets remain eligible because Risk does
   not infer an unprovided daily market calendar or source cadence. This qualification is applied
   before the method-specific estimator sufficiency checks.
-- Fewer than two portfolio observations after period filtering, frequency compounding, and optional
+- Fewer than two daily portfolio observations after period filtering and optional
   transformation return `metrics.VAR.value = null` with `details.error = "Insufficient data"`.
 - `CORNISH_FISHER` with two or three observations after that same preparation returns
   `metrics.VAR.value = null` with `details.error = "Insufficient data"`; it never reports a null
@@ -124,7 +131,7 @@
   validation.
 - `options.var.horizon_days` must be positive by request-contract validation.
 - Non-numeric return values are rejected by request validation before engine math.
-- When `options.use_log_returns=true`, any compounded portfolio return less than or equal to
+- When `options.use_log_returns=true`, any retained daily portfolio return less than or equal to
   `-100%` returns `metrics.VAR.value = null` with
   `details.error = "Log returns are undefined for returns less than or equal to -100%"`.
 - Expected-shortfall tail-set empty posture is deterministic: `base_expected_shortfall` falls back
@@ -149,6 +156,7 @@
 - `results[period].metrics.VAR.details.tail_probability`
 - `results[period].metrics.VAR.details.base_horizon_days`
 - `results[period].metrics.VAR.details.horizon_days`
+- `results[period].metrics.VAR.details.sampling_frequency`
 - `results[period].metrics.VAR.details.horizon_scale_method`
 - `results[period].metrics.VAR.details.horizon_scale_factor`
 - `results[period].metrics.VAR.details.include_expected_shortfall`
@@ -167,6 +175,8 @@ Consumer guidance:
   threshold is positive.
 - Downstream consumers must preserve source-owned signed VaR and expected-shortfall values rather
   than recalculating or changing sign conventions locally.
+- Consumers must treat `sampling_frequency=DAILY` as the VaR/ES source distribution even when
+  response metadata records `WEEKLY` or `MONTHLY` for other resampled metrics.
 
 ## Worked Example
 Assume:
@@ -203,6 +213,7 @@ Output mapping:
 - `results[period].metrics.VAR.details.tail_probability = 0.0500000000`
 - `results[period].metrics.VAR.details.base_horizon_days = 1`
 - `results[period].metrics.VAR.details.horizon_days = 4`
+- `results[period].metrics.VAR.details.sampling_frequency = "DAILY"`
 - `results[period].metrics.VAR.details.horizon_scale_method = "SQRT_TIME"`
 - `results[period].metrics.VAR.details.horizon_scale_factor = 2.0000000000`
 - `results[period].metrics.VAR.details.include_expected_shortfall = true`

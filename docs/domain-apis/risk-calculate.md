@@ -166,6 +166,13 @@ log transformation and estimator sufficiency. Benchmark-dependent metrics apply 
 both portfolio and benchmark series before alignment. `DRAWDOWN` continues to use the raw dated
 portfolio series and is not made invalid by this statistical-series qualification.
 
+VaR and expected shortfall are day-horizon metrics. They retain the daily portfolio-return
+distribution regardless of the request's `WEEKLY` or `MONTHLY` option, apply optional log returns
+to that daily distribution, and publish `details.sampling_frequency = "DAILY"` with the explicit
+base/target horizon and scale factor. Risk therefore never calls a compounded weekly/monthly return
+a one-day VaR observation. A source-bucket gap still fails closed before affected metric
+calculation; this policy does not invent missing daily source evidence.
+
 ## Alignment Assessment
 
 - Bounded context ownership: aligned (`lotus-risk` is correct owner per RFC-0065).
