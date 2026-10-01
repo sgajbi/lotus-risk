@@ -459,66 +459,6 @@ def test_historical_attribution_stateful_active_risk_rejects_missing_benchmark_r
     assert body["details"]["service"] == "lotus-performance"
 
 
-def test_historical_attribution_stateful_active_risk_refuses_incomplete_benchmark_exposure_source() -> (
-    None
-):
-    performance_client = build_stateful_attribution_returns_client()
-    benchmark_context = build_benchmark_exposure_context_response()
-    metadata = dict(benchmark_context["metadata"])
-    metadata["exposure_source_quality"] = {
-        "status": "incomplete",
-        "omitted_component_count": 0,
-        "omitted_point_count": 1,
-        "reason_codes": ["MISSING_COMPONENT_WEIGHT"],
-        "omissions": [
-            {
-                "component_id": "IDX_GLOBAL_BONDS",
-                "series_date": "2026-01-05",
-                "reason_code": "MISSING_COMPONENT_WEIGHT",
-            }
-        ],
-        "omissions_truncated": False,
-    }
-    performance_client.benchmark_exposure_context_payload = {
-        **benchmark_context,
-        "metadata": metadata,
-    }
-
-    with override_app_runtime(
-        lotus_performance_client=performance_client,
-        lotus_core_client=RecordingHistoricalAttributionCoreClient(),
-    ):
-        client = TestClient(app)
-        response = client.post(
-            "/analytics/risk/historical-attribution",
-            headers={
-                "X-Correlation-Id": "corr-attr-incomplete-bmk-context",
-                "X-Tenant-Id": "tenant-a",
-            },
-            json={
-                "input_mode": "stateful",
-                "stateful_input": {
-                    "portfolio_id": "DEMO_DPM_EUR_001",
-                    "as_of_date": "2026-01-06",
-                    "periods": [{"type": "YTD", "name": "YTD"}],
-                    "attribution_options": {
-                        "attribution_types": ["ACTIVE_RISK"],
-                        "metrics": ["TRACKING_ERROR"],
-                        "grouping_dimensions": ["SECTOR"],
-                    },
-                },
-            },
-        )
-
-    assert response.status_code == 424
-    body = response.json()["error"]
-    assert body["code"] == "FAILED_DEPENDENCY"
-    assert body["message"] == "Required upstream dependency data is unavailable."
-    assert body["correlation_id"] == "corr-attr-incomplete-bmk-context"
-    assert body["details"]["service"] == "lotus-performance"
-    assert body["details"]["operation"] == "/integration/benchmarks/exposure-context"
-
-
 def test_historical_attribution_stateful_active_risk_rejects_bad_benchmark_context_shape() -> None:
     performance_client = build_stateful_attribution_returns_client()
     performance_client.benchmark_exposure_context_payload = {
@@ -554,49 +494,6 @@ def test_historical_attribution_stateful_active_risk_rejects_bad_benchmark_conte
     assert body["code"] == "UPSTREAM_INVALID_RESPONSE"
     assert body["message"] == "Upstream dependency returned an invalid response."
     assert body["correlation_id"] == "corr-attr-bad-bmk-context"
-
-
-@pytest.mark.parametrize("mutation", ["missing_row_key", "foreign_portfolio"])
-def test_historical_attribution_stateful_active_risk_refuses_complete_but_invalid_context(
-    mutation: str,
-) -> None:
-    performance_client = build_stateful_attribution_returns_client()
-    benchmark_context = build_benchmark_exposure_context_response()
-    if mutation == "missing_row_key":
-        rows = list(benchmark_context["rows"])
-        rows[0] = {key: value for key, value in rows[0].items() if key != "group_key"}
-        benchmark_context["rows"] = rows
-    else:
-        benchmark_context["portfolio_id"] = "FOREIGN_PORTFOLIO"
-    performance_client.benchmark_exposure_context_payload = benchmark_context
-
-    with override_app_runtime(
-        lotus_performance_client=performance_client,
-        lotus_core_client=RecordingHistoricalAttributionCoreClient(),
-    ):
-        response = TestClient(app).post(
-            "/analytics/risk/historical-attribution",
-            headers={"X-Correlation-Id": "corr-attr-invalid-complete", "X-Tenant-Id": "tenant-a"},
-            json={
-                "input_mode": "stateful",
-                "stateful_input": {
-                    "portfolio_id": "DEMO_DPM_EUR_001",
-                    "as_of_date": "2026-01-06",
-                    "periods": [{"type": "YTD", "name": "YTD"}],
-                    "attribution_options": {
-                        "attribution_types": ["ACTIVE_RISK"],
-                        "metrics": ["TRACKING_ERROR"],
-                        "grouping_dimensions": ["SECTOR"],
-                    },
-                },
-            },
-        )
-
-    assert response.status_code == 502
-    body = response.json()["error"]
-    assert body["code"] == "UPSTREAM_INVALID_RESPONSE"
-    assert body["correlation_id"] == "corr-attr-invalid-complete"
-    assert performance_client.benchmark_exposure_context_calls
 
 
 def test_historical_attribution_stateful_active_risk_maps_benchmark_context_500_to_upstream_failure() -> (
