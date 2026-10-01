@@ -61,6 +61,11 @@ def _record() -> ScenarioEvaluationJobRecord:
         status=ScenarioEvaluationJobStatus.QUEUED,
         actor_id="advisor-a",
         correlation_id="correlation-a",
+        claim_token=None,
+        lease_expires_at=None,
+        attempt_count=0,
+        failure_code=None,
+        failure_detail=None,
         submitted_at=dt.datetime(2026, 5, 3, 9, 30, tzinfo=dt.UTC),
         expires_at=dt.datetime(2026, 5, 6, 9, 30, tzinfo=dt.UTC),
     )
@@ -245,8 +250,8 @@ def test_status_mapping_is_tenant_scoped_and_read_store_failure_is_reported(
         f"sqlite:///{(tmp_path / 'unmigrated.db').as_posix()}",
     )
     with TestClient(app) as client:
-        response = client.get(
+        http_response = client.get(
             f"/analytics/risk/regime-scenario-pack/jobs/{store.record.job_id}",
             headers={"X-Tenant-Id": "tenant-a"},
         )
-    assert response.status_code == 503
+    assert http_response.status_code == 503

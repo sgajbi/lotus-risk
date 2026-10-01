@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import datetime as dt
 import json
 import os
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -189,6 +192,72 @@ def test_job_admission_refuses_an_unmigrated_configured_store(
     assert "not migrated or reachable" in response.json()["error"]["message"]
 
 
+def test_expired_claim_is_recovered_with_a_new_token_and_stale_failure_is_fenced(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    _migrated_database(tmp_path, monkeypatch)
+    headers = {"X-Tenant-Id": "tenant-a", "Idempotency-Key": "scenario-job-claim"}
+    with TestClient(app) as client:
+        admitted = client.post(
+            "/analytics/risk/regime-scenario-pack/jobs", json=_payload(), headers=headers
+        )
+    assert admitted.status_code == 202
+
+    from app.scenario_jobs.store import SqlAlchemyScenarioJobStore
+
+    store = SqlAlchemyScenarioJobStore(os.environ["LOTUS_RISK_SCENARIO_JOB_DATABASE_URL"])
+    claimed_at = dt.datetime(2026, 5, 3, 9, 30, tzinfo=dt.UTC)
+    first_claim = store.claim_next(
+        now=claimed_at,
+        lease_expires_at=claimed_at + dt.timedelta(minutes=5),
+    )
+    assert first_claim is not None
+    assert first_claim.status.value == "RUNNING"
+    assert first_claim.attempt_count == 1
+    assert first_claim.claim_token is not None
+    assert (
+        store.claim_next(
+            now=claimed_at + dt.timedelta(minutes=1),
+            lease_expires_at=claimed_at + dt.timedelta(minutes=6),
+        )
+        is None
+    )
+
+    reclaimed_at = claimed_at + dt.timedelta(minutes=6)
+    recovered_claim = store.claim_next(
+        now=reclaimed_at,
+        lease_expires_at=reclaimed_at + dt.timedelta(minutes=5),
+    )
+    assert recovered_claim is not None
+    assert recovered_claim.claim_token is not None
+    assert recovered_claim.claim_token != first_claim.claim_token
+    assert recovered_claim.attempt_count == 2
+    assert not store.fail_claim(
+        job_id=first_claim.job_id,
+        claim_token=first_claim.claim_token,
+        failure_code="STALE_WORKER",
+        failure_detail="must not overwrite the reclaimed claim",
+        failed_at=reclaimed_at,
+    )
+    assert store.fail_claim(
+        job_id=recovered_claim.job_id,
+        claim_token=recovered_claim.claim_token,
+        failure_code="SCENARIO_PACK_REVISION_UNAVAILABLE",
+        failure_detail="persisted revision was unavailable to the evaluator",
+        failed_at=reclaimed_at,
+    )
+    store.close()
+
+    with TestClient(app) as client:
+        status_response = client.get(
+            f"/analytics/risk/regime-scenario-pack/jobs/{admitted.json()['job_id']}",
+            headers={"X-Tenant-Id": "tenant-a"},
+        )
+    assert status_response.status_code == 200
+    assert status_response.json()["status"] == "FAILED"
+    assert status_response.json()["failure_code"] == "SCENARIO_PACK_REVISION_UNAVAILABLE"
+
+
 @pytest.mark.skipif(
     not os.getenv("LOTUS_RISK_SCENARIO_JOB_POSTGRES_URL"),
     reason="requires an explicitly provisioned isolated PostgreSQL URL",
@@ -211,3 +280,76 @@ def test_postgres_job_admission_replays_after_migration(monkeypatch: MonkeyPatch
     assert first.status_code == 202
     assert replay.status_code == 202
     assert replay.json() == first.json()
+
+    from app.scenario_jobs.store import SqlAlchemyScenarioJobStore
+
+    store = SqlAlchemyScenarioJobStore(database_url)
+    claimed_at = dt.datetime(2026, 5, 3, 9, 0, tzinfo=dt.UTC)
+    try:
+        claim = store.claim_next(
+            now=claimed_at,
+            lease_expires_at=claimed_at + dt.timedelta(minutes=5),
+        )
+        assert claim is not None
+        assert claim.job_id == first.json()["job_id"]
+        assert claim.claim_token is not None
+        assert store.fail_claim(
+            job_id=claim.job_id,
+            claim_token=claim.claim_token,
+            failure_code="POSTGRES_TEST_TERMINAL",
+            failure_detail="releases the isolated replay fixture from the runnable queue",
+            failed_at=claimed_at,
+        )
+    finally:
+        store.close()
+
+
+@pytest.mark.skipif(
+    not os.getenv("LOTUS_RISK_SCENARIO_JOB_POSTGRES_URL"),
+    reason="requires an explicitly provisioned isolated PostgreSQL URL",
+)
+def test_postgres_concurrent_claims_do_not_share_a_job(monkeypatch: MonkeyPatch) -> None:
+    """Concurrent workers use PostgreSQL row locks to claim distinct durable jobs."""
+    database_url = os.environ["LOTUS_RISK_SCENARIO_JOB_POSTGRES_URL"]
+    monkeypatch.setenv("LOTUS_RISK_SCENARIO_JOB_DATABASE_URL", database_url)
+    monkeypatch.setenv("LOTUS_RISK_SCENARIO_JOB_RETENTION_HOURS", "72")
+    _apply_migration(database_url)
+    request_prefix = f"postgres-claim-{uuid4()}"
+    headers = [
+        {"X-Tenant-Id": "postgres-claim-tenant", "Idempotency-Key": f"{request_prefix}-{index}"}
+        for index in range(2)
+    ]
+    with TestClient(app) as client:
+        admitted = [
+            client.post(
+                "/analytics/risk/regime-scenario-pack/jobs", json=_payload(), headers=header
+            )
+            for header in headers
+        ]
+    assert [response.status_code for response in admitted] == [202, 202]
+    submitted_job_ids = {response.json()["job_id"] for response in admitted}
+
+    from app.scenario_jobs.store import SqlAlchemyScenarioJobStore
+
+    claimed_at = dt.datetime(2026, 5, 3, 10, 0, tzinfo=dt.UTC)
+    lease_expires_at = claimed_at + dt.timedelta(minutes=5)
+    stores = [SqlAlchemyScenarioJobStore(database_url) for _ in range(2)]
+    try:
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            claims = list(
+                executor.map(
+                    lambda store: store.claim_next(
+                        now=claimed_at, lease_expires_at=lease_expires_at
+                    ),
+                    stores,
+                )
+            )
+    finally:
+        for store in stores:
+            store.close()
+
+    assert all(claim is not None for claim in claims)
+    durable_claims = [claim for claim in claims if claim is not None]
+    assert {claim.job_id for claim in durable_claims} == submitted_job_ids
+    assert len({claim.claim_token for claim in durable_claims}) == 2
+    assert {claim.attempt_count for claim in durable_claims} == {1}

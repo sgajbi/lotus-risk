@@ -22,7 +22,11 @@
   admission atomically commits tenant/key identity, canonical request digest, immutable JSON,
   code-defined pack revision, retention expiry, and initial `QUEUED` status in one transaction.
 - A same-key changed digest is refused; a same-key same-digest replay returns the original job.
-  The admission slice does not yet claim worker execution, retry, result persistence, or cleanup.
+  The claim store atomically transitions only `QUEUED` or expired-lease `RUNNING` records to a
+  fresh fenced `RUNNING` claim. A terminal failure requires the current claim token, so a stale
+  claimant cannot overwrite a recovered attempt. This is a durable evaluator-ownership primitive,
+  not an evaluator runtime: result persistence, pages, expiry cleanup, capacity and throughput
+  claims remain unavailable.
 
 ## Idempotency for Write APIs
 

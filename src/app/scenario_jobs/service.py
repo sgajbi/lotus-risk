@@ -107,6 +107,7 @@ def scenario_job_status_response(
         scenario_pack_revision=record.scenario_pack_revision,
         expires_at=record.expires_at,
         submitted_at=record.submitted_at,
+        failure_code=record.failure_code,
     )
 
 

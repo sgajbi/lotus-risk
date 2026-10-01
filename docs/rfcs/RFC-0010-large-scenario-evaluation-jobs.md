@@ -53,6 +53,13 @@ concurrency/restart, measured workload, observability and consumer acceptance. E
 the existing synchronous cap. Roll back by disabling job admission; retained immutable jobs remain
 readable until their stated expiry.
 
+### Implementation progress
+
+Slices 1 and the persistence-only portion of slice 2 are implemented: admission, tenant-scoped
+status reads, transactional claim, expired-lease recovery, and stale-token failure fencing. The
+claim store is not a worker runtime. Evaluation, success persistence, contribution pages, cleanup,
+capacity measurement, and consumer acceptance remain explicitly outstanding.
+
 ## Non-goals
 
 This does not ingest core-bank holdings, create orders, replace CIO scenario methodology, infer

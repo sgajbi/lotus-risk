@@ -3,7 +3,7 @@
 ## Endpoint
 
 - `POST /analytics/risk/regime-scenario-pack/evaluate`
-- `POST /analytics/risk/regime-scenario-pack/jobs` (durable admission only)
+- `POST /analytics/risk/regime-scenario-pack/jobs` (durable admission)
 
 ## Product Contract
 
@@ -136,7 +136,7 @@ approval, effective period, or portfolio applicability locally.
 
 The existing synchronous endpoint remains bounded to 250 returned contribution rows. The separate
 job-admission endpoint accepts up to 1,000 reconciled component rows and requires an admitted
-`X-Tenant-Id` plus `Idempotency-Key`. It returns only a `QUEUED` identity, canonical request
+`X-Tenant-Id` plus `Idempotency-Key`. It returns a `QUEUED` identity, canonical request
 fingerprint, code-defined scenario-pack revision, and expiry after the immutable request commits.
 
 For one tenant and idempotency key, the same canonical input replays the original job; changed
@@ -145,5 +145,9 @@ Admission is unavailable until the operator configures and migrates
 `LOTUS_RISK_SCENARIO_JOB_DATABASE_URL` and sets positive
 `LOTUS_RISK_SCENARIO_JOB_RETENTION_HOURS`.
 
-This slice does **not** execute the job, return results or contribution pages, claim work, recover
-leases, or establish production capacity. Consumers must not treat `QUEUED` as completed analysis.
+The persistence boundary can claim the next `QUEUED` job, or safely recover a `RUNNING` job only
+after its lease expires. Every claim has a fresh opaque token; a stale claimant cannot persist a
+terminal failure after recovery. This slice does **not** execute the job, return results or
+contribution pages, run a worker, clean retained evidence, or establish production capacity.
+Consumers must not treat `QUEUED`, `RUNNING`, or `FAILED` as completed analysis; `FAILED` carries
+only the bounded terminal failure code when one has been durably recorded.

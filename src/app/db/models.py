@@ -24,6 +24,13 @@ class ScenarioEvaluationJobModel(Base):
     status: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
     actor_id: Mapped[str | None] = mapped_column(String(256), nullable=True)
     correlation_id: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    claim_token: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    lease_expires_at: Mapped[dt.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
+    attempt_count: Mapped[int] = mapped_column(nullable=False, default=0)
+    failure_code: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    failure_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
     submitted_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     expires_at: Mapped[dt.datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, index=True

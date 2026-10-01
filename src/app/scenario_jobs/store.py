@@ -5,7 +5,7 @@ import json
 from dataclasses import dataclass
 from uuid import uuid4
 
-from sqlalchemy import create_engine, inspect, select
+from sqlalchemy import and_, create_engine, inspect, or_, select
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
@@ -30,6 +30,11 @@ class ScenarioEvaluationJobRecord:
     status: ScenarioEvaluationJobStatus
     actor_id: str | None
     correlation_id: str | None
+    claim_token: str | None
+    lease_expires_at: dt.datetime | None
+    attempt_count: int
+    failure_code: str | None
+    failure_detail: str | None
     submitted_at: dt.datetime
     expires_at: dt.datetime
 
@@ -115,6 +120,84 @@ class SqlAlchemyScenarioJobStore:
             )
             return _record(model) if model is not None else None
 
+    def claim_next(
+        self, *, now: dt.datetime, lease_expires_at: dt.datetime
+    ) -> ScenarioEvaluationJobRecord | None:
+        """Atomically claim one queued job or reclaim one expired lease.
+
+        PostgreSQL evaluates the row lock with ``SKIP LOCKED`` so concurrent workers do not wait
+        behind the same candidate. SQLite remains an isolated test-only implementation; its
+        transaction still establishes a single durable state transition before the returned claim.
+        """
+        if lease_expires_at <= now:
+            raise ValueError("claim lease expiry must be after the claim timestamp")
+        candidate_filter = or_(
+            ScenarioEvaluationJobModel.status == ScenarioEvaluationJobStatus.QUEUED.value,
+            and_(
+                ScenarioEvaluationJobModel.status == ScenarioEvaluationJobStatus.RUNNING.value,
+                ScenarioEvaluationJobModel.lease_expires_at.is_not(None),
+                ScenarioEvaluationJobModel.lease_expires_at <= now,
+            ),
+        )
+        with self._session_factory.begin() as session:
+            statement = (
+                select(ScenarioEvaluationJobModel)
+                .where(
+                    candidate_filter,
+                    ScenarioEvaluationJobModel.expires_at > now,
+                )
+                .order_by(
+                    ScenarioEvaluationJobModel.submitted_at, ScenarioEvaluationJobModel.job_id
+                )
+                .with_for_update(skip_locked=True)
+                .limit(1)
+            )
+            model = session.scalar(statement)
+            if model is None:
+                return None
+            model.status = ScenarioEvaluationJobStatus.RUNNING.value
+            model.claim_token = str(uuid4())
+            model.lease_expires_at = lease_expires_at
+            model.attempt_count += 1
+            model.failure_code = None
+            model.failure_detail = None
+            session.flush()
+            return _record(model)
+
+    def fail_claim(
+        self,
+        *,
+        job_id: str,
+        claim_token: str,
+        failure_code: str,
+        failure_detail: str,
+        failed_at: dt.datetime,
+    ) -> bool:
+        """Fence terminal failure on the currently durable claim token.
+
+        A stale claimant is not allowed to overwrite a reclaimed claim or a terminal result. The
+        operation is deliberately idempotent at the caller boundary: ``False`` means no state was
+        changed and the caller must not report a terminal transition.
+        """
+        with self._session_factory.begin() as session:
+            model = session.scalar(
+                select(ScenarioEvaluationJobModel)
+                .where(ScenarioEvaluationJobModel.job_id == job_id)
+                .with_for_update()
+            )
+            if (
+                model is None
+                or model.status != ScenarioEvaluationJobStatus.RUNNING.value
+                or model.claim_token != claim_token
+            ):
+                return False
+            model.status = ScenarioEvaluationJobStatus.FAILED.value
+            model.lease_expires_at = failed_at
+            model.failure_code = failure_code
+            model.failure_detail = failure_detail
+            session.flush()
+            return True
+
 
 def _get_by_key(
     session: Session,
@@ -144,6 +227,11 @@ def _record(model: ScenarioEvaluationJobModel) -> ScenarioEvaluationJobRecord:
         status=ScenarioEvaluationJobStatus(model.status),
         actor_id=model.actor_id,
         correlation_id=model.correlation_id,
+        claim_token=model.claim_token,
+        lease_expires_at=model.lease_expires_at,
+        attempt_count=model.attempt_count,
+        failure_code=model.failure_code,
+        failure_detail=model.failure_detail,
         submitted_at=model.submitted_at,
         expires_at=model.expires_at,
     )
