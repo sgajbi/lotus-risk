@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.contracts.risk_event_cohort_inputs import (
@@ -81,6 +82,40 @@ def test_risk_event_affected_cohort_endpoint_preserves_exclusion_lineage() -> No
         ),
         "reason_codes": ["RISK_EVENT_BELOW_THRESHOLD"],
     }
+
+
+@pytest.mark.parametrize("invalid_weight", ["NaN", "Infinity", "-Infinity"])
+def test_risk_event_affected_cohort_refuses_non_finite_source_weights(
+    invalid_weight: str,
+) -> None:
+    client = TestClient(app)
+
+    response = client.post(
+        "/analytics/risk/risk-event-cohorts/evaluate",
+        json={
+            "risk_event_id": "RISK_EVENT_2026_Q2_RATES_UP",
+            "as_of_date": "2026-05-10",
+            "minimum_impact_score": 0.05,
+            "portfolios": [
+                {
+                    "portfolio_id": "REVIEW-COHORT-INVALID",
+                    "exposure_weights": {"FIXED_INCOME": invalid_weight},
+                },
+                {
+                    "portfolio_id": "REVIEW-COHORT-VALID",
+                    "exposure_weights": {"FIXED_INCOME": 1.0},
+                },
+            ],
+        },
+    )
+
+    assert response.status_code == 422
+    body = response.json()
+    assert body["error"]["code"] == "INVALID_REQUEST"
+    assert body["error"]["details"][0]["msg"] == (
+        "Value error, exposure_weights must contain only finite values"
+    )
+    assert body["error"]["details"][0]["loc"] == ["body", "portfolios", 0]
 
 
 def test_capabilities_include_risk_event_cohort_workflow() -> None:

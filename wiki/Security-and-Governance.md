@@ -112,9 +112,11 @@ After the full SARIF inventory is written, a library-only scan blocks every appl
 HIGH/CRITICAL finding, including findings without a published fix. The separate OS-only scan uses
 `ignore-unfixed: true`; this keeps every newly fixable base-image HIGH/CRITICAL finding
 release-blocking while retaining visibility of Debian findings that have no published remediation.
-The OS-only posture is owned by `lotus-risk` maintainers and expires on 2026-09-30. The repository gate enforces
-`UNFIXED_VULNERABILITY_EXCEPTION_EXPIRES_ON` and fails after that date unless maintainers renew it
-from a fresh image scan.
+The OS-only posture is owned by `lotus-risk` maintainers and expires on 2026-12-31. Its 2026-10-01
+renewal followed a fresh Trivy 0.70.0 scan of the `f15501ff677e418a3033a7c5d6a11b5950551c96`
+runtime image: 44 HIGH/CRITICAL Debian findings, zero Python findings, and no scanner-provided
+fixed versions. The repository gate enforces `UNFIXED_VULNERABILITY_EXCEPTION_EXPIRES_ON` and fails
+after that date unless maintainers renew it from a fresh image scan and explicit evidence.
 
 ## Upstream Boundary Discipline
 
