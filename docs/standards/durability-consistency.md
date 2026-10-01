@@ -30,9 +30,11 @@
 
 ## Idempotency for Write APIs
 
-- Scenario-job admission requires both admitted `X-Tenant-Id` and `Idempotency-Key`; process-local
-  replay caches are prohibited. The configured store is unavailable-by-default until an operator
-  supplies a migrated database URL and explicit retention duration.
+- Scenario-job admission requires exactly one admitted `X-Tenant-Id` and exactly one
+  `Idempotency-Key`; duplicate raw values are refused before store construction, so a proxy cannot
+  select durable ownership or replay identity by header ordering. Process-local replay caches are
+  prohibited. The configured store is unavailable-by-default until an operator supplies a migrated
+  database URL and explicit retention duration.
 - Most analytics endpoints are read-oriented computations with no persistent side effects.
 - Concentration simulation is the current exception: when `simulation_input.simulation_changes[]`
   is non-empty, `POST /analytics/risk/concentration` requires `Idempotency-Key` and forwards that

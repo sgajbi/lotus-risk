@@ -135,12 +135,16 @@ approval, effective period, or portfolio applicability locally.
 ## Large Evaluation Job Admission
 
 The existing synchronous endpoint remains bounded to 250 returned contribution rows. The separate
-job-admission endpoint accepts up to 1,000 reconciled component rows and requires an admitted
-`X-Tenant-Id` plus `Idempotency-Key`. It returns a `QUEUED` identity, canonical request
+job-admission endpoint accepts up to 1,000 reconciled component rows and requires exactly one
+non-blank admitted `X-Tenant-Id` and exactly one non-blank `Idempotency-Key`. Duplicate header
+values, including matching values with differently cased header names, are refused with `400
+INVALID_INPUT` before the store opens. It returns a `QUEUED` identity, canonical request
 fingerprint, code-defined scenario-pack revision, and expiry after the immutable request commits.
 
 For one tenant and idempotency key, the same canonical input replays the original job; changed
 input is a conflict. A foreign tenant receives the same not-found response as an absent job.
+Status reads also require exactly one tenant header; ambiguous tenant input is refused before a
+store lookup, so it cannot select an owner based on intermediary header ordering.
 Admission is unavailable until the operator configures and migrates
 `LOTUS_RISK_SCENARIO_JOB_DATABASE_URL` and sets positive
 `LOTUS_RISK_SCENARIO_JOB_RETENTION_HOURS`.

@@ -173,6 +173,144 @@ def test_job_admission_refuses_missing_authority_or_idempotency_before_store_acc
     assert missing_key.json()["error"]["code"] == "INVALID_REQUEST"
 
 
+@pytest.mark.parametrize(
+    ("headers", "status_code", "error_code", "message"),
+    [
+        (
+            {"X-Tenant-Id": " ", "Idempotency-Key": "blank-tenant"},
+            401,
+            "MISSING_TENANT_AUTHORITY",
+            "Stateful input requires X-Tenant-Id before any upstream request is made.",
+        ),
+        (
+            {"X-Tenant-Id": "t" * 129, "Idempotency-Key": "oversized-tenant"},
+            400,
+            "INVALID_TENANT_AUTHORITY",
+            "X-Tenant-Id must not exceed 128 characters after trimming.",
+        ),
+        (
+            {"X-Tenant-Id": "tenant-a", "Idempotency-Key": " \t "},
+            400,
+            "INVALID_INPUT",
+            "Idempotency-Key is required for scenario evaluation job submission",
+        ),
+        (
+            {"X-Tenant-Id": "tenant-a", "Idempotency-Key": "k" * 129},
+            400,
+            "INVALID_INPUT",
+            "Idempotency-Key must not exceed 128 characters after trimming",
+        ),
+    ],
+)
+def test_job_admission_preserves_single_header_value_validation(
+    headers: dict[str, str], status_code: int, error_code: str, message: str
+) -> None:
+    with TestClient(app) as client:
+        response = client.post(
+            "/analytics/risk/regime-scenario-pack/jobs", json=_payload(), headers=headers
+        )
+
+    assert response.status_code == status_code
+    assert response.json()["error"]["code"] == error_code
+    assert response.json()["error"]["message"] == message
+
+
+@pytest.mark.parametrize(
+    ("headers", "header_name"),
+    [
+        (
+            [
+                ("X-Tenant-Id", "tenant-a"),
+                ("x-tenant-id", "tenant-a"),
+                ("Idempotency-Key", "duplicate-tenant-same"),
+            ],
+            "X-Tenant-Id",
+        ),
+        (
+            [
+                ("x-tenant-id", "tenant-b"),
+                ("X-Tenant-Id", "tenant-a"),
+                ("Idempotency-Key", "duplicate-tenant-reversed"),
+            ],
+            "X-Tenant-Id",
+        ),
+        (
+            [
+                ("X-Tenant-Id", "tenant-a"),
+                ("Idempotency-Key", "duplicate-key-same"),
+                ("idempotency-key", "duplicate-key-same"),
+            ],
+            "Idempotency-Key",
+        ),
+        (
+            [
+                ("X-Tenant-Id", "tenant-a"),
+                ("idempotency-key", "duplicate-key-b"),
+                ("Idempotency-Key", "duplicate-key-a"),
+            ],
+            "Idempotency-Key",
+        ),
+    ],
+)
+def test_job_admission_refuses_ambiguous_raw_headers_without_a_durable_write(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    headers: list[tuple[str, str]],
+    header_name: str,
+) -> None:
+    database_url = _migrated_database(tmp_path, monkeypatch)
+    with TestClient(app) as client:
+        response = client.post(
+            "/analytics/risk/regime-scenario-pack/jobs", json=_payload(), headers=headers
+        )
+
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "INVALID_INPUT"
+    assert response.json()["error"]["message"] == f"{header_name} must be supplied exactly once"
+
+    from sqlalchemy import create_engine, text
+
+    engine = create_engine(database_url)
+    try:
+        with engine.connect() as connection:
+            assert connection.scalar(text("select count(*) from scenario_evaluation_jobs")) == 0
+    finally:
+        engine.dispose()
+
+
+def test_job_routes_refuse_ambiguous_tenant_before_opening_the_store(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    from app.routers import scenario_jobs as scenario_jobs_router
+
+    def store_must_not_open() -> object:
+        raise AssertionError(
+            "ambiguous tenant authority must be rejected before store construction"
+        )
+
+    monkeypatch.setattr(scenario_jobs_router, "configured_scenario_job_store", store_must_not_open)
+    ambiguous_tenant_headers = [
+        ("X-Tenant-Id", "tenant-a"),
+        ("x-tenant-id", "tenant-b"),
+        ("Idempotency-Key", "store-guard"),
+    ]
+    with TestClient(app) as client:
+        submission = client.post(
+            "/analytics/risk/regime-scenario-pack/jobs",
+            json=_payload(),
+            headers=ambiguous_tenant_headers,
+        )
+        status_read = client.get(
+            "/analytics/risk/regime-scenario-pack/jobs/not-a-job",
+            headers=ambiguous_tenant_headers,
+        )
+
+    for response in (submission, status_read):
+        assert response.status_code == 400
+        assert response.json()["error"]["code"] == "INVALID_INPUT"
+        assert response.json()["error"]["message"] == "X-Tenant-Id must be supplied exactly once"
+
+
 def test_job_admission_refuses_an_unmigrated_configured_store(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
