@@ -29,6 +29,7 @@ from app.services.risk.period_resolution import (
 )
 
 RISK_METRICS_REQUIRING_RISK_FREE = {"SHARPE"}
+_CORNISH_FISHER_MINIMUM_OBSERVATIONS = 4
 LOG_RETURN_UNDEFINED_ERROR = "Log returns are undefined for returns less than or equal to -100%"
 RESAMPLING_GAP_ERROR_PREFIX = "Missing return observations in resampling buckets ending"
 
@@ -133,6 +134,7 @@ def _var_gaussian(returns: pd.Series, confidence: float) -> float:
 
 
 def _var_cornish_fisher(returns: pd.Series, confidence: float) -> float:
+    _require_data(returns, minimum=_CORNISH_FISHER_MINIMUM_OBSERVATIONS)
     alpha = 1.0 - confidence
     z_score = NormalDist().inv_cdf(alpha)
     skew = _as_number(cast(float, returns.skew()))
@@ -141,7 +143,10 @@ def _var_cornish_fisher(returns: pd.Series, confidence: float) -> float:
     z_cf += ((z_score**2) - 1) * skew / 6
     z_cf += ((z_score**3) - 3 * z_score) * kurt / 24
     z_cf -= ((2 * z_score**3) - 5 * z_score) * (skew**2) / 36
-    return _as_number(returns.mean() + returns.std(ddof=1) * z_cf)
+    var_value = _as_number(returns.mean() + returns.std(ddof=1) * z_cf)
+    if not np.isfinite(var_value):
+        raise ValueError("Cornish-Fisher VaR is undefined for this sample")
+    return var_value
 
 
 def _calculate_var_by_method(returns: pd.Series, method: str, confidence: float) -> float:

@@ -408,6 +408,67 @@ def test_risk_calculate_var_exposes_horizon_scaling_context() -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ("returns", "as_of_date", "include_expected_shortfall"),
+    [
+        ([-2.0, 0.0], "2025-01-03", False),
+        ([-2.0, 0.0, 1.0], "2025-01-04", True),
+    ],
+)
+def test_risk_calculate_qualifies_sparse_cornish_fisher_history(
+    returns: list[float], as_of_date: str, include_expected_shortfall: bool
+) -> None:
+    client = TestClient(app)
+    response = client.post(
+        "/analytics/risk/calculate",
+        json={
+            "input_mode": "stateless",
+            "stateless_input": {
+                "scope": {"as_of_date": as_of_date, "net_or_gross": "NET"},
+                "portfolio_open_date": "2025-01-01",
+                "periods": [{"type": "YTD", "name": "YTD"}],
+                "metrics": ["VAR"],
+                "options": {
+                    "frequency": "DAILY",
+                    "var": {
+                        "method": "CORNISH_FISHER",
+                        "confidence": 0.95,
+                        "horizon_days": 1,
+                        "include_expected_shortfall": include_expected_shortfall,
+                    },
+                },
+                "returns": [
+                    {"date": f"2025-01-{index + 2:02d}", "value": value}
+                    for index, value in enumerate(returns)
+                ],
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    metric = body["results"]["YTD"]["metrics"]["VAR"]
+    assert metric == {"value": None, "details": {"error": "Insufficient data"}}
+    assert {
+        key: body["metadata"]["calculation_supportability"][key]
+        for key in (
+            "state",
+            "reason",
+            "freshness_bucket",
+            "degraded_metric_count",
+            "empty_period_count",
+            "evaluated_period_count",
+        )
+    } == {
+        "state": "degraded",
+        "reason": "insufficient_observations",
+        "freshness_bucket": "current",
+        "degraded_metric_count": 1,
+        "empty_period_count": 0,
+        "evaluated_period_count": 1,
+    }
+
+
 def test_risk_calculate_drawdown_exposes_recovery_context() -> None:
     client = TestClient(app)
     payload = _request_payload()
