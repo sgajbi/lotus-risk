@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 import pytest
 
 from app.contracts.risk_event_cohort import (
@@ -52,14 +54,15 @@ def _request(**overrides: object) -> RiskEventAffectedCohortRequest:
 
 
 def _portfolio(
-    index: int, *, exposure_weights: dict[str, float] | None = None
+    index: int, *, exposure_weights: Mapping[str, float | str] | None = None
 ) -> dict[str, object]:
     return {
         "portfolio_id": f"PB_SG_TEST_{index:03d}",
         "mandate_id": f"MANDATE-PB-SG-TEST-{index:03d}",
         "portfolio_manager_id": "pm-singapore-01",
-        "exposure_weights": exposure_weights
-        or {"EQUITY": 0.55, "FIXED_INCOME": 0.35, "CASH": 0.10},
+        "exposure_weights": dict(exposure_weights)
+        if exposure_weights is not None
+        else {"EQUITY": 0.55, "FIXED_INCOME": 0.35, "CASH": 0.10},
     }
 
 
@@ -146,6 +149,12 @@ def test_risk_event_cohort_rejects_underallocated_exposure_weights() -> None:
 def test_risk_event_cohort_rejects_overallocated_exposure_weights() -> None:
     with pytest.raises(ValueError, match="less than or equal to 1.0"):
         _request(portfolios=[_portfolio(1, exposure_weights={"EQUITY": 1.05})])
+
+
+@pytest.mark.parametrize("weight", ["NaN", "Infinity", "-Infinity"])
+def test_risk_event_cohort_rejects_non_finite_exposure_weights(weight: str) -> None:
+    with pytest.raises(ValueError, match="exposure_weights must contain only finite values"):
+        _request(portfolios=[_portfolio(1, exposure_weights={"EQUITY": weight})])
 
 
 def test_risk_event_cohort_rejects_duplicate_semantic_exposure_buckets() -> None:

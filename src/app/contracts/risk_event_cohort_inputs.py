@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import math
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -47,6 +48,8 @@ class RiskEventPortfolioExposure(BaseModel):
                 "exposure_weights must contain unique exposure buckets: "
                 + ", ".join(duplicate_buckets)
             )
+        if any(not math.isfinite(weight) for weight in self.exposure_weights.values()):
+            raise ValueError("exposure_weights must contain only finite values")
         if any(weight < 0 for weight in self.exposure_weights.values()):
             raise ValueError("exposure_weights must be non-negative")
         if any(weight > 1.0 for weight in self.exposure_weights.values()):

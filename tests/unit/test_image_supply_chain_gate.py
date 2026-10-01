@@ -788,9 +788,9 @@ def test_image_release_contract_requires_sarif_upload_to_execute(
     ("marker", "replacement"),
     [
         (
-            '  UNFIXED_VULNERABILITY_EXCEPTION_EXPIRES_ON: "2026-09-30"\n',
+            '  UNFIXED_VULNERABILITY_EXCEPTION_EXPIRES_ON: "2026-12-31"\n',
             (
-                '  UNFIXED_VULNERABILITY_EXCEPTION_EXPIRES_ON: "2026-09-30"\n'
+                '  UNFIXED_VULNERABILITY_EXCEPTION_EXPIRES_ON: "2026-12-31"\n'
                 '  TRIVY_SKIP_DIRS: "/usr/local/lib/python3.12/site-packages"\n'
             ),
         ),
@@ -973,16 +973,16 @@ def test_image_release_contract_rejects_expired_unfixed_exception(tmp_path: Path
         encoding="utf-8",
     )
 
-    issues = validate_ci_image_release_workflow(workflow_path, today=date(2026, 10, 1))
+    issues = validate_ci_image_release_workflow(workflow_path, today=date(2027, 1, 1))
 
-    assert f"{workflow_path}: unfixed-vulnerability exception expired on 2026-09-30" in issues
+    assert f"{workflow_path}: unfixed-vulnerability exception expired on 2026-12-31" in issues
 
 
 def test_image_release_contract_rejects_malformed_unfixed_exception(tmp_path: Path) -> None:
     workflow_path = tmp_path / "image-release.yml"
     current = Path(".github/workflows/image-release.yml").read_text(encoding="utf-8")
     workflow_path.write_text(
-        current.replace('EXPIRES_ON: "2026-09-30"', 'EXPIRES_ON: "renew-later"'),
+        current.replace('EXPIRES_ON: "2026-12-31"', 'EXPIRES_ON: "renew-later"'),
         encoding="utf-8",
     )
 

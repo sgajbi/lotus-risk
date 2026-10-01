@@ -195,7 +195,7 @@ fixable-finding gate.
 | Owner | `lotus-risk` maintainers |
 | Reason | Debian base-image findings without an upstream fixed version cannot be remediated by this repository; blocking them would permanently disable signing and attestation without reducing risk. |
 | Review trigger | Every image build, base-image digest change, or vulnerability-database change; newly fixable findings fail the release automatically. |
-| Expiry | 2026-09-30; encoded by `UNFIXED_VULNERABILITY_EXCEPTION_EXPIRES_ON`; the repository gate fails after this date unless maintainers renew it with a fresh scan and explicit evidence. |
+| Expiry | 2026-12-31; encoded by `UNFIXED_VULNERABILITY_EXCEPTION_EXPIRES_ON`. Renewed on 2026-10-01 after a fresh Trivy 0.70.0 scan of runtime image `sha256:e80a42ba39611d35f7b1b59610b6392518953c133ba75d2c39bbe06a01c425b8`, built from `f15501ff677e418a3033a7c5d6a11b5950551c96`: 44 HIGH/CRITICAL Debian findings, zero Python findings, and zero non-empty fixed versions. The repository gate fails after this date unless maintainers renew it with a fresh scan and explicit evidence. |
 | Compensating evidence | Complete SARIF inventory, SPDX SBOM, immutable digest, signature, provenance attestation, and fixable-finding blocking scan. |
 
 ## Evidence Commands

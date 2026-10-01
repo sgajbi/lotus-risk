@@ -226,6 +226,10 @@ governance state is the mistake to avoid:
 rather than routing it into a review workflow. `blocked` is declared by the type but is not emitted
 by the cohort engine.
 
+Source exposure weights must be finite and form a full allocation. The endpoint refuses quoted
+`NaN` and infinity sentinels before they can be normalized, scored, or reclassified as an
+unaffected portfolio.
+
 ### Mandate health
 
 `mandate-health-context` uses a third set:
