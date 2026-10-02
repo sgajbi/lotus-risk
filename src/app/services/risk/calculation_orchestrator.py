@@ -15,6 +15,7 @@ from app.contracts.risk import (
     RiskResponseMetadata,
     RiskStatelessCalculationInput,
 )
+from app.contracts.stateful_returns_source_evidence import StatefulReturnsSourceEvidence
 from app.services.audit_lineage import fingerprint_model
 from app.services.calculation_supportability import supportability_from_risk_metric_results
 from app.services.risk import helpers as risk_helpers
@@ -64,6 +65,7 @@ def build_request_metadata(
     annual_factor: int,
     periodic_rf: float,
     calculation_supportability: RiskCalculationSupportability,
+    source_returns_evidence: StatefulReturnsSourceEvidence | None = None,
 ) -> RiskResponseMetadata:
     benchmark_metrics = _requested_benchmark_metrics(request.metrics)
     return RiskResponseMetadata(
@@ -79,6 +81,7 @@ def build_request_metadata(
         ),
         benchmark_context=_benchmark_request_context(benchmark_metrics),
         calculation_supportability=calculation_supportability,
+        source_returns_evidence=source_returns_evidence,
         mar_annual_rate=request.options.mar_annual_rate,
         var_method=request.options.var.method,
         var_confidence=request.options.var.confidence,

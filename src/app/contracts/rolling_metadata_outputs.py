@@ -17,6 +17,7 @@ from app.contracts.rolling_response_field_examples import (
     ROLLING_REQUESTED_METRICS_EXAMPLE,
     ROLLING_RISK_FREE_CONTEXT_EXAMPLE,
 )
+from app.contracts.stateful_returns_source_evidence import StatefulReturnsSourceEvidence
 
 
 class RollingRequestDependencyContext(BaseModel):
@@ -115,6 +116,27 @@ class RollingMetadata(AuditMetadataFields):
         ),
         description="Source-backed supportability posture for UI and operator consumption.",
         json_schema_extra={"example": ROLLING_CALCULATION_SUPPORTABILITY_EXAMPLE},
+    )
+    source_returns_evidence: StatefulReturnsSourceEvidence | None = Field(
+        default=None,
+        description=(
+            "Consumed lotus-performance returns-series response identity and source "
+            "qualification for stateful calculations. Null for stateless calculations."
+        ),
+        json_schema_extra={
+            "example": {
+                "source_service": "lotus-performance",
+                "calculation_id": "00000000-0000-4000-8000-000000000001",
+                "contract_version": "v1",
+                "input_fingerprint": "sha256:" + "1" * 64,
+                "calculation_hash": "sha256:" + "2" * 64,
+                "freshness": "current",
+                "requested_points": 65,
+                "returned_points": 65,
+                "missing_points": 0,
+                "coverage_ratio": 1.0,
+            }
+        },
     )
 
     @model_validator(mode="after")

@@ -627,7 +627,9 @@ def test_rolling_metrics_endpoint_rejects_unbounded_time_series_expansion() -> N
 def test_rolling_metrics_endpoint_rejects_oversized_stateful_sourced_history() -> None:
     recorder = RecordingLotusPerformanceClient(
         response_payload=build_returns_series_response(
-            portfolio_returns=_return_rows(ROLLING_MAX_STATELESS_OBSERVATIONS + 1)
+            portfolio_returns=_return_rows(ROLLING_MAX_STATELESS_OBSERVATIONS + 1),
+            as_of_date="2030-12-31",
+            resolved_start_date="2020-01-01",
         )
     )
     with override_app_runtime(lotus_performance_client=recorder):
@@ -639,8 +641,15 @@ def test_rolling_metrics_endpoint_rejects_oversized_stateful_sourced_history() -
                 "input_mode": "stateful",
                 "stateful_input": {
                     "portfolio_id": "DEMO_DPM_EUR_001",
-                    "as_of_date": "2026-01-06",
-                    "periods": [{"type": "YTD", "name": "YTD"}],
+                    "as_of_date": "2030-12-31",
+                    "periods": [
+                        {
+                            "type": "EXPLICIT",
+                            "name": "HISTORY",
+                            "from_date": "2020-01-01",
+                            "to_date": "2030-12-31",
+                        }
+                    ],
                     "rolling_options": {
                         "window_lengths": [2],
                         "metrics": ["ROLLING_VOLATILITY"],

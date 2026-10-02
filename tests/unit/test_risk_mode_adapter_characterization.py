@@ -104,11 +104,12 @@ def test_stateful_source_payload_passes_benchmark_override_for_relative_metrics(
 def test_calculate_risk_stateful_characterization() -> None:
     performance_client = RecordingLotusPerformanceClient(
         response_payload=build_returns_series_response(
+            as_of_date="2025-01-07",
             portfolio_returns=[
                 ("2025-01-02", "0.0100"),
                 ("2025-01-03", "-0.0050"),
                 ("2025-01-06", "0.0030"),
-            ]
+            ],
         )
     )
     response = asyncio.run(
@@ -136,6 +137,7 @@ def test_calculate_risk_stateful_applies_sourced_risk_free_for_sharpe() -> None:
     stateful = _stateful_input().model_copy(update={"metrics": ["SHARPE"]})
     performance_client = RecordingLotusPerformanceClient(
         response_payload=build_returns_series_response(
+            as_of_date="2025-01-07",
             portfolio_returns=[
                 ("2025-01-02", "0.0100"),
                 ("2025-01-03", "-0.0050"),
@@ -191,6 +193,7 @@ def test_calculate_risk_stateful_uses_core_currency_not_uncontracted_returns_con
         update={"metrics": ["SHARPE"], "reporting_currency": None}
     )
     source_response: dict[str, Any] = build_returns_series_response(
+        as_of_date="2025-01-07",
         portfolio_returns=[
             ("2025-01-02", "0.0100"),
             ("2025-01-03", "-0.0050"),
@@ -262,11 +265,14 @@ def test_calculate_risk_stateful_sources_risk_free_after_si_returns_resolve_wind
     )
     performance_client = RecordingLotusPerformanceClient(
         response_payload=build_returns_series_response(
+            as_of_date="2025-01-07",
             portfolio_returns=[
                 ("2024-12-30", "0.0040"),
                 ("2025-01-02", "0.0100"),
                 ("2025-01-06", "0.0030"),
             ],
+            resolved_start_date="2024-12-30",
+            resolved_period_label="SI",
         )
     )
     core_client = RecordingLotusCoreReferenceClient(risk_free_response=_risk_free_payload())
@@ -294,6 +300,7 @@ def test_calculate_risk_stateful_rejects_missing_risk_free_for_sharpe() -> None:
     stateful = _stateful_input().model_copy(update={"metrics": ["SHARPE"]})
     performance_client = RecordingLotusPerformanceClient(
         response_payload=build_returns_series_response(
+            as_of_date="2025-01-07",
             portfolio_returns=[
                 ("2025-01-02", "0.0100"),
                 ("2025-01-03", "-0.0050"),
@@ -318,11 +325,12 @@ def test_calculate_risk_stateful_requires_core_client_for_sharpe() -> None:
     stateful = _stateful_input().model_copy(update={"metrics": ["SHARPE"]})
     performance_client = RecordingLotusPerformanceClient(
         response_payload=build_returns_series_response(
+            as_of_date="2025-01-07",
             portfolio_returns=[
                 ("2025-01-02", "0.0100"),
                 ("2025-01-03", "-0.0050"),
                 ("2025-01-06", "0.0030"),
-            ]
+            ],
         )
     )
 

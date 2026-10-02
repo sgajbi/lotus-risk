@@ -161,7 +161,8 @@ flowchart LR
 Gateway --> Workbench[Workbench risk panel support state]
 ```
 
-For stateful drawdown, inspect `metadata.source_returns_evidence` alongside supportability. It
+For stateful risk calculation, drawdown, and rolling metrics, inspect
+`metadata.source_returns_evidence` alongside supportability. It
 names the exact Performance calculation and source freshness/coverage that Risk accepted. Missing,
 malformed, unsupported, or request-mismatched qualification is an upstream-invalid response rather
 than a successful calculation; a stale or incomplete qualified source must remain visible as stale

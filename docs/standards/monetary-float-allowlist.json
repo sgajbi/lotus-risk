@@ -166,13 +166,13 @@
       "review_by": "2026-12-01"
     },
     {
-      "finding": "src/app/services/stateful_returns_series_parser.py:18:def decimal_return_to_percentage_points(value: Any) -> float:",
+      "finding": "src/app/services/stateful_returns_series_parser.py:19:def decimal_return_to_percentage_points(value: Any) -> float:",
       "justification": "Return conversion is a non-monetary analytic percentage-point value; Decimal parsing occurs before the public float risk-measure boundary.",
       "owner": "risk-analytics",
       "review_by": "2027-03-30"
     },
     {
-      "finding": "src/app/services/stateful_returns_series_parser.py:35:return float(decimal_value * Decimal(\"100\"))",
+      "finding": "src/app/services/stateful_returns_series_parser.py:36:return float(decimal_value * Decimal(\"100\"))",
       "justification": "Return conversion is a non-monetary analytic percentage-point value; Decimal parsing occurs before the public float risk-measure boundary.",
       "owner": "risk-analytics",
       "review_by": "2027-03-30"

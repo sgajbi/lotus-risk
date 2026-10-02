@@ -272,7 +272,8 @@ def test_metrics_expose_stateful_endpoint_execution_mode() -> None:
             portfolio_returns=[
                 ("2026-01-02", "0.005"),
                 ("2026-01-05", "-0.002"),
-            ]
+            ],
+            as_of_date="2026-03-31",
         )
     )
 

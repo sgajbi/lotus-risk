@@ -261,7 +261,7 @@ async def test_client_polls_async_returns_series_result_until_complete(
                 url="http://performance.local/performance/executions/calc-1",
             ),
             _ok_response(
-                {"series": {"portfolio_returns": []}},
+                {"calculation_id": "calc-1", "series": {"portfolio_returns": []}},
                 url="http://performance.local/integration/returns/series/results/calc-1",
             ),
         ]
@@ -292,6 +292,36 @@ async def test_client_polls_async_returns_series_result_until_complete(
     assert [request["headers"]["X-Correlation-Id"] for request in _FakeAsyncClient.requests] == (
         ["corr-async"] * 5
     )
+
+
+@pytest.mark.asyncio
+async def test_client_accepts_async_contribution_result_without_calculation_id(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(httpx, "AsyncClient", _FakeAsyncClient)
+    _FakeAsyncClient.requests = []
+    responses = iter(
+        [
+            _ok_response(
+                {
+                    "calculation_id": "calc-contribution-1",
+                    "result_path": "/performance/contribution/results/calc-contribution-1",
+                },
+                status_code=202,
+            ),
+            _ok_response({"results_by_period": {"YTD": []}}),
+        ]
+    )
+    _FakeAsyncClient.response_factory = lambda **_: next(responses)
+
+    client = LotusPerformanceClient(base_url="http://performance.local")
+    response = await client.get_contribution(
+        request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
+        authority=admitted_test_authority("corr-contribution-async"),
+    )
+
+    assert response == {"results_by_period": {"YTD": []}}
+    assert [request["method"] for request in _FakeAsyncClient.requests] == ["POST", "GET"]
 
 
 @pytest.mark.asyncio
@@ -346,6 +376,7 @@ async def test_client_surfaces_async_execution_failure_without_message(
         [
             _ok_response(
                 {
+                    "calculation_id": "calc-1",
                     "poll_path": "/performance/executions/calc-1",
                     "result_path": "/integration/returns/series/results/calc-1",
                 },
@@ -379,6 +410,7 @@ async def test_client_rejects_null_async_result_payload(monkeypatch: pytest.Monk
         [
             _ok_response(
                 {
+                    "calculation_id": "calc-null",
                     "result_path": "/integration/returns/series/results/calc-null",
                 },
                 status_code=202,
@@ -418,7 +450,11 @@ async def test_client_rejects_invalid_async_accepted_payloads(
 
     for payload, expected in [
         ({"result_path": "relative"}, "missing result_path"),
-        ({"result_path": "/result", "poll_path": "relative"}, "invalid poll_path"),
+        (
+            {"calculation_id": "calc-1", "result_path": "/result", "poll_path": "relative"},
+            "invalid poll_path",
+        ),
+        ({"result_path": "/result"}, "missing calculation_id"),
     ]:
 
         def _response_factory(_payload: dict[str, str] = payload, **_: Any) -> httpx.Response:
@@ -444,7 +480,10 @@ async def test_client_raises_for_unexpected_async_result_status(
     responses = iter(
         [
             _ok_response(
-                {"result_path": "/integration/returns/series/results/calc-1"},
+                {
+                    "calculation_id": "calc-1",
+                    "result_path": "/integration/returns/series/results/calc-1",
+                },
                 status_code=202,
             ),
             _ok_response({"detail": "not ready"}, status_code=500),
@@ -475,7 +514,10 @@ async def test_client_raises_for_unexpected_async_result_client_error(
     responses = iter(
         [
             _ok_response(
-                {"result_path": "/integration/returns/series/results/calc-1"},
+                {
+                    "calculation_id": "calc-1",
+                    "result_path": "/integration/returns/series/results/calc-1",
+                },
                 status_code=202,
             ),
             _ok_response({"detail": "portfolio identifier leaked"}, status_code=400),
@@ -491,6 +533,42 @@ async def test_client_raises_for_unexpected_async_result_client_error(
         )
     assert exc_info.value.code == "FAILED_DEPENDENCY"
     assert "portfolio identifier leaked" not in exc_info.value.message
+
+
+@pytest.mark.asyncio
+async def test_client_rejects_async_result_for_a_different_calculation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(httpx, "AsyncClient", _FakeAsyncClient)
+    _FakeAsyncClient.requests = []
+    responses = iter(
+        [
+            _ok_response(
+                {
+                    "calculation_id": "calc-1",
+                    "result_path": "/integration/returns/series/results/calc-1",
+                },
+                status_code=202,
+            ),
+            _ok_response(
+                {
+                    "calculation_id": "calc-other",
+                    "series": {"portfolio_returns": []},
+                }
+            ),
+        ]
+    )
+    _FakeAsyncClient.response_factory = lambda **_: next(responses)
+
+    client = LotusPerformanceClient(base_url="http://performance.local")
+    with pytest.raises(UpstreamServiceError, match="does not match accepted execution") as exc_info:
+        await client.get_returns_series(
+            request_payload={"portfolio_id": "DEMO_DPM_EUR_001"},
+            authority=admitted_test_authority("corr-async-mismatch"),
+        )
+
+    assert exc_info.value.code == "UPSTREAM_INVALID_RESPONSE"
+    assert exc_info.value.details["field"] == "calculation_id"
 
 
 @pytest.mark.asyncio

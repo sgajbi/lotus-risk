@@ -843,6 +843,7 @@ def test_risk_calculate_stateful_mode_preserves_gross_metric_basis_and_currency(
     performance_client = RecordingLotusPerformanceClient(
         response_payload=build_returns_series_response(
             portfolio_returns=RISK_STATEFUL_RETURNS,
+            metric_basis="GROSS",
         )
     )
     with override_app_runtime(lotus_performance_client=performance_client):

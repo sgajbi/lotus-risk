@@ -304,6 +304,60 @@ def test_drawdown_endpoint_stateful_rejects_missing_source_qualification() -> No
     assert error["correlation_id"] == "corr-source-missing"
 
 
+def test_drawdown_endpoint_stateful_rejects_mismatched_resolved_window() -> None:
+    recorder = RecordingLotusPerformanceClient(
+        response_payload=build_returns_series_response(
+            portfolio_returns=JAN_2026_PORTFOLIO_RETURNS,
+            resolved_start_date="2025-12-31",
+        )
+    )
+    with override_app_runtime(lotus_performance_client=recorder):
+        response = TestClient(app).post(
+            "/analytics/risk/drawdown",
+            headers={"X-Tenant-Id": "tenant-a"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-06",
+                    "periods": [{"type": "YTD"}],
+                },
+            },
+        )
+
+    assert response.status_code == 502
+    error = response.json()["error"]
+    assert error["code"] == "UPSTREAM_INVALID_RESPONSE"
+    assert error["details"]["field"] == "resolved_window"
+
+
+def test_drawdown_endpoint_stateful_rejects_return_row_outside_resolved_window() -> None:
+    recorder = RecordingLotusPerformanceClient(
+        response_payload=build_returns_series_response(
+            portfolio_returns=(("2025-12-31", "0.0100"), *JAN_2026_PORTFOLIO_RETURNS),
+            resolved_start_date="2026-01-01",
+        )
+    )
+    with override_app_runtime(lotus_performance_client=recorder):
+        response = TestClient(app).post(
+            "/analytics/risk/drawdown",
+            headers={"X-Tenant-Id": "tenant-a"},
+            json={
+                "input_mode": "stateful",
+                "stateful_input": {
+                    "portfolio_id": "DEMO_DPM_EUR_001",
+                    "as_of_date": "2026-01-06",
+                    "periods": [{"type": "YTD"}],
+                },
+            },
+        )
+
+    assert response.status_code == 502
+    error = response.json()["error"]
+    assert error["code"] == "UPSTREAM_INVALID_RESPONSE"
+    assert error["details"]["field"] == "series.portfolio_returns.date"
+
+
 def test_drawdown_endpoint_maps_malformed_upstream_return_dates_to_502() -> None:
     recorder = RecordingLotusPerformanceClient(
         response_payload=build_returns_series_response(

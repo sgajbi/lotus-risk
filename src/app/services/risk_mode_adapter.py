@@ -13,6 +13,7 @@ from app.contracts.risk import (
     RiskStatelessCalculationInput,
     StatefulRiskInput,
 )
+from app.contracts.stateful_returns_source_evidence import StatefulReturnsSourceEvidence
 from app.integrations.upstream_operations import LOTUS_CORE_SNAPSHOT_OPERATION
 from app.services.audit_lineage import ordered_source_services, upstream_request_fingerprint
 from app.services.core_portfolio_currency import resolve_portfolio_reporting_currency
@@ -26,6 +27,8 @@ from app.services.risk_engine import calculate_risk
 from app.services.stateful_returns_request import build_stateful_returns_series_request
 from app.services.stateful_returns_series_parser import (
     extract_required_portfolio_returns,
+    extract_stateful_returns_source_evidence,
+    normalize_return_points_to_resolved_window,
     to_return_points,
 )
 from app.upstream_errors import missing_upstream_data
@@ -69,6 +72,7 @@ class _StatefulRiskSource:
     portfolio_points: list[ReturnPoint]
     benchmark_points: list[ReturnPoint]
     risk_free_points: list[ReturnPoint]
+    evidence: StatefulReturnsSourceEvidence
 
 
 def _portfolio_open_date(series_points: list[ReturnPoint], *, as_of_date: date) -> date:
@@ -179,7 +183,24 @@ async def _fetch_stateful_risk_source(
         performance_client=performance_client,
         authority=authority,
     )
-    series, portfolio_points = extract_required_portfolio_returns(source_response)
+    series, portfolio_points = extract_required_portfolio_returns(
+        source_response,
+        frequency=stateful.options.frequency,
+    )
+    evidence = extract_stateful_returns_source_evidence(
+        source_response,
+        portfolio_id=stateful.portfolio_id,
+        as_of_date=stateful.as_of_date,
+        frequency=stateful.options.frequency,
+        metric_basis=stateful.net_or_gross,
+        requested_window=source_payload["window"],
+        returned_points=portfolio_points,
+    )
+    portfolio_points = normalize_return_points_to_resolved_window(
+        source_response,
+        portfolio_points,
+        frequency=stateful.options.frequency,
+    )
     risk_free_request = _build_stateful_risk_free_request(
         stateful=stateful,
         portfolio_points=portfolio_points,
@@ -193,7 +214,15 @@ async def _fetch_stateful_risk_source(
 
     benchmark_points: list[ReturnPoint] = []
     if _requires_benchmark(stateful):
-        benchmark_points = to_return_points(series.get("benchmark_returns"))
+        benchmark_points = to_return_points(
+            series.get("benchmark_returns"),
+            frequency=stateful.options.frequency,
+        )
+        benchmark_points = normalize_return_points_to_resolved_window(
+            source_response,
+            benchmark_points,
+            frequency=stateful.options.frequency,
+        )
 
     risk_free_points: list[ReturnPoint] = []
     if risk_free_request is not None and risk_free_response is not None:
@@ -216,6 +245,7 @@ async def _fetch_stateful_risk_source(
         portfolio_points=portfolio_points,
         benchmark_points=benchmark_points,
         risk_free_points=risk_free_points,
+        evidence=evidence,
     )
 
 
@@ -332,7 +362,8 @@ async def calculate_risk_stateful(
         _build_stateful_stateless_risk_input(
             stateful=stateful,
             source=source,
-        )
+        ),
+        source_returns_evidence=source.evidence,
     )
     return _attach_stateful_risk_lineage(
         response=response,

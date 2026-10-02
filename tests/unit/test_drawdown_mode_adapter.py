@@ -29,8 +29,8 @@ def _stateful() -> DrawdownStatefulInput:
 def test_drawdown_stateful_adapter_happy_path() -> None:
     client = RecordingLotusPerformanceClient(
         response_payload=build_returns_series_response(
-            portfolio_returns=(("2026-01-02", "0.0100"), ("2026-01-03", "-0.0200")),
-            benchmark_returns=(("2026-01-02", "0.0060"), ("2026-01-03", "-0.0100")),
+            portfolio_returns=(("2026-01-02", "0.0100"), ("2026-01-05", "-0.0200")),
+            benchmark_returns=(("2026-01-02", "0.0060"), ("2026-01-05", "-0.0100")),
             as_of_date="2026-01-08",
         )
     )
@@ -135,7 +135,7 @@ def test_drawdown_stateful_adapter_requires_portfolio_returns() -> None:
 def test_drawdown_stateful_adapter_requires_benchmark_when_policy_requires() -> None:
     client = RecordingLotusPerformanceClient(
         response_payload=build_returns_series_response(
-            portfolio_returns=(("2026-01-02", "0.0100"), ("2026-01-03", "-0.0200")),
+            portfolio_returns=(("2026-01-02", "0.0100"), ("2026-01-05", "-0.0200")),
             benchmark_returns=(),
             as_of_date="2026-01-08",
         )
@@ -182,7 +182,7 @@ def test_drawdown_stateful_adapter_rejects_invalid_portfolio_return_value() -> N
         )
 
 
-def test_drawdown_stateful_adapter_skips_malformed_rows_and_allows_optional_benchmark() -> None:
+def test_drawdown_stateful_adapter_ignores_rows_without_string_dates() -> None:
     client = RecordingLotusPerformanceClient(
         response_payload=build_returns_series_response(
             portfolio_returns=(("2026-01-02", "0.0100"),),
@@ -212,9 +212,9 @@ def test_drawdown_stateful_adapter_skips_malformed_rows_and_allows_optional_benc
             authority=admitted_test_authority(),
         )
     )
-    assert "YTD" in response.results
-    assert response.metadata.include_benchmark is False
-    assert response.metadata.missing_benchmark_policy == "IGNORE"
+
+    assert response.metadata.source_returns_evidence is not None
+    assert response.metadata.source_returns_evidence.returned_points == 1
 
 
 def test_drawdown_stateful_preserves_changed_performance_identity_for_same_numbers() -> None:

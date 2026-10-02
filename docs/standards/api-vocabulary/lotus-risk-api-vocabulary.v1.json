@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-10-01T06:39:41.579822+00:00",
+  "generatedAt": "2026-10-02T14:47:16.402192+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.affected_portfolios",
@@ -3849,7 +3849,7 @@
       "semanticId": "lotus.source_returns_evidence",
       "canonicalTerm": "source_returns_evidence",
       "preferredName": "source_returns_evidence",
-      "description": "Validated lotus-performance returns-series identity, freshness, and coverage for stateful drawdown. Null for caller-supplied stateless returns.",
+      "description": "Consumed lotus-performance returns-series response identity and source qualification for stateful calculations. Null for stateless calculations.",
       "example": {
         "calculation_hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
         "calculation_id": "00000000-0000-4000-8000-000000000001",
@@ -7967,6 +7967,14 @@
             "attributeRef": "#/attributeCatalog/lotus.evaluated_period_count"
           },
           {
+            "name": "metadata.source_returns_evidence",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.source_returns_evidence",
+            "attributeRef": "#/attributeCatalog/lotus.source_returns_evidence"
+          },
+          {
             "name": "metadata.mar_annual_rate",
             "location": "body",
             "required": false,
@@ -8763,6 +8771,14 @@
             "type": "integer",
             "semanticId": "lotus.evaluated_period_count",
             "attributeRef": "#/attributeCatalog/lotus.evaluated_period_count"
+          },
+          {
+            "name": "metadata.source_returns_evidence",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.source_returns_evidence",
+            "attributeRef": "#/attributeCatalog/lotus.source_returns_evidence"
           }
         ]
       }

@@ -7,7 +7,11 @@ from app.contracts.risk import (
     RiskResponseMetadata,
     RiskStatelessCalculationInput,
 )
-from app.services.calculation_supportability import record_operation_supportability
+from app.contracts.stateful_returns_source_evidence import StatefulReturnsSourceEvidence
+from app.services.calculation_supportability import (
+    compose_returns_source_supportability,
+    record_operation_supportability,
+)
 from app.services.observability_ports import (
     observe_risk_metric_duration,
     record_risk_metric_requests,
@@ -21,12 +25,14 @@ def _build_metadata(
     annual_factor: int,
     periodic_rf: float,
     calculation_supportability: RiskCalculationSupportability,
+    source_returns_evidence: StatefulReturnsSourceEvidence | None,
 ) -> RiskResponseMetadata:
     return risk_orchestrator.build_request_metadata(
         request,
         annual_factor=annual_factor,
         periodic_rf=periodic_rf,
         calculation_supportability=calculation_supportability,
+        source_returns_evidence=source_returns_evidence,
     )
 
 
@@ -43,8 +49,14 @@ def _risk_response(
     annual_factor: int,
     periodic_rf: float,
     results: dict[str, RiskPeriodResult],
+    source_returns_evidence: StatefulReturnsSourceEvidence | None,
 ) -> RiskResponse:
     calculation_supportability = _resolve_calculation_supportability(request, results)
+    if source_returns_evidence is not None:
+        calculation_supportability = compose_returns_source_supportability(
+            calculation_supportability=calculation_supportability,
+            source_evidence=source_returns_evidence,
+        )
     record_operation_supportability(
         operation="risk/calculate",
         supportability=calculation_supportability,
@@ -57,11 +69,16 @@ def _risk_response(
             annual_factor=annual_factor,
             periodic_rf=periodic_rf,
             calculation_supportability=calculation_supportability,
+            source_returns_evidence=source_returns_evidence,
         ),
     )
 
 
-def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
+def calculate_risk(
+    request: RiskStatelessCalculationInput,
+    *,
+    source_returns_evidence: StatefulReturnsSourceEvidence | None = None,
+) -> RiskResponse:
     record_risk_metric_requests(request.metrics)
     annual_factor = risk_orchestrator.derive_annualization_factor(request)
 
@@ -72,6 +89,7 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
             annual_factor=annual_factor,
             periodic_rf=0.0,
             results={},
+            source_returns_evidence=source_returns_evidence,
         )
 
     periodic_rf, periodic_mar = risk_orchestrator.resolve_periodic_rates(
@@ -94,4 +112,5 @@ def calculate_risk(request: RiskStatelessCalculationInput) -> RiskResponse:
         annual_factor=annual_factor,
         periodic_rf=periodic_rf,
         results=results,
+        source_returns_evidence=source_returns_evidence,
     )

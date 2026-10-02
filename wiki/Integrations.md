@@ -74,9 +74,13 @@ Gateway, Workbench, reporting, and AI consumers must preserve:
 7. risk-event affected-cohort source refs and impact scores,
 8. mandate risk health threshold posture and non-claim reason codes,
 9. lineage and upstream request-fingerprint metadata,
-10. stateful drawdown `source_returns_evidence`, including its calculation identity, source
-    freshness, and reconciled coverage. A Risk request fingerprint is not a substitute for this
-    producer response evidence.
+10. stateful risk calculation, drawdown, and rolling-metrics `source_returns_evidence`, including
+    exact portfolio/as-of/frequency/basis/window admission, calculation identity, source freshness,
+    and coverage matching frequency-valid portfolio observations whose producer buckets overlap the
+    admitted resolved window. An admitted trailing weekly/monthly bucket label is normalized to the
+    resolved end for Risk period filtering. Async results must retain the calculation identity
+    accepted at submission. A request fingerprint is not a substitute for this producer response
+    evidence.
 
 If those are dropped or flattened, a numerically correct response can still become product-wrong.
 

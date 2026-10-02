@@ -13,8 +13,10 @@ from app.contracts.rolling import (
     RollingResponse,
     RollingStatelessInput,
 )
+from app.contracts.stateful_returns_source_evidence import StatefulReturnsSourceEvidence
 from app.services.audit_lineage import fingerprint_model
 from app.services.calculation_supportability import (
+    compose_returns_source_supportability,
     record_operation_supportability,
     supportability_from_period_results,
 )
@@ -38,6 +40,7 @@ def _response_metadata(
     *,
     requested_metrics: Sequence[RollingMetric],
     calculation_supportability: RiskCalculationSupportability,
+    source_returns_evidence: StatefulReturnsSourceEvidence | None,
 ) -> RollingMetadata:
     options = request.rolling_options
     return RollingMetadata(
@@ -61,6 +64,7 @@ def _response_metadata(
             {ROLLING_SHARPE_METRIC},
         ),
         calculation_supportability=calculation_supportability,
+        source_returns_evidence=source_returns_evidence,
     )
 
 
@@ -68,12 +72,18 @@ def _empty_response(
     request: RollingStatelessInput,
     *,
     input_mode: RollingInputMode,
+    source_returns_evidence: StatefulReturnsSourceEvidence | None,
 ) -> RollingResponse:
     calculation_supportability = supportability_from_period_results(
         returns=request.returns,
         as_of_date=request.scope.as_of_date,
         results={},
     )
+    if source_returns_evidence is not None:
+        calculation_supportability = compose_returns_source_supportability(
+            calculation_supportability=calculation_supportability,
+            source_evidence=source_returns_evidence,
+        )
     record_operation_supportability(
         operation="risk/rolling-metrics",
         supportability=calculation_supportability,
@@ -87,6 +97,7 @@ def _empty_response(
             request,
             requested_metrics=requested_metrics,
             calculation_supportability=calculation_supportability,
+            source_returns_evidence=source_returns_evidence,
         ),
     )
 
@@ -95,10 +106,15 @@ def calculate_rolling_metrics(
     request: RollingStatelessInput,
     *,
     input_mode: RollingInputMode,
+    source_returns_evidence: StatefulReturnsSourceEvidence | None = None,
 ) -> RollingResponse:
     frames = build_rolling_input_frames(request)
     if frames.portfolio.empty:
-        return _empty_response(request, input_mode=input_mode)
+        return _empty_response(
+            request,
+            input_mode=input_mode,
+            source_returns_evidence=source_returns_evidence,
+        )
 
     options = request.rolling_options
     requested_metrics = list(options.metrics)
@@ -114,6 +130,11 @@ def calculate_rolling_metrics(
         as_of_date=request.scope.as_of_date,
         results=results,
     )
+    if source_returns_evidence is not None:
+        calculation_supportability = compose_returns_source_supportability(
+            calculation_supportability=calculation_supportability,
+            source_evidence=source_returns_evidence,
+        )
     record_operation_supportability(
         operation="risk/rolling-metrics",
         supportability=calculation_supportability,
@@ -126,5 +147,6 @@ def calculate_rolling_metrics(
             request,
             requested_metrics=requested_metrics,
             calculation_supportability=calculation_supportability,
+            source_returns_evidence=source_returns_evidence,
         ),
     )
