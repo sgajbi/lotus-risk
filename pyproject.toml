@@ -42,7 +42,9 @@ dev = [
   "import-linter==2.13",
   "radon==6.0.1",
   "vulture==2.16",
-  "pre-commit>=4.0.0"
+  "pre-commit>=4.0.0",
+  "PyYAML==6.0.3",
+  "types-PyYAML==6.0.12.20260518"
 ]
 
 [tool.ruff]
@@ -92,4 +94,4 @@ optional_dependencies_dev_groups = ["dev"]
 # and `packaging`, imported by scripts/run_typecheck_hook.py -- itself dev
 # tooling that runs only from pre-commit and is not shipped -- to read this
 # file's own pins with a standards-aware parser instead of a regex.
-per_rule_ignores = { DEP002 = ["uvicorn", "psycopg"], DEP004 = ["coverage", "packaging"] }
+per_rule_ignores = { DEP002 = ["uvicorn", "psycopg"], DEP004 = ["coverage", "packaging", "yaml"] }

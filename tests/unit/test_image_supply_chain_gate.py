@@ -73,7 +73,14 @@ def test_dockerfile_uses_hardened_runtime_target_without_dev_extra() -> None:
     assert "USER lotus" in dockerfile
     assert "HEALTHCHECK" in dockerfile
     assert ".[dev]" not in dockerfile
-    assert "importlib.util.find_spec" in dockerfile
+    assert "importlib.machinery.PathFinder.find_spec" in dockerfile
+    assert "/usr/local/bin/python3.12 -I -S -c" in dockerfile
+    assert "find /install -mindepth 1" in dockerfile
+    assert "Builder output escapes dependency roots" in dockerfile
+    assert "find /install/bin -maxdepth 1 \\( -name 'python*' -o -name 'pip*' \\)" in dockerfile
+    assert "root.glob('*.pth')" in dockerfile
+    assert "'sitecustomize','usercustomize'" in dockerfile
+    assert "Runtime image contains import-path archives" in dockerfile
     for package in FORBIDDEN_RUNTIME_DEV_DEPENDENCIES:
         assert package in dockerfile
 
@@ -247,6 +254,7 @@ def test_image_release_order_guard_rejects_publication_before_scan(tmp_path: Pat
         f"- name: {step}"
         for step in (
             "Build image for validation",
+            "Capture validated local image identity",
             "Generate SBOM",
             "Generate complete vulnerability inventory",
             "Upload vulnerability scan results",
@@ -966,7 +974,7 @@ def test_image_release_contract_rejects_scan_of_nonrelease_image(
     next_step = current.find("\n      - name:", start + 1)
     end = len(current) if next_step < 0 else next_step
     corrupted_step = current[start:end].replace(
-        "image-ref: ${{ env.IMAGE_NAME }}:${{ github.sha }}",
+        "image-ref: ${{ steps.validated_image.outputs.image_id }}",
         "image-ref: debian:stable",
     )
     workflow_path.write_text(

@@ -53,6 +53,10 @@ GATE_OUTPUT_TOOLS = frozenset(
         "vulture",
         # A stub release changes what mypy concludes about unchanged code.
         "pandas-stubs",
+        "types-pyyaml",
+        # The workflow supply-chain gate parses YAML semantically; parser drift can change which
+        # release-control mutations it accepts, so its verdict-producing parser is pinned too.
+        "pyyaml",
         # These produce the number --cov-fail-under compares against a fixed threshold.
         "coverage",
         "pytest-cov",
