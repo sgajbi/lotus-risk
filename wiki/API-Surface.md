@@ -272,13 +272,14 @@ governance state is the mistake to avoid:
 | state | emitted when | reason code |
 |---|---|---|
 | `ready` | at least one affected portfolio was identified | `RISK_EVENT_AFFECTED_COHORT_READY` |
-| `degraded` | some candidate exposure buckets were unsupported | `RISK_EVENT_PARTIAL_UNSUPPORTED_EXPOSURE_BUCKETS` |
-| `pending_review` | **no portfolio met the impact threshold** — an empty cohort | `RISK_EVENT_NO_AFFECTED_PORTFOLIOS` |
+| `degraded` | any candidate exposure bucket was unsupported, including an empty affected cohort | `RISK_EVENT_PARTIAL_UNSUPPORTED_EXPOSURE_BUCKETS`; also `RISK_EVENT_NO_AFFECTED_PORTFOLIOS` when empty |
+| `pending_review` | all candidates were evaluable but **no portfolio met the impact threshold** | `RISK_EVENT_NO_AFFECTED_PORTFOLIOS` |
 
 `pending_review` here is not an approval step and this endpoint creates no approvals. Treat it as
 "nothing was affected, have a look at whether that is expected", and handle it as an empty result
-rather than routing it into a review workflow. `blocked` is declared by the type but is not emitted
-by the cohort engine.
+rather than routing it into a review workflow. Unsupported evidence takes precedence over an empty
+result, and the ready reason is never combined with a non-ready state. `blocked` is declared by the
+type but is not emitted by the cohort engine.
 
 Source exposure weights must be finite and form a full allocation. The endpoint refuses quoted
 `NaN` and infinity sentinels before they can be normalized, scored, or reclassified as an

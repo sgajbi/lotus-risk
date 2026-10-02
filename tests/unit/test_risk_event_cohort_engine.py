@@ -126,8 +126,7 @@ def test_risk_event_affected_cohort_degrades_unsupported_exposure_bucket() -> No
     )
 
     assert (
-        response.metadata.calculation_supportability
-        == RiskEventCohortSupportabilityState.PENDING_REVIEW
+        response.metadata.calculation_supportability == RiskEventCohortSupportabilityState.DEGRADED
     )
     assert response.affected_portfolios == []
     excluded = response.excluded_portfolios[0]
@@ -137,8 +136,58 @@ def test_risk_event_affected_cohort_degrades_unsupported_exposure_bucket() -> No
     )
     assert excluded.dominant_bucket == "PRIVATE_CREDIT"
     assert excluded.bucket_impacts == {"PRIVATE_CREDIT": 0.0}
-    assert "RISK_EVENT_NO_AFFECTED_PORTFOLIOS" in response.reason_codes
-    assert "RISK_EVENT_PARTIAL_UNSUPPORTED_EXPOSURE_BUCKETS" in response.reason_codes
+    assert response.reason_codes == [
+        "RISK_EVENT_NO_AFFECTED_PORTFOLIOS",
+        "RISK_EVENT_PARTIAL_UNSUPPORTED_EXPOSURE_BUCKETS",
+    ]
+
+
+def test_risk_event_affected_cohort_clean_empty_result_requires_review() -> None:
+    response = evaluate_risk_event_affected_cohort(
+        _request(
+            minimum_impact_score=0.20,
+            portfolios=[
+                {
+                    "portfolio_id": "PB_SG_FIXED_INCOME_004",
+                    "exposure_weights": {"FIXED_INCOME": 1.0},
+                }
+            ],
+        )
+    )
+
+    assert (
+        response.metadata.calculation_supportability
+        == RiskEventCohortSupportabilityState.PENDING_REVIEW
+    )
+    assert response.reason_codes == ["RISK_EVENT_NO_AFFECTED_PORTFOLIOS"]
+
+
+@pytest.mark.parametrize("reverse_candidates", [False, True])
+def test_risk_event_affected_cohort_degraded_precedence_is_order_independent(
+    reverse_candidates: bool,
+) -> None:
+    portfolios = [
+        {
+            "portfolio_id": "PB_SG_FIXED_INCOME_005",
+            "exposure_weights": {"FIXED_INCOME": 1.0},
+        },
+        {
+            "portfolio_id": "PB_SG_PRIVATE_MARKETS_006",
+            "exposure_weights": {"PRIVATE_CREDIT": 1.0},
+        },
+    ]
+    if reverse_candidates:
+        portfolios.reverse()
+
+    response = evaluate_risk_event_affected_cohort(_request(portfolios=portfolios))
+
+    assert (
+        response.metadata.calculation_supportability == RiskEventCohortSupportabilityState.DEGRADED
+    )
+    assert [member.portfolio_id for member in response.affected_portfolios] == [
+        "PB_SG_FIXED_INCOME_005"
+    ]
+    assert response.reason_codes == ["RISK_EVENT_PARTIAL_UNSUPPORTED_EXPOSURE_BUCKETS"]
 
 
 def test_risk_event_cohort_rejects_underallocated_exposure_weights() -> None:

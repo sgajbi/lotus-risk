@@ -61,6 +61,17 @@ The response returns:
 5. supportability posture,
 6. bounded reason codes.
 
+Supportability has strict precedence:
+
+| State | Condition | Reasons |
+| --- | --- | --- |
+| `degraded` | Any candidate contains an unsupported exposure bucket | `RISK_EVENT_PARTIAL_UNSUPPORTED_EXPOSURE_BUCKETS`, plus `RISK_EVENT_NO_AFFECTED_PORTFOLIOS` when the cohort is empty |
+| `pending_review` | Every candidate is evaluable but none meets the threshold | `RISK_EVENT_NO_AFFECTED_PORTFOLIOS` |
+| `ready` | At least one portfolio is affected and every candidate is evaluable | `RISK_EVENT_AFFECTED_COHORT_READY` |
+
+`RISK_EVENT_AFFECTED_COHORT_READY` is exclusive to `ready`; candidate order cannot change the
+posture. Consumers must not reinterpret a degraded empty cohort as a clean empty result.
+
 ## Explicit Non-Ownership
 
 This endpoint does not create:

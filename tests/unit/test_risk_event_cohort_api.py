@@ -44,6 +44,59 @@ def test_risk_event_affected_cohort_endpoint_returns_source_contract() -> None:
     assert body["affected_portfolios"][0]["source_ref"].startswith("risk-event-cohort:")
 
 
+@pytest.mark.parametrize(
+    ("minimum_impact_score", "portfolios", "expected_state", "expected_reasons"),
+    [
+        (
+            0.20,
+            [{"portfolio_id": "CLEAN-EMPTY", "exposure_weights": {"FIXED_INCOME": 1.0}}],
+            "pending_review",
+            ["RISK_EVENT_NO_AFFECTED_PORTFOLIOS"],
+        ),
+        (
+            0.05,
+            [{"portfolio_id": "UNSUPPORTED", "exposure_weights": {"PRIVATE_CREDIT": 1.0}}],
+            "degraded",
+            [
+                "RISK_EVENT_NO_AFFECTED_PORTFOLIOS",
+                "RISK_EVENT_PARTIAL_UNSUPPORTED_EXPOSURE_BUCKETS",
+            ],
+        ),
+        (
+            0.05,
+            [
+                {"portfolio_id": "AFFECTED", "exposure_weights": {"FIXED_INCOME": 1.0}},
+                {"portfolio_id": "UNSUPPORTED", "exposure_weights": {"PRIVATE_CREDIT": 1.0}},
+            ],
+            "degraded",
+            ["RISK_EVENT_PARTIAL_UNSUPPORTED_EXPOSURE_BUCKETS"],
+        ),
+    ],
+)
+def test_risk_event_affected_cohort_endpoint_preserves_supportability_precedence(
+    minimum_impact_score: float,
+    portfolios: list[dict[str, object]],
+    expected_state: str,
+    expected_reasons: list[str],
+) -> None:
+    client = TestClient(app)
+
+    response = client.post(
+        "/analytics/risk/risk-event-cohorts/evaluate",
+        json={
+            "risk_event_id": "RISK_EVENT_2026_Q2_RATES_UP",
+            "as_of_date": "2026-05-10",
+            "minimum_impact_score": minimum_impact_score,
+            "portfolios": portfolios,
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["metadata"]["calculation_supportability"] == expected_state
+    assert body["reason_codes"] == expected_reasons
+
+
 def test_risk_event_affected_cohort_endpoint_preserves_exclusion_lineage() -> None:
     client = TestClient(app)
 
