@@ -103,7 +103,8 @@ class RegimeScenarioPackJobRequest(BaseModel):
         max_length=SCENARIO_JOB_MAX_EXPOSURE_COMPONENTS,
         description=(
             "Optional reconciled position rows, bounded to 1,000 for durable job admission. "
-            "This admission slice does not yet execute or page their contributions."
+            "The worker evaluates the immutable rows and exposes their contributions through "
+            "the bounded page route after successful completion."
         ),
         json_schema_extra={"example": SCENARIO_EXPOSURE_COMPONENTS_EXAMPLE},
     )
@@ -131,7 +132,10 @@ class ScenarioEvaluationJobAccepted(BaseModel):
         json_schema_extra={"example": "12db0287-38f2-4c29-a155-61499ea40b47"},
     )
     status: ScenarioEvaluationJobStatus = Field(
-        description="Durable lifecycle posture; this slice only emits QUEUED.",
+        description=(
+            "Durable lifecycle posture. Submission emits QUEUED; status reads can also expose "
+            "RUNNING, SUCCEEDED, or FAILED."
+        ),
         json_schema_extra={"example": "QUEUED"},
     )
     request_fingerprint: str = Field(
@@ -164,6 +168,14 @@ class ScenarioEvaluationJobStatusResponse(ScenarioEvaluationJobAccepted):
             "does not expose another tenant's evidence."
         ),
         json_schema_extra={"example": "SCENARIO_PACK_REVISION_UNAVAILABLE"},
+    )
+    completed_at: dt.datetime | None = Field(
+        default=None,
+        description=(
+            "UTC timestamp at the fenced terminal transaction boundary. This is absent while "
+            "work is queued or running and is retained for both success and qualified failure."
+        ),
+        json_schema_extra={"example": "2026-05-03T09:30:04Z"},
     )
     result: RegimeScenarioPackResponse | None = Field(
         default=None,

@@ -162,6 +162,8 @@ at most 250 stable rows per page for the owning tenant. The explicit worker comm
 bounded expiry cleanup.
 
 Consumers must not treat `QUEUED`, `RUNNING`, or `FAILED` as completed analysis; `FAILED` carries
-only the bounded terminal failure code when one has been durably recorded. The implementation has
+only the bounded terminal failure code when one has been durably recorded. Terminal success and
+qualified failure carry `completed_at` from the fenced terminal transaction; queued and running
+jobs keep it null. The implementation has
 no production capacity, worker-scheduling, throughput, horizontal-scaling, or consumer-acceptance
 claim until each deployment supplies measured evidence.

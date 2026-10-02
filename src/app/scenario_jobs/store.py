@@ -212,6 +212,7 @@ class SqlAlchemyScenarioJobStore:
                 return False
             model.status = ScenarioEvaluationJobStatus.FAILED.value
             model.lease_expires_at = failed_at
+            model.completed_at = failed_at
             model.failure_code = failure_code
             model.failure_detail = failure_detail
             session.flush()
@@ -372,15 +373,26 @@ def _record(model: ScenarioEvaluationJobModel) -> ScenarioEvaluationJobRecord:
         actor_id=model.actor_id,
         correlation_id=model.correlation_id,
         claim_token=model.claim_token,
-        lease_expires_at=model.lease_expires_at,
+        lease_expires_at=_as_utc_optional(model.lease_expires_at),
         attempt_count=model.attempt_count,
         failure_code=model.failure_code,
         failure_detail=model.failure_detail,
         result_json=model.result_json,
-        completed_at=model.completed_at,
-        submitted_at=model.submitted_at,
-        expires_at=model.expires_at,
+        completed_at=_as_utc_optional(model.completed_at),
+        submitted_at=_as_utc(model.submitted_at),
+        expires_at=_as_utc(model.expires_at),
     )
+
+
+def _as_utc(value: dt.datetime) -> dt.datetime:
+    """Restore the declared UTC contract when an adapter returns a naive database value."""
+    if value.tzinfo is None:
+        return value.replace(tzinfo=dt.UTC)
+    return value.astimezone(dt.UTC)
+
+
+def _as_utc_optional(value: dt.datetime | None) -> dt.datetime | None:
+    return _as_utc(value) if value is not None else None
 
 
 def _contribution_record(

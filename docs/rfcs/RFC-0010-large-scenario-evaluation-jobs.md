@@ -20,7 +20,8 @@ and cursor-paged; pages never recompute or renormalize contributions.
 2. Submission, immutable input, scenario-pack revision, and initial `QUEUED` state commit in one
    transaction. A worker changes state only through a compare-and-set claim.
 3. A claim has a lease. Recovery may reclaim only an expired lease; terminal success/failure is
-   fenced by the claim token so a stale worker cannot overwrite a newer attempt.
+   fenced by the claim token so a stale worker cannot overwrite a newer attempt. The durable
+   terminal timestamp is recorded at that transaction boundary, not copied from claim time.
 4. Every output row is keyed by `(job_id, scenario_id, ordinal)` and written with the aggregate
    result in the terminal transaction. Reads require the submitting tenant and use a stable cursor
    over that immutable order.

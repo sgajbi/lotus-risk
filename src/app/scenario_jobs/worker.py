@@ -6,6 +6,7 @@ import argparse
 import datetime as dt
 import json
 import time
+from collections.abc import Callable
 
 from app.contracts.scenario_response_outputs import RegimeScenarioPackResponse
 from app.observability import (
@@ -26,11 +27,16 @@ from app.services.scenario_engine import evaluate_large_regime_scenario_job
 DEFAULT_LEASE_SECONDS = 300
 
 
+def _utc_now() -> dt.datetime:
+    return dt.datetime.now(tz=dt.UTC)
+
+
 def process_one_scenario_job(
     *,
     store: SqlAlchemyScenarioJobStore,
     now: dt.datetime | None = None,
     lease_seconds: int = DEFAULT_LEASE_SECONDS,
+    clock: Callable[[], dt.datetime] = _utc_now,
 ) -> str | None:
     """Claim and process at most one job, returning its identity only when claimed.
 
@@ -42,7 +48,7 @@ def process_one_scenario_job(
         raise ValueError("scenario job lease_seconds must be positive")
     started_at = observation_start()
     outcome: ScenarioJobExecutionOutcome = "retryable_error"
-    claimed_at = now or dt.datetime.now(tz=dt.UTC)
+    claimed_at = now or clock()
     try:
         claim = store.claim_next(
             now=claimed_at,
@@ -56,12 +62,12 @@ def process_one_scenario_job(
         return None
     assert claim.claim_token is not None
     try:
-        outcome = _evaluate_claim(store=store, claim=claim, claimed_at=claimed_at)
+        outcome = _evaluate_claim(store=store, claim=claim, clock=clock)
     except _QualifiedScenarioJobFailure as exc:
         outcome = _record_claim_failure(
             store=store,
             claim=claim,
-            claimed_at=claimed_at,
+            failed_at=clock(),
             failure_code=exc.code,
             failure_detail=exc.code,
             terminal_outcome="qualified_failure",
@@ -70,7 +76,7 @@ def process_one_scenario_job(
         outcome = _record_claim_failure(
             store=store,
             claim=claim,
-            claimed_at=claimed_at,
+            failed_at=clock(),
             failure_code="SCENARIO_EVALUATION_INVALID_INPUT",
             failure_detail="Persisted scenario job input could not be evaluated.",
             terminal_outcome="invalid_input",
@@ -84,7 +90,7 @@ def _evaluate_claim(
     *,
     store: SqlAlchemyScenarioJobStore,
     claim: ScenarioEvaluationJobRecord,
-    claimed_at: dt.datetime,
+    clock: Callable[[], dt.datetime],
 ) -> ScenarioJobExecutionOutcome:
     """Evaluate one immutable claim and atomically publish it only through its current fence."""
     assert claim.claim_token is not None
@@ -105,7 +111,7 @@ def _evaluate_claim(
         claim_token=claim.claim_token,
         aggregate_result=aggregate_result.model_dump(mode="json"),
         contributions=_contribution_records(job_id=claim.job_id, evaluation=evaluation),
-        completed_at=claimed_at,
+        completed_at=clock(),
     )
     return "succeeded" if completed else "stale_claim"
 
@@ -114,7 +120,7 @@ def _record_claim_failure(
     *,
     store: SqlAlchemyScenarioJobStore,
     claim: ScenarioEvaluationJobRecord,
-    claimed_at: dt.datetime,
+    failed_at: dt.datetime,
     failure_code: str,
     failure_detail: str,
     terminal_outcome: ScenarioJobExecutionOutcome,
@@ -126,7 +132,7 @@ def _record_claim_failure(
         claim_token=claim.claim_token,
         failure_code=failure_code,
         failure_detail=failure_detail,
-        failed_at=claimed_at,
+        failed_at=failed_at,
     )
     return terminal_outcome if failed else "stale_claim"
 

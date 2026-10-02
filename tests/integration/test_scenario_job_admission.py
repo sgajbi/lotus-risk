@@ -153,9 +153,15 @@ def test_large_job_worker_persists_all_contributions_once_and_pages_them_stably(
     from app.scenario_jobs.worker import process_one_scenario_job
 
     store = SqlAlchemyScenarioJobStore(database_url)
+    claimed_at = dt.datetime(2026, 5, 3, 10, 0, tzinfo=dt.UTC)
+    completed_at = claimed_at + dt.timedelta(seconds=6)
     try:
         assert (
-            process_one_scenario_job(store=store, now=dt.datetime(2026, 5, 3, 10, 0, tzinfo=dt.UTC))
+            process_one_scenario_job(
+                store=store,
+                now=claimed_at,
+                clock=lambda: completed_at,
+            )
             == job_id
         )
         assert (
@@ -198,6 +204,7 @@ def test_large_job_worker_persists_all_contributions_once_and_pages_them_stably(
 
     assert status_response.status_code == 200
     assert status_response.json()["status"] == "SUCCEEDED"
+    assert status_response.json()["completed_at"] == completed_at.isoformat().replace("+00:00", "Z")
     assert all(
         not item["position_contributions"]
         for item in status_response.json()["result"]["scenario_results"]
@@ -768,6 +775,7 @@ def test_expired_claim_is_recovered_with_a_new_token_and_stale_failure_is_fenced
     assert status_response.status_code == 200
     assert status_response.json()["status"] == "FAILED"
     assert status_response.json()["failure_code"] == "SCENARIO_PACK_REVISION_UNAVAILABLE"
+    assert status_response.json()["completed_at"] == reclaimed_at.isoformat().replace("+00:00", "Z")
 
 
 def test_store_refuses_invalid_claim_cleanup_and_contribution_ownership(
