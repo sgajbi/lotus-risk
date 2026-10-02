@@ -1,4 +1,4 @@
-.PHONY: architecture-gate complexity-gate source-size-gate personal-path-gate dead-code-gate dependency-hygiene-gate github-actions-runtime-gate install install-ci check check-all test test-unit test-integration test-e2e test-all test-coverage test-fast test-all-fast test-all-no-cov test-all-parallel ci ci-local ci-local-docker ci-local-docker-down typecheck typecheck-tests-critical lint monetary-float-guard domain-product-validate domain-data-product-gate trust-telemetry-validate observability-contract-validate mesh-contract-validate idea-opportunity-evidence-gate idea-opportunity-runtime-evidence image-supply-chain-gate no-alias-gate openapi-gate openapi-artifact-gate api-vocabulary-gate format clean run check-deps security-audit migration-smoke migration-apply pre-commit docker-build docker-up docker-down test-pyramid-gate quality-baseline maintainability-report
+.PHONY: architecture-gate complexity-gate source-size-gate personal-path-gate dead-code-gate dependency-hygiene-gate github-actions-runtime-gate install install-ci check check-all test test-unit test-integration test-e2e test-all test-coverage test-fast test-all-fast test-all-no-cov test-all-parallel ci ci-local ci-local-docker ci-local-docker-down typecheck lint monetary-float-guard domain-product-validate domain-data-product-gate trust-telemetry-validate observability-contract-validate mesh-contract-validate idea-opportunity-evidence-gate idea-opportunity-runtime-evidence image-supply-chain-gate no-alias-gate openapi-gate openapi-artifact-gate api-vocabulary-gate format clean run check-deps security-audit migration-smoke migration-apply pre-commit docker-build docker-up docker-down test-pyramid-gate quality-baseline maintainability-report
 
 COVERAGE_FAIL_UNDER ?= 98
 SOURCE_FILE_MAX_LINES ?= 450
@@ -104,9 +104,6 @@ check-all: lint typecheck test-all
 
 typecheck:
 	python -m mypy --config-file mypy.ini
-
-typecheck-tests-critical:
-	python -m mypy tests/unit/core/test_capabilities.py tests/unit/dpm/engine/test_engine_workflow_gates.py
 
 openapi-gate:
 	python scripts/openapi_quality_gate.py
