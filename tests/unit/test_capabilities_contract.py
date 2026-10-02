@@ -1,9 +1,13 @@
+from typing import get_args
+
 from app.contracts.capabilities import (
     CAPABILITY_FEATURE_KEYS,
     CAPABILITY_WORKFLOW_KEYS,
+    SUPPORTED_INPUT_MODES,
     CapabilityFeature,
     CapabilityWorkflow,
     IntegrationCapabilitiesResponse,
+    SupportedInputMode,
 )
 from app.services.capability_workflows import (
     aggregate_supported_input_modes,
@@ -22,6 +26,19 @@ def test_capability_workflow_keys_use_snake_case_domain_vocabulary() -> None:
     for workflow_key in CAPABILITY_WORKFLOW_KEYS:
         assert workflow_key == workflow_key.lower()
         assert "-" not in workflow_key
+
+
+def test_input_mode_inventory_and_presentation_order_derive_from_contract() -> None:
+    assert SUPPORTED_INPUT_MODES == get_args(SupportedInputMode)
+    workflows = [
+        CapabilityWorkflow(
+            workflow_key="mode-order-proof",
+            endpoint_path="/analytics/risk/concentration",
+            supported_input_modes=list(reversed(SUPPORTED_INPUT_MODES)),
+            support_status="full",
+        )
+    ]
+    assert aggregate_supported_input_modes(workflows) == list(SUPPORTED_INPUT_MODES)
 
 
 def test_integration_capabilities_response_contract() -> None:

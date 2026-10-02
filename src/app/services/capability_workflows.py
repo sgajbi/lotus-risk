@@ -3,12 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from app.contracts.capabilities import (
+    SUPPORTED_INPUT_MODES,
     CapabilityWorkflow,
     SupportedInputMode,
     WorkflowSupportStatus,
 )
-
-SUPPORTED_INPUT_MODE_ORDER: tuple[SupportedInputMode, ...] = ("stateless", "stateful", "simulation")
 
 
 @dataclass(frozen=True)
@@ -130,4 +129,4 @@ def aggregate_supported_input_modes(
         if workflow.enabled
         for mode in workflow.supported_input_modes
     }
-    return [mode for mode in SUPPORTED_INPUT_MODE_ORDER if mode in observed]
+    return [mode for mode in SUPPORTED_INPUT_MODES if mode in observed]

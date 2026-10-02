@@ -7,6 +7,7 @@ from app.api_errors import STANDARD_ERROR_RESPONSES
 from app.build_metadata import resolve_build_metadata
 from app.contracts.capabilities import (
     CAPABILITY_FEATURE_KEYS,
+    SUPPORTED_INPUT_MODES,
     CapabilityFeature,
     IntegrationCapabilitiesResponse,
 )
@@ -25,7 +26,6 @@ from app.service_metadata import (
     ROUNDING_POLICY_VERSION,
     SERVICE_NAME,
     SERVICE_VERSION,
-    SUPPORTED_INPUT_MODES,
 )
 from app.services.capability_workflows import (
     aggregate_supported_input_modes,

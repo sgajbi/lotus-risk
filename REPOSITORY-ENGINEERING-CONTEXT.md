@@ -543,6 +543,10 @@ Most relevant current governance:
 10. `make architecture-gate` invokes Import Linter's actual CLI entry point with `src` on the
     import path; service code may import `app.upstream_errors` constructors but must not import
     `httpx` directly or transitively. Transport classifiers belong to `app.integrations`.
+11. `SupportedInputMode` in `app.contracts.capabilities` owns the ordered mode vocabulary.
+    `/ops` and capability aggregation derive their inventory/order from that alias; only
+    workflow entries authorize an executable mode. Do not hand-copy the alias into metadata or
+    filtering constants when adding a mode.
 
 ## Context Maintenance Rule
 

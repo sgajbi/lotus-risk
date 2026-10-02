@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, get_args
 
 from pydantic import BaseModel, Field
 
@@ -27,6 +27,7 @@ CAPABILITY_WORKFLOW_KEYS: tuple[str, ...] = (
     "risk_event_affected_cohort",
 )
 SupportedInputMode = Literal["stateless", "stateful", "simulation"]
+SUPPORTED_INPUT_MODES: tuple[SupportedInputMode, ...] = get_args(SupportedInputMode)
 WorkflowSupportStatus = Literal["full", "partial"]
 InputModeAffordanceAuthority = Literal["workflows.supported_input_modes"]
 

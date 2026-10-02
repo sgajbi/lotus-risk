@@ -59,6 +59,12 @@ Each workflow now also publishes:
 - `support_status`
 - `notes`
 
+The ordered mode vocabulary is declared once by `SupportedInputMode` in
+`app.contracts.capabilities`. `GET /ops` publishes that vocabulary directly; the integration
+capability aggregate filters the modes actually declared by enabled workflow entries in the same
+declaration order. Adding a vocabulary member alone does not grant an executable workflow mode:
+the workflow catalog and its implementation must still admit that mode explicitly.
+
 This allows consumers to discover that:
 
 - concentration supports simulation
