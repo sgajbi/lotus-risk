@@ -500,13 +500,13 @@ Important validation expectations:
    `allow_fork_syncing`, and this repository adopted that copy verbatim and declares all four.
 9. Release image posture is governed by `make image-supply-chain-gate`: images are built locally,
    tagged by Git SHA, labeled with source/build/version/CI metadata, accompanied by an SBOM, and
-    fully inventoried, scanned unconditionally for application-library HIGH/CRITICAL findings, and
-    scanned for fixable OS HIGH/CRITICAL findings before registry authentication or publication.
+    fully inventoried and scanned unconditionally for application-library and operating-system
+    HIGH/CRITICAL findings before registry authentication or publication.
     Only scan-passing images are pushed by `.github/workflows/image-release.yml`,
    then signed, attested, recorded in release-manifest evidence, and promoted by digest rather than
-   environment-specific rebuilds. The full SARIF retains unfixed findings; the time-bounded
-    `ignore-unfixed` blocking posture is governed in `docs/security-deployment-policy.md`, and the
-    supply-chain gate rejects it after `UNFIXED_VULNERABILITY_EXCEPTION_EXPIRES_ON`.
+   environment-specific rebuilds. Builder, validator, and runtime stages share one approved,
+   immutable Python 3.12 Alpine 3.23 index digest. The supply-chain gate forbids `ignore-unfixed`;
+   SBOM, signature, and provenance evidence never override a failed vulnerability verdict.
    `make docker-build`
    targets the multi-stage `runtime` image by default; that target copies a non-editable package from
    its builder, applies current operating-system security updates, runs as `lotus` UID/GID `10001`,

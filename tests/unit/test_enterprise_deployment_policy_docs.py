@@ -1,4 +1,3 @@
-import re
 from pathlib import Path
 
 import pytest
@@ -111,18 +110,18 @@ def test_enterprise_deployment_policy_records_image_supply_chain_requirements() 
         assert term in wiki_security
 
 
-def test_unfixed_base_image_exception_expiry_is_consistent_across_policy_sources() -> None:
+def test_runtime_image_vulnerability_posture_is_consistent_across_policy_sources() -> None:
     workflow = (REPO_ROOT / ".github" / "workflows" / "image-release.yml").read_text(
         encoding="utf-8"
     )
-    expiry_match = re.search(
-        r'UNFIXED_VULNERABILITY_EXCEPTION_EXPIRES_ON: "(?P<expiry>\d{4}-\d{2}-\d{2})"',
-        workflow,
-    )
-
-    assert expiry_match is not None
-    expiry = expiry_match.group("expiry")
-    assert f"| Expiry | {expiry};" in POLICY_DOC.read_text(encoding="utf-8")
+    policy = POLICY_DOC.read_text(encoding="utf-8")
     wiki = WIKI_SECURITY_DOC.read_text(encoding="utf-8")
-    assert f"expires on {expiry}" in wiki
-    assert "fresh image scan and explicit evidence" in wiki
+    context = (REPO_ROOT / "REPOSITORY-ENGINEERING-CONTEXT.md").read_text(encoding="utf-8")
+
+    assert "ignore-unfixed" not in workflow
+    assert "UNFIXED_VULNERABILITY_EXCEPTION_EXPIRES_ON" not in workflow
+    assert "fixable HIGH/CRITICAL" not in policy
+    assert "fixable HIGH/CRITICAL" not in wiki
+    for text in (policy, wiki, context):
+        assert "Python 3.12 Alpine 3.23" in text
+        assert "forbids `ignore-unfixed`" in text

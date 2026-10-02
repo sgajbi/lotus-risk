@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from scripts.validate_image_supply_chain import (
+    APPROVED_RUNTIME_BASE,
     RUNTIME_DEPENDENCY_GUARD,
     RUNTIME_ENSUREPIP_REMOVAL,
     RUNTIME_PIP_REMOVAL,
@@ -323,8 +324,9 @@ def test_runtime_container_contract_rejects_inherited_shell_override(tmp_path: P
     current = Path("Dockerfile").read_text(encoding="utf-8")
     dockerfile.write_text(
         current.replace(
-            "FROM python:3.12-slim AS runtime",
-            'FROM python:3.12-slim AS shell-base\nSHELL ["/bin/true", "-c"]\n'
+            f"FROM {APPROVED_RUNTIME_BASE} AS runtime",
+            f"FROM {APPROVED_RUNTIME_BASE} AS shell-base\n"
+            'SHELL ["/bin/true", "-c"]\n'
             "FROM shell-base AS runtime",
         ),
         encoding="utf-8",
@@ -420,9 +422,9 @@ def test_runtime_container_contract_rejects_builder_controlled_collision_check(
 ) -> None:
     dockerfile = tmp_path / "Dockerfile"
     current = Path("Dockerfile").read_text(encoding="utf-8")
-    validator_stage = "\nFROM python:3.12-slim AS builder-output-validator\n\n"
+    validator_stage = f"\nFROM {APPROVED_RUNTIME_BASE} AS builder-output-validator\n\n"
     collision_guard = current.split(validator_stage, maxsplit=1)[1].split(
-        "\nFROM python:3.12-slim AS runtime", maxsplit=1
+        f"\nFROM {APPROVED_RUNTIME_BASE} AS runtime", maxsplit=1
     )[0]
     mutated = current.replace(validator_stage + collision_guard, "\n" + collision_guard)
     mutated = mutated.replace(

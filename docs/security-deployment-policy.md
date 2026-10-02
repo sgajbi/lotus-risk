@@ -146,9 +146,9 @@ The governed release image policy is:
    URL, image digest field, and CI pipeline/run ID,
 3. image push is permitted only through `.github/workflows/image-release.yml`,
 4. the image is built and loaded locally so an SPDX SBOM, a complete HIGH/CRITICAL vulnerability
-   inventory, and the blocking scan for fixable HIGH/CRITICAL findings complete before registry
+   inventory, and blocking scans for every HIGH/CRITICAL finding complete before registry
    authentication or publication,
-5. a fixable HIGH/CRITICAL finding fails the blocking scan and prevents publication,
+5. any HIGH/CRITICAL finding fails the applicable blocking scan and prevents publication,
 6. after the scan passes, the immutable image is pushed and its registry digest is captured in
    `output/image-release/image-release-manifest.json`,
 7. the image is signed by digest with keyless cosign signing,
@@ -201,28 +201,21 @@ base image and logical instruction sequence, are contract-locked so package stas
 outside the reviewed install/removal path. The validated `runtime` stage must remain the final
 Dockerfile stage because the release build publishes Docker's default final target.
 The final-image vulnerability inventory, not the Dockerfile alone, is the evidence
-that fixable package findings are absent; local image proof does not certify a published release.
+that HIGH/CRITICAL package findings are absent; local image proof does not certify a published release.
 
-### Unfixed base-image vulnerability treatment
+### Base-image vulnerability treatment
 
-The complete Trivy SARIF inventory intentionally retains HIGH/CRITICAL findings regardless of fix
-availability. A separate application-library scan blocks every HIGH/CRITICAL finding, including
-findings without a published fix. The OS-only blocking scan uses `ignore-unfixed: true`; it
-suppresses only base-image findings for which the vulnerability feed publishes no fixed version,
-while every fixable OS HIGH/CRITICAL finding remains release-blocking. This is an actionability rule,
-not a severity downgrade or a package-specific ignore list.
+All Docker stages use the same approved, immutable Python 3.12 Alpine 3.23 index digest. The runtime
+stage applies available operating-system updates during the build. The release workflow then scans
+the exact captured final-image ID before registry authentication or publication.
 
-The governed Trivy HIGH/CRITICAL vulnerability scan therefore has three evidence-preserving passes:
-complete SARIF visibility, an unconditional application-library gate, and the expiring OS-only
-fixable-finding gate.
-
-| Control field | Governed value |
-|---|---|
-| Owner | `lotus-risk` maintainers |
-| Reason | Debian base-image findings without an upstream fixed version cannot be remediated by this repository; blocking them would permanently disable signing and attestation without reducing risk. |
-| Review trigger | Every image build, base-image digest change, or vulnerability-database change; newly fixable findings fail the release automatically. |
-| Expiry | 2026-12-31; encoded by `UNFIXED_VULNERABILITY_EXCEPTION_EXPIRES_ON`. Renewed on 2026-10-01 after a fresh Trivy 0.70.0 scan of runtime image `sha256:e80a42ba39611d35f7b1b59610b6392518953c133ba75d2c39bbe06a01c425b8`, built from `f15501ff677e418a3033a7c5d6a11b5950551c96`: 44 HIGH/CRITICAL Debian findings, zero Python findings, and zero non-empty fixed versions. The repository gate fails after this date unless maintainers renew it with a fresh scan and explicit evidence. |
-| Compensating evidence | Complete SARIF inventory, SPDX SBOM, immutable digest, signature, provenance attestation, and fixable-finding blocking scan. |
+The governed Trivy HIGH/CRITICAL vulnerability scan preserves a complete SARIF inventory and
+independently blocks every application-library and operating-system finding at those severities.
+The release contract forbids `ignore-unfixed`:
+absence of a published fix does not convert a terminal vulnerability verdict into release
+acceptance. Base-image digest changes require a reviewed contract update, a real image build, and a
+fresh exact-image scan. SBOM, signature, provenance attestation, and immutable digest evidence remain
+required but do not override a failed vulnerability gate.
 
 ## Evidence Commands
 
