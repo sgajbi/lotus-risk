@@ -200,18 +200,19 @@ def _supportability_state(
     affected: list[RiskEventAffectedPortfolio],
     excluded: list[RiskEventExcludedPortfolio],
 ) -> tuple[RiskEventCohortSupportabilityState, list[str]]:
-    supportability = RiskEventCohortSupportabilityState.READY
-    reason_codes = ["RISK_EVENT_AFFECTED_COHORT_READY"]
     unsupported_bucket_seen = any(
         "RISK_EVENT_UNSUPPORTED_EXPOSURE_BUCKET" in portfolio.reason_codes for portfolio in excluded
     )
+    reason_codes: list[str] = []
     if unsupported_bucket_seen:
-        supportability = RiskEventCohortSupportabilityState.DEGRADED
         reason_codes.append("RISK_EVENT_PARTIAL_UNSUPPORTED_EXPOSURE_BUCKETS")
     if not affected:
-        supportability = RiskEventCohortSupportabilityState.PENDING_REVIEW
         reason_codes.append("RISK_EVENT_NO_AFFECTED_PORTFOLIOS")
-    return supportability, sorted(set(reason_codes))
+    if unsupported_bucket_seen:
+        return RiskEventCohortSupportabilityState.DEGRADED, sorted(reason_codes)
+    if not affected:
+        return RiskEventCohortSupportabilityState.PENDING_REVIEW, reason_codes
+    return RiskEventCohortSupportabilityState.READY, ["RISK_EVENT_AFFECTED_COHORT_READY"]
 
 
 def _request_fingerprint(request: RiskEventAffectedCohortRequest) -> str:
