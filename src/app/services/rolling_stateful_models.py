@@ -6,6 +6,7 @@ from typing import Any, Protocol
 from app.contracts.downstream_authority import DownstreamAuthority
 from app.contracts.risk import ReturnPoint
 from app.contracts.rolling import RollingStatefulInput
+from app.contracts.stateful_returns_source_evidence import StatefulReturnsSourceEvidence
 
 
 class LotusPerformanceClientProtocol(Protocol):
@@ -60,6 +61,7 @@ class ResolvedStatefulRollingInputs:
     portfolio_points: list[ReturnPoint]
     benchmark_points: list[ReturnPoint]
     risk_free_points: list[ReturnPoint]
+    source_returns_evidence: StatefulReturnsSourceEvidence
 
 
 @dataclass(frozen=True)

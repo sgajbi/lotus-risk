@@ -77,8 +77,9 @@ portfolio IDs and endpoint-specific evidence before they are counted as validate
 All analytics endpoint metadata now includes `lineage_version`, `request_fingerprint`,
 `source_services`, and `upstream_request_fingerprints`. Endpoint-specific metadata remains
 responsible for methodology version, observation counts, alignment policy, and coverage diagnostics.
-Stateful drawdown also exposes Performance's qualified response identity, freshness, and coverage
-as `source_returns_evidence`; it is not interchangeable with the upstream-request fingerprint.
+Stateful risk calculation, drawdown, and rolling metrics also expose Performance's qualified
+response identity, freshness, and coverage as `source_returns_evidence`; it is not interchangeable
+with the upstream-request fingerprint.
 
 See `docs/domain-apis/risk-audit-lineage.md`.
 

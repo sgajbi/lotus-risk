@@ -12,14 +12,14 @@ completion claim.
 
 ## Generation Identity
 
-- Measured source/test SHA-256: `1aee120103129b0433f34c88cb2f61028f7bb14e9a834ab396711459a1284f21`
+- Measured source/test SHA-256: `407208a7184a5fa88a4f7c22def4235c180439109c58b502374e3b19145cc9a1`
 - The branch, commit, tool output and timings belong to the CI run artifact, not this
   rebase-stable measurement. The immutable initial baseline remains commit `3254774`.
 
 ## Current Code Size
 
 - Python source files under `src/`: 281
-- Python test files under `tests/`: 158
+- Python test files under `tests/`: 159
 - Python packages under `src/`: 14
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
 
@@ -33,20 +33,20 @@ completion claim.
 | src/app/services/attribution_active_group_evidence.py | 414 | 16963 |
 | src/app/scenario_jobs/store.py | 407 | 16257 |
 | src/app/evidence/idea_opportunity_runtime.py | 400 | 15185 |
-| src/app/services/risk_mode_adapter.py | 341 | 11531 |
-| src/app/services/calculation_supportability.py | 317 | 12222 |
+| src/app/services/stateful_returns_series_parser.py | 386 | 14206 |
+| src/app/services/risk_mode_adapter.py | 372 | 12684 |
+| src/app/services/calculation_supportability.py | 320 | 12394 |
+| src/app/integrations/performance_async_execution.py | 308 | 9572 |
 | src/app/integrations/lotus_performance_transport.py | 304 | 10376 |
 | src/app/services/attribution_calculation.py | 300 | 11612 |
 | src/app/services/risk/period_metrics.py | 282 | 9471 |
 | src/app/enterprise_readiness.py | 276 | 9394 |
 | src/app/services/attribution_decomposition.py | 266 | 9711 |
-| src/app/integrations/performance_async_execution.py | 264 | 8088 |
 | src/app/services/scenario_engine.py | 255 | 8966 |
 | src/app/integrations/lotus_core_operations.py | 231 | 7376 |
 | src/app/services/supportability_periods.py | 229 | 8819 |
 | src/app/services/risk_event_cohort_engine.py | 224 | 7790 |
 | src/app/contracts/attribution_result_outputs.py | 221 | 10334 |
-| src/app/scenario_jobs/contracts.py | 221 | 8454 |
 
 ### Largest Functions And Classes
 
@@ -54,24 +54,24 @@ completion claim.
 | --- | --- | --- | --- |
 | src/app/scenario_jobs/store.py | SqlAlchemyScenarioJobStore | ClassDef | 286 |
 | src/app/contracts/attribution_metadata_outputs.py | HistoricalAttributionMetadata | ClassDef | 137 |
+| src/app/contracts/rolling_metadata_outputs.py | RollingMetadata | ClassDef | 136 |
 | src/app/integrations/lotus_core_client.py | LotusCoreClient | ClassDef | 132 |
-| src/app/contracts/rolling_metadata_outputs.py | RollingMetadata | ClassDef | 115 |
+| src/app/contracts/risk_response_outputs.py | RiskResponseMetadata | ClassDef | 111 |
 | src/app/contracts/drawdown_metadata_outputs.py | DrawdownMetadata | ClassDef | 105 |
 | src/app/contracts/mandate_health_response_outputs.py | MandateRiskHealthContextResponse | ClassDef | 102 |
 | src/app/services/attribution_stateful_inputs.py | fetch_group_evidence | AsyncFunctionDef | 100 |
 | src/app/contracts/attribution_result_outputs.py | AttributionSetResult | ClassDef | 91 |
-| src/app/contracts/risk_response_outputs.py | RiskResponseMetadata | ClassDef | 90 |
 | src/app/contracts/concentration_issuer_metric_outputs.py | IssuerConcentration | ClassDef | 89 |
 | src/app/contracts/scenario_inputs.py | RegimeScenarioPackRequest | ClassDef | 86 |
 | src/app/contracts/concentration_metadata_outputs.py | ConcentrationMetadata | ClassDef | 82 |
 | src/app/integrations/lotus_performance_client.py | LotusPerformanceClient | ClassDef | 82 |
 | src/app/contracts/attribution_stateless_inputs.py | HistoricalAttributionStatelessInput | ClassDef | 79 |
 | src/app/trust_telemetry_product_models.py | ProductTrustTelemetrySeed | ClassDef | 79 |
+| src/app/services/risk_mode_adapter.py | _fetch_stateful_risk_source | AsyncFunctionDef | 78 |
 | src/app/contracts/concentration_request_inputs.py | ConcentrationRequest | ClassDef | 77 |
 | src/app/contracts/drawdown_response_envelope_outputs.py | DrawdownResponse | ClassDef | 77 |
 | src/app/contracts/rolling_metric_summary_outputs.py | RollingMetricSummary | ClassDef | 76 |
 | src/app/contracts/rolling_period_outputs.py | RollingPeriodResult | ClassDef | 76 |
-| src/app/services/calculation_supportability.py | supportability_from_attribution_results | FunctionDef | 75 |
 
 ## Tool Baseline
 
@@ -164,6 +164,6 @@ needs current CI status, generated OpenAPI artifact evidence, and reviewer-ready
 
 ## Validation Snapshot
 
-- Unit tests collected: 1387
+- Unit tests collected: 1402
 - Import-linter is an enforced architecture gate; its run verdict belongs to CI, not this
   rebase-stable snapshot.

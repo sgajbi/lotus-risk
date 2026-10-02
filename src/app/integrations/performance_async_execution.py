@@ -26,6 +26,7 @@ class AsyncExecutionOperations:
     status: str
     result: str
     workflow_name: str
+    bind_result_calculation_id: bool = False
 
 
 def async_accepted_paths(
@@ -49,6 +50,22 @@ def async_accepted_paths(
             message="lotus-performance async accepted payload has invalid poll_path",
         )
     return result_path, poll_path
+
+
+def _accepted_calculation_id(
+    accepted_payload: dict[str, Any],
+    *,
+    operations: AsyncExecutionOperations,
+) -> str:
+    calculation_id = accepted_payload.get("calculation_id")
+    if not isinstance(calculation_id, str) or not calculation_id.strip():
+        raise invalid_upstream_payload(
+            service="lotus-performance",
+            operation=operations.submit,
+            message="lotus-performance async accepted payload missing calculation_id",
+            details={"field": "calculation_id"},
+        )
+    return calculation_id
 
 
 def raise_async_failure(
@@ -83,15 +100,29 @@ def raise_async_poll_timeout(
 def required_async_result(
     result_payload: dict[str, Any] | None,
     *,
+    accepted_calculation_id: str,
     operations: AsyncExecutionOperations,
 ) -> dict[str, Any]:
-    if result_payload is not None:
-        return result_payload
-    raise missing_upstream_data(
-        service="lotus-performance",
-        operation=operations.submit,
-        message=f"lotus-performance async {operations.workflow_name} result returned no payload",
-    )
+    if result_payload is None:
+        raise missing_upstream_data(
+            service="lotus-performance",
+            operation=operations.submit,
+            message=f"lotus-performance async {operations.workflow_name} result returned no payload",
+        )
+    if (
+        operations.bind_result_calculation_id
+        and result_payload.get("calculation_id") != accepted_calculation_id
+    ):
+        raise invalid_upstream_payload(
+            service="lotus-performance",
+            operation=operations.result,
+            message=(
+                f"lotus-performance async {operations.workflow_name} result calculation_id "
+                "does not match accepted execution"
+            ),
+            details={"field": "calculation_id"},
+        )
+    return result_payload
 
 
 def parse_dict_payload(
@@ -140,6 +171,10 @@ async def poll_async_result(
     operations: AsyncExecutionOperations,
 ) -> dict[str, Any]:
     result_path, poll_path = async_accepted_paths(accepted_payload, operations=operations)
+    accepted_calculation_id = _accepted_calculation_id(
+        accepted_payload,
+        operations=operations,
+    )
     last_status = "pending"
     for _ in range(async_max_polls):
         result_payload, last_status = await _poll_once(
@@ -150,6 +185,7 @@ async def poll_async_result(
             headers=headers,
             started_at=started_at,
             last_status=last_status,
+            accepted_calculation_id=accepted_calculation_id,
             operations=operations,
         )
         if result_payload is not None:
@@ -169,6 +205,7 @@ async def _poll_once(
     headers: dict[str, str],
     started_at: float,
     last_status: str,
+    accepted_calculation_id: str,
     operations: AsyncExecutionOperations,
 ) -> tuple[dict[str, Any] | None, str]:
     next_status = last_status
@@ -192,7 +229,14 @@ async def _poll_once(
     )
     if result_status != 200:
         return None, next_status
-    return required_async_result(result_payload, operations=operations), next_status
+    return (
+        required_async_result(
+            result_payload,
+            accepted_calculation_id=accepted_calculation_id,
+            operations=operations,
+        ),
+        next_status,
+    )
 
 
 async def _poll_status(

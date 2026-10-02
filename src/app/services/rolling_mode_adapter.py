@@ -156,7 +156,11 @@ def _calculate_stateful_response(resolved_inputs: ResolvedStatefulRollingInputs)
         benchmark_points=resolved_inputs.benchmark_points,
         risk_free_points=resolved_inputs.risk_free_points,
     )
-    return calculate_rolling_metrics(stateless, input_mode=RollingInputMode.STATEFUL)
+    return calculate_rolling_metrics(
+        stateless,
+        input_mode=RollingInputMode.STATEFUL,
+        source_returns_evidence=resolved_inputs.source_returns_evidence,
+    )
 
 
 async def calculate_rolling_metrics_stateful(

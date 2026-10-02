@@ -4,16 +4,63 @@ import datetime as dt
 from types import SimpleNamespace
 from typing import Any
 
+import pytest
 from pydantic import BaseModel
 
 from app.contracts.risk import ReturnPoint
+from app.contracts.risk_response_contexts import RiskCalculationSupportability
+from app.contracts.stateful_returns_source_evidence import StatefulReturnsSourceEvidence
 from app.services.calculation_supportability import (
+    compose_returns_source_supportability,
     default_calculation_supportability,
     supportability_from_attribution_results,
     supportability_from_concentration_response,
     supportability_from_period_results,
     supportability_from_risk_metric_results,
 )
+
+
+def _source_evidence(
+    *, freshness: str = "current", missing_points: int = 0
+) -> StatefulReturnsSourceEvidence:
+    returned_points = 2
+    requested_points = returned_points + missing_points
+    return StatefulReturnsSourceEvidence.model_validate(
+        {
+            "source_service": "lotus-performance",
+            "calculation_id": "00000000-0000-4000-8000-000000000001",
+            "contract_version": "v1",
+            "input_fingerprint": "sha256:" + "1" * 64,
+            "calculation_hash": "sha256:" + "2" * 64,
+            "freshness": freshness,
+            "requested_points": requested_points,
+            "returned_points": returned_points,
+            "missing_points": missing_points,
+            "coverage_ratio": returned_points / requested_points,
+        }
+    )
+
+
+@pytest.mark.parametrize("missing_points", [0, 1])
+def test_returns_source_composition_preserves_more_severe_empty_state(
+    missing_points: int,
+) -> None:
+    local = RiskCalculationSupportability(
+        state="empty",
+        reason="insufficient_observations",
+        freshness_bucket="current",
+        empty_period_count=1,
+        evaluated_period_count=1,
+    )
+
+    composed = compose_returns_source_supportability(
+        calculation_supportability=local,
+        source_evidence=_source_evidence(missing_points=missing_points),
+    )
+
+    assert composed.state == "empty"
+    assert composed.reason == "insufficient_observations"
+    assert composed.empty_period_count == 1
 
 
 class _PeriodResult(BaseModel):

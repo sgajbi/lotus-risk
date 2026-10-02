@@ -11,9 +11,11 @@ the transports cannot prove this boundary, so they are deliberately not used her
 from __future__ import annotations
 
 import asyncio
+import json
 import threading
 from dataclasses import dataclass, field
 from typing import Any
+from uuid import NAMESPACE_URL, uuid5
 
 import httpx
 import pytest
@@ -24,6 +26,7 @@ from app.integrations.lotus_core_client import LotusCoreClient
 from app.integrations.lotus_performance_client import LotusPerformanceClient
 from app.main import app
 from tests.support.app_runtime import override_app_runtime
+from tests.support.returns_series_payloads import build_returns_series_response
 
 _PRODUCER_BASE_URL = "http://performance.enforcing.test"
 _CORE_BASE_URL = "http://core-control.enforcing.test"
@@ -51,10 +54,44 @@ class EnforcingPerformanceProducer:
 
     async_mode: bool = False
     foreign_result_tenant: str | None = None
+    result_calculation_id_override: str | None = None
     requests: list[dict[str, Any]] = field(default_factory=list)
     _submitted_tenants: dict[str, str] = field(default_factory=dict)
+    _submitted_payloads: dict[str, dict[str, Any]] = field(default_factory=dict)
     _lock: threading.Lock = field(default_factory=threading.Lock)
     _next_calculation: int = 0
+
+    def _response_payload(
+        self,
+        *,
+        calculation_id: str,
+        tenant_id: str,
+        request_payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        window = request_payload["window"]
+        resolved_start_date = (
+            str(window["from_date"])
+            if isinstance(window, dict) and window.get("mode") == "EXPLICIT"
+            else None
+        )
+        resolved_period_label = (
+            str(window["period"])
+            if isinstance(window, dict) and window.get("mode") == "RELATIVE"
+            else None
+        )
+        return build_returns_series_response(
+            portfolio_returns=[
+                (str(row["date"]), str(row["return_value"]))
+                for row in _RETURNS_BY_TENANT[tenant_id]
+            ],
+            portfolio_id=str(request_payload["portfolio_id"]),
+            as_of_date=str(request_payload["as_of_date"]),
+            frequency=str(request_payload["frequency"]),
+            metric_basis=str(request_payload["metric_basis"]),
+            calculation_id=calculation_id,
+            resolved_start_date=resolved_start_date,
+            resolved_period_label=resolved_period_label,
+        )
 
     def handler(self, request: httpx.Request) -> httpx.Response:
         tenant_id = request.headers.get("X-Tenant-Id", "").strip()
@@ -77,16 +114,22 @@ class EnforcingPerformanceProducer:
                     },
                     request=request,
                 )
+            request_payload = json.loads(request.content)
+            calculation_id = str(uuid5(NAMESPACE_URL, f"{tenant_id}:{self._next_calculation + 1}"))
             if not self.async_mode:
                 return httpx.Response(
                     200,
-                    json={"series": {"portfolio_returns": _RETURNS_BY_TENANT[tenant_id]}},
+                    json=self._response_payload(
+                        calculation_id=calculation_id,
+                        tenant_id=tenant_id,
+                        request_payload=request_payload,
+                    ),
                     request=request,
                 )
             with self._lock:
                 self._next_calculation += 1
-                calculation_id = f"calc-{self._next_calculation}"
                 self._submitted_tenants[calculation_id] = tenant_id
+                self._submitted_payloads[calculation_id] = request_payload
             return httpx.Response(
                 202,
                 json={
@@ -110,7 +153,11 @@ class EnforcingPerformanceProducer:
                 )
             return httpx.Response(
                 200,
-                json={"series": {"portfolio_returns": _RETURNS_BY_TENANT[tenant_id]}},
+                json=self._response_payload(
+                    calculation_id=self.result_calculation_id_override or calculation_id,
+                    tenant_id=tenant_id,
+                    request_payload=self._submitted_payloads[calculation_id],
+                ),
                 request=request,
             )
         raise AssertionError(f"unexpected producer path: {request.url.path}")
@@ -308,6 +355,13 @@ async def test_two_concurrent_tenants_stay_isolated_on_one_shared_pooled_client(
 
     assert response_a.status_code == 200
     assert response_b.status_code == 200
+    evidence_a = response_a.json()["metadata"]["source_returns_evidence"]
+    evidence_b = response_b.json()["metadata"]["source_returns_evidence"]
+    assert evidence_a["calculation_id"] in producer._submitted_tenants
+    assert evidence_b["calculation_id"] in producer._submitted_tenants
+    assert evidence_a["calculation_id"] != evidence_b["calculation_id"]
+    assert evidence_a["requested_points"] == evidence_a["returned_points"] == 3
+    assert evidence_b["requested_points"] == evidence_b["returned_points"] == 3
     # Constant returns have zero sample deviation: tenant-a's volatility is exactly 0,
     # anchored outside the service, while tenant-b's varied series must not be.
     volatility_a = response_a.json()["results"]["YTD"]["metrics"]["VOLATILITY"]["value"]
@@ -344,3 +398,22 @@ def test_foreign_tenant_result_access_maps_to_bounded_error_not_endless_pending(
     assert error["code"] == "FAILED_DEPENDENCY"
     assert error["details"]["upstream_status_code"] == 403
     assert "result_tenant_authority_mismatch" not in error["message"]
+
+
+def test_async_result_must_match_the_submitted_calculation_identity() -> None:
+    producer = EnforcingPerformanceProducer(
+        async_mode=True,
+        result_calculation_id_override="00000000-0000-4000-8000-000000000099",
+    )
+    performance_client, _ = _real_performance_client(producer)
+    with override_app_runtime(lotus_performance_client=performance_client):
+        response = TestClient(app).post(
+            "/analytics/risk/calculate",
+            headers={"X-Tenant-Id": "tenant-a"},
+            json=_STATEFUL_PAYLOADS["/analytics/risk/calculate"],
+        )
+
+    assert response.status_code == 502
+    error = response.json()["error"]
+    assert error["code"] == "UPSTREAM_INVALID_RESPONSE"
+    assert error["details"]["field"] == "calculation_id"

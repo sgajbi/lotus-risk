@@ -24,6 +24,7 @@ RETURNS_SERIES_ASYNC_OPERATIONS = AsyncExecutionOperations(
     status=LOTUS_PERFORMANCE_RETURNS_SERIES_STATUS_OPERATION,
     result=LOTUS_PERFORMANCE_RETURNS_SERIES_RESULT_OPERATION,
     workflow_name="returns-series",
+    bind_result_calculation_id=True,
 )
 
 

@@ -68,9 +68,13 @@ def _parse_drawdown_source_series(
     source_response: dict[str, Any],
     *,
     stateful: DrawdownStatefulInput,
+    source_payload: dict[str, Any],
 ) -> _DrawdownSourceSeries:
-    series, portfolio_points = extract_required_portfolio_returns(source_response)
-    benchmark_points = to_return_points(series.get("benchmark_returns"))
+    series, portfolio_points = extract_required_portfolio_returns(
+        source_response,
+        frequency="DAILY",
+    )
+    benchmark_points = to_return_points(series.get("benchmark_returns"), frequency="DAILY")
     if (
         stateful.benchmark_policy.include_benchmark
         and not benchmark_points
@@ -83,7 +87,10 @@ def _parse_drawdown_source_series(
         source_response,
         portfolio_id=stateful.portfolio_id,
         as_of_date=stateful.as_of_date,
+        frequency="DAILY",
         metric_basis=stateful.net_or_gross,
+        requested_window=source_payload["window"],
+        returned_points=portfolio_points,
     )
     return _DrawdownSourceSeries(
         portfolio_points=portfolio_points,
@@ -123,6 +130,7 @@ async def calculate_drawdown_stateful(
     source_series = _parse_drawdown_source_series(
         source_response,
         stateful=stateful,
+        source_payload=source_payload,
     )
     stateless = _drawdown_stateless_request(stateful, source_series)
     response = calculate_drawdown(

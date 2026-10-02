@@ -331,6 +331,15 @@ Boundary rules:
     precedence. Performance's returns-series response does not contract a currency echo and must
     not become the fallback authority. Invalid Core currency is an upstream contract failure,
     and snapshot request identity belongs in response lineage.
+32. Stateful `risk/calculate`, `drawdown`, and `rolling-metrics` share one typed Performance
+    returns-series admission boundary. Validate exact portfolio, as-of date, requested frequency,
+    NET/GROSS basis, resolved window/relative-period label, v1 stateful provenance, producer
+    calculation identity (including an exact async submit/result match), and coverage matching
+    frequency-valid portfolio observations whose producer buckets overlap the admitted resolved
+    window and are actually consumed before calculation. Normalize only an admitted trailing
+    weekly/monthly bucket label to the resolved end for Risk period filtering. Preserve
+    `source_returns_evidence` separately from request
+    fingerprints, and compose stale/partial source qualification with local supportability.
 
 Canonical direct local validation ports:
 

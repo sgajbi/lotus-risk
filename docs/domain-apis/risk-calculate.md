@@ -33,6 +33,15 @@
     on every async status/result poll; lotus-performance enforces that tenant authority and scopes
     async result access to the submitting tenant (a foreign-tenant refusal surfaces as
     `424 FAILED_DEPENDENCY`).
+  - before calculation, lotus-risk validates the response portfolio, as-of date, requested
+    frequency, resolved window/period label, NET/GROSS basis, v1 contract, stateful provenance,
+    calculation identity (including an exact async submit/result match), and coverage matching
+    frequency-valid portfolio points whose producer buckets overlap the admitted resolved window.
+    An admitted trailing weekly/monthly bucket label is normalized to the resolved end so its
+    observations remain in the requested Risk period. A mismatch or malformed qualification
+    returns a typed upstream error.
+  - source freshness and missing coverage compose with local metric supportability. Usable figures
+    remain available, but stale or partial source evidence cannot be reported as ready/current.
   - when `SHARPE` is requested, lotus-risk requests risk-free observations directly from
     `lotus-core` using `/integration/reference/risk-free-series` and records a separate
     `lotus-core:/integration/reference/risk-free-series` upstream request fingerprint.
@@ -130,6 +139,9 @@ resampling bucket remain valid inputs.
     - `metric_labels`: bounded Prometheus label keys for
       `lotus_risk_calculation_supportability_total`
     - `degraded_metric_count`, `empty_period_count`, `evaluated_period_count`
+  - `source_returns_evidence`: exact consumed Performance calculation ID, input fingerprint,
+    calculation hash, freshness, and reconciled coverage for stateful mode; `null` for stateless
+    mode. This response evidence is distinct from Risk's request fingerprints.
 - `results` map keyed by period name/type:
   - `start_date`
   - `end_date`

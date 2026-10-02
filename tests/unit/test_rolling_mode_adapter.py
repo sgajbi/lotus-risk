@@ -16,6 +16,7 @@ from app.upstream_errors import UpstreamServiceError
 from tests.support.downstream_authority import admitted_test_authority
 from tests.support.lotus_core_fakes import RecordingLotusCoreReferenceClient
 from tests.support.lotus_performance_fakes import RecordingLotusPerformanceClient
+from tests.support.returns_series_payloads import build_returns_series_response
 from tests.support.risk_free_series_payloads import build_risk_free_series_response
 
 
@@ -55,14 +56,10 @@ def _stateful_input(metrics: list[str]) -> RollingStatefulInput:
 
 
 def _portfolio_only_payload() -> dict[str, object]:
-    return {
-        "series": {
-            "portfolio_returns": [
-                {"date": "2026-01-02", "return_value": "0.0100"},
-                {"date": "2026-01-05", "return_value": "-0.0200"},
-            ]
-        }
-    }
+    return build_returns_series_response(
+        portfolio_returns=(("2026-01-02", "0.0100"), ("2026-01-05", "-0.0200")),
+        as_of_date="2026-01-05",
+    )
 
 
 def _risk_free_payload() -> dict[str, object]:
@@ -104,20 +101,17 @@ def test_build_stateful_source_request_selection_flags() -> None:
 
 def test_stateful_adapter_happy_path() -> None:
     client = RecordingLotusPerformanceClient(
-        response_payload={
-            "series": {
-                "portfolio_returns": [
-                    {"date": "2026-01-02", "return_value": "0.0100"},
-                    {"date": "2026-01-05", "return_value": "-0.0200"},
-                    {"date": "2026-01-06", "return_value": "0.0050"},
-                ],
-                "benchmark_returns": [
-                    {"date": "2026-01-02", "return_value": "0.0080"},
-                    {"date": "2026-01-05", "return_value": "-0.0150"},
-                    {"date": "2026-01-06", "return_value": "0.0040"},
-                ],
-            }
-        }
+        response_payload=build_returns_series_response(
+            portfolio_returns=(
+                ("2026-01-02", "0.0100"),
+                ("2026-01-05", "-0.0200"),
+            ),
+            benchmark_returns=(
+                ("2026-01-02", "0.0080"),
+                ("2026-01-05", "-0.0150"),
+            ),
+            as_of_date="2026-01-05",
+        )
     )
     core_client = RecordingLotusCoreReferenceClient(risk_free_response=_risk_free_payload())
 
@@ -410,15 +404,16 @@ def test_stateful_adapter_rejects_unknown_risk_free_value_convention() -> None:
 
 def test_stateful_adapter_sources_risk_free_after_returns_for_si_window() -> None:
     client = RecordingLotusPerformanceClient(
-        response_payload={
-            "series": {
-                "portfolio_returns": [
-                    {"date": "2026-01-02", "return_value": "0.0100"},
-                    {"date": "2026-01-05", "return_value": "-0.0200"},
-                    {"date": "2026-01-06", "return_value": "0.0050"},
-                ],
-            }
-        }
+        response_payload=build_returns_series_response(
+            portfolio_returns=(
+                ("2026-01-02", "0.0100"),
+                ("2026-01-05", "-0.0200"),
+                ("2026-01-06", "0.0050"),
+            ),
+            as_of_date="2026-01-06",
+            resolved_start_date="2026-01-02",
+            resolved_period_label="SI",
+        )
     )
     core_client = RecordingLotusCoreReferenceClient(risk_free_response=_risk_free_payload())
     request = RollingStatefulInput.model_validate(

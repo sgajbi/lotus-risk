@@ -89,20 +89,23 @@ def compose_returns_source_supportability(
     keeps its own period errors and their precedence, but never upgrades stale
     or incomplete evidence merely because the numeric series can be calculated.
     """
-    reasons: list[RiskSupportabilityReason] = []
-    if calculation_supportability.state != "ready":
-        reasons.append(calculation_supportability.reason)
+    source_reasons: list[RiskSupportabilityReason] = []
     if source_evidence.missing_points:
-        reasons.append("calculation_quality_issue")
+        source_reasons.append("calculation_quality_issue")
     if source_evidence.freshness == "stale":
-        reasons.append("stale_source_observations")
-    if not reasons:
+        source_reasons.append("stale_source_observations")
+    if not source_reasons:
         return calculation_supportability
 
+    reasons = list(source_reasons)
+    if calculation_supportability.state != "ready":
+        reasons.append(calculation_supportability.reason)
     reason = select_supportability_reason(reasons)
-    state: RiskSupportabilityState = (
-        "stale" if reason == "stale_source_observations" else "degraded"
-    )
+    state: RiskSupportabilityState
+    if reason == calculation_supportability.reason:
+        state = calculation_supportability.state
+    else:
+        state = "stale" if reason == "stale_source_observations" else "degraded"
     return RiskCalculationSupportability(
         state=state,
         reason=reason,

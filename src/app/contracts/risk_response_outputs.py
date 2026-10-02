@@ -21,6 +21,7 @@ from app.contracts.risk_response_field_examples import (
     RISK_RESPONSE_RESULTS_EXAMPLE,
     RISK_RESPONSE_SCOPE_EXAMPLE,
 )
+from app.contracts.stateful_returns_source_evidence import StatefulReturnsSourceEvidence
 
 
 class RiskResponseMetadata(AuditMetadataFields):
@@ -92,6 +93,27 @@ class RiskResponseMetadata(AuditMetadataFields):
         ),
         description="Source-backed supportability posture for UI and operator consumption.",
         json_schema_extra={"example": RISK_CALCULATION_SUPPORTABILITY_EXAMPLE},
+    )
+    source_returns_evidence: StatefulReturnsSourceEvidence | None = Field(
+        default=None,
+        description=(
+            "Consumed lotus-performance returns-series response identity and source "
+            "qualification for stateful calculations. Null for stateless calculations."
+        ),
+        json_schema_extra={
+            "example": {
+                "source_service": "lotus-performance",
+                "calculation_id": "00000000-0000-4000-8000-000000000001",
+                "contract_version": "v1",
+                "input_fingerprint": "sha256:" + "1" * 64,
+                "calculation_hash": "sha256:" + "2" * 64,
+                "freshness": "current",
+                "requested_points": 65,
+                "returned_points": 65,
+                "missing_points": 0,
+                "coverage_ratio": 1.0,
+            }
+        },
     )
     mar_annual_rate: float = Field(
         default=0.0,

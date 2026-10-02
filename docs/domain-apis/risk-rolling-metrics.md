@@ -25,6 +25,13 @@ Provide windowed historical risk diagnostics for PB/WM portfolios with instituti
   caller header on risk-free series/coverage requests; the risk-free facts remain global and the
   body carries no tenant filter. A missing caller context refuses before Core I/O.
 - Caller provides identifiers and options; lotus-risk sources portfolio and benchmark return series from lotus-performance.
+- lotus-risk admits that response only when portfolio, as-of date, DAILY frequency, NET/GROSS
+  basis, resolved window/period label, v1 stateful provenance, calculation identity, and coverage
+  matching portfolio points whose producer buckets overlap the admitted resolved window. Async
+  results must retain the calculation identity accepted at submission. Malformed or mismatched
+  evidence fails before rolling calculation.
+- Performance freshness and coverage compose with local rolling supportability. Stale or partial
+  source evidence may retain usable figures but cannot produce ready/current qualification.
 - lotus-risk resolves the longest required source window from the requested periods and sends an explicit `window` to lotus-performance unless `SI` is requested.
 - when `ROLLING_SHARPE` is requested, lotus-risk sources risk-free reference series from lotus-core.
 - when `ROLLING_SHARPE` is requested and `reporting_currency` is omitted, lotus-risk resolves
@@ -149,6 +156,9 @@ materialized.
     - `benchmark_context.requested_metrics`
     - `risk_free_context.requested`
     - `risk_free_context.requested_metrics`
+  - `source_returns_evidence`: exact consumed Performance calculation identity, fingerprint/hash,
+    freshness, and coverage for stateful mode; `null` for stateless mode. It is not the upstream
+    request fingerprint.
 
 ## Governance Alignment
 
@@ -159,10 +169,9 @@ materialized.
 
 ## Gaps / Decisions Required
 
-1. Expand stateful lineage metadata in response contract (`source_window`, `data_quality`, `upstream_refs`).
-2. Evaluate whether annualization basis should support both 252 and 260 in v2.
-3. Stateful rolling Sharpe now passes live validation for the tested USD YTD window using lotus-core risk-free series.
-4. When lotus-core returns an empty risk-free series for other currencies/windows, lotus-risk enriches the `424 FAILED_DEPENDENCY` error details with coverage diagnostics from `/integration/reference/risk-free-series/coverage` when available:
+1. Evaluate whether annualization basis should support both 252 and 260 in v2.
+2. Stateful rolling Sharpe now passes live validation for the tested USD YTD window using lotus-core risk-free series.
+3. When lotus-core returns an empty risk-free series for other currencies/windows, lotus-risk enriches the `424 FAILED_DEPENDENCY` error details with coverage diagnostics from `/integration/reference/risk-free-series/coverage` when available:
    - `risk_free_currency`
    - `risk_free_total_points`
    - `risk_free_missing_dates_count`

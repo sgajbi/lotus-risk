@@ -6,6 +6,7 @@ from typing import Any
 from app.contracts.downstream_authority import DownstreamAuthority
 from app.contracts.risk import ReturnPoint
 from app.contracts.rolling import RollingStatefulInput
+from app.contracts.stateful_returns_source_evidence import StatefulReturnsSourceEvidence
 from app.services.rolling_risk_free_dependency import (
     get_risk_free_coverage_details,
     resolve_risk_free_dependency,
@@ -28,6 +29,7 @@ from app.services.rolling_stateful_source_responses import (
 )
 from app.services.stateful_returns_series_parser import (
     extract_required_portfolio_returns,
+    extract_stateful_returns_source_evidence,
     to_return_points,
 )
 from app.upstream_errors import missing_upstream_data
@@ -37,6 +39,7 @@ from app.upstream_errors import missing_upstream_data
 class _ParsedRollingSourceSeries:
     portfolio_points: list[ReturnPoint]
     benchmark_points: list[ReturnPoint]
+    evidence: StatefulReturnsSourceEvidence
 
 
 @dataclass(frozen=True)
@@ -61,7 +64,7 @@ def _benchmark_points_or_raise(
     *,
     include_benchmark: bool,
 ) -> list[ReturnPoint]:
-    benchmark_points = to_return_points(series.get("benchmark_returns"))
+    benchmark_points = to_return_points(series.get("benchmark_returns"), frequency="DAILY")
     if include_benchmark and not benchmark_points:
         raise missing_upstream_data(
             service="lotus-performance",
@@ -77,14 +80,28 @@ def _benchmark_points_or_raise(
 def _parse_stateful_source_series(
     source_response: dict[str, Any],
     *,
+    stateful: RollingStatefulInput,
+    source_payload: dict[str, Any],
     include_benchmark: bool,
 ) -> _ParsedRollingSourceSeries:
-    series, portfolio_points = extract_required_portfolio_returns(source_response)
+    series, portfolio_points = extract_required_portfolio_returns(
+        source_response,
+        frequency="DAILY",
+    )
     return _ParsedRollingSourceSeries(
         portfolio_points=portfolio_points,
         benchmark_points=_benchmark_points_or_raise(
             series,
             include_benchmark=include_benchmark,
+        ),
+        evidence=extract_stateful_returns_source_evidence(
+            source_response,
+            portfolio_id=stateful.portfolio_id,
+            as_of_date=stateful.as_of_date,
+            frequency="DAILY",
+            metric_basis=stateful.net_or_gross,
+            requested_window=source_payload["window"],
+            returned_points=portfolio_points,
         ),
     )
 
@@ -107,6 +124,7 @@ def _resolved_stateful_inputs(
         portfolio_points=parsed_series.portfolio_points,
         benchmark_points=parsed_series.benchmark_points,
         risk_free_points=risk_free_points,
+        source_returns_evidence=parsed_series.evidence,
     )
 
 
@@ -127,6 +145,8 @@ async def _resolve_rolling_source_series(
     )
     parsed_series = _parse_stateful_source_series(
         source_responses.source_response,
+        stateful=dependency_selection.stateful,
+        source_payload=source_responses.source_payload,
         include_benchmark=requires_benchmark(dependency_selection.stateful),
     )
     return _RollingSourceResolution(
