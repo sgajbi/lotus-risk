@@ -94,7 +94,7 @@ branched on mechanically — branch on the one belonging to the endpoint you cal
 | term | meaning |
 |---|---|
 | **supportability state** | risk calculation family: `ready`, `stale`, `degraded`, `empty`, `error`, `permission_blocked`, `unsupported` |
-| **`pending_review`** | scenario pack: a breach was detected, or applicability is pending. Risk-event cohorts: **no portfolio met the impact threshold** — an empty cohort, not an approval step. |
+| **`pending_review`** | scenario pack: a breach was detected, or applicability is pending. Risk-event cohorts: every candidate was evaluable but **no portfolio met the impact threshold** — a clean empty cohort, not an approval step. Unsupported evidence takes precedence and yields `degraded`. |
 | **`blocked`** | scenario pack: CIO approval not confirmed, or the pack is not applicable to the portfolio. Not emitted by the risk-event engine. |
 | **`attention`** | mandate health: the mandate warrants a look. A business signal, not a service degradation. |
 | **`empty` vs `error`** | `empty` — the calculation ran and had nothing to work on. `error` — it could not run. |
