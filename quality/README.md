@@ -50,22 +50,26 @@ are regenerated wholesale and compared to nothing; the eight authored ones are r
 for comparison. Recorded as an empty category on purpose, because "retained baseline" is the label
 that makes a stale number look deliberate.
 
-## Known defect: these measurements can be arbitrarily stale, and are
+## Freshness and diagnostic evidence
 
-`.github/workflows/quality-baseline.yml` is named **Report Only** and behaves that way: it
-regenerates `quality/` on every PR, uploads it as an artifact, and compares nothing. The committed
-files can therefore describe a tree that no longer exists, and the lane is green either way.
+The six generated measurements stay committed and are checked against current source/test inputs
+by `make quality-baseline-check` from the repository root. The Quality Baseline workflow runs this
+as a blocking **Freshness Gate** on PRs and feature branches. A mismatch names the stale file and
+shows a bounded diff. Regenerate with `make quality-baseline` before committing a changed source or
+test tree; whichever PR lands second must regenerate from its rebased tree.
+For a quick deterministic refresh without rerunning the diagnostic commands, run
+`python scripts/generate_quality_baseline.py --skip-diagnostics` from the repository root,
+then run `make quality-baseline-check`.
 
-Measured 2026-09-08:
+The earlier report embedded raw pytest progress, timings, and other runner-specific command output.
+It could differ twice on an unchanged tree, so a byte check would be permanently red. A normal
+generation run now writes that diagnostic transcript to ignored
+`output/quality/baseline-command-transcript.md`, and CI uploads it with the quality reports. The
+committed `baseline_report.md` contains deterministic measurements and a SHA-256 fingerprint of
+the measured source/test content, independent of branch and rebase commit identity. The transcript
+is report-only; actual Feature, PR Merge and Main gates own their acceptance verdicts.
 
-- `quality/baseline_report.md` on `main` records **`635 passed`**. The suite is **1052**.
-- Regenerating on an unchanged tree rewrites four of the six files.
-
-**A `--check` gate is the obvious remedy and does not work yet.** `baseline_report.md` embeds raw
-`pytest` stdout — progress dots, per-run timings and test ordering — so two runs on an identical tree
-differ. A byte-comparison check would fail on a tree nobody touched, which is a gate that cannot pass
-rather than one that cannot fail.
-
-Making staleness fail therefore requires separating the report's deterministic content from its
-embedded transcript first. That is #279's remaining work and is tracked there rather than half-done
-here.
+The initial baseline at commit `3254774` remains immutable. The old committed report's `635 passed`
+and the 2026-09-08 observation that four of six regenerated files drifted are historical defect
+evidence, not current test results. The authored records above are not generator targets, and
+there are still no retained ratchet baselines in this directory.

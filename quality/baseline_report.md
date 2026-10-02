@@ -12,65 +12,66 @@ completion claim.
 
 ## Generation Identity
 
-- Git branch: `refactor/enterprise-risk-backend`
-- Git commit: `8389d5c56a32e8cbf52739e1058d577491356f12`
+- Measured source/test SHA-256: `485adba681705c04da80e63cc0051cff962ae90e18c3f88fffd8fb9f5876299f`
+- The branch, commit, tool output and timings belong to the CI run artifact, not this
+  rebase-stable measurement. The immutable initial baseline remains commit `3254774`.
 
 ## Current Code Size
 
-- Python source files under `src/`: 250
-- Python test files under `tests/`: 110
-- Python packages under `src/`: 11
+- Python source files under `src/`: 281
+- Python test files under `tests/`: 155
+- Python packages under `src/`: 14
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
 
 ### Largest Source Files
 
-| Path | Lines | Bytes |
+| Path | Lines | UTF-8 bytes (LF-normalized) |
 | --- | --- | --- |
-| src/app/services/risk_mode_adapter.py | 317 | 10556 |
-| src/app/enterprise_readiness.py | 274 | 9366 |
-| src/app/services/risk/period_metrics.py | 269 | 8941 |
-| src/app/services/benchmark_exposure_history.py | 267 | 8995 |
-| src/app/services/calculation_supportability.py | 222 | 7242 |
-| src/app/services/risk/benchmark_period_metrics.py | 218 | 6928 |
-| src/app/integrations/lotus_performance_transport.py | 216 | 6839 |
-| src/app/services/scenario_engine.py | 214 | 7075 |
-| src/app/services/risk_event_cohort_engine.py | 212 | 7302 |
-| src/app/services/risk/metric_calculators.py | 211 | 7168 |
-| src/app/openapi_request_examples/analytics.py | 210 | 6967 |
-| src/app/routers/operational.py | 209 | 6741 |
-| src/app/services/scenario_governance.py | 208 | 7313 |
-| src/app/integrations/downstream_request_execution.py | 208 | 5311 |
-| src/app/services/rolling_metric_series.py | 206 | 6370 |
-| src/app/upstream_errors.py | 201 | 5199 |
-| src/app/trust_telemetry_builders.py | 200 | 7732 |
-| src/app/contracts/drawdown_metric_outputs.py | 194 | 7451 |
-| src/app/services/rolling_period_results.py | 194 | 6548 |
-| src/app/services/attribution_decomposition.py | 194 | 6333 |
+| src/app/services/attribution_group_evidence.py | 450 | 18065 |
+| src/app/services/benchmark_exposure_history.py | 440 | 16325 |
+| src/app/services/attribution_stateful_inputs.py | 415 | 16444 |
+| src/app/services/attribution_active_group_evidence.py | 414 | 16963 |
+| src/app/scenario_jobs/store.py | 407 | 16257 |
+| src/app/evidence/idea_opportunity_runtime.py | 400 | 15185 |
+| src/app/services/risk_mode_adapter.py | 341 | 11531 |
+| src/app/services/calculation_supportability.py | 317 | 12222 |
+| src/app/integrations/lotus_performance_transport.py | 304 | 10376 |
+| src/app/services/attribution_calculation.py | 300 | 11612 |
+| src/app/services/risk/period_metrics.py | 282 | 9471 |
+| src/app/enterprise_readiness.py | 276 | 9394 |
+| src/app/services/attribution_decomposition.py | 266 | 9711 |
+| src/app/integrations/performance_async_execution.py | 264 | 8088 |
+| src/app/services/scenario_engine.py | 255 | 8966 |
+| src/app/integrations/lotus_core_operations.py | 231 | 7376 |
+| src/app/services/supportability_periods.py | 229 | 8819 |
+| src/app/services/risk_event_cohort_engine.py | 224 | 7790 |
+| src/app/contracts/attribution_result_outputs.py | 221 | 10334 |
+| src/app/scenario_jobs/contracts.py | 221 | 8454 |
 
 ### Largest Functions And Classes
 
 | Path | Symbol | Kind | Lines |
 | --- | --- | --- | --- |
+| src/app/scenario_jobs/store.py | SqlAlchemyScenarioJobStore | ClassDef | 286 |
+| src/app/contracts/attribution_metadata_outputs.py | HistoricalAttributionMetadata | ClassDef | 137 |
 | src/app/integrations/lotus_core_client.py | LotusCoreClient | ClassDef | 132 |
+| src/app/contracts/rolling_metadata_outputs.py | RollingMetadata | ClassDef | 115 |
+| src/app/contracts/drawdown_metadata_outputs.py | DrawdownMetadata | ClassDef | 105 |
+| src/app/contracts/mandate_health_response_outputs.py | MandateRiskHealthContextResponse | ClassDef | 102 |
+| src/app/services/attribution_stateful_inputs.py | fetch_group_evidence | AsyncFunctionDef | 100 |
+| src/app/contracts/attribution_result_outputs.py | AttributionSetResult | ClassDef | 91 |
+| src/app/contracts/risk_response_outputs.py | RiskResponseMetadata | ClassDef | 90 |
 | src/app/contracts/concentration_issuer_metric_outputs.py | IssuerConcentration | ClassDef | 89 |
+| src/app/contracts/scenario_inputs.py | RegimeScenarioPackRequest | ClassDef | 86 |
+| src/app/contracts/concentration_metadata_outputs.py | ConcentrationMetadata | ClassDef | 82 |
+| src/app/integrations/lotus_performance_client.py | LotusPerformanceClient | ClassDef | 82 |
+| src/app/contracts/attribution_stateless_inputs.py | HistoricalAttributionStatelessInput | ClassDef | 79 |
 | src/app/trust_telemetry_product_models.py | ProductTrustTelemetrySeed | ClassDef | 79 |
-| src/app/contracts/attribution_stateless_inputs.py | HistoricalAttributionStatelessInput | ClassDef | 77 |
 | src/app/contracts/concentration_request_inputs.py | ConcentrationRequest | ClassDef | 77 |
 | src/app/contracts/drawdown_response_envelope_outputs.py | DrawdownResponse | ClassDef | 77 |
-| src/app/contracts/mandate_health_response_outputs.py | MandateRiskHealthContextResponse | ClassDef | 77 |
 | src/app/contracts/rolling_metric_summary_outputs.py | RollingMetricSummary | ClassDef | 76 |
 | src/app/contracts/rolling_period_outputs.py | RollingPeriodResult | ClassDef | 76 |
-| src/app/contracts/risk_response_outputs.py | RiskResponseMetadata | ClassDef | 75 |
-| src/app/middleware/correlation.py | CorrelationIdMiddleware | ClassDef | 74 |
-| src/app/contracts/attribution_metadata_outputs.py | HistoricalAttributionMetadata | ClassDef | 71 |
-| src/app/contracts/drawdown_metadata_outputs.py | DrawdownMetadata | ClassDef | 69 |
-| src/app/contracts/risk_common_inputs.py | RiskRequestPeriod | ClassDef | 68 |
-| src/app/contracts/rolling_stateless_inputs.py | RollingStatelessInput | ClassDef | 68 |
-| src/app/contracts/concentration_metadata_outputs.py | ConcentrationMetadata | ClassDef | 67 |
-| src/app/contracts/risk_event_cohort_response.py | RiskEventAffectedCohortResponse | ClassDef | 66 |
-| src/app/contracts/risk_stateful_inputs.py | StatefulRiskInput | ClassDef | 64 |
-| src/app/contracts/attribution_request_inputs.py | HistoricalAttributionRequest | ClassDef | 63 |
-| src/app/contracts/concentration_simulation_inputs.py | SimulationChangeInput | ClassDef | 63 |
+| src/app/services/calculation_supportability.py | supportability_from_attribution_results | FunctionDef | 75 |
 
 ## Tool Baseline
 
@@ -86,82 +87,12 @@ completion claim.
 - `make openapi-artifact-gate` exports `output/openapi/lotus-risk.openapi.json` and validates the
   artifact against the repository's Spectral policy expectations from `.spectral.yaml`.
 
-## Static Quality Snapshot
+## Validation Transcript
 
-- Ruff lint: passed
-
-```text
-All checks passed!
-```
-- Ruff format check: passed
-
-```text
-376 files already formatted
-```
-- Type checking: passed
-
-```text
-Success: no issues found in 360 source files
-```
-- Unit coverage snapshot: passed
-
-```text
-........................................................................ [ 11%]
-........................................................................ [ 22%]
-........................................................................ [ 34%]
-........................................................................ [ 45%]
-........................................................................ [ 56%]
-........................................................................ [ 68%]
-...
-src\app\services\rolling_stateful_source_responses.py           45      1     16      1    97%   96
---------------------------------------------------------------------------------------------------------
-TOTAL                                                         6599    101   1110     78    98%
-
-201 files skipped due to complete coverage.
-635 passed in 19.82s
-```
-
-## Complexity And Maintainability Snapshot
-
-- Cyclomatic complexity C-or-worse candidates: passed
-- Maintainability index summary: passed
-
-```text
-src\app\api_errors.py - A (49.88)
-src\app\api_error_examples.py - A (60.17)
-src\app\app_factory.py - A (100.00)
-src\app\app_lifecycle.py - A (59.25)
-src\app\build_metadata.py - A (68.72)
-src\app\domain_data_products.py - A (49.24)
-...
-src\app\services\risk\numeric.py - A (100.00)
-src\app\services\risk\period_metrics.py - A (42.09)
-src\app\services\risk\period_resolution.py - A (47.21)
-src\app\services\risk\period_results.py - A (52.51)
-src\app\services\risk\period_windows.py - A (58.70)
-src\app\services\risk\__init__.py - A (100.00)
-```
-
-## Dead Code And Dependency Hygiene Snapshot
-
-- Dead-code candidates: passed
-- Dependency hygiene: passed
-
-```text
-Scanning 250 files...
-
-Success! No dependency issues found.
-```
-
-## Security Snapshot
-
-- Bandit source scan: passed
-- Dependency vulnerability audit: passed
-
-```text
-=== Vulnerability Summary ===
-Known vulnerabilities: 0
-```
+Command output, status, timings and runner package state are recorded separately in
+`output/quality/baseline-command-transcript.md` by a normal generation run and uploaded by CI.
+This committed report records deterministic measurements; it does not turn a local diagnostic
+failure or a report-only lane into an enforced gate verdict.
 
 ## Current Architectural Findings
 
@@ -233,37 +164,6 @@ needs current CI status, generated OpenAPI artifact evidence, and reviewer-ready
 
 ## Validation Snapshot
 
-- Unit test collection: passed
-
-```text
-tests/unit/scripts/test_clean_generated_artifacts.py::test_clean_generated_artifacts_removes_only_allowlisted_byproducts
-tests/unit/scripts/test_clean_generated_artifacts.py::test_clean_generated_artifacts_dry_run_reports_without_removing
-tests/unit/test_agent_effectiveness_review.py::test_agent_effectiveness_review_records_all_required_areas
-tests/unit/test_agent_effectiveness_review.py::test_codebase_review_playbook_requires_recurring_effectiveness_review
-tests/unit/test_agent_effectiveness_review.py::test_second_effectiveness_review_records_configuration_and_context_improvements
-tests/unit/test_agent_effectiveness_review.py::test_third_effectiveness_review_records_problem_details_and_modularity_evidence
-...
-tests/unit/test_upstream_errors.py::test_classify_upstream_http_error_matrix[504-502-UPSTREAM_FAILURE-upstream_failure-True]
-tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc0-504-UPSTREAM_TIMEOUT-timeout]
-tests/unit/test_upstream_errors.py::test_classify_upstream_transport_error_matrix[exc1-503-UPSTREAM_UNAVAILABLE-transport]
-tests/unit/test_upstream_errors.py::test_invalid_payload_and_missing_data_carry_structured_categories
-
-635 tests collected in 3.30s
-```
-- Import-linter report-only: reported exit 1
-
-```text
-=============
-Import Linter
-=============
-
-
----------
-...
-    app.ops_runtime -> app.integrations.lotus_core_client (l.8)
-
--   app.routers.operational -> app.trust_telemetry (l.31)
-    app.trust_telemetry -> app.trust_telemetry_builders (l.3)
-    app.trust_telemetry_builders -> app.ops_runtime (l.18)
-    app.ops_runtime -> app.integrations.lotus_performance_client (l.9)
-```
+- Unit tests collected: 1324
+- Import-linter is an enforced architecture gate; its run verdict belongs to CI, not this
+  rebase-stable snapshot.

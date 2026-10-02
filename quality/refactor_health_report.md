@@ -4,9 +4,9 @@
 
 The branch has moved beyond report-only scaffolding into measured modularity,
 contract-size, client-boundary, runtime lifecycle hardening, complexity reduction,
-and generated OpenAPI schema certification. The current baseline shows no
-C-or-worse complexity candidates, while GitHub feature-lane checks are being
-used asynchronously after each pushed slice.
+and generated OpenAPI schema certification. The current complexity verdict belongs
+to the enforced `make complexity-gate` run, while GitHub feature-lane checks are
+reviewed asynchronously after each pushed slice.
 
 ## Highest Priority Refactor Targets
 
@@ -15,7 +15,7 @@ used asynchronously after each pushed slice.
 | 1 | Service module size | Concentration, attribution, and rolling public adapters have been split from stateful, simulation, and exposure-resolution helpers; remaining source-size pressure is concentrated in contract modules | Continue extracting cohesive orchestration, response-building, and dependency-resolution helpers with characterization tests |
 | 2 | Contract module size | Concentration, rolling, risk, drawdown, attribution, and scenario request/response contracts are split; concentration, rolling, and drawdown response models are further split into metric/detail and top-level response modules; remaining contract-size pressure is concentrated in risk and input modules | Split reusable metadata or nested contract fragments only where it improves reviewability and preserves OpenAPI output |
 | 3 | OpenAPI and certification evidence | `make openapi-gate` evaluates the generated FastAPI schema; `make openapi-artifact-gate` exports `output/openapi/lotus-risk.openapi.json` and validates Spectral policy expectations; `quality/openapi_artifact_evidence.md` records current checksum evidence | Regenerate and attach the final current OpenAPI artifact evidence to the PR |
-| 4 | Security and abuse-control evidence | Authorization, audit, redaction, Bandit, pip-audit, payload-size limits, capability checks, threat-model evidence, bank deployment policy, and image supply-chain release controls are covered | Add upstream identity-provider token-validation evidence and inspect the first mainline image-release evidence before external release promotion |
+| 4 | Security and abuse-control evidence | Authorization, audit, redaction, Bandit, pip-audit, payload-size limits, capability checks, threat-model evidence, bank deployment policy, and image supply-chain release controls are covered | Add upstream identity-provider token-validation evidence and inspect exact-main image-release evidence before external release promotion |
 | 5 | Observability operations evidence | Metrics/correlation support, dashboard panels, alert definitions, and runbook anchors are governed by the observability monitoring contract | Keep alert thresholds aligned with production telemetry after deployment |
 
 ## Progressive Gate Posture

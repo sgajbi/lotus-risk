@@ -38,5 +38,21 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: lotus-risk-quality-baseline
-          path: quality/
+          path: |
+            quality/
+            output/quality/
           if-no-files-found: error
+
+  freshness:
+    name: Quality Baseline / Freshness Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+      - name: Install
+        run: make install
+      - name: Compare deterministic reports with committed source
+        run: make quality-baseline-check

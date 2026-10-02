@@ -3,9 +3,11 @@
 ## REF-DEC-001: Preserve The Initial Baseline By Commit Identity
 
 The immutable enterprise-refactor baseline is commit `3254774`. Generated
-`quality/baseline_report.md` represents current state and must identify its branch, commit, and
-working-tree posture. This prevents routine regeneration from silently rewriting the "before"
-evidence.
+`quality/baseline_report.md` represents current measured source/test state and identifies that
+content by SHA-256, independent of branch or rebase commit. Runner branch, commit, tool output and
+timings belong to the CI-uploaded diagnostic transcript, not the committed measurement. The
+blocking freshness check prevents stale current reports; the initial commit remains the immutable
+"before" evidence.
 
 ## REF-DEC-002: Continue Incrementally From Current Main
 
