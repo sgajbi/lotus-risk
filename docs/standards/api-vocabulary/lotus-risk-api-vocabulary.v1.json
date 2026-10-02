@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-10-02T14:47:16.402192+00:00",
+  "generatedAt": "2026-10-02T19:47:53.341423+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.affected_portfolios",
@@ -658,6 +658,23 @@
       ],
       "fieldPaths": [
         "cohort_id"
+      ]
+    },
+    {
+      "semanticId": "lotus.completed_at",
+      "canonicalTerm": "completed_at",
+      "preferredName": "completed_at",
+      "description": "UTC timestamp at the fenced terminal transaction boundary. This is absent while work is queued or running and is retained for both success and qualified failure.",
+      "example": "2026-05-03T09:30:04Z",
+      "type": "object",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "object"
+      ],
+      "fieldPaths": [
+        "completed_at"
       ]
     },
     {
@@ -7487,6 +7504,14 @@
             "type": "object",
             "semanticId": "lotus.failure_code",
             "attributeRef": "#/attributeCatalog/lotus.failure_code"
+          },
+          {
+            "name": "completed_at",
+            "location": "body",
+            "required": false,
+            "type": "object",
+            "semanticId": "lotus.completed_at",
+            "attributeRef": "#/attributeCatalog/lotus.completed_at"
           },
           {
             "name": "result",

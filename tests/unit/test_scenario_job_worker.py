@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import datetime as dt
 import json
 from types import SimpleNamespace
 from typing import cast
 
 import pytest
 
+from app.contracts.scenario_response_outputs import RegimeScenarioPackResponse
 from app.scenario_jobs import worker
 from app.scenario_jobs.contracts import RegimeScenarioPackJobRequest
 from app.scenario_jobs.store import SqlAlchemyScenarioJobStore
@@ -165,11 +167,30 @@ def test_worker_publishes_complete_aggregate_or_records_a_stale_fence(
         lambda *, outcome, started_at: outcomes.append(outcome),
     )
     store = _Store(claim)
+    claimed_at = dt.datetime(2026, 5, 3, 9, 30, tzinfo=dt.UTC)
+    completed_at = claimed_at + dt.timedelta(seconds=4)
+    events: list[str] = []
+
+    def evaluate_after_claim(request: RegimeScenarioPackJobRequest) -> RegimeScenarioPackResponse:
+        events.append("evaluate")
+        return evaluate_large_regime_scenario_job(request)
+
+    def terminal_clock() -> dt.datetime:
+        events.append("terminal-clock")
+        return completed_at
+
+    monkeypatch.setattr(worker, "evaluate_large_regime_scenario_job", evaluate_after_claim)
     assert (
-        worker.process_one_scenario_job(store=cast("SqlAlchemyScenarioJobStore", store))
+        worker.process_one_scenario_job(
+            store=cast("SqlAlchemyScenarioJobStore", store),
+            now=claimed_at,
+            clock=terminal_clock,
+        )
         == "job-complete"
     )
     assert store.completed is not None
+    assert store.completed["completed_at"] == completed_at
+    assert events == ["evaluate", "terminal-clock"]
     aggregate = cast(dict[str, object], store.completed["aggregate_result"])
     assert all(
         result["position_contributions"] == []
@@ -194,15 +215,21 @@ def test_worker_records_invalid_persisted_input_as_a_terminal_failure() -> None:
         scenario_pack_revision="sha256:admitted",
     )
     store = _Store(claim)
+    claimed_at = dt.datetime(2026, 5, 3, 9, 30, tzinfo=dt.UTC)
+    failed_at = claimed_at + dt.timedelta(seconds=2)
 
     assert (
         worker.process_one_scenario_job(
-            store=cast("SqlAlchemyScenarioJobStore", store), lease_seconds=30
+            store=cast("SqlAlchemyScenarioJobStore", store),
+            now=claimed_at,
+            lease_seconds=30,
+            clock=lambda: failed_at,
         )
         == "job-invalid"
     )
     assert store.failed is not None
     assert store.failed["failure_code"] == "SCENARIO_EVALUATION_INVALID_INPUT"
+    assert store.failed["failed_at"] == failed_at
 
 
 def test_worker_polling_uses_the_explicit_interval(monkeypatch: pytest.MonkeyPatch) -> None:

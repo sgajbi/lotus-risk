@@ -12,7 +12,7 @@ completion claim.
 
 ## Generation Identity
 
-- Measured source/test SHA-256: `56d0c49374ae607e0d608ee2aecad7bc1f508d76cd99d0d9ae39a33be9635519`
+- Measured source/test SHA-256: `5c6fc899b0405760c911b5be0ef505a5ae160d7424b6350d0c7c859f03cd4668`
 - The branch, commit, tool output and timings belong to the CI run artifact, not this
   rebase-stable measurement. The immutable initial baseline remains commit `3254774`.
 
@@ -29,9 +29,9 @@ completion claim.
 | --- | --- | --- |
 | src/app/services/attribution_group_evidence.py | 450 | 18065 |
 | src/app/services/benchmark_exposure_history.py | 440 | 16325 |
+| src/app/scenario_jobs/store.py | 419 | 16735 |
 | src/app/services/attribution_stateful_inputs.py | 415 | 16444 |
 | src/app/services/attribution_active_group_evidence.py | 414 | 16963 |
-| src/app/scenario_jobs/store.py | 407 | 16257 |
 | src/app/evidence/idea_opportunity_runtime.py | 400 | 15185 |
 | src/app/services/stateful_returns_series_parser.py | 386 | 14206 |
 | src/app/services/risk_mode_adapter.py | 372 | 12684 |
@@ -43,16 +43,16 @@ completion claim.
 | src/app/enterprise_readiness.py | 276 | 9394 |
 | src/app/services/attribution_decomposition.py | 266 | 9711 |
 | src/app/services/scenario_engine.py | 255 | 8966 |
+| src/app/scenario_jobs/contracts.py | 233 | 8985 |
 | src/app/integrations/lotus_core_operations.py | 231 | 7376 |
 | src/app/services/supportability_periods.py | 229 | 8819 |
 | src/app/services/risk_event_cohort_engine.py | 224 | 7790 |
-| src/app/contracts/attribution_result_outputs.py | 221 | 10334 |
 
 ### Largest Functions And Classes
 
 | Path | Symbol | Kind | Lines |
 | --- | --- | --- | --- |
-| src/app/scenario_jobs/store.py | SqlAlchemyScenarioJobStore | ClassDef | 286 |
+| src/app/scenario_jobs/store.py | SqlAlchemyScenarioJobStore | ClassDef | 287 |
 | src/app/contracts/attribution_metadata_outputs.py | HistoricalAttributionMetadata | ClassDef | 137 |
 | src/app/contracts/rolling_metadata_outputs.py | RollingMetadata | ClassDef | 136 |
 | src/app/integrations/lotus_core_client.py | LotusCoreClient | ClassDef | 132 |
