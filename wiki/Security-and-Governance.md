@@ -90,7 +90,7 @@ Release images are governed by the same security posture as runtime configuratio
 2. images are tagged with the Git SHA and labeled with commit, branch/ref, service version, build
    timestamp, repository URL, image digest field, and CI run ID;
 3. the release workflow builds locally, generates SBOM plus complete HIGH/CRITICAL SARIF evidence,
-   and completes a blocking scan for fixable HIGH/CRITICAL findings before registry authentication
+   and completes blocking OS and library scans for every HIGH/CRITICAL finding before registry authentication
    or image publication;
 4. only a scan-passing image is pushed, after which the registry digest is signed, attested, and
    recorded in `image-release-manifest.json`;
@@ -126,15 +126,12 @@ and logical instruction sequences, and requires the validated `runtime` stage to
 Dockerfile stage published by the default release build. The released-image SARIF remains the
 vulnerability source of truth.
 
-After the full SARIF inventory is written, a library-only scan blocks every application dependency
-HIGH/CRITICAL finding, including findings without a published fix. The separate OS-only scan uses
-`ignore-unfixed: true`; this keeps every newly fixable base-image HIGH/CRITICAL finding
-release-blocking while retaining visibility of Debian findings that have no published remediation.
-The OS-only posture is owned by `lotus-risk` maintainers and expires on 2026-12-31. Its 2026-10-01
-renewal followed a fresh Trivy 0.70.0 scan of the `f15501ff677e418a3033a7c5d6a11b5950551c96`
-runtime image: 44 HIGH/CRITICAL Debian findings, zero Python findings, and no scanner-provided
-fixed versions. The repository gate enforces `UNFIXED_VULNERABILITY_EXCEPTION_EXPIRES_ON` and fails
-after that date unless maintainers renew it from a fresh image scan and explicit evidence.
+All Docker stages use one approved, immutable Python 3.12 Alpine 3.23 index digest, and the runtime
+stage applies available operating-system updates during the build. After the full SARIF inventory is
+written, independent library-only and OS-only scans block every HIGH/CRITICAL finding in the exact
+captured final-image ID. The workflow forbids `ignore-unfixed`: missing upstream remediation remains
+a release gap, not an accepted verdict. Any base-image digest change requires a reviewed contract
+update, real image build, and fresh exact-image scan before publication.
 
 ## Upstream Boundary Discipline
 

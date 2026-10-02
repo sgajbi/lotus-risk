@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import re
 import sys
-from datetime import UTC, date, datetime
 from pathlib import Path
 
 import yaml
@@ -12,10 +11,6 @@ DOCKERFILE = ROOT / "Dockerfile"
 MAKEFILE = ROOT / "Makefile"
 WORKFLOW_DIR = ROOT / ".github" / "workflows"
 IMAGE_RELEASE_WORKFLOW = WORKFLOW_DIR / "image-release.yml"
-UNFIXED_EXCEPTION_EXPIRY_PATTERN = re.compile(
-    r'^\s*UNFIXED_VULNERABILITY_EXCEPTION_EXPIRES_ON:\s*"(?P<expiry>[^\"]+)"\s*$',
-    flags=re.MULTILINE,
-)
 TRIVY_ENV_OVERRIDE_PATTERN = re.compile(
     r"(?<![A-Z0-9_])(?P<quote>[\"']?)(?P<name>TRIVY_[A-Z0-9_]+)(?P=quote)(?:\s*:|=)"
 )
@@ -97,7 +92,6 @@ APPROVED_WORKFLOW_ENVIRONMENT = (
     "env:",
     "IMAGE_NAME: ghcr.io/${{ github.repository }}",
     'PYTHON_VERSION: "3.12"',
-    'UNFIXED_VULNERABILITY_EXCEPTION_EXPIRES_ON: "2026-12-31"',
 )
 APPROVED_WORKFLOW_PERMISSIONS = (
     "permissions:",
@@ -269,9 +263,14 @@ RUNTIME_TERMINAL_INSTRUCTIONS = (
     ),
     'CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8130"]',
 )
-RUNTIME_BASE_INSTRUCTION = "FROM python:3.12-slim AS runtime"
-BUILDER_BASE_INSTRUCTION = "FROM python:3.12-slim AS builder"
-BUILDER_OUTPUT_VALIDATOR_BASE_INSTRUCTION = "FROM python:3.12-slim AS builder-output-validator"
+APPROVED_RUNTIME_BASE = (
+    "python:3.12-alpine3.23@sha256:33a47b0a92c0766bdd77cd82bbaa4c320ce48db01a2bfe1782920ca7a16e3744"
+)
+RUNTIME_BASE_INSTRUCTION = f"FROM {APPROVED_RUNTIME_BASE} AS runtime"
+BUILDER_BASE_INSTRUCTION = f"FROM {APPROVED_RUNTIME_BASE} AS builder"
+BUILDER_OUTPUT_VALIDATOR_BASE_INSTRUCTION = (
+    f"FROM {APPROVED_RUNTIME_BASE} AS builder-output-validator"
+)
 BUILDER_OUTPUT_COLLISION_GUARD = (
     'RUN collision="$(find /install -mindepth 1 ! -path /install/bin '
     "! -path '/install/bin/*' ! -path /install/lib ! -path /install/lib/python3.12 "
@@ -327,13 +326,10 @@ RUNTIME_INSTRUCTION_CONTRACT = (
     "COPY contracts/domain-data-products ./contracts/domain-data-products",
     RUNTIME_PIP_REMOVAL,
     RUNTIME_ENSUREPIP_REMOVAL,
+    ("RUN apk upgrade --no-cache"),
     (
-        "RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get upgrade --yes && "
-        "rm -rf /var/lib/apt/lists/*"
-    ),
-    (
-        "RUN groupadd --system --gid 10001 lotus && useradd --system --uid 10001 "
-        "--gid lotus --home-dir /app --shell /usr/sbin/nologin lotus && chown lotus:lotus /app"
+        "RUN addgroup -S -g 10001 lotus && adduser -S -D -H -u 10001 -G lotus "
+        "-s /sbin/nologin lotus && chown lotus:lotus /app"
     ),
     "USER lotus",
     RUNTIME_DEPENDENCY_GUARD,
@@ -403,7 +399,7 @@ TRIVY_INVENTORY_ALLOWED_FIELDS = {
     "exit-code",
 }
 TRIVY_LIBRARY_GATE_ALLOWED_FIELDS = TRIVY_INVENTORY_ALLOWED_FIELDS - {"output"}
-TRIVY_OS_GATE_ALLOWED_FIELDS = TRIVY_LIBRARY_GATE_ALLOWED_FIELDS | {"ignore-unfixed"}
+TRIVY_OS_GATE_ALLOWED_FIELDS = TRIVY_LIBRARY_GATE_ALLOWED_FIELDS
 
 
 def _read(path: Path) -> str:
@@ -508,9 +504,9 @@ def validate_runtime_container_contract(
             "runtime data-product declarations"
         ),
         'LOTUS_REPO_ROOT="/app"': "runtime repository-root declaration",
-        "apt-get upgrade --yes": "runtime operating-system security update",
-        "groupadd --system --gid 10001 lotus": "non-root runtime group",
-        "useradd --system --uid 10001": "non-root runtime user",
+        "apk upgrade --no-cache": "runtime operating-system security update",
+        "addgroup -S -g 10001 lotus": "non-root runtime group",
+        "adduser -S -D -H -u 10001": "non-root runtime user",
         "USER lotus": "non-root runtime user selection",
         "HEALTHCHECK": "container healthcheck",
         "http://127.0.0.1:8130/health/ready": "readiness healthcheck endpoint",
@@ -914,8 +910,6 @@ def _decoded_workflow_control_fields(text: str) -> tuple[tuple[str, ...], tuple[
 
 def validate_ci_image_release_workflow(
     workflow_path: Path = IMAGE_RELEASE_WORKFLOW,
-    *,
-    today: date | None = None,
 ) -> list[str]:
     if not workflow_path.exists():
         return [f"{workflow_path}: image release workflow is missing"]
@@ -1252,13 +1246,11 @@ def validate_ci_image_release_workflow(
     if _workflow_field_value(os_gate, "image-ref") != VALIDATED_LOCAL_IMAGE_ID:
         issues.append(f"{workflow_path}: OS vulnerability gate must scan the release image")
     if _workflow_field_value(os_gate, "vuln-type") != "os":
-        issues.append(f"{workflow_path}: unfixed exception must be scoped to OS findings")
-    if _workflow_field_value(os_gate, "ignore-unfixed") != "true":
-        issues.append(
-            f"{workflow_path}: OS blocking scan must ignore only vulnerabilities without a fix"
-        )
+        issues.append(f"{workflow_path}: OS vulnerability gate must scan only OS findings")
+    if _workflow_field_value(os_gate, "ignore-unfixed") is not None:
+        issues.append(f"{workflow_path}: OS vulnerability gate must not ignore unfixed findings")
     if _workflow_field_value(os_gate, "exit-code") != "1":
-        issues.append(f"{workflow_path}: fixable OS HIGH/CRITICAL findings must be blocking")
+        issues.append(f"{workflow_path}: OS HIGH/CRITICAL findings must be blocking")
     if _workflow_field_value(os_gate, "severity") != "HIGH,CRITICAL":
         issues.append(f"{workflow_path}: OS blocking scan must cover HIGH/CRITICAL findings")
     if _workflow_field_value(os_gate, "continue-on-error") is not None:
@@ -1288,24 +1280,6 @@ def validate_ci_image_release_workflow(
         )
     ):
         issues.append(f"{workflow_path}: registry authentication must match the approved contract")
-
-    expiry_match = UNFIXED_EXCEPTION_EXPIRY_PATTERN.search(text)
-    if expiry_match is None:
-        issues.append(f"{workflow_path}: missing unfixed-vulnerability exception expiry")
-    else:
-        expiry_text = expiry_match.group("expiry")
-        try:
-            expiry = date.fromisoformat(expiry_text)
-        except ValueError:
-            issues.append(
-                f"{workflow_path}: invalid unfixed-vulnerability exception expiry {expiry_text!r}"
-            )
-        else:
-            effective_today = today or datetime.now(UTC).date()
-            if effective_today > expiry:
-                issues.append(
-                    f"{workflow_path}: unfixed-vulnerability exception expired on {expiry.isoformat()}"
-                )
 
     if 'branches: [ "main" ]' not in text and "branches: [main]" not in text:
         issues.append(f"{workflow_path}: image push must be scoped to main")

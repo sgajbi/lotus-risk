@@ -19,7 +19,6 @@ permissions:
 env:
   IMAGE_NAME: ghcr.io/${{ github.repository }}
   PYTHON_VERSION: "3.12"
-  UNFIXED_VULNERABILITY_EXCEPTION_EXPIRES_ON: "2026-12-31"
 
 jobs:
   release-image:
@@ -129,7 +128,6 @@ jobs:
           format: table
           vuln-type: os
           severity: HIGH,CRITICAL
-          ignore-unfixed: true
           exit-code: "1"
 
       - name: Authenticate to release registry

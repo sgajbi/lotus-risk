@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from datetime import date
 from pathlib import Path
 
 import pytest
 
 from scripts.validate_image_supply_chain import (
+    APPROVED_RUNTIME_BASE,
     FORBIDDEN_RUNTIME_DEV_DEPENDENCIES,
     FORBIDDEN_TRIVY_OVERRIDE_FIELDS,
     validate_ci_image_release_workflow,
@@ -65,7 +65,8 @@ def test_dockerfile_uses_hardened_runtime_target_without_dev_extra() -> None:
     assert "AS builder" in dockerfile
     assert "AS runtime" in dockerfile
     assert "pip install --prefix=/install ." in dockerfile
-    assert "apt-get upgrade --yes" in dockerfile
+    assert "apk upgrade --no-cache" in dockerfile
+    assert dockerfile.count(f"FROM {APPROVED_RUNTIME_BASE} AS ") == 3
     assert " -e " not in dockerfile
     assert "COPY scripts" not in dockerfile
     assert "COPY contracts/domain-data-products ./contracts/domain-data-products" in dockerfile
@@ -83,6 +84,34 @@ def test_dockerfile_uses_hardened_runtime_target_without_dev_extra() -> None:
     assert "Runtime image contains import-path archives" in dockerfile
     for package in FORBIDDEN_RUNTIME_DEV_DEPENDENCIES:
         assert package in dockerfile
+
+
+@pytest.mark.parametrize("stage", ["builder", "builder-output-validator", "runtime"])
+def test_runtime_container_contract_rejects_mutable_or_divergent_stage_base(
+    tmp_path: Path,
+    stage: str,
+) -> None:
+    dockerfile = tmp_path / "Dockerfile"
+    current = Path("Dockerfile").read_text(encoding="utf-8")
+    dockerfile.write_text(
+        current.replace(
+            f"FROM {APPROVED_RUNTIME_BASE} AS {stage}",
+            f"FROM python:3.12-alpine3.23 AS {stage}",
+            1,
+        ),
+        encoding="utf-8",
+    )
+
+    issues = validate_runtime_container_contract(dockerfile, Path("Makefile"))
+
+    expected = {
+        "builder": "builder stage must use approved base image directly",
+        "builder-output-validator": (
+            "builder-output validator must use approved base image directly"
+        ),
+        "runtime": "runtime stage must use approved base image directly",
+    }
+    assert f"{dockerfile}: {expected[stage]}" in issues
 
 
 def test_runtime_container_contract_rejects_single_stage_root_runtime(
@@ -225,7 +254,7 @@ def test_image_release_scans_before_registry_authentication_and_publication() ->
     assert "Generate complete vulnerability inventory" in workflow
     assert "vuln-type: os,library" in workflow
     assert 'exit-code: "0"' in workflow
-    assert "ignore-unfixed: true" in workflow
+    assert "ignore-unfixed" not in workflow
     assert 'exit-code: "1"' in workflow
     assert workflow.index("- name: Block application-library vulnerabilities") < workflow.index(
         "- name: Vulnerability scan"
@@ -351,36 +380,33 @@ def test_image_release_contract_rejects_build_time_publication(tmp_path: Path) -
     assert f"{workflow_path}: build must not publish before the vulnerability scan" in issues
 
 
-def test_image_release_contract_rejects_unactionable_blocking_scan(tmp_path: Path) -> None:
-    workflow_path = tmp_path / "image-release.yml"
-    current = Path(".github/workflows/image-release.yml").read_text(encoding="utf-8")
-    workflow_path.write_text(
-        current.replace("          ignore-unfixed: true\n", ""),
-        encoding="utf-8",
-    )
-
-    issues = validate_ci_image_release_workflow(workflow_path)
-
-    assert (
-        f"{workflow_path}: OS blocking scan must ignore only vulnerabilities without a fix"
-        in issues
-    )
-
-
-def test_image_release_contract_rejects_nonblocking_os_scan(tmp_path: Path) -> None:
+def test_image_release_contract_rejects_unfixed_os_exception(tmp_path: Path) -> None:
     workflow_path = tmp_path / "image-release.yml"
     current = Path(".github/workflows/image-release.yml").read_text(encoding="utf-8")
     workflow_path.write_text(
         current.replace(
-            '          ignore-unfixed: true\n          exit-code: "1"',
-            '          ignore-unfixed: true\n          exit-code: "0"',
+            '          severity: HIGH,CRITICAL\n          exit-code: "1"',
+            "          severity: HIGH,CRITICAL\n          ignore-unfixed: true\n"
+            '          exit-code: "1"',
         ),
         encoding="utf-8",
     )
 
     issues = validate_ci_image_release_workflow(workflow_path)
 
-    assert f"{workflow_path}: fixable OS HIGH/CRITICAL findings must be blocking" in issues
+    assert f"{workflow_path}: OS vulnerability gate must not ignore unfixed findings" in issues
+
+
+def test_image_release_contract_rejects_nonblocking_os_scan(tmp_path: Path) -> None:
+    workflow_path = tmp_path / "image-release.yml"
+    current = Path(".github/workflows/image-release.yml").read_text(encoding="utf-8")
+    start = current.index("- name: Vulnerability scan")
+    corrupted = current[start:].replace('          exit-code: "1"', '          exit-code: "0"', 1)
+    workflow_path.write_text(current[:start] + corrupted, encoding="utf-8")
+
+    issues = validate_ci_image_release_workflow(workflow_path)
+
+    assert f"{workflow_path}: OS HIGH/CRITICAL findings must be blocking" in issues
 
 
 @pytest.mark.parametrize(
@@ -809,9 +835,9 @@ def test_image_release_contract_requires_sarif_upload_to_execute(
     ("marker", "replacement"),
     [
         (
-            '  UNFIXED_VULNERABILITY_EXCEPTION_EXPIRES_ON: "2026-12-31"\n',
+            '  PYTHON_VERSION: "3.12"\n',
             (
-                '  UNFIXED_VULNERABILITY_EXCEPTION_EXPIRES_ON: "2026-12-31"\n'
+                '  PYTHON_VERSION: "3.12"\n'
                 '  TRIVY_SKIP_DIRS: "/usr/local/lib/python3.12/site-packages"\n'
             ),
         ),
@@ -923,7 +949,7 @@ def test_image_release_contract_rejects_conditional_blocking_scans(
     assert f"{workflow_path}: {expected_issue}" in issues
 
 
-def test_image_release_contract_rejects_unscoped_os_exception(tmp_path: Path) -> None:
+def test_image_release_contract_rejects_missing_os_scope(tmp_path: Path) -> None:
     workflow_path = tmp_path / "image-release.yml"
     current = Path(".github/workflows/image-release.yml").read_text(encoding="utf-8")
     workflow_path.write_text(
@@ -933,10 +959,10 @@ def test_image_release_contract_rejects_unscoped_os_exception(tmp_path: Path) ->
 
     issues = validate_ci_image_release_workflow(workflow_path)
 
-    assert f"{workflow_path}: unfixed exception must be scoped to OS findings" in issues
+    assert f"{workflow_path}: OS vulnerability gate must scan only OS findings" in issues
 
 
-def test_image_release_contract_rejects_os_exception_covering_libraries(tmp_path: Path) -> None:
+def test_image_release_contract_rejects_os_gate_covering_libraries(tmp_path: Path) -> None:
     workflow_path = tmp_path / "image-release.yml"
     current = Path(".github/workflows/image-release.yml").read_text(encoding="utf-8")
     workflow_path.write_text(
@@ -946,7 +972,7 @@ def test_image_release_contract_rejects_os_exception_covering_libraries(tmp_path
 
     issues = validate_ci_image_release_workflow(workflow_path)
 
-    assert f"{workflow_path}: unfixed exception must be scoped to OS findings" in issues
+    assert f"{workflow_path}: OS vulnerability gate must scan only OS findings" in issues
 
 
 @pytest.mark.parametrize(
@@ -985,33 +1011,6 @@ def test_image_release_contract_rejects_scan_of_nonrelease_image(
     issues = validate_ci_image_release_workflow(workflow_path)
 
     assert f"{workflow_path}: {expected_issue}" in issues
-
-
-def test_image_release_contract_rejects_expired_unfixed_exception(tmp_path: Path) -> None:
-    workflow_path = tmp_path / "image-release.yml"
-    workflow_path.write_text(
-        Path(".github/workflows/image-release.yml").read_text(encoding="utf-8"),
-        encoding="utf-8",
-    )
-
-    issues = validate_ci_image_release_workflow(workflow_path, today=date(2027, 1, 1))
-
-    assert f"{workflow_path}: unfixed-vulnerability exception expired on 2026-12-31" in issues
-
-
-def test_image_release_contract_rejects_malformed_unfixed_exception(tmp_path: Path) -> None:
-    workflow_path = tmp_path / "image-release.yml"
-    current = Path(".github/workflows/image-release.yml").read_text(encoding="utf-8")
-    workflow_path.write_text(
-        current.replace('EXPIRES_ON: "2026-12-31"', 'EXPIRES_ON: "renew-later"'),
-        encoding="utf-8",
-    )
-
-    issues = validate_ci_image_release_workflow(workflow_path, today=date(2026, 8, 27))
-
-    assert (
-        f"{workflow_path}: invalid unfixed-vulnerability exception expiry 'renew-later'" in issues
-    )
 
 
 def test_image_release_contract_rejects_digest_lookup_by_mutable_tag(tmp_path: Path) -> None:
