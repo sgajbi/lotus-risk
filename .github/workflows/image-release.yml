@@ -36,8 +36,8 @@ jobs:
       - name: Validate image supply-chain contract
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev]"
-          make image-supply-chain-gate
+          python -m pip install PyYAML==6.0.3
+          python -P scripts/validate_image_supply_chain.py
 
       - name: Resolve build timestamp
         run: echo "LOTUS_BUILD_TIMESTAMP=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_ENV"
@@ -49,6 +49,8 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
+          file: Dockerfile
+          target: runtime
           push: false
           load: true
           tags: ${{ env.IMAGE_NAME }}:${{ github.sha }}
@@ -63,13 +65,26 @@ jobs:
             LOTUS_IMAGE_DIGEST=resolved-after-push-in-release-manifest
             LOTUS_CI_PIPELINE_RUN_ID=${{ github.run_id }}
 
+      - name: Capture validated local image identity
+        id: validated_image
+        shell: bash
+        run: |
+          set -euo pipefail
+          image_ref="${IMAGE_NAME}:${GITHUB_SHA}"
+          image_id="$(docker image inspect --format='{{.Id}}' "$image_ref")"
+          if [[ ! "$image_id" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "::error::Validated build did not produce a local image ID: $image_id"
+            exit 1
+          fi
+          echo "image_id=$image_id" >> "$GITHUB_OUTPUT"
+
       - name: Prepare image release evidence directory
         run: mkdir -p output/image-release
 
       - name: Generate SBOM
         uses: anchore/sbom-action@v0
         with:
-          image: ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          image: ${{ steps.validated_image.outputs.image_id }}
           format: spdx-json
           output-file: output/image-release/lotus-risk-sbom.spdx.json
 
@@ -79,7 +94,7 @@ jobs:
           scan-type: image
           scanners: vuln
           version: v0.70.0
-          image-ref: ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          image-ref: ${{ steps.validated_image.outputs.image_id }}
           format: sarif
           output: output/image-release/trivy-results.sarif
           vuln-type: os,library
@@ -98,7 +113,7 @@ jobs:
           scan-type: image
           scanners: vuln
           version: v0.70.0
-          image-ref: ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          image-ref: ${{ steps.validated_image.outputs.image_id }}
           format: table
           vuln-type: library
           severity: HIGH,CRITICAL
@@ -110,7 +125,7 @@ jobs:
           scan-type: image
           scanners: vuln
           version: v0.70.0
-          image-ref: ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          image-ref: ${{ steps.validated_image.outputs.image_id }}
           format: table
           vuln-type: os
           severity: HIGH,CRITICAL
@@ -130,7 +145,11 @@ jobs:
         run: |
           set -euo pipefail
           image_ref="${IMAGE_NAME}:${GITHUB_SHA}"
-          local_image_id="$(docker image inspect --format='{{.Id}}' "$image_ref")"
+          validated_image_id="${{ steps.validated_image.outputs.image_id }}"
+          if [ "$(docker image inspect --format='{{.Id}}' "$image_ref")" != "$validated_image_id" ]; then
+            echo "::error::The release tag no longer identifies the scanned image."
+            exit 1
+          fi
           push_output="$(docker push "$image_ref" 2>&1)"
           printf '%s\n' "$push_output"
           published_digest="$(printf '%s\n' "$push_output" \
@@ -140,7 +159,7 @@ jobs:
             echo "::error::Docker push did not return a valid image digest: $published_digest"
             exit 1
           fi
-          if [ "$(docker image inspect --format='{{.Id}}' "$image_ref")" != "$local_image_id" ]; then
+          if [ "$(docker image inspect --format='{{.Id}}' "$image_ref")" != "$validated_image_id" ]; then
             echo "::error::The locally scanned image changed during publication."
             exit 1
           fi

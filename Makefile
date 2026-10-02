@@ -212,6 +212,7 @@ docker-build:
 		--build-arg LOTUS_IMAGE_DIGEST="$(IMAGE_DIGEST)" \
 		--build-arg LOTUS_CI_PIPELINE_RUN_ID="$(CI_PIPELINE_RUN_ID)" \
 		-t lotus-risk:ci .
+	python scripts/validate_builder_output_isolation.py
 
 docker-up:
 	docker compose up -d --build

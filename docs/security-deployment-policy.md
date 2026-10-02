@@ -177,6 +177,32 @@ Kubernetes image references and secret-like Docker build argument or environment
 that pytest, ruff, mypy, bandit, deptry, radon, vulture, and pre-commit are absent from the deployable
 runtime image.
 
+The builder uses `pip` to install the application, but the final runtime stage removes that package
+manager after copying installed dependencies. Its build-time import guard also rejects a retained
+`pip` module. The standard-library `ensurepip` bootstrap and its bundled wheel are also removed,
+and the build guard rejects a retained bootstrap so the runtime user cannot reinstall bundled pip.
+Removal and verification run with isolated Python startup (`-I -S`) and inspect resolved standard-
+library and installation paths. Runtime `sitecustomize`/`usercustomize` modules and site-packages
+`.pth` files are rejected so they cannot activate hidden package paths or executable startup code
+outside those inspected roots. Existing file-backed entries on the isolated interpreter's default
+import path are also rejected, preventing sibling zip archives from supplying hidden modules.
+Builder output is limited to `/install/bin` and the Python 3.12 site-packages tree before it is
+copied over `/usr/local`; output that could replace standard-library files is refused. It also
+cannot contain a `python*` executable collision, and removal/verification invokes the base image's
+versioned interpreter path. The release build is pinned to repository context `.`, the validated
+root `Dockerfile`, and the `runtime` target; custom Dockerfile syntax frontends and the external
+`BUILDKIT_SYNTAX` frontend selector are forbidden. Release build arguments must match the complete
+approved provenance contract, so runtime expression indirection cannot inject additional arguments.
+The approved build action is unique, and later build or local-tag mutation commands are forbidden. The
+approved build's immutable local image ID is captured immediately; SBOM and vulnerability scans use
+that ID, and publication refuses a tag that no longer resolves to it. The
+builder and runtime stages, including each direct
+base image and logical instruction sequence, are contract-locked so package stashes cannot be added
+outside the reviewed install/removal path. The validated `runtime` stage must remain the final
+Dockerfile stage because the release build publishes Docker's default final target.
+The final-image vulnerability inventory, not the Dockerfile alone, is the evidence
+that fixable package findings are absent; local image proof does not certify a published release.
+
 ### Unfixed base-image vulnerability treatment
 
 The complete Trivy SARIF inventory intentionally retains HIGH/CRITICAL findings regardless of fix

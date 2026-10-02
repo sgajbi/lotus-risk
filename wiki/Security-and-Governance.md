@@ -107,6 +107,24 @@ on the released image. `make image-supply-chain-gate` is the local and CI guard 
 including the enforced scan-before-publication sequence and hardened runtime-target contract. The
 deployable runtime image installs runtime dependencies only and rejects dev tooling during the Docker
 build if pytest, ruff, mypy, bandit, deptry, radon, vulture, or pre-commit are present.
+The builder retains `pip` for installation; the final runtime stage removes it and the bundled
+`ensurepip` bootstrap, and the build guard rejects both modules. These controls use isolated Python
+startup and filesystem-path inspection; runtime `sitecustomize`/`usercustomize` modules and `.pth`
+files are rejected rather than trusted to execute code or activate additional paths. File-backed
+entries on the isolated interpreter's default import path are also rejected. The release build is
+pinned to repository context `.`, the validated root `Dockerfile`, and the `runtime` target; custom
+Dockerfile syntax frontends and the external `BUILDKIT_SYNTAX` frontend selector are rejected. The
+complete release build-argument block is contract-locked, including against runtime expression
+indirection. The approved build action is unique, and later build or local-tag mutation commands are
+forbidden. SBOM and vulnerability scans use the approved build's captured immutable local image ID;
+publication refuses a tag that no longer resolves to that ID. Builder output is
+confined to the scripts and Python 3.12 site-packages roots before
+copying over `/usr/local`, so it cannot replace standard-library files. Builder-installed `python*`
+executable collisions are refused, and controls invoke the base image's versioned interpreter path.
+The image contract locks builder/runtime base identities
+and logical instruction sequences, and requires the validated `runtime` stage to remain the final
+Dockerfile stage published by the default release build. The released-image SARIF remains the
+vulnerability source of truth.
 
 After the full SARIF inventory is written, a library-only scan blocks every application dependency
 HIGH/CRITICAL finding, including findings without a published fix. The separate OS-only scan uses
