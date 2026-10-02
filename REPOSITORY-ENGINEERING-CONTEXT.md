@@ -57,6 +57,9 @@ Current repository posture:
     source-supplied exposure weights against governed risk-event definitions and returns affected
     membership, exclusions, impact scores, source refs, supportability, and bounded reason codes
     for future manage wave-trigger consumption without creating waves or campaign approvals.
+    Any unsupported candidate exposure bucket yields `degraded`, including for an empty affected
+    cohort. `pending_review` is reserved for a fully evaluable cohort with no threshold match, and
+    `RISK_EVENT_AFFECTED_COHORT_READY` is exclusive to `ready`.
 11. `MandateRiskHealthContext:v1` is a repo-native domain data product exposed through
     `POST /analytics/risk/mandate-health-context`; it derives bounded mandate risk health posture
     from source-owned tracking-error methodology, returns threshold breach state, methodology
