@@ -12,7 +12,7 @@ completion claim.
 
 ## Generation Identity
 
-- Measured source/test SHA-256: `5c6fc899b0405760c911b5be0ef505a5ae160d7424b6350d0c7c859f03cd4668`
+- Measured source/test SHA-256: `bf511aa39989a2fc329add839b1d53ae8f10abcf9268a0d0cf2b2a25894f3d78`
 - The branch, commit, tool output and timings belong to the CI run artifact, not this
   rebase-stable measurement. The immutable initial baseline remains commit `3254774`.
 
@@ -46,7 +46,7 @@ completion claim.
 | src/app/scenario_jobs/contracts.py | 233 | 8985 |
 | src/app/integrations/lotus_core_operations.py | 231 | 7376 |
 | src/app/services/supportability_periods.py | 229 | 8819 |
-| src/app/services/risk_event_cohort_engine.py | 224 | 7790 |
+| src/app/services/risk_event_cohort_engine.py | 225 | 7811 |
 
 ### Largest Functions And Classes
 
@@ -164,6 +164,6 @@ needs current CI status, generated OpenAPI artifact evidence, and reviewer-ready
 
 ## Validation Snapshot
 
-- Unit tests collected: 1403
+- Unit tests collected: 1409
 - Import-linter is an enforced architecture gate; its run verdict belongs to CI, not this
   rebase-stable snapshot.
