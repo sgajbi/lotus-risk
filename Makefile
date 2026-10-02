@@ -1,4 +1,4 @@
-.PHONY: architecture-gate complexity-gate source-size-gate personal-path-gate dead-code-gate dependency-hygiene-gate github-actions-runtime-gate install install-ci check check-all test test-unit test-integration test-e2e test-all test-coverage test-fast test-all-fast test-all-no-cov test-all-parallel ci ci-local ci-local-docker ci-local-docker-down typecheck lint monetary-float-guard domain-product-validate domain-data-product-gate trust-telemetry-validate observability-contract-validate mesh-contract-validate idea-opportunity-evidence-gate idea-opportunity-runtime-evidence image-supply-chain-gate no-alias-gate openapi-gate openapi-artifact-gate api-vocabulary-gate format clean run check-deps security-audit migration-smoke migration-apply pre-commit docker-build docker-up docker-down test-pyramid-gate quality-baseline maintainability-report
+.PHONY: architecture-gate complexity-gate source-size-gate personal-path-gate dead-code-gate dependency-hygiene-gate github-actions-runtime-gate install install-ci check check-all test test-unit test-integration test-e2e test-all test-coverage test-fast test-all-fast test-all-no-cov test-all-parallel ci ci-local ci-local-docker ci-local-docker-down typecheck lint monetary-float-guard domain-product-validate domain-data-product-gate trust-telemetry-validate observability-contract-validate mesh-contract-validate idea-opportunity-evidence-gate idea-opportunity-runtime-evidence image-supply-chain-gate no-alias-gate openapi-gate openapi-artifact-gate api-vocabulary-gate format clean run check-deps security-audit migration-smoke migration-apply pre-commit docker-build docker-up docker-down test-pyramid-gate quality-baseline quality-baseline-check maintainability-report
 
 COVERAGE_FAIL_UNDER ?= 98
 SOURCE_FILE_MAX_LINES ?= 450
@@ -34,6 +34,9 @@ ci: github-actions-runtime-gate lint check-deps architecture-gate no-alias-gate 
 
 quality-baseline:
 	python scripts/generate_quality_baseline.py
+
+quality-baseline-check:
+	python scripts/generate_quality_baseline.py --check
 
 github-actions-runtime-gate:
 	python scripts/validate_github_actions_runtime.py

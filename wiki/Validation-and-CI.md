@@ -63,7 +63,9 @@ and deterministic for local and protected lanes.
 - `make ci-local` - split-suite coverage loop without Docker
 - `make ci-local-docker` - isolated Docker lane for the split-suite coverage loop; the image
   normalizes Python source modes so Ruff sees Git-equivalent permissions from Windows hosts
-- `make quality-baseline` - report-only enterprise refactor baseline and quality scorecard
+- `make quality-baseline` - regenerate deterministic enterprise refactor measurements and a
+  runner-specific diagnostic transcript under ignored `output/quality/`
+- `make quality-baseline-check` - fail if any committed deterministic measurement is stale
 - `make mesh-contract-validate` - domain product, trust telemetry, and observability contract validation
 - `make image-supply-chain-gate` - image metadata, CI-only push, digest deployment, SBOM, vulnerability scan, signing, provenance, and secret-free Docker metadata validation
 - `make domain-data-product-gate` - blocking repo-native domain product declaration validation;
@@ -154,7 +156,14 @@ and deterministic for local and protected lanes.
 
 ## Quality Baseline
 
-`make quality-baseline` generates report-only refactor evidence under `quality/`.
+From the `lotus-risk` repository root, `make quality-baseline` refreshes the six committed
+measurements under `quality/` and writes runner-specific command output to
+`output/quality/baseline-command-transcript.md`. `make quality-baseline-check` compares newly
+generated deterministic reports with the committed copies without modifying them. The Quality
+Baseline workflow uploads the diagnostic transcript and runs a separate blocking Freshness Gate.
+For a quick local deterministic refresh, run
+`python scripts/generate_quality_baseline.py --skip-diagnostics` from the same repository root;
+this does not create or refresh diagnostic command evidence.
 
 It currently records:
 
@@ -162,10 +171,11 @@ It currently records:
 2. API entry-point modularity risk,
 3. architecture and API-governance rules,
 4. quality scorecard posture,
-5. report-only import-linter/Spectral readiness.
+5. a source/test content SHA-256 rather than a branch or rebase commit identity.
 
-This evidence is a prioritization and regression-control baseline. It is not an enterprise-readiness
-completion claim until the progressive gates move from report-only to enforced thresholds.
+The transcript is diagnostic, not a substitute for Feature, PR Merge or Main gate verdicts. Passing
+freshness proves that committed measurements match the checked tree; it is not an enterprise-readiness
+or production acceptance claim.
 
 ## Why These Gates Matter Here
 

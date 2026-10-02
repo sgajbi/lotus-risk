@@ -40,8 +40,9 @@ Current measured highlights:
 6. Observability evidence now covers metrics, dashboard panels, alert definitions, and runbook
    anchors.
 7. The continuation branch carries small, non-squash-oriented commits over `origin/main`; generated
-   baseline identity is recorded in `quality/baseline_report.md` and must be regenerated immediately
-   before final PR assembly.
+   source/test content identity is recorded in `quality/baseline_report.md` and must pass
+   `make quality-baseline-check` on the final PR tree. Runner commit and command transcripts are
+   uploaded separately from the CI run.
 
 ## Architecture Improvements
 

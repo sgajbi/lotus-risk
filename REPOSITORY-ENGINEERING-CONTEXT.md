@@ -552,6 +552,12 @@ Most relevant current governance:
     without a path-keyed, non-empty reason. The documentation-vocabulary parity test is an
     explicit exception because its `app` contract import is an oracle for wiki text, not a
     product-behavior test. Canonical-lift collection marking remains separately verified.
+13. `make quality-baseline` from the repository root refreshes six committed deterministic
+    `quality/` measurements and writes volatile command output to ignored `output/quality/`.
+    `make quality-baseline-check` is a read-only comparison on the measured source/test tree;
+    the Quality Baseline workflow's separate Freshness Gate blocks stale committed reports.
+    A rebase requires regeneration, while CI tool transcripts remain diagnostic and must not be
+    read as Feature, PR Merge or Main gate verdicts.
 
 ## Context Maintenance Rule
 
