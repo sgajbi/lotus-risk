@@ -547,6 +547,11 @@ Most relevant current governance:
     `/ops` and capability aggregation derive their inventory/order from that alias; only
     workflow entries authorize an executable mode. Do not hand-copy the alias into metadata or
     filtering constants when adding a mode.
+12. `tests/unit/test_test_pyramid_gate.py` checks both governance-marker directions for unit
+    modules: non-product modules must be marked, and modules importing `app` must not be marked
+    without a path-keyed, non-empty reason. The documentation-vocabulary parity test is an
+    explicit exception because its `app` contract import is an oracle for wiki text, not a
+    product-behavior test. Canonical-lift collection marking remains separately verified.
 
 ## Context Maintenance Rule
 

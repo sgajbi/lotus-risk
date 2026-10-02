@@ -7,8 +7,8 @@ the marker load-bearing in two directions, and both need holding:
   integration and e2e ratios, which is the defect issue #220 records: the repository was two unit
   tests away from being unable to add any CI-contract coverage without turning CI red.
 - If it is over-applied, product tests vanish from the denominator and the gate stops governing
-  anything. Nothing here can detect that automatically, which is why the marker is explicit and
-  reviewed rather than inferred.
+  anything. The unit-module import classifier guards this direction too; explicit, reasoned
+  exceptions are needed when importing app code is only a governance inspection.
 
 The governance completeness check below covers `tests/unit` only. A `tests/unit` module that never imports
 product code cannot be testing product behaviour, so the signal is sound there. It is deliberately
@@ -23,6 +23,7 @@ from __future__ import annotations
 import ast
 import subprocess
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 
 import pytest
@@ -212,22 +213,104 @@ def _imports_product_code(module: Path) -> bool:
 #: file stays comparable to its canonical blob.
 #: Retires when the module is no longer a verbatim lift.
 CANONICAL_LIFTS = {"tests/unit/test_branch_protection_policy.py"}
+PRODUCT_MARKER_EXCEPTIONS: dict[str, str] = {
+    "tests/unit/test_documented_supportability_reasons.py": (
+        "Compares the declared reason vocabulary with authored wiki prose; it does not "
+        "exercise product behavior. Importing the contract alias is the documentation oracle."
+    ),
+}
 
 
-def test_unit_modules_that_never_touch_product_code_declare_the_marker() -> None:
-    unmarked = [
+def _unit_module_paths(unit_root: Path) -> list[tuple[str, Path]]:
+    return [
+        (f"tests/unit/{module.relative_to(unit_root).as_posix()}", module)
+        for module in sorted(unit_root.rglob("test_*.py"))
+    ]
+
+
+def _unmarked_governance_modules(unit_root: Path) -> list[str]:
+    return [
         path
-        for module in sorted((ROOT / "tests" / "unit").rglob("test_*.py"))
-        if (path := module.relative_to(ROOT).as_posix()) not in CANONICAL_LIFTS
+        for path, module in _unit_module_paths(unit_root)
+        if path not in CANONICAL_LIFTS
         and not _imports_product_code(module)
         and not _declares_governance_marker(module)
     ]
 
+
+def _marked_product_modules(unit_root: Path) -> list[str]:
+    return [
+        path
+        for path, module in _unit_module_paths(unit_root)
+        if _imports_product_code(module) and _declares_governance_marker(module)
+    ]
+
+
+def _assert_unmarked_governance_modules(unit_root: Path) -> None:
+    unmarked = _unmarked_governance_modules(unit_root)
     assert unmarked == [], (
         "These unit modules never import product code, so they are not product tests, but they do "
         f"not bind `pytestmark` to `pytest.mark.{MARKER_NAME}`. They will be counted in the "
         f"product pyramid and squeeze the integration and e2e ratios: {unmarked}. See issue #220."
     )
+
+
+def _assert_marked_product_modules(
+    unit_root: Path, exceptions: Mapping[str, str] = PRODUCT_MARKER_EXCEPTIONS
+) -> None:
+    assert all(reason.strip() for reason in exceptions.values())
+    marked = _marked_product_modules(unit_root)
+    assert set(exceptions) <= set(marked), "Stale governance-marker exceptions"
+    misclassified = [path for path in marked if path not in exceptions]
+    assert misclassified == [], (
+        "These unit modules import product code but declare pytest.mark.governance, so their "
+        f"product tests disappear from the measured pyramid: {misclassified}. See issue #289."
+    )
+
+
+def test_unit_modules_that_never_touch_product_code_declare_the_marker() -> None:
+    _assert_unmarked_governance_modules(ROOT / "tests" / "unit")
+
+
+def test_unit_modules_that_import_product_code_do_not_declare_governance_marker() -> None:
+    _assert_marked_product_modules(ROOT / "tests" / "unit")
+
+
+def test_marker_classifier_fails_both_misclassification_mutations(tmp_path: Path) -> None:
+    unit_root = tmp_path / "tests" / "unit"
+    unit_root.mkdir(parents=True)
+    product = unit_root / "test_product.py"
+    governance = unit_root / "test_governance.py"
+    product.write_text("from app.contracts import capabilities\n", encoding="utf-8")
+    governance.write_text("import pytest\npytestmark = pytest.mark.governance\n", encoding="utf-8")
+    assert _marked_product_modules(unit_root) == []
+    assert _unmarked_governance_modules(unit_root) == []
+    _assert_marked_product_modules(unit_root, {})
+    _assert_unmarked_governance_modules(unit_root)
+
+    product_source = product.read_text(encoding="utf-8")
+    assert product_source.count("from app.contracts import capabilities\n") == 1
+    product.write_text(
+        product_source + "import pytest\npytestmark = pytest.mark.governance\n",
+        encoding="utf-8",
+    )
+    assert _declares_governance_marker(product)
+    with pytest.raises(AssertionError, match="tests/unit/test_product.py"):
+        _assert_marked_product_modules(unit_root, {})
+    with pytest.raises(AssertionError):
+        _assert_marked_product_modules(unit_root, {"tests/unit/test_product.py": "  "})
+    with pytest.raises(AssertionError, match="Stale governance-marker exceptions"):
+        _assert_marked_product_modules(unit_root, {"tests/unit/test_missing.py": "obsolete"})
+
+    governance_source = governance.read_text(encoding="utf-8")
+    assert governance_source.count("pytestmark = pytest.mark.governance\n") == 1
+    governance.write_text(
+        governance_source.replace("pytestmark = pytest.mark.governance\n", "", 1),
+        encoding="utf-8",
+    )
+    assert not _declares_governance_marker(governance)
+    with pytest.raises(AssertionError, match="tests/unit/test_governance.py"):
+        _assert_unmarked_governance_modules(unit_root)
 
 
 def test_every_canonical_lift_is_marked_at_collection_time() -> None:
