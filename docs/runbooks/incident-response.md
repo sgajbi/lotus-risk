@@ -47,7 +47,8 @@ response-profile SHA-256 values printed by the `--prepare-exercise-revision` com
 must also reference a source-safe JSON evidence artifact and record its exact byte digest. Its
 `exercise_id` and `timestamp_utc` must equal the result identity and `executed_at`, preventing
 evidence reuse across exercise results. The contract revision covers incident policy, runbook
-content, and monitoring definitions.
+content, and canonical monitoring definitions; JSON formatting and platform line endings do not
+change its identity.
 Earlier or failed results remain history and cannot advance the posture. Plans and valid passes
 must cover the selected alert's escalation roles.
 

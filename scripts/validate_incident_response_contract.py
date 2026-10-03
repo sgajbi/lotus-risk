@@ -251,11 +251,12 @@ def _incident_contract_revision_sha256(
         governed_runbook.encode()
     ).hexdigest()
     resolved_monitoring_path = monitoring_path or repository_root / CANONICAL_MONITORING_CONTRACT
-    governed_behavior["monitoring_contract_sha256"] = (
-        hashlib.sha256(resolved_monitoring_path.read_bytes()).hexdigest()
-        if resolved_monitoring_path.is_file()
-        else ""
-    )
+    governed_behavior["monitoring_contract_sha256"] = ""
+    if resolved_monitoring_path.is_file():
+        monitoring_contract = _load_object(resolved_monitoring_path)
+        governed_behavior["monitoring_contract_sha256"] = hashlib.sha256(
+            json.dumps(monitoring_contract, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()
     return hashlib.sha256(
         json.dumps(governed_behavior, sort_keys=True, separators=(",", ":")).encode()
     ).hexdigest()
