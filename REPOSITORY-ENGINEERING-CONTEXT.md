@@ -254,7 +254,9 @@ Boundary rules:
     requires `ENTERPRISE_TRUSTED_INGRESS_SECRET`; write requests and protected operator endpoints
     (`/ops`, `/ops/trust-telemetry`, and `/metrics`) must reject missing or invalid
     `X-Lotus-Trusted-Ingress` before trusting propagated actor, service identity, or capability
-    headers. Health and readiness probes remain platform-compatible.
+    headers. The rejection audit record must use the bounded `unverified` identity sentinel and
+    omit the caller's unverified correlation claim. Health and readiness probes remain
+    platform-compatible.
 20. Runtime downstream composition lives under `src/app/runtime`. Lifespan creates concrete
     `lotus-core` and `lotus-performance` clients with reusable HTTP pools; routers receive the
     typed `RuntimeDownstreamClients` dependency and resolve stateful ports from that boundary only.

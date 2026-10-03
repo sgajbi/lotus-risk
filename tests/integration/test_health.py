@@ -1,3 +1,6 @@
+import logging
+from typing import Any, cast
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -13,6 +16,35 @@ class _ConfiguredOnlyDependencyClient:
     @property
     def base_url(self) -> str:
         return self._base_url
+
+
+def test_real_app_rejected_ingress_does_not_accept_claimed_audit_identity(
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    monkeypatch.setenv("ENTERPRISE_TRUSTED_INGRESS_SECRET", "trusted-proof")
+    caplog.set_level(logging.INFO, logger="enterprise_readiness")
+
+    response = TestClient(app).post(
+        "/analytics/risk/calculate",
+        json={},
+        headers={
+            "X-Actor-Id": "forged-admin",
+            "X-Tenant-Id": "victim-bank",
+            "X-Role": "platform-owner",
+            "X-Correlation-Id": "forged-correlation",
+        },
+    )
+
+    assert response.status_code == 403
+    audit_records = [record for record in caplog.records if hasattr(record, "audit")]
+    audit = cast(dict[str, Any], getattr(audit_records[-1], "audit"))  # noqa: B009
+    assert audit["actor_id"] == "unverified"
+    assert audit["tenant_id"] == "unverified"
+    assert audit["role"] == "unverified"
+    assert audit["correlation_id"] == ""
+    assert "forged" not in repr(audit)
+    assert "victim-bank" not in repr(audit)
 
 
 @pytest.mark.parametrize(

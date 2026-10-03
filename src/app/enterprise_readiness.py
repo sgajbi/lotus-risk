@@ -201,12 +201,15 @@ def _authorization_denied_response(
 
 
 def _trusted_ingress_denied_response(request: Request) -> Response:
+    # Propagated identity headers are not authoritative until the trusted-ingress marker passes.
+    # Recording them here would let an unauthenticated caller forge the audit subject of its own
+    # rejected request.
     emit_audit_event(
         action=f"DENY {request.method} {request.url.path}",
-        actor_id=request.headers.get("X-Actor-Id", "unknown"),
-        tenant_id=request.headers.get("X-Tenant-Id", "default"),
-        role=request.headers.get("X-Role", "unknown"),
-        correlation_id=request.headers.get("X-Correlation-Id"),
+        actor_id="unverified",
+        tenant_id="unverified",
+        role="unverified",
+        correlation_id=None,
         metadata={"reason": "missing_trusted_ingress"},
     )
     return error_response(

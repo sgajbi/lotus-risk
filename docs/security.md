@@ -32,7 +32,8 @@ client, request, response, trace, or correlation data through logs, metrics, err
     Uvicorn/Compose is local-only unless deployment proof is supplied.
 12. Enterprise write requests and operator diagnostics require trusted-ingress proof through
     `X-Lotus-Trusted-Ingress`; direct callers with only actor, service identity, and capability
-    headers are denied.
+    headers are denied. Audit records for that denial use an `unverified` identity sentinel and
+    never copy the rejected caller's actor, tenant, role, or correlation claims.
 
 ## Refactor Requirements
 
