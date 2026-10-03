@@ -62,6 +62,11 @@ def _relative(path: Path) -> str:
 
 
 def _run(command: list[str]) -> tuple[int, str]:
+    # PATH activation does not select the parent's virtualenv reliably on Windows.
+    # Resolve only our symbolic Python command; preserve explicitly selected tools.
+    selected_command = (
+        [sys.executable, *command[1:]] if command and command[0] == "python" else command
+    )
     env = os.environ.copy()
     existing_pythonpath = env.get("PYTHONPATH")
     env["PYTHONPATH"] = (
@@ -71,7 +76,7 @@ def _run(command: list[str]) -> tuple[int, str]:
     )
     try:
         completed = subprocess.run(
-            command,
+            selected_command,
             cwd=ROOT,
             env=env,
             text=True,
@@ -157,10 +162,11 @@ def command_status(command: list[str]) -> str:
 
 
 def collected_test_count(evidence: str) -> str:
-    match = re.search(r"(\d+) tests collected", evidence)
-    if match is None:
-        return "unknown"
-    return match.group(1)
+    # Parametrized test IDs can contain the same words; only summaries are evidence.
+    summaries = re.findall(
+        r"^(\d+) tests? collected(?: in [^\r\n]+)?$", evidence, flags=re.MULTILINE
+    )
+    return summaries[-1] if summaries else "unknown"
 
 
 def source_test_fingerprint() -> str:
@@ -605,6 +611,8 @@ def write_diagnostics(unit_collection_output: str) -> None:
         "",
         f"- Git branch: `{git_value('branch', '--show-current')}`",
         f"- Git commit: `{git_value('rev-parse', 'HEAD')}`",
+        f"- Python interpreter: `{sys.executable}`",
+        f"- Python version: `{sys.version.split()[0]}`",
         "",
         "## Unit test collection",
         "",

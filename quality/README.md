@@ -69,6 +69,25 @@ committed `baseline_report.md` contains deterministic measurements and a SHA-256
 the measured source/test content, independent of branch and rebase commit identity. The transcript
 is report-only; actual Feature, PR Merge and Main gates own their acceptance verdicts.
 
+Collection and diagnostic Python children use the generator's `sys.executable`, not a second
+interpreter found through `PATH`. The transcript records that interpreter and Python version.
+Unit counts come from the last complete pytest collection-summary line, never a test ID or an
+embedded phrase; failed collection or missing summaries refuse generation.
+Select the repository environment before invoking Make. From the repository root:
+
+```powershell
+$env:PATH = "$((Get-Location).Path)\.venv\Scripts;$env:PATH"
+make quality-baseline
+```
+
+```bash
+PATH="$PWD/.venv/bin:$PATH" make quality-baseline
+```
+
+Explicitly selected non-Python commands are unchanged. A failed diagnostic retains its exit code
+and output; a report-only run is not a gate pass. Preserve previous failed transcripts when
+collecting corrective evidence.
+
 The initial baseline at commit `3254774` remains immutable. The old committed report's `635 passed`
 and the 2026-09-08 observation that four of six regenerated files drifted are historical defect
 evidence, not current test results. The authored records above are not generator targets, and
