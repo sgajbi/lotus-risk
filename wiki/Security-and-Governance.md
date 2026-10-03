@@ -78,7 +78,8 @@ Bank deployment mode is stricter than local development mode:
     deployment supplies the machine-readable proof values.
 14. write requests, `/ops`, `/ops/trust-telemetry`, and `/metrics` require trusted-ingress proof in
     enterprise mode; `/health`, `/health/live`, and `/health/ready` remain available for platform
-    probes.
+    probes. A rejected ingress request is audited as `unverified`; its caller-supplied actor,
+    tenant, role, and correlation claims are not accepted into the audit identity.
 15. the gateway or ingress must strip caller-supplied `X-Lotus-Trusted-Ingress` and inject it only
     after token and operator-access validation.
 

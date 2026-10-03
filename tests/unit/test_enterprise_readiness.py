@@ -412,8 +412,11 @@ def test_enterprise_middleware_denies_unauthorized_writes(monkeypatch: pytest.Mo
     assert response.headers["X-Enterprise-Policy-Version"] == "1.0.0"
 
 
+@pytest.mark.parametrize("trusted_header", [None, "invalid-proof"])
 def test_enterprise_middleware_requires_trusted_ingress_before_write_authz(
     monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    trusted_header: str | None,
 ) -> None:
     monkeypatch.setenv("ENTERPRISE_ENFORCE_AUTHZ", "true")
     monkeypatch.setenv("ENTERPRISE_TRUSTED_INGRESS_SECRET", "trusted-ingress-proof-2026")
@@ -427,11 +430,32 @@ def test_enterprise_middleware_requires_trusted_ingress_before_write_authz(
         "X-Capabilities": "risk.write",
     }
     client = TestClient(_enterprise_test_app())
+    caplog.set_level(logging.INFO, logger="enterprise_readiness")
 
-    denied = client.post("/writes", content="{}", headers=headers)
+    denied_headers = {
+        **headers,
+        "X-Actor-Id": "forged-admin",
+        "X-Tenant-Id": "victim-bank",
+        "X-Role": "platform-owner",
+        "X-Correlation-Id": "forged-correlation",
+    }
+    if trusted_header is not None:
+        denied_headers[TRUSTED_INGRESS_HEADER] = trusted_header
+    denied = client.post(
+        "/writes",
+        content="{}",
+        headers=denied_headers,
+    )
 
     assert denied.status_code == 403
     assert denied.json()["error"]["details"]["reason"] == "missing_trusted_ingress"
+    denied_audit = cast(dict[str, Any], getattr(caplog.records[-1], "audit"))  # noqa: B009
+    assert denied_audit["actor_id"] == "unverified"
+    assert denied_audit["tenant_id"] == "unverified"
+    assert denied_audit["role"] == "unverified"
+    assert denied_audit["correlation_id"] == ""
+    assert "forged" not in repr(denied_audit)
+    assert "victim-bank" not in repr(denied_audit)
 
     allowed = client.post(
         "/writes",
@@ -439,6 +463,11 @@ def test_enterprise_middleware_requires_trusted_ingress_before_write_authz(
         headers={**headers, TRUSTED_INGRESS_HEADER: "trusted-ingress-proof-2026"},
     )
     assert allowed.status_code == 200
+    allowed_audit = cast(dict[str, Any], getattr(caplog.records[-1], "audit"))  # noqa: B009
+    assert allowed_audit["actor_id"] == "actor-1"
+    assert allowed_audit["tenant_id"] == "tenant-1"
+    assert allowed_audit["role"] == "advisor"
+    assert allowed_audit["correlation_id"] == "corr-403"
 
 
 @pytest.mark.parametrize("path", ["/ops", "/ops/trust-telemetry", "/metrics"])
