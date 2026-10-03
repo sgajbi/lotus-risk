@@ -34,22 +34,79 @@ def _request(route: str) -> dict[str, Any]:
             "metrics": ["ROLLING_VOLATILITY"],
             "include_time_series": True,
         }
-    else:
+    elif not route.endswith("drawdown"):
         common["metrics"] = ["VOLATILITY"]
     return {"input_mode": "stateful", "stateful_input": common}
 
 
 def _post(route: str, source_response: dict[str, Any]) -> Response:
     client = RecordingLotusPerformanceClient(response_payload=source_response)
-    with override_app_runtime(lotus_performance_client=client):
+    with override_app_runtime(lotus_performance_client=client), TestClient(app) as api:
         return cast(
             Response,
-            TestClient(app).post(
+            api.post(
                 route,
                 headers={"X-Tenant-Id": "tenant-a", "X-Correlation-Id": "corr-source"},
                 json=_request(route),
             ),
         )
+
+
+@pytest.mark.parametrize(
+    "route",
+    ["/analytics/risk/calculate", "/analytics/risk/rolling-metrics", "/analytics/risk/drawdown"],
+)
+def test_stateful_routes_admit_quantized_partial_source_without_inventing_observations(
+    route: str,
+) -> None:
+    source = build_returns_series_response(
+        portfolio_returns=_RETURNS[:2],
+        as_of_date="2026-01-06",
+        resolved_start_date="2026-01-01",
+        requested_points=3,
+        missing_points=1,
+    )
+    assert source["diagnostics"]["coverage"]["coverage_ratio"] == 0.66666667
+    response = _post(route, source)
+    assert response.status_code == 200
+    body = response.json()
+    evidence = body["metadata"]["source_returns_evidence"]
+    assert evidence["coverage_ratio"] == 0.66666667
+    assert evidence["returned_points"] == 2
+    assert evidence["missing_points"] == 1
+    assert body["metadata"]["calculation_supportability"]["state"] == "degraded"
+    result = body["results"]["YTD"]
+    if route.endswith("calculate"):
+        assert result["portfolio_observation_count"] == 2
+        expected = statistics.stdev([1.0, -2.0]) * math.sqrt(252)
+        assert result["metrics"]["VOLATILITY"]["value"] == pytest.approx(expected)
+    elif route.endswith("drawdown"):
+        assert result["portfolio_observation_count"] == 2
+        assert result["summary"]["max_drawdown"] == pytest.approx(-0.02)
+    else:
+        assert result["series_count"] == 2
+        series = result["window_results"][0]["metric_series"]
+        assert [point["date"] for point in series] == ["2026-01-02", "2026-01-05"]
+        assert series[0]["metric_values"]["ROLLING_VOLATILITY"] is None
+        expected = statistics.stdev([0.01, -0.02]) * math.sqrt(252)
+        assert series[1]["metric_values"]["ROLLING_VOLATILITY"] == pytest.approx(expected)
+
+
+@pytest.mark.parametrize(
+    "route",
+    ["/analytics/risk/calculate", "/analytics/risk/rolling-metrics", "/analytics/risk/drawdown"],
+)
+def test_stateful_routes_refuse_noncanonical_coverage_rounding(route: str) -> None:
+    source = build_returns_series_response(
+        portfolio_returns=_RETURNS[:2],
+        as_of_date="2026-01-06",
+        requested_points=3,
+        missing_points=1,
+    )
+    source["diagnostics"]["coverage"]["coverage_ratio"] = 0.66666666
+    response = _post(route, source)
+    assert response.status_code == 502
+    assert response.json()["error"]["code"] == "UPSTREAM_INVALID_RESPONSE"
 
 
 @pytest.mark.parametrize(

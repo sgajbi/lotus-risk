@@ -86,7 +86,7 @@ def build_returns_series_response(
                 "coverage_ratio": (
                     1.0
                     if resolved_requested_points == 0
-                    else resolved_returned_points / resolved_requested_points
+                    else round(resolved_returned_points / resolved_requested_points, 8)
                 ),
             },
             "freshness": freshness,

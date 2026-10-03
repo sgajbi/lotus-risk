@@ -84,6 +84,10 @@ Gateway, Workbench, reporting, and AI consumers must preserve:
 
 If those are dropped or flattened, a numerically correct response can still become product-wrong.
 
+Coverage accepts Performance's eight-decimal wire rounding or the unquantized count ratio;
+counts still reconcile exactly. Admission preserves missing observations and stale/partial
+qualification, not readiness. See the [coverage precision policy](https://github.com/sgajbi/lotus-risk/blob/main/docs/standards/rounding-precision.md).
+
 ## Upstream Contract Families
 
 Stateful workflows depend on governed upstream inputs:
