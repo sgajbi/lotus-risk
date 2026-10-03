@@ -307,7 +307,13 @@
           "/health/live",
           "/health/ready",
           "/metadata",
+          "/version",
+          "/integration/capabilities",
           "/metrics",
+          "/openapi.json",
+          "/docs",
+          "/docs/oauth2-redirect",
+          "/redoc",
           "/analytics/risk/calculate",
           "/analytics/risk/drawdown",
           "/analytics/risk/rolling-metrics",
@@ -318,21 +324,25 @@
           "/analytics/risk/regime-scenario-pack/jobs",
           "/analytics/risk/regime-scenario-pack/jobs/{job_id}",
           "/analytics/risk/regime-scenario-pack/jobs/{job_id}/contributions",
-          "/analytics/risk/risk-event-cohorts/evaluate"
+          "/analytics/risk/risk-event-cohorts/evaluate",
+          "unmatched"
         ],
         "method": [
           "GET",
+          "HEAD",
           "POST",
           "PUT",
           "DELETE",
-          "OPTIONS"
+          "OPTIONS",
+          "OTHER"
         ],
         "status": [
           "1xx",
           "2xx",
           "3xx",
           "4xx",
-          "5xx"
+          "5xx",
+          "other"
         ]
       },
       "source": "app.observability.record_http_request"

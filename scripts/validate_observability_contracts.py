@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import sys
@@ -15,6 +16,11 @@ sys.path.insert(0, SRC_STR)
 
 from app import observability
 from app.integrations.upstream_operations import UPSTREAM_OPERATION_VALUES
+from app.observability_contracts import (
+    HTTP_REQUEST_HANDLER_VALUES,
+    HTTP_REQUEST_METHOD_VALUES,
+    HTTP_REQUEST_STATUS_VALUES,
+)
 
 LOCAL_OBSERVABILITY_DIR = ROOT / "contracts" / "observability"
 CONTRACT_PATH = LOCAL_OBSERVABILITY_DIR / "lotus-risk-monitoring.v1.json"
@@ -31,37 +37,81 @@ _FORBIDDEN_LABEL_HINTS = {
     "run_id",
     "instrument_id",
 }
+_CONTRACT_FIELDS = {
+    "alerts",
+    "contract_id",
+    "contract_version",
+    "dashboards",
+    "metrics",
+    "no_sensitive_telemetry_policy",
+    "owner_repository",
+    "purpose",
+    "service",
+    "status",
+}
+_FORBIDDEN_LABEL_VALUES = {
+    "account_id",
+    "actor_id",
+    "client_id",
+    "correlation_id",
+    "idempotency_key",
+    "instrument_id",
+    "portfolio_id",
+    "raw_error",
+    "request_hash",
+    "run_id",
+}
+_GOVERNED_ALERT_TRIGGERS = {
+    "lotus-risk-endpoint-failure-rate": (
+        "lotus_risk_endpoint_executions_total",
+        'sum by (endpoint) (rate(lotus_risk_endpoint_executions_total{outcome="failure"}[5m])) > 0',
+        "Any risk analytics endpoint records failures for five minutes.",
+    ),
+    "lotus-risk-upstream-dependency-failures": (
+        "lotus_risk_upstream_requests_total",
+        'sum by (dependency, category) (rate(lotus_risk_upstream_requests_total{outcome="failure"}[5m])) > 0',
+        "lotus-core or lotus-performance requests fail in a bounded upstream category.",
+    ),
+    "lotus-risk-calculation-supportability-degraded": (
+        "lotus_risk_calculation_supportability_total",
+        'sum by (operation, supportability_state, reason) (rate(lotus_risk_calculation_supportability_total{supportability_state=~"degraded|error|permission_blocked|unavailable|blocked"}[5m])) > 0',
+        "Risk calculation supportability is degraded, errored, permission-blocked, unavailable, or blocked.",
+    ),
+    "lotus-risk-http-5xx": (
+        "http_requests_total",
+        'sum by (handler) (rate(http_requests_total{status="5xx"}[5m])) > 0',
+        "The service emits HTTP 5xx responses by handler.",
+    ),
+    "lotus-risk-scenario-job-retryable-error": (
+        "lotus_risk_scenario_job_executions_total",
+        'sum(rate(lotus_risk_scenario_job_executions_total{outcome="retryable_error"}[5m])) > 0',
+        "A durable scenario-job worker reports an unexpected retryable error for five minutes.",
+    ),
+}
+_GOVERNED_RUNTIME_METRIC_LABEL_VALUES_SHA256 = (
+    "a5e5336a10c2c3ef85d38ad5e6acb4d7224d919a2258a4a9f097610a394b63ae"
+)
 
 
-def implemented_metric_contract() -> dict[str, tuple[str, ...]]:
+def implemented_metric_contract() -> dict[str, tuple[tuple[str, ...], str, str]]:
+    definitions = (
+        (observability.ENDPOINT_EXECUTIONS_TOTAL, "record_endpoint_execution"),
+        (observability.ENDPOINT_EXECUTION_SECONDS, "record_endpoint_execution"),
+        (observability.SCENARIO_JOB_EXECUTIONS_TOTAL, "record_scenario_job_execution"),
+        (observability.SCENARIO_JOB_EXECUTION_SECONDS, "record_scenario_job_execution"),
+        (observability.UPSTREAM_REQUESTS_TOTAL, "record_upstream_request"),
+        (observability.UPSTREAM_REQUEST_SECONDS, "record_upstream_request"),
+        (observability.CALCULATION_SUPPORTABILITY_TOTAL, "record_calculation_supportability"),
+        (observability.ANALYTICS_FRESHNESS_BUCKET_TOTAL, "record_analytics_freshness_bucket"),
+        (observability.HTTP_REQUESTS_TOTAL, "record_http_request"),
+    )
     return {
-        f"{observability.ENDPOINT_EXECUTIONS_TOTAL._name}_total": tuple(
-            observability.ENDPOINT_EXECUTIONS_TOTAL._labelnames
-        ),
-        observability.ENDPOINT_EXECUTION_SECONDS._name: tuple(
-            observability.ENDPOINT_EXECUTION_SECONDS._labelnames
-        ),
-        f"{observability.SCENARIO_JOB_EXECUTIONS_TOTAL._name}_total": tuple(
-            observability.SCENARIO_JOB_EXECUTIONS_TOTAL._labelnames
-        ),
-        observability.SCENARIO_JOB_EXECUTION_SECONDS._name: tuple(
-            observability.SCENARIO_JOB_EXECUTION_SECONDS._labelnames
-        ),
-        f"{observability.UPSTREAM_REQUESTS_TOTAL._name}_total": tuple(
-            observability.UPSTREAM_REQUESTS_TOTAL._labelnames
-        ),
-        observability.UPSTREAM_REQUEST_SECONDS._name: tuple(
-            observability.UPSTREAM_REQUEST_SECONDS._labelnames
-        ),
-        f"{observability.CALCULATION_SUPPORTABILITY_TOTAL._name}_total": tuple(
-            observability.CALCULATION_SUPPORTABILITY_TOTAL._labelnames
-        ),
-        f"{observability.ANALYTICS_FRESHNESS_BUCKET_TOTAL._name}_total": tuple(
-            observability.ANALYTICS_FRESHNESS_BUCKET_TOTAL._labelnames
-        ),
-        f"{observability.HTTP_REQUESTS_TOTAL._name}_total": tuple(
-            observability.HTTP_REQUESTS_TOTAL._labelnames
-        ),
+        f"{metric._name}{'_total' if metric._type == 'counter' else ''}": (
+            tuple(metric._labelnames),
+            str(metric._type),
+            f"app.observability.{source}",
+        )
+        for metric, source in definitions
     }
 
 
@@ -99,7 +149,7 @@ def _validate_runbook_reference(runbook: str) -> list[str]:
 def _validate_metric(
     *,
     metric: dict[str, Any],
-    implemented_metrics: dict[str, tuple[str, ...]],
+    implemented_metrics: dict[str, tuple[tuple[str, ...], str, str]],
 ) -> list[str]:
     issues: list[str] = []
     name = metric.get("name")
@@ -107,13 +157,22 @@ def _validate_metric(
         issues.append(f"{name}: metric is not implemented by app.observability")
         return issues
 
+    if set(metric) != {"name", "type", "description", "labels", "source"}:
+        issues.append(f"{name}: metric fields do not match the governed schema")
+    expected_label_names, expected_type, expected_source = implemented_metrics[name]
+    if metric.get("type") != expected_type:
+        issues.append(f"{name}: metric type does not match implementation")
+    if not isinstance(metric.get("description"), str) or not metric["description"].strip():
+        issues.append(f"{name}: metric description must be a nonblank string")
+    if metric.get("source") != expected_source:
+        issues.append(f"{name}: metric source does not match implementation")
+
     labels = metric.get("labels")
     if not isinstance(labels, dict):
         issues.append(f"{name}: labels must be an object")
         return issues
 
     declared_label_names = tuple(labels)
-    expected_label_names = implemented_metrics[name]
     if declared_label_names != expected_label_names:
         issues.append(
             f"{name}: labels {declared_label_names} do not match implementation "
@@ -142,6 +201,23 @@ def _declared_metric(payload: dict[str, Any], metric_name: str) -> dict[str, Any
         if isinstance(metric, dict) and metric.get("name") == metric_name:
             return metric
     return None
+
+
+def _validate_alert_selectors(alert: dict[str, Any], metric: dict[str, Any] | None) -> list[str]:
+    labels = metric.get("labels") if isinstance(metric, dict) else None
+    query = alert.get("query")
+    if not isinstance(labels, dict) or not isinstance(query, str):
+        return []
+    issues: list[str] = []
+    for selector in re.findall(r"\{([^{}]+)\}", query):
+        for label, operator, raw_value in re.findall(r'(\w+)\s*(=~|=)\s*"([^"]*)"', selector):
+            allowed = labels.get(label)
+            selected = raw_value.split("|") if operator == "=~" else [raw_value]
+            if not isinstance(allowed, list) or not set(selected) <= set(allowed):
+                issues.append(
+                    f"{alert.get('alert_id')}: selector {label}={raw_value!r} is outside the metric allowlist"
+                )
+    return issues
 
 
 def _validate_upstream_operation_value(value: str) -> list[str]:
@@ -197,6 +273,23 @@ def _validate_upstream_operation_contract(payload: dict[str, Any]) -> list[str]:
             for issue in _validate_upstream_operation_value(value)
         )
     return issues
+
+
+def _validate_http_request_label_contract(payload: dict[str, Any]) -> list[str]:
+    metric_name = "http_requests_total"
+    metric = _declared_metric(payload, metric_name)
+    labels = metric.get("labels") if isinstance(metric, dict) else None
+    if not isinstance(labels, dict):
+        return [f"{metric_name}: runtime label allowlists are missing"]
+
+    expected = {
+        "handler": list(HTTP_REQUEST_HANDLER_VALUES),
+        "method": list(HTTP_REQUEST_METHOD_VALUES),
+        "status": list(HTTP_REQUEST_STATUS_VALUES),
+    }
+    if labels != expected:
+        return [f"{metric_name}: label allowlists do not match runtime vocabularies"]
+    return []
 
 
 def _contract_metric_values(payload: dict[str, Any]) -> dict[str, dict[str, list[str]]]:
@@ -263,24 +356,67 @@ def validate_observability_contract(
 
     payload = _load_contract(path)
     issues: list[str] = []
+    if set(payload) != _CONTRACT_FIELDS:
+        issues.append(f"{path}: monitoring contract fields do not match the governed schema")
+    if payload.get("contract_id") != "lotus-risk:observability-monitoring:v1":
+        issues.append(f"{path}: monitoring contract_id does not match")
+    if payload.get("contract_version") != "1.0.0":
+        issues.append(f"{path}: monitoring contract_version must be 1.0.0")
+    if payload.get("service") != "lotus-risk" or payload.get("owner_repository") != "lotus-risk":
+        issues.append(f"{path}: monitoring service ownership does not match")
+    if payload.get("status") != "active":
+        issues.append(f"{path}: monitoring status must be active")
+    telemetry_policy = payload.get("no_sensitive_telemetry_policy")
+    if not isinstance(telemetry_policy, dict) or set(telemetry_policy) != {
+        "forbidden_label_values",
+        "label_cardinality_posture",
+    }:
+        issues.append(f"{path}: no-sensitive-telemetry policy schema does not match")
+    else:
+        forbidden_values = telemetry_policy.get("forbidden_label_values")
+        if (
+            not isinstance(forbidden_values, list)
+            or len(forbidden_values) != len(set(forbidden_values))
+            or set(forbidden_values) != _FORBIDDEN_LABEL_VALUES
+        ):
+            issues.append(f"{path}: forbidden telemetry labels do not match")
+        if telemetry_policy.get("label_cardinality_posture") != "bounded_allowlist_only":
+            issues.append(f"{path}: telemetry label cardinality posture does not match")
     implemented_metrics = implemented_metric_contract()
     declared_metrics = payload.get("metrics")
     if not isinstance(declared_metrics, list) or not declared_metrics:
-        return [f"{path}: metrics must be a non-empty list"]
+        issues.append(f"{path}: metrics must be a non-empty list")
+        return issues
 
     declared_metric_names = set()
     for metric in declared_metrics:
         if not isinstance(metric, dict):
             issues.append(f"{path}: metric entries must be objects")
             continue
-        declared_metric_names.add(metric.get("name"))
+        metric_name = metric.get("name")
+        if metric_name in declared_metric_names:
+            issues.append(f"{metric_name}: metric name must be unique")
+        declared_metric_names.add(metric_name)
         issues.extend(_validate_metric(metric=metric, implemented_metrics=implemented_metrics))
 
     for implemented_metric in implemented_metrics:
         if implemented_metric not in declared_metric_names:
             issues.append(f"{implemented_metric}: implemented metric is missing from contract")
+    metric_label_values = {
+        metric["name"]: metric["labels"]
+        for metric in declared_metrics
+        if isinstance(metric, dict)
+        and isinstance(metric.get("name"), str)
+        and isinstance(metric.get("labels"), dict)
+    }
+    metric_label_values_sha256 = hashlib.sha256(
+        json.dumps(metric_label_values, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    if metric_label_values_sha256 != _GOVERNED_RUNTIME_METRIC_LABEL_VALUES_SHA256:
+        issues.append(f"{path}: metric label value allowlists do not match runtime vocabularies")
 
     issues.extend(_validate_upstream_operation_contract(payload))
+    issues.extend(_validate_http_request_label_contract(payload))
     issues.extend(_validate_domain_observability_doc(payload, domain_doc_path))
 
     dashboards = payload.get("dashboards")
@@ -300,9 +436,26 @@ def validate_observability_contract(
         alerts = []
 
     for alert in alerts:
+        if not isinstance(alert, dict):
+            issues.append(f"{path}: alert entries must be objects")
+            continue
+        if set(alert) != {"alert_id", "condition", "metric", "query", "runbook", "severity"}:
+            issues.append(f"{alert.get('alert_id')}: alert fields do not match the governed schema")
+        for field in ("alert_id", "condition", "metric", "query", "runbook"):
+            if not isinstance(alert.get(field), str) or not alert[field].strip():
+                issues.append(f"{alert.get('alert_id')}: alert {field} must be a nonblank string")
+        trigger = _GOVERNED_ALERT_TRIGGERS.get(str(alert.get("alert_id")))
+        if (
+            trigger is None
+            or tuple(alert.get(field) for field in ("metric", "query", "condition")) != trigger
+        ):
+            issues.append(
+                f"{alert.get('alert_id')}: alert trigger does not match the governed definition"
+            )
         metric_name = alert.get("metric")
         if metric_name not in declared_metric_names:
             issues.append(f"{alert.get('alert_id')}: alert references {metric_name}")
+        issues.extend(_validate_alert_selectors(alert, _declared_metric(payload, str(metric_name))))
         if alert.get("severity") not in {"info", "warning", "critical"}:
             issues.append(f"{alert.get('alert_id')}: alert severity is not governed")
         runbook = alert.get("runbook")

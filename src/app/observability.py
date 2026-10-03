@@ -8,6 +8,9 @@ from typing import Literal
 from prometheus_client import Counter, Histogram
 
 from app.observability_contracts import (
+    HTTP_REQUEST_HANDLER_VALUES,
+    HTTP_REQUEST_METHOD_VALUES,
+    HTTP_REQUEST_STATUS_VALUES,
     RISK_ANALYTICS_FRESHNESS_METRIC_LABELS,
     RISK_CALCULATION_SUPPORTABILITY_METRIC_LABELS,
 )
@@ -173,5 +176,15 @@ def record_analytics_freshness_bucket(
 
 
 def record_http_request(*, handler: str, method: str, status_code: int) -> None:
-    status_class = f"{status_code // 100}xx"
-    HTTP_REQUESTS_TOTAL.labels(handler=handler, method=method.upper(), status=status_class).inc()
+    bounded_handler = handler if handler in HTTP_REQUEST_HANDLER_VALUES else "unmatched"
+    normalized_method = method.upper()
+    bounded_method = (
+        normalized_method if normalized_method in HTTP_REQUEST_METHOD_VALUES else "OTHER"
+    )
+    candidate_status = f"{status_code // 100}xx"
+    bounded_status = candidate_status if candidate_status in HTTP_REQUEST_STATUS_VALUES else "other"
+    HTTP_REQUESTS_TOTAL.labels(
+        handler=bounded_handler,
+        method=bounded_method,
+        status=bounded_status,
+    ).inc()

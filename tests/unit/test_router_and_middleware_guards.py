@@ -10,6 +10,7 @@ from app.contracts.drawdown import DrawdownInputMode
 from app.contracts.risk import RiskInputMode
 from app.contracts.rolling import RollingInputMode
 from app.middleware.http_observation import build_http_observation_middleware
+from app.observability import record_http_request
 from app.routers.drawdown import analytics_risk_drawdown
 from app.routers.historical_attribution import analytics_risk_historical_attribution
 from app.routers.risk_calculation import analytics_risk_calculate
@@ -63,6 +64,27 @@ def test_http_observation_middleware_records_success_and_exception(
     with pytest.raises(RuntimeError, match="forced"):
         asyncio.run(_call_middleware(_raise))
     assert observed[-1] == {"handler": "/health", "method": "GET", "status_code": 500}
+
+
+def test_http_observation_clamps_unmatched_runtime_labels(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    observed: list[dict[str, str]] = []
+
+    class _CounterChild:
+        def inc(self) -> None:
+            pass
+
+    class _Counter:
+        def labels(self, **labels: str) -> _CounterChild:
+            observed.append(labels)
+            return _CounterChild()
+
+    monkeypatch.setattr("app.observability.HTTP_REQUESTS_TOTAL", _Counter())
+
+    record_http_request(handler="/attacker/controlled", method="PATCH", status_code=799)
+
+    assert observed == [{"handler": "unmatched", "method": "OTHER", "status": "other"}]
 
 
 @pytest.mark.parametrize(

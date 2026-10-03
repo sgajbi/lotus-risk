@@ -1,0 +1,150 @@
+{
+  "contract_id": "lotus-risk:incident-response:v1",
+  "contract_version": "1.0.0",
+  "service": "lotus-risk",
+  "owner_repository": "lotus-risk",
+  "status": "prepared_not_exercised",
+  "production_acceptance": false,
+  "incident_runbook": "docs/runbooks/incident-response.md",
+  "severity_model": {
+    "SEV1": {
+      "meaning": "Critical service, security, or data incident requiring incident command and immediate containment.",
+      "acknowledgement_target": "deployment_policy_required"
+    },
+    "SEV2": {
+      "meaning": "Material degradation requiring service-owner investigation and bounded remediation.",
+      "acknowledgement_target": "deployment_policy_required"
+    }
+  },
+  "escalation_model": {
+    "contact_source": "deployment_controlled_contact_directory",
+    "assignment_status": "deployment_assignment_required",
+    "roles": [
+      "incident_commander",
+      "service_support_owner",
+      "security_response_owner",
+      "source_service_owner",
+      "platform_operations_owner"
+    ]
+  },
+  "source_safe_evidence_fields": [
+    "alert_id",
+    "bounded_correlation_reference",
+    "corrective_action_id",
+    "deployment_event_reference",
+    "exercise_id",
+    "image_digest",
+    "metric_snapshot_digest",
+    "reconciliation_result",
+    "release_sha",
+    "timestamp_utc"
+  ],
+  "alert_responses": [
+    {
+      "alert_id": "lotus-risk-endpoint-failure-rate",
+      "monitoring_severity": "warning",
+      "incident_severity": "SEV2",
+      "incident_class": "risk_endpoint_failure",
+      "runbook": "docs/runbooks/service-operations.md#endpoint-failure-rate-alert",
+      "escalation_roles": ["service_support_owner", "source_service_owner"],
+      "initial_containment": [
+        "Preserve the failing endpoint and input-mode classification before changing traffic.",
+        "Stop only the affected release or workflow when repeatable failures threaten result integrity."
+      ],
+      "recovery_reconciliation": [
+        "Re-run an independently checked representative calculation after remediation.",
+        "Reconcile supportability state and response lineage before restoring normal posture."
+      ],
+      "evidence_preservation": ["alert_id", "bounded_correlation_reference", "exercise_id", "release_sha", "reconciliation_result", "timestamp_utc"]
+    },
+    {
+      "alert_id": "lotus-risk-upstream-dependency-failures",
+      "monitoring_severity": "critical",
+      "incident_severity": "SEV1",
+      "incident_class": "source_dependency_failure",
+      "runbook": "docs/runbooks/service-operations.md#upstream-dependency-failure-alert",
+      "escalation_roles": ["incident_commander", "service_support_owner", "source_service_owner"],
+      "initial_containment": [
+        "Keep affected source-dependent calculations fail closed; do not fabricate or cache replacement evidence.",
+        "Isolate escalation to the bounded dependency, operation, and failure category."
+      ],
+      "recovery_reconciliation": [
+        "Verify source reachability and contract validity independently before replay.",
+        "Reconcile source identity, business dates, revisions, and calculation outputs after recovery."
+      ],
+      "evidence_preservation": ["alert_id", "bounded_correlation_reference", "exercise_id", "metric_snapshot_digest", "reconciliation_result", "timestamp_utc"]
+    },
+    {
+      "alert_id": "lotus-risk-calculation-supportability-degraded",
+      "monitoring_severity": "warning",
+      "incident_severity": "SEV2",
+      "incident_class": "calculation_supportability_degradation",
+      "runbook": "docs/runbooks/service-operations.md#calculation-supportability-alert",
+      "escalation_roles": ["service_support_owner", "source_service_owner"],
+      "initial_containment": [
+        "Preserve degraded or blocked supportability truth; do not relabel the result ready.",
+        "Pause affected publication when the result cannot be qualified safely."
+      ],
+      "recovery_reconciliation": [
+        "Re-run independent financial expectations for the affected metric family.",
+        "Reconcile supportability reason, freshness, source lineage, and published result."
+      ],
+      "evidence_preservation": ["alert_id", "bounded_correlation_reference", "exercise_id", "release_sha", "reconciliation_result", "timestamp_utc"]
+    },
+    {
+      "alert_id": "lotus-risk-http-5xx",
+      "monitoring_severity": "critical",
+      "incident_severity": "SEV1",
+      "incident_class": "service_execution_failure",
+      "runbook": "docs/runbooks/service-operations.md#http-5xx-alert",
+      "escalation_roles": ["incident_commander", "service_support_owner", "platform_operations_owner"],
+      "initial_containment": [
+        "Identify the failing handler and release before rollback or forward-fix.",
+        "Remove only the affected release from service when continued execution is unsafe."
+      ],
+      "recovery_reconciliation": [
+        "Validate liveness, readiness, and the affected handler on the remediated immutable image.",
+        "Reconcile failed requests through source-owned replay or resubmission rules."
+      ],
+      "evidence_preservation": ["alert_id", "bounded_correlation_reference", "deployment_event_reference", "exercise_id", "image_digest", "reconciliation_result", "release_sha", "timestamp_utc"]
+    },
+    {
+      "alert_id": "lotus-risk-scenario-job-retryable-error",
+      "monitoring_severity": "warning",
+      "incident_severity": "SEV2",
+      "incident_class": "durable_worker_failure",
+      "runbook": "docs/runbooks/service-operations.md#scenario-job-retryable-error-alert",
+      "escalation_roles": ["service_support_owner", "platform_operations_owner"],
+      "initial_containment": [
+        "Pause the affected worker schedule without changing durable job state.",
+        "Preserve the current claim token, immutable request digest, and database state."
+      ],
+      "recovery_reconciliation": [
+        "Resume through the fenced claim path after database and migration checks pass.",
+        "Reconcile durable terminal state and contribution counts rather than process exit alone."
+      ],
+      "evidence_preservation": ["alert_id", "bounded_correlation_reference", "exercise_id", "metric_snapshot_digest", "reconciliation_result", "timestamp_utc"]
+    }
+  ],
+  "credential_response": {
+    "owner": "deployment_authority",
+    "actions": ["revoke_compromised_identity", "rotate_credential", "verify_revocation", "revalidate_service_identity"],
+    "repository_secret_material_permitted": false
+  },
+  "exercise_evidence": {
+    "status": "not_exercised",
+    "evidence_references": [],
+    "production_claim": false
+  },
+  "corrective_action_model": {
+    "required_fields": ["corrective_action_id", "owner_role", "status", "due_date", "verification_reference"],
+    "allowed_statuses": ["open", "in_progress", "verified", "accepted_external_blocker"]
+  },
+  "deployment_blockers": [
+    "approved contact-directory assignments",
+    "deployed alert routing and acknowledgement targets",
+    "executed incident exercise or incident-review evidence",
+    "deployment-owned corrective-action tracker",
+    "production acceptance by the incident commander and service support owner"
+  ]
+}
