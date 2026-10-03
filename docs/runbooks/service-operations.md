@@ -41,6 +41,9 @@ dependency status overrides when an operator or higher-level runtime has injecte
 
 ## Incident First Checks
 
+Use `docs/runbooks/incident-response.md` and the versioned incident-response contract for
+classification, containment, evidence, recovery, and corrective-action posture.
+
 1. Check container logs for request failures and stack traces.
 2. Verify /health/ready, /ops, and metrics endpoint.
 3. Run local parity check (make ci) before hotfix PR.

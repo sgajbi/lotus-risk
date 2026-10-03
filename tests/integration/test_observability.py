@@ -8,6 +8,8 @@ from pydantic import BaseModel
 from app.main import app
 from app.observability import record_scenario_job_execution
 from app.observability_contracts import (
+    HTTP_REQUEST_HANDLER_VALUES,
+    HTTP_REQUEST_METHOD_VALUES,
     RISK_ANALYTICS_FRESHNESS_METRIC_LABELS,
     RISK_CALCULATION_SUPPORTABILITY_METRIC_LABELS,
 )
@@ -32,6 +34,52 @@ FORBIDDEN_SUPPORTABILITY_METRIC_LABELS = {
 
 class _ObservedRouteResponse(BaseModel):
     status: str
+
+
+def test_http_handler_vocabulary_covers_every_registered_route() -> None:
+    openapi_paths = app.openapi()["paths"]
+    registered_paths = set(openapi_paths)
+    registered_paths.update({"/openapi.json", "/docs", "/docs/oauth2-redirect", "/redoc"})
+    path_item_metadata = {"$ref", "description", "parameters", "servers", "summary"}
+    registered_methods = {
+        method.upper()
+        for operations in openapi_paths.values()
+        for method in operations
+        if method not in path_item_metadata
+    }
+    registered_methods.add("HEAD")
+
+    assert registered_paths <= set(HTTP_REQUEST_HANDLER_VALUES)
+    assert registered_methods <= set(HTTP_REQUEST_METHOD_VALUES)
+
+
+def test_supported_head_request_retains_bounded_method_label() -> None:
+    assert client.head("/docs").status_code == 200
+    metrics = client.get("/metrics").text
+
+    assert 'handler="/docs",method="HEAD",status="2xx"' in metrics
+
+
+def test_unmatched_requests_emit_only_bounded_http_metric_labels() -> None:
+    response = client.patch("/attacker/controlled")
+    metrics_response = client.get("/metrics")
+
+    assert response.status_code == 404
+    assert (
+        'http_requests_total{handler="unmatched",method="OTHER",status="4xx"}'
+        in metrics_response.text
+    )
+    assert "/attacker/controlled" not in metrics_response.text
+    assert 'method="PATCH"' not in metrics_response.text
+
+
+def test_supported_operational_routes_retain_distinct_http_metric_labels() -> None:
+    assert client.get("/version").status_code == 200
+    assert client.get("/integration/capabilities").status_code == 200
+    metrics = client.get("/metrics").text
+
+    assert 'handler="/version",method="GET",status="2xx"' in metrics
+    assert 'handler="/integration/capabilities",method="GET",status="2xx"' in metrics
 
 
 def _mandate_health_payload() -> dict[str, object]:

@@ -144,8 +144,21 @@ The matching Prometheus counter is
 The same source-owned posture also increments the RFC-0108 cross-service freshness counter
 `lotus_analytics_freshness_bucket_total{service="lotus-risk",operation,freshness_bucket,supportability_state}`.
 HTTP status posture is exposed through
-`http_requests_total{handler,method,status}`; use the HTTP 5xx alert path in
+`http_requests_total{handler,method,status}`; unmatched routes and unsupported methods are bounded
+as `unmatched` and `OTHER`. Use the HTTP 5xx alert path in
 `docs/runbooks/service-operations.md#http-5xx-alert` when handlers emit `5xx` responses.
+
+The versioned incident-response contract maps every governed alert to severity, containment,
+recovery/reconciliation, escalation roles, and source-safe evidence. Validate it with
+`make incident-response-contract-validate`. Before creating evidence, use
+`python scripts/validate_incident_response_contract.py --prepare-exercise-revision` to obtain the
+candidate contract and response-profile revisions without accepting the lifecycle transition.
+Plans and results must retain those exact revisions; plans must remain future-dated, and results
+must bind an exact digest to a source-safe JSON evidence artifact whose exercise identity and
+timestamp equal the result. Plans and valid passes must cover the selected response roles. Failed
+results remain history and cannot advance the lifecycle posture. This is prepared repository
+guidance, not proof of deployed alert routing, assigned contacts, an executed exercise, or
+production acceptance.
 
 The response contract publishes `metadata.calculation_supportability.metric_labels` so operators
 can verify the metric-label contract directly from the API response. Do not add portfolio, account,
@@ -178,6 +191,7 @@ mode or workflow is intentionally unsupported versus operationally failing.
 ## Detailed Runbook Sources
 
 - `docs/runbooks/service-operations.md`
+- `docs/runbooks/incident-response.md`
 - `docs/operations/canonical-local-upstream-urls.md`
 - `docs/operations/live-risk-validation-matrix.md`
 

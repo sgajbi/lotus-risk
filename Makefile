@@ -1,4 +1,4 @@
-.PHONY: architecture-gate complexity-gate source-size-gate personal-path-gate dead-code-gate dependency-hygiene-gate github-actions-runtime-gate install install-ci check check-all test test-unit test-integration test-e2e test-all test-coverage test-fast test-all-fast test-all-no-cov test-all-parallel ci ci-local ci-local-docker ci-local-docker-down typecheck lint monetary-float-guard domain-product-validate domain-data-product-gate trust-telemetry-validate observability-contract-validate mesh-contract-validate idea-opportunity-evidence-gate idea-opportunity-runtime-evidence image-supply-chain-gate no-alias-gate openapi-gate openapi-artifact-gate api-vocabulary-gate format clean run check-deps security-audit migration-smoke migration-apply pre-commit docker-build docker-up docker-down test-pyramid-gate quality-baseline quality-baseline-check maintainability-report
+.PHONY: architecture-gate complexity-gate source-size-gate personal-path-gate dead-code-gate dependency-hygiene-gate github-actions-runtime-gate install install-ci check check-all test test-unit test-integration test-e2e test-all test-coverage test-fast test-all-fast test-all-no-cov test-all-parallel ci ci-local ci-local-docker ci-local-docker-down typecheck lint monetary-float-guard domain-product-validate domain-data-product-gate trust-telemetry-validate observability-contract-validate incident-response-contract-validate mesh-contract-validate idea-opportunity-evidence-gate idea-opportunity-runtime-evidence image-supply-chain-gate no-alias-gate openapi-gate openapi-artifact-gate api-vocabulary-gate format clean run check-deps security-audit migration-smoke migration-apply pre-commit docker-build docker-up docker-down test-pyramid-gate quality-baseline quality-baseline-check maintainability-report
 
 COVERAGE_FAIL_UNDER ?= 98
 SOURCE_FILE_MAX_LINES ?= 450
@@ -166,7 +166,10 @@ trust-telemetry-validate:
 observability-contract-validate:
 	python scripts/validate_observability_contracts.py
 
-mesh-contract-validate: domain-product-validate trust-telemetry-validate observability-contract-validate
+incident-response-contract-validate:
+	python scripts/validate_incident_response_contract.py
+
+mesh-contract-validate: domain-product-validate trust-telemetry-validate observability-contract-validate incident-response-contract-validate
 
 idea-opportunity-evidence-gate:
 	python -m pytest tests/unit/test_idea_opportunity_runtime_evidence.py -q

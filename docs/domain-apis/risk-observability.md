@@ -142,21 +142,31 @@ Governed handler values are:
 4. `/health/live`,
 5. `/health/ready`,
 6. `/metadata`,
-7. `/metrics`,
-8. `/analytics/risk/calculate`,
-9. `/analytics/risk/drawdown`,
-10. `/analytics/risk/rolling-metrics`,
-11. `/analytics/risk/historical-attribution`,
-12. `/analytics/risk/concentration`,
-13. `/analytics/risk/mandate-health-context`,
-14. `/analytics/risk/regime-scenario-pack/evaluate`,
-15. `/analytics/risk/regime-scenario-pack/jobs`,
-16. `/analytics/risk/regime-scenario-pack/jobs/{job_id}`,
-17. `/analytics/risk/regime-scenario-pack/jobs/{job_id}/contributions`,
-18. `/analytics/risk/risk-event-cohorts/evaluate`.
+7. `/version`,
+8. `/integration/capabilities`,
+9. `/metrics`,
+10. `/openapi.json`,
+11. `/docs`,
+12. `/docs/oauth2-redirect`,
+13. `/redoc`,
+14. `/analytics/risk/calculate`,
+15. `/analytics/risk/drawdown`,
+16. `/analytics/risk/rolling-metrics`,
+17. `/analytics/risk/historical-attribution`,
+18. `/analytics/risk/concentration`,
+19. `/analytics/risk/mandate-health-context`,
+20. `/analytics/risk/regime-scenario-pack/evaluate`,
+21. `/analytics/risk/regime-scenario-pack/jobs`,
+22. `/analytics/risk/regime-scenario-pack/jobs/{job_id}`,
+23. `/analytics/risk/regime-scenario-pack/jobs/{job_id}/contributions`,
+24. `/analytics/risk/risk-event-cohorts/evaluate`,
+25. `unmatched`.
 
-Governed methods are `GET`, `POST`, `PUT`, `DELETE`, and `OPTIONS`. Governed status classes are
-`1xx`, `2xx`, `3xx`, `4xx`, and `5xx`.
+Governed methods are `GET`, `HEAD`, `POST`, `PUT`, `DELETE`, `OPTIONS`, and the bounded `OTHER`
+fallback.
+Governed status classes are `1xx`, `2xx`, `3xx`, `4xx`, `5xx`, and the bounded `other` fallback.
+Requests without a governed route template use the bounded `unmatched` handler; raw paths and
+unsupported methods never become metric label values.
 
 The HTTP 5xx alert is `lotus-risk-http-5xx`; use
 `docs/runbooks/service-operations.md#http-5xx-alert` for triage. Endpoint, upstream dependency, and

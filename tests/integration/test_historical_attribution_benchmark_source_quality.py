@@ -1,8 +1,9 @@
 """Registered-route refusal of incomplete or incoherent benchmark exposures."""
 
+from typing import Protocol, TypedDict
+
 import pytest
 from fastapi.testclient import TestClient
-from httpx import Response
 
 from app.main import app
 from tests.support.app_runtime import override_app_runtime
@@ -14,9 +15,31 @@ from tests.support.historical_attribution_fakes import (
 from tests.support.lotus_performance_fakes import RecordingLotusPerformanceClient
 
 
+class _ErrorDetails(TypedDict, total=False):
+    service: str
+    operation: str
+
+
+class _ErrorBody(TypedDict):
+    code: str
+    message: str
+    correlation_id: str
+    details: _ErrorDetails
+
+
+class _ErrorEnvelope(TypedDict):
+    error: _ErrorBody
+
+
+class _TestResponse(Protocol):
+    status_code: int
+
+    def json(self) -> _ErrorEnvelope: ...
+
+
 def _post_stateful_active_risk(
     benchmark_context: dict[str, object],
-) -> tuple[Response, RecordingLotusPerformanceClient]:
+) -> tuple[_TestResponse, RecordingLotusPerformanceClient]:
     performance_client = build_stateful_attribution_returns_client()
     performance_client.benchmark_exposure_context_payload = benchmark_context
     with override_app_runtime(

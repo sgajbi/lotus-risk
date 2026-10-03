@@ -86,6 +86,69 @@ def test_observability_contract_alerts_reference_runbook_anchors() -> None:
     assert issues == []
 
 
+def test_observability_contract_rejects_incomplete_identity_and_policy(tmp_path: Path) -> None:
+    payload = _contract()
+    payload.pop("contract_id")
+    payload["no_sensitive_telemetry_policy"] = {
+        "forbidden_label_values": ["portfolio_id"],
+        "label_cardinality_posture": "unbounded",
+    }
+    contract_path = tmp_path / "monitoring.json"
+    _write_contract(contract_path, payload)
+
+    issues = validate_observability_contract(contract_path)
+
+    assert any("fields do not match the governed schema" in issue for issue in issues)
+    assert any("monitoring contract_id does not match" in issue for issue in issues)
+    assert any("forbidden telemetry labels do not match" in issue for issue in issues)
+    assert any("cardinality posture does not match" in issue for issue in issues)
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "expected"),
+    [
+        ("type", "gauge", "metric type does not match implementation"),
+        ("source", "app.observability.missing", "metric source does not match implementation"),
+    ],
+)
+def test_observability_contract_rejects_metric_definition_drift(
+    tmp_path: Path, field: str, value: str, expected: str
+) -> None:
+    payload = _contract()
+    metric = next(item for item in payload["metrics"] if item["name"] == "http_requests_total")
+    metric[field] = value
+    contract_path = tmp_path / "monitoring.json"
+    _write_contract(contract_path, payload)
+
+    assert any(expected in issue for issue in validate_observability_contract(contract_path))
+
+
+def test_observability_contract_rejects_duplicate_metric_identity(tmp_path: Path) -> None:
+    payload = _contract()
+    metric = next(item for item in payload["metrics"] if item["name"] == "http_requests_total")
+    payload["metrics"].append(json.loads(json.dumps(metric)))
+    contract_path = tmp_path / "monitoring.json"
+    _write_contract(contract_path, payload)
+
+    assert any(
+        "http_requests_total: metric name must be unique" in issue
+        for issue in validate_observability_contract(contract_path)
+    )
+
+
+def test_observability_contract_rejects_incomplete_runtime_metric_values(tmp_path: Path) -> None:
+    payload = _contract()
+    metric = next(item for item in payload["metrics"] if item["name"] == "http_requests_total")
+    metric["labels"]["method"].remove("GET")
+    contract_path = tmp_path / "monitoring.json"
+    _write_contract(contract_path, payload)
+
+    assert any(
+        "metric label value allowlists do not match runtime vocabularies" in issue
+        for issue in validate_observability_contract(contract_path)
+    )
+
+
 def test_domain_observability_doc_projects_monitoring_contract_labels() -> None:
     issues = validate_observability_contract(OBSERVABILITY_CONTRACT)
 

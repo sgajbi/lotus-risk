@@ -156,6 +156,11 @@ Current repository posture:
     promotion. Use
     `make idea-opportunity-evidence-gate` for the focused contract gate and
     `make idea-opportunity-runtime-evidence` against a running Risk API to generate the artifact.
+18. The Risk incident-response contract maps every governed monitoring alert to severity,
+    containment, recovery/reconciliation, escalation roles, and source-safe evidence. The blocking
+    validator preserves the lifecycle declaration in the incident runbook; deployment contacts,
+    alert routing, exercises, corrective-action operation, and production acceptance remain
+    deployment-owned.
 
 ## Architecture And Module Map
 

@@ -39,3 +39,10 @@ The governed monitoring contract lives at
 that dashboards and alerts reference implemented metrics, that alert runbook anchors exist, and
 that `docs/domain-apis/risk-observability.md` projects the current metric names and bounded label
 values from the same contract.
+
+The paired `contracts/observability/lotus-risk-incident-response.v1.json` contract maps every
+alert to severity, containment, recovery/reconciliation, escalation roles, and source-safe
+evidence. `make incident-response-contract-validate` fails incomplete or overstated incident
+posture. The incident runbook carries the machine-checked lifecycle declaration; deployment
+contacts, alert routing, exercise evidence, corrective-action operation, and production acceptance
+are external controls.
