@@ -576,7 +576,10 @@ Most relevant current governance:
     `make quality-baseline-check` is a read-only comparison on the measured source/test tree;
     the Quality Baseline workflow's separate Freshness Gate blocks stale committed reports.
     A rebase requires regeneration, while CI tool transcripts remain diagnostic and must not be
-    read as Feature, PR Merge or Main gate verdicts.
+    read as Feature, PR Merge or Main gate verdicts. The generator resolves its symbolic Python
+    children through `sys.executable`, preserving the selected repository environment on Windows
+    and POSIX. Diagnostics record interpreter/version; non-Python commands retain their argv.
+    See `quality/README.md` for environment-selected commands and failure-evidence preservation.
 
 ## Context Maintenance Rule
 

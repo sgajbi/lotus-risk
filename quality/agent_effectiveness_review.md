@@ -13,6 +13,21 @@ admission boundary. No skill, central context, runtime split, migration, or feat
 change is warranted. Live source-pinned acceptance and protected mainline closure remain required;
 component and recording-transport tests are not production evidence.
 
+## Quality Runner Interpreter Review
+
+Issue #379 fixes the local generator boundary, not financial or deployment behavior. Fourteen controls
+cover real child identity/failure, unchanged non-symbolic argv, collection refusal and diagnostic
+attribution. Review also caught a test ID being mistaken for a collection summary; only anchored
+summary lines can supply counts, with the last summary authoritative. Repository context, quality
+guidance and the Validation/CI wiki carry the method.
+No shared skill, deployed agent contract, API, migration, dependency pin, gate threshold or runtime
+split changes. No central synchronization is needed for this repository-local context change.
+
+The review-directory critical-path and owner-QA notes are superseded as implementation plans by
+merged #380, but their source-pinned acceptance requirement remains under #377. The efficiency
+draft's immutable-evidence and non-interference guidance is adopted in execution, not copied into
+product documentation. Previous global-tool diagnostic failures remain historical evidence.
+
 ## Review Triggers
 
 Review after every five meaningful refactor slices and before major architecture, PR, or closure

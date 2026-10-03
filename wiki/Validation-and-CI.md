@@ -52,6 +52,13 @@ behind each tag and includes actions selected through repository subpaths.
 This complements the offline form check in `make github-actions-runtime-gate`, which remains fast
 and deterministic for local and protected lanes.
 
+## Quality Runner Identity
+
+Baseline collection and diagnostics use the Python interpreter selected for the generator.
+The diagnostic transcript records its interpreter/version and preserves failed command verdicts;
+report-only output is not protected-gate acceptance. Select the repository environment using
+the OS-specific commands in [Quality evidence](https://github.com/sgajbi/lotus-risk/blob/main/quality/README.md#freshness-and-diagnostic-evidence).
+
 ## Primary Commands
 
 - `make check` - fast local gate
