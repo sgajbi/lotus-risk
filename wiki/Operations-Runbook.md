@@ -153,8 +153,10 @@ recovery/reconciliation, escalation roles, and source-safe evidence. Validate it
 `make incident-response-contract-validate`. Before creating evidence, use
 `python scripts/validate_incident_response_contract.py --prepare-exercise-revision` to obtain the
 candidate contract and response-profile revisions without accepting the lifecycle transition.
-Plans and results must retain those exact revisions; plans must remain future-dated, and results
-must bind an exact digest to a source-safe JSON evidence artifact whose exercise identity and
+The contract revision canonicalizes monitoring JSON, so formatting and platform line endings do
+not change its identity. Plans and results must retain those exact revisions. Plans must remain
+future-dated; results must bind an exact digest to a source-safe JSON evidence artifact whose
+exercise identity and
 timestamp equal the result. Plans and valid passes must cover the selected response roles. Failed
 results remain history and cannot advance the lifecycle posture. This is prepared repository
 guidance, not proof of deployed alert routing, assigned contacts, an executed exercise, or
