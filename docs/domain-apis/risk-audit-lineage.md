@@ -55,6 +55,10 @@ and reconciled requested/returned/missing coverage. Consumers must preserve both
 fingerprint is not evidence that a returned calculation was current, complete, or for the requested
 source identity.
 
+Coverage admission accepts the producer's eight-decimal serialization without replacing its
+value or missing count. The exact reconciliation and compatibility rule is defined in
+[Rounding and Precision](../standards/rounding-precision.md#stateful-returns-coverage).
+
 For stateful and simulation concentration, the core snapshot lineage key is stable across portfolios
 and sessions:
 

@@ -3,6 +3,16 @@
 This register records conscious reviews of whether the enterprise refactor should improve skills,
 guidance, documentation, context, or automation for future engineers and agents.
 
+## Returns Coverage Compatibility Review
+
+Issue #377 adopts `RISK-COVERAGE-WIRE-PRECISION-20261003.md` from the workspace review directory
+as reproduction and acceptance scope. The eight-decimal producer representation is admitted
+without widening the general tolerance or replacing source qualification. Contract/API docs and
+the Integrations wiki carry the changed truth; repository context already identifies the shared
+admission boundary. No skill, central context, runtime split, migration, or feature-promotion
+change is warranted. Live source-pinned acceptance and protected mainline closure remain required;
+component and recording-transport tests are not production evidence.
+
 ## Review Triggers
 
 Review after every five meaningful refactor slices and before major architecture, PR, or closure

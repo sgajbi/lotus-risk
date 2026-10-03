@@ -58,7 +58,11 @@ class StatefulReturnsSourceEvidence(BaseModel):
     coverage_ratio: float = Field(
         ge=0,
         le=1,
-        description="Returned-to-requested source coverage as a decimal ratio.",
+        description=(
+            "Returned-to-requested source coverage, preserving the producer value. "
+            "Accepts the exact count ratio within 1e-12 or Performance's "
+            "eight-decimal Python round(ratio, 8) representation; zero requests require 1."
+        ),
         json_schema_extra={"example": 1.0},
     )
 
@@ -69,7 +73,12 @@ class StatefulReturnsSourceEvidence(BaseModel):
         expected_ratio = (
             1.0 if self.requested_points == 0 else self.returned_points / self.requested_points
         )
-        if abs(self.coverage_ratio - expected_ratio) > 1e-12:
+        # Performance v1 serializes Decimal(str(round(count_ratio, 8))).
+        # Match that discrete wire value, not a broader tolerance around every
+        # ratio. Retain unquantized v1 compatibility and never rewrite evidence.
+        if abs(self.coverage_ratio - expected_ratio) > 1e-12 and self.coverage_ratio != round(
+            expected_ratio, 8
+        ):
             raise ValueError("coverage ratio does not reconcile with coverage counts")
         return self
 
