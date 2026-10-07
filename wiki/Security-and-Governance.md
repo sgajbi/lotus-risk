@@ -14,6 +14,17 @@ controls and evidence paths listed here.
 
 ## Governance Posture
 
+The verified-principal pilot admits concentration, scenario-pack evaluation and affected-cohort
+evaluation only. Deployment composition supplies trusted Ed25519 verification, revocation and
+GrantStore providers; requests cannot choose keys, tenants or grants. Delegated user/application
+capabilities and portfolio scopes intersect, and missing authority refuses before execution.
+Other protected routes are blocked in verified mode. Header-trust is local/dev compatibility only.
+
+The [deployment policy](https://github.com/sgajbi/lotus-risk/blob/main/docs/security-deployment-policy.md)
+and [real HTTP tests](https://github.com/sgajbi/lotus-risk/blob/main/tests/integration/test_verified_risk_authority_http.py)
+describe the bounded proof. Production key custody, revocation/GrantStore operation and live consumer
+acceptance remain separate requirements under [Risk #384](https://github.com/sgajbi/lotus-risk/issues/384).
+
 For `lotus-risk`, governance is mainly about analytical truth, contract discipline, and clear
 upstream authority boundaries.
 
@@ -48,7 +59,9 @@ The highest-value rules for this repo are:
 
 ## Enterprise Deployment Security
 
-Bank deployment mode is stricter than local development mode:
+The existing deployment controls below remain baseline requirements, not production IAM approval.
+The header-context and trusted-ingress behavior is retained local/dev compatibility; it does not
+override verified admission or permit unsupported protected routes:
 
 1. `ENTERPRISE_ENFORCE_AUTHZ=true` is required,
 2. `ENTERPRISE_ENFORCE_RUNTIME_CONFIG=true` is required,

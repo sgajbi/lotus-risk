@@ -83,6 +83,11 @@ def _required_capability(method: str, path: str) -> str | None:
     return _required_capability_from_rules(load_capability_rules(), method=method, path=path)
 
 
+def required_route_capability(method: str, path: str) -> str | None:
+    """The same explicit operator rule is used for both admission postures."""
+    return _required_capability(method, path)
+
+
 def missing_supported_write_route_capability_rules(
     rules: dict[str, str] | None = None,
 ) -> list[str]:

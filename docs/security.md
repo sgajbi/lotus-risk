@@ -5,7 +5,11 @@ client, request, response, trace, or correlation data through logs, metrics, err
 
 ## Current Controls
 
-1. Enterprise audit middleware enforces write-policy headers and redacts sensitive metadata.
+1. Existing enterprise audit middleware supports deployment-selected verified-principal admission
+   for the three bounded pilot operations; legacy write-policy headers remain local/dev only.
+   Admission verifies actual Ed25519 signatures before membership, route grants and delegated
+   portfolio intersections. Missing authority refuses before protected execution, with no header
+   fallback. Audit identity comes from the admitted principal and sensitive metadata is redacted.
 2. Correlation middleware treats caller correlation and trace headers as untrusted input:
    correlation IDs are bounded to a safe character set and length, while trace IDs and
    `traceparent` must satisfy the supported W3C format. Unsafe values are replaced instead of
@@ -30,7 +34,7 @@ client, request, response, trace, or correlation data through logs, metrics, err
 11. Enterprise body-limit posture is machine-checked: ingress/proxy and ASGI/server proof values
     must be explicit and no larger than `ENTERPRISE_MAX_WRITE_PAYLOAD_BYTES`; direct local
     Uvicorn/Compose is local-only unless deployment proof is supplied.
-12. Enterprise write requests and operator diagnostics require trusted-ingress proof through
+12. The retained local/dev header-trust path requires trusted-ingress proof through
     `X-Lotus-Trusted-Ingress`; direct callers with only actor, service identity, and capability
     headers are denied. Audit records for that denial use an `unverified` identity sentinel and
     never copy the rejected caller's actor, tenant, role, or correlation claims.
@@ -47,5 +51,6 @@ client, request, response, trace, or correlation data through logs, metrics, err
    deployment mode.
 6. Do not let legacy or local-only runtime shortcuts become bank-readiness claims. Keep retained
    compatibility behavior clearly scoped to local development unless enterprise evidence proves it.
-7. Keep `/ops`, `/ops/trust-telemetry`, and `/metrics` behind trusted ingress in enterprise mode
-   while preserving `/health` and readiness probes for platform orchestration.
+7. Verified mode blocks `/ops`, `/ops/trust-telemetry`, `/metrics` and non-pilot protected routes
+   pending their own authorization rollout; preserve health/readiness probes. Do not interpret
+   the pilot, mocked providers or local HTTP proof as production IAM or consumer acceptance.

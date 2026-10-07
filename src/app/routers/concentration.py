@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header
+from fastapi import APIRouter, Depends, Header, Request
 
 from app.api_errors import STATEFUL_TENANT_ERROR_RESPONSES
 from app.contracts.concentration import (
@@ -16,6 +16,7 @@ from app.dependencies.request_context import (
     request_actor_id,
     request_correlation_id,
     request_tenant_id,
+    require_portfolio_scope,
 )
 from app.openapi_examples import CONCENTRATION_EXAMPLES, stateful_request_openapi_extra
 from app.runtime.downstream_clients import RuntimeDownstreamClients, runtime_downstream_clients
@@ -41,6 +42,7 @@ router = APIRouter(tags=["risk-analytics"])
 )
 async def analytics_risk_concentration(
     payload: ConcentrationRequest,
+    request: Request,
     runtime_clients: Annotated[RuntimeDownstreamClients, Depends(runtime_downstream_clients)],
     correlation_id: Annotated[str | None, Depends(request_correlation_id)],
     tenant_id: Annotated[str | None, Depends(request_tenant_id)],
@@ -56,6 +58,8 @@ async def analytics_risk_concentration(
         ),
     ] = None,
 ) -> ConcentrationResponse:
+    scope_input = payload.stateful_input or payload.simulation_input
+    require_portfolio_scope(request, [scope_input.portfolio_id] if scope_input is not None else [])
     # Stateless concentration keeps working without tenant authority; stateful and
     # simulation modes admit it here, before the observed operation, so a refused
     # request makes no upstream call and is not an endpoint execution.

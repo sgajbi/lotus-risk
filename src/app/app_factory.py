@@ -16,11 +16,14 @@ from app.routers.risk_calculation import router as risk_calculation_router
 from app.routers.rolling import router as rolling_router
 from app.routers.scenario_jobs import router as scenario_jobs_router
 from app.routers.source_products import router as source_products_router
+from app.security.configuration import PrincipalProviders, PrincipalSecurityConfiguration
 from app.service_metadata import SERVICE_NAME, SERVICE_VERSION
 
 
-def create_app() -> FastAPI:
+def create_app(*, principal_providers: PrincipalProviders | None = None) -> FastAPI:
     risk_app = FastAPI(title=SERVICE_NAME, version=SERVICE_VERSION, lifespan=application_lifespan)
+    risk_app.state.principal_security = PrincipalSecurityConfiguration.from_environment()
+    risk_app.state.principal_providers = principal_providers or PrincipalProviders()
     risk_app.add_middleware(CorrelationIdMiddleware, service_name=SERVICE_NAME)
     validate_enterprise_runtime_config()
     risk_app.middleware("http")(build_enterprise_audit_middleware())

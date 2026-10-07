@@ -9,6 +9,7 @@ description = "Advanced risk analytics service for Lotus platform."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+  "cryptography==50.0.2",
   "fastapi>=0.133.0",
   "starlette>=1.0.1",
   "uvicorn>=0.41.0",

@@ -41,6 +41,22 @@ explicit invalid overrides for `LOTUS_CORE_*`, `LOTUS_PERFORMANCE_*`, or
 
 ## Enterprise Security
 
+### Principal Admission
+
+| Setting | Local default | Meaning |
+| --- | --- | --- |
+| `LOTUS_RISK_PRINCIPAL_POSTURE` | `header-trust` | `verified` selects signed principal admission at construction; no request-selected fallback |
+| `LOTUS_RISK_DEPLOYMENT_ENVIRONMENT` | `local` | Header-trust is allowed only for `local` or `dev`; operators must declare the actual environment |
+
+Verified composition injects `PrincipalProviders` into `create_app`; it does not read JWKS, issuer,
+audience or grants from the credential or authority headers. `Ed25519CredentialVerifier` accepts
+explicit deployment-trusted issuer/audience, JWKS and revocation ports. Missing verifier or GrantStore
+fails admission with `grant_store_unavailable`; no implicit provider or grants are installed.
+Use explicit `ENTERPRISE_CAPABILITY_RULES_JSON` entries for the three pilot operations; missing
+rules deny. Other protected route families remain blocked in verified mode. See
+[the deployment policy](security-deployment-policy.md#verified-principal-pilot) for scope and
+production IAM limitations. The existing configuration requirements below remain baseline controls.
+
 | Setting | Local default | Enterprise bank posture |
 | --- | --- | --- |
 | `ENTERPRISE_POLICY_VERSION` | `1.0.0` | Explicit governed policy version |
