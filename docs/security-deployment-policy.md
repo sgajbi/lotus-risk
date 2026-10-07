@@ -29,6 +29,9 @@ or downstream execution. Header actor, tenant, role and capabilities cannot supp
 Correlation remains diagnostic. Missing providers return bounded denial, never header fallback.
 Verified-admission 401 responses carry a static `WWW-Authenticate: Bearer` challenge; 403 and 503
 do not. Challenges contain no credential, provider diagnostic or requested-resource details.
+All three pilot OpenAPI response maps publish verified 401 envelopes, examples and conditional
+Bearer challenge metadata. Concentration separately retains local/dev header-trust missing-tenant
+examples; its tenant-header parameter states that verified identity, not that header, supplies authority.
 Portfolio-scope refusals emit classified denial audits with verified identity, correlation and
 bounded `portfolio_outside_scope` reason, without requested portfolio IDs or credential bytes.
 An internal scope-refusal marker distinguishes these from unrelated endpoint-generated 403s.

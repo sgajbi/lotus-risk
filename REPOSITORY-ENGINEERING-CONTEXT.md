@@ -46,6 +46,8 @@ Bearer scheme comparison is case-insensitive. Normalize only the scheme prefix, 
 credential bytes; retain duplicate-header and malformed-credential refusal.
 All verified-admission 401 denials share a static Bearer challenge. Keep 403/503 unchanged and
 never reflect credentials, provider diagnostics or resource claims into challenge parameters.
+Document verified 401 in the three pilot operations' actual OpenAPI response maps, using the
+standard envelope and conditional Bearer challenge; tenant-header text must distinguish both postures.
 The three approved POST routes allow one trailing slash through canonical capability admission,
 then the router's 307 redirect. Keep the original path/body intact; the canonical route repeats
 admission and scope checks after redirect. Multiple slashes and other protected routes stay blocked.

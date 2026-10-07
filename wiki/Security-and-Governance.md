@@ -41,6 +41,8 @@ Bearer scheme matching is case-insensitive without changing credential bytes; du
 wrong-scheme Authorization headers still refuse.
 Verified-admission 401 responses include a static Bearer challenge; 403/503 remain distinct and
 do not carry that challenge.
+The three pilot OpenAPI response maps include verified 401 envelopes and conditional challenge
+metadata. Concentration retains distinct local/dev missing-tenant examples and posture-aware header text.
 Key, revocation, membership and grant adapter exceptions always refuse 503 without exposing their
 diagnostics or selected status. Injected credential verifiers may express only declared denial
 reason/status pairs; legitimate 401/403 refusals remain distinct from provider outages.

@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-10-02T19:47:53.341423+00:00",
+  "generatedAt": "2026-10-07T09:31:37.861214+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.affected_portfolios",
@@ -5096,7 +5096,7 @@
       "location": "header",
       "required": false,
       "type": "string",
-      "description": "Admitted tenant authority for stateful (and concentration simulation) input modes. The admitted value is forwarded on every tenant-owned lotus-performance and lotus-core request, including async status/result polling. A stateful request without a non-blank value refuses with 401 MISSING_TENANT_AUTHORITY before any upstream request is made; a trimmed value longer than 128 characters refuses with 400 INVALID_TENANT_AUTHORITY. Stateless requests do not require tenant authority.",
+      "description": "With LOTUS_RISK_PRINCIPAL_POSTURE=verified, tenant authority comes from the resolved credential and X-Tenant-Id is ignored in every input mode; the credential tenant is forwarded on tenant-owned downstream requests. In local/dev header-trust posture: Admitted tenant authority for stateful (and concentration simulation) input modes. The admitted value is forwarded on every tenant-owned lotus-performance and lotus-core request, including async status/result polling. A stateful request without a non-blank value refuses with 401 MISSING_TENANT_AUTHORITY before any upstream request is made; a trimmed value longer than 128 characters refuses with 400 INVALID_TENANT_AUTHORITY. Stateless header-trust requests do not require tenant authority.",
       "example": "tenant-sg",
       "allowedValues": [],
       "semanticId": "lotus.x_tenant_id",

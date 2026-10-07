@@ -12,14 +12,14 @@ completion claim.
 
 ## Generation Identity
 
-- Measured source/test SHA-256: `bab3afdbcee2eb2d856e9368bf8cdb1d2dc95d19779115c6fb03910c813838f2`
+- Measured source/test SHA-256: `c3857daed77bb422772f42a06a6c3b8281b2ed75a15bbbe8fa91c7354f1635db`
 - The branch, commit, tool output and timings belong to the CI run artifact, not this
   rebase-stable measurement. The immutable initial baseline remains commit `3254774`.
 
 ## Current Code Size
 
 - Python source files under `src/`: 287
-- Python test files under `tests/`: 172
+- Python test files under `tests/`: 173
 - Python packages under `src/`: 15
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
 
@@ -43,10 +43,10 @@ completion claim.
 | src/app/services/risk/period_metrics.py | 282 | 9471 |
 | src/app/services/attribution_decomposition.py | 266 | 9711 |
 | src/app/services/scenario_engine.py | 255 | 8966 |
+| src/app/api_error_examples.py | 242 | 7603 |
 | src/app/scenario_jobs/contracts.py | 233 | 8985 |
 | src/app/integrations/lotus_core_operations.py | 231 | 7376 |
 | src/app/services/supportability_periods.py | 229 | 8819 |
-| src/app/security/credential_verification.py | 228 | 8556 |
 
 ### Largest Functions And Classes
 
@@ -164,6 +164,6 @@ needs current CI status, generated OpenAPI artifact evidence, and reviewer-ready
 
 ## Validation Snapshot
 
-- Unit tests collected: 1864
+- Unit tests collected: 1882
 - Import-linter is an enforced architecture gate; its run verdict belongs to CI, not this
   rebase-stable snapshot.
