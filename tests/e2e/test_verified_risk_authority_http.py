@@ -367,6 +367,76 @@ def test_portfolio_scope_denial_audit_is_distinct_from_endpoint_403(
     assert credential not in unrelated.text + str(audits)
 
 
+@pytest.mark.parametrize("route", list(CAPABILITIES))
+def test_verified_401_challenge_preserves_non_authentication_outcomes(
+    runtime: HttpRuntime, route: str, caplog: pytest.LogCaptureFixture
+) -> None:
+    credential = runtime.token()
+    controls = [
+        (None, "missing_credential"),
+        ("not-a-credential", "malformed_credential"),
+        (runtime.token(exp=NOW), "expired_credential"),
+        (credential, "revoked_principal"),
+    ]
+    for token, reason in controls:
+        runtime.revocations.revoked = reason == "revoked_principal"
+        headers = {"Authorization": "Bearer " + token} if token else {}
+        with caplog.at_level(logging.INFO, logger="enterprise_readiness"):
+            refused = runtime.client.post(route, json=payload(route), headers=headers)
+        assert refused.status_code == 401 and reason in refused.text
+        assert refused.headers.get_list("WWW-Authenticate") == ["Bearer"]
+        assert runtime.calls == {}
+        audits = [record.audit for record in caplog.records if hasattr(record, "audit")]
+        assert len(audits) == 1 and audits[0]["action"] == "DENY POST " + route
+        assert audits[0]["metadata"] == {"reason": reason}
+        assert audits[0]["actor_id"] == audits[0]["tenant_id"] == "unverified"
+        if token:
+            assert token not in refused.text + str(audits)
+        caplog.clear()
+    runtime.revocations.revoked = False
+    headers = {"Authorization": "Bearer " + credential}
+    capabilities = runtime.grants.user_capabilities
+    runtime.grants.user_capabilities = runtime.grants.application_capabilities = frozenset()
+    capability_refusal = runtime.client.post(route, json=payload(route), headers=headers)
+    assert (
+        capability_refusal.status_code == 403
+        and "capability_not_granted" in capability_refusal.text
+    )
+    assert "WWW-Authenticate" not in capability_refusal.headers and runtime.calls == {}
+    runtime.grants.user_capabilities = runtime.grants.application_capabilities = capabilities
+
+    body = payload(route, "private-foreign-portfolio")
+    if route == CONCENTRATION:
+        body["stateful_input"] = {
+            "portfolio_id": "private-foreign-portfolio",
+            "as_of_date": "2026-05-03",
+            "reporting_currency": "USD",
+        }
+    scope_refusal = runtime.client.post(route, json=body, headers=headers)
+    assert scope_refusal.status_code == 403 and "portfolio_outside_scope" in scope_refusal.text
+    assert "WWW-Authenticate" not in scope_refusal.headers and runtime.calls == {}
+    assert "private-foreign-portfolio" not in scope_refusal.text
+
+    runtime.grants.raw_failure = True
+    provider_refusal = runtime.client.post(route, json=payload(route), headers=headers)
+    assert (
+        provider_refusal.status_code == 503 and "grant_store_unavailable" in provider_refusal.text
+    )
+    assert "WWW-Authenticate" not in provider_refusal.headers and runtime.calls == {}
+    assert "provider-private-diagnostic" not in provider_refusal.text
+    runtime.grants.raw_failure = False
+    admitted = runtime.client.post(route, json=payload(route), headers=headers)
+    assert admitted.status_code == 200 and "WWW-Authenticate" not in admitted.headers
+    assert runtime.calls == {route: 1}
+    result = admitted.json()
+    if route == CONCENTRATION:
+        assert result["risk_proxy"]["hhi_current"] == 6250
+    elif route == SCENARIO:
+        assert result["worst_case_loss_pct"] == 0.18
+    else:
+        assert result["affected_portfolios"][0]["impact_score"] == 0.18
+
+
 DENIALS = [
     ("missing_credential", 401),
     ("malformed_credential", 401),
