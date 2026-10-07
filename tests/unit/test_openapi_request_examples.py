@@ -67,3 +67,32 @@ def test_post_routes_publish_request_body_examples() -> None:
             .get("examples", {})
         )
         assert examples, f"{path} is missing request examples"
+
+
+def test_openapi_distinguishes_local_headers_from_exact_verified_pilot() -> None:
+    spec = app.openapi()
+    adopted = {
+        "/analytics/risk/concentration",
+        "/analytics/risk/regime-scenario-pack/evaluate",
+        "/analytics/risk/risk-event-cohorts/evaluate",
+    }
+    published = set()
+    for path, path_item in spec["paths"].items():
+        operation = path_item.get("post", {})
+        legacy = operation.get("x-lotus-enterprise-authorization")
+        if legacy is None:
+            continue
+        assert legacy["mode"] == "local_dev_header_trust"
+        assert legacy["permitted_environments"] == ["local", "dev"]
+        verified = operation["x-lotus-verified-principal"]
+        assert verified["authority_headers_ignored"] is True
+        assert verified["production_iam_certified"] is False
+        if verified["adopted"]:
+            published.add(path)
+            assert verified["credential_header"] == "Authorization"
+            assert verified["credential_scheme"] == "Bearer"
+            assert verified["denial_statuses"] == [401, 403, 503]
+        else:
+            assert verified["denial_statuses"] == [403]
+            assert verified["unadopted_route_reason"] == "capability_not_granted"
+    assert published == adopted

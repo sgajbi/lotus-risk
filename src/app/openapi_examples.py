@@ -26,11 +26,14 @@ from app.openapi_request_examples import (
 JsonObject = dict[str, Any]
 
 
-def _enterprise_authorization_extension() -> JsonObject:
+def _enterprise_authorization_extension(*, verified_pilot: bool) -> JsonObject:
     return {
         "x-lotus-enterprise-authorization": {
-            "mode": "enterprise_bank_deployment",
-            "enforced_when": "ENTERPRISE_ENFORCE_AUTHZ=true",
+            "mode": "local_dev_header_trust",
+            "enforced_when": (
+                "LOTUS_RISK_PRINCIPAL_POSTURE=header-trust and ENTERPRISE_ENFORCE_AUTHZ=true"
+            ),
+            "permitted_environments": ["local", "dev"],
             "required_context_headers": list(ENTERPRISE_AUTHORIZATION_REQUIRED_HEADERS),
             "service_identity_headers": list(ENTERPRISE_SERVICE_IDENTITY_HEADERS),
             "trusted_ingress_header": TRUSTED_INGRESS_HEADER,
@@ -39,7 +42,24 @@ def _enterprise_authorization_extension() -> JsonObject:
             "denial_status": 403,
             "denial_code": "AUTHORIZATION_DENIED",
             "denial_reason": "authorization_policy_denied",
-        }
+        },
+        "x-lotus-verified-principal": {
+            "posture_env": "LOTUS_RISK_PRINCIPAL_POSTURE",
+            "enforced_when": "LOTUS_RISK_PRINCIPAL_POSTURE=verified",
+            "adopted": verified_pilot,
+            "credential_header": "Authorization",
+            "credential_scheme": "Bearer",
+            "signature_algorithm": "EdDSA",
+            "trusted_key_type": "OKP/Ed25519",
+            "authority_headers_ignored": True,
+            "providers": "deployment-injected verifier, revocation and GrantStore",
+            "capability_rules_env": "ENTERPRISE_CAPABILITY_RULES_JSON",
+            "delegated_authority": "user/application capability and portfolio intersection",
+            "denial_code": "AUTHORIZATION_DENIED",
+            "denial_statuses": [401, 403, 503] if verified_pilot else [403],
+            "unadopted_route_reason": None if verified_pilot else "capability_not_granted",
+            "production_iam_certified": False,
+        },
     }
 
 
@@ -66,16 +86,20 @@ def _stateful_tenant_header_parameter() -> JsonObject:
     }
 
 
-def stateful_request_openapi_extra(examples: dict[str, JsonObject]) -> JsonObject:
+def stateful_request_openapi_extra(
+    examples: dict[str, JsonObject], *, verified_pilot: bool = False
+) -> JsonObject:
     return {
-        **request_body_examples(examples),
+        **request_body_examples(examples, verified_pilot=verified_pilot),
         "parameters": [_stateful_tenant_header_parameter()],
     }
 
 
-def request_body_examples(examples: dict[str, JsonObject]) -> JsonObject:
+def request_body_examples(
+    examples: dict[str, JsonObject], *, verified_pilot: bool = False
+) -> JsonObject:
     return {
-        **_enterprise_authorization_extension(),
+        **_enterprise_authorization_extension(verified_pilot=verified_pilot),
         "requestBody": {
             "content": {
                 "application/json": {

@@ -32,7 +32,7 @@ router = APIRouter(tags=["risk-analytics"])
     responses=STATEFUL_TENANT_ERROR_RESPONSES,
     operation_id="calculateConcentrationRiskAnalytics",
     summary="Calculate concentration risk analytics",
-    openapi_extra=stateful_request_openapi_extra(CONCENTRATION_EXAMPLES),
+    openapi_extra=stateful_request_openapi_extra(CONCENTRATION_EXAMPLES, verified_pilot=True),
     description=(
         "Calculates portfolio, single-position, and issuer concentration analytics across "
         "stateless, stateful, and simulation modes. Returns position-level HHI, top-position "
