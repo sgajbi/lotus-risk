@@ -304,6 +304,18 @@ _VERIFIED_WRITE_ROUTES = frozenset(
 )
 
 
+def _verified_denial_response(request: Request, denial: PrincipalDenied) -> Response:
+    response = error_response(
+        request,
+        status_code=denial.status,
+        code="AUTHORIZATION_DENIED",
+        message=denial.reason,
+    )
+    if denial.status == 401:
+        response.headers["WWW-Authenticate"] = "Bearer"
+    return _apply_enterprise_response_headers(response)
+
+
 async def _verified_admission(request: Request, call_next: MiddlewareNext) -> Response:
     protected = trusted_ingress_required(
         request.method, request.url.path
@@ -336,14 +348,7 @@ async def _verified_admission(request: Request, call_next: MiddlewareNext) -> Re
             correlation_id=getattr(request.state, "correlation_id", None),
             metadata={"reason": denial.reason},
         )
-        return _apply_enterprise_response_headers(
-            error_response(
-                request,
-                status_code=denial.status,
-                code="AUTHORIZATION_DENIED",
-                message=denial.reason,
-            )
-        )
+        return _verified_denial_response(request, denial)
     response = await call_next(request)
     _emit_write_audit_event(request, response)
     return _apply_enterprise_response_headers(response)

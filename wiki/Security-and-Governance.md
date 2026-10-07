@@ -31,6 +31,8 @@ Typed verifier results must satisfy identity and kind/actor invariants before me
 invalid fields refuse 503 without narrowing or bypassing delegated authorization.
 Bearer scheme matching is case-insensitive without changing credential bytes; duplicate or
 wrong-scheme Authorization headers still refuse.
+Verified-admission 401 responses include a static Bearer challenge; 403/503 remain distinct and
+do not carry that challenge.
 Key, revocation, membership and grant adapter exceptions always refuse 503 without exposing their
 diagnostics or selected status. Injected credential verifiers may express only declared denial
 reason/status pairs; legitimate 401/403 refusals remain distinct from provider outages.

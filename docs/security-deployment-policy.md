@@ -23,6 +23,8 @@ GrantStore. Delegated capabilities and portfolio scope are the
 intersection of user and application grants; every named portfolio must be entitled before engine
 or downstream execution. Header actor, tenant, role and capabilities cannot supply authority.
 Correlation remains diagnostic. Missing providers return bounded denial, never header fallback.
+Verified-admission 401 responses carry a static `WWW-Authenticate: Bearer` challenge; 403 and 503
+do not. Challenges contain no credential, provider diagnostic or requested-resource details.
 Portfolio-scope refusals emit classified denial audits with verified identity, correlation and
 bounded `portfolio_outside_scope` reason, without requested portfolio IDs or credential bytes.
 An internal scope-refusal marker distinguishes these from unrelated endpoint-generated 403s.
