@@ -311,7 +311,7 @@ async def _verified_admission(request: Request, call_next: MiddlewareNext) -> Re
         headers = request.headers.getlist("Authorization")
         credential: str | None = None
         if headers:
-            if len(headers) != 1 or not headers[0].startswith("Bearer "):
+            if len(headers) != 1 or headers[0][:7].lower() != "bearer ":
                 raise PrincipalDenied("malformed_credential")
             credential = headers[0][7:]
         request.state.resolved_principal = resolve_principal(

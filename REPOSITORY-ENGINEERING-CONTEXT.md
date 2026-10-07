@@ -37,6 +37,8 @@ Keep exception origins distinct: `security_provider_call` normalizes every key, 
 GrantStore adapter exception to bounded 503. `credential_verifier_call` admits only declared
 reason/status pairs from the deployment-owned verifier, preserving legitimate 401/403 refusals.
 Never forward arbitrary provider diagnostics or statuses, even through `PrincipalDenied`.
+Bearer scheme comparison is case-insensitive. Normalize only the scheme prefix, never signed
+credential bytes; retain duplicate-header and malformed-credential refusal.
 
 `lotus-risk` is the authoritative risk analytics service in Lotus.
 

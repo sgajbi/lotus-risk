@@ -230,6 +230,61 @@ def test_admitted_registered_http_preserves_independent_economics(
         assert result["single_position_concentration"]["top_position_weight_current"] == 0.75
 
 
+@pytest.mark.parametrize("route", list(CAPABILITIES))
+def test_bearer_scheme_case_preserves_exact_credentials_and_refusals(
+    runtime: HttpRuntime,
+    route: str,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    verified_bytes: list[str] = []
+    original = runtime.identity_verifier.verify
+
+    def recording_verifier(credential: str) -> Any:
+        verified_bytes.append(credential)
+        return original(credential)
+
+    monkeypatch.setattr(runtime.identity_verifier, "verify", recording_verifier)
+    credential = runtime.token()
+    for scheme in ("Bearer", "bearer", "bEaReR"):
+        response = runtime.client.post(
+            route, json=payload(route), headers={"Authorization": scheme + " " + credential}
+        )
+        assert response.status_code == 200, response.text
+        result = response.json()
+        if route == CONCENTRATION:
+            assert result["risk_proxy"]["hhi_current"] == 6250
+        elif route == SCENARIO:
+            assert result["worst_case_loss_pct"] == 0.18
+        else:
+            assert result["affected_portfolios"][0]["impact_score"] == 0.18
+    assert verified_bytes == [credential] * 3
+    assert runtime.calls == {route: 3}
+
+    refusals: list[tuple[list[tuple[str, str]], str]] = [
+        ([], "missing_credential"),
+        ([("Authorization", "")], "malformed_credential"),
+        ([("Authorization", "Bearer")], "malformed_credential"),
+        ([("Authorization", "Basic " + credential)], "malformed_credential"),
+        ([("Authorization", "bearer  " + credential)], "malformed_credential"),
+        (
+            [("Authorization", "bearer " + credential), ("Authorization", "Bearer " + credential)],
+            "malformed_credential",
+        ),
+    ]
+    for headers, reason in refusals:
+        with caplog.at_level(logging.INFO, logger="enterprise_readiness"):
+            refused = runtime.client.post(route, json=payload(route), headers=headers)
+        assert refused.status_code == 401 and reason in refused.text
+        assert runtime.calls == {route: 3}
+        audits = [record.audit for record in caplog.records if hasattr(record, "audit")]
+        assert audits and audits[-1]["actor_id"] == audits[-1]["tenant_id"] == "unverified"
+        assert credential not in refused.text + str(audits)
+        caplog.clear()
+    # The extra space reaches the verifier unchanged and fails compact-JWS framing.
+    assert verified_bytes == [credential] * 3 + [" " + credential]
+
+
 DENIALS = [
     ("missing_credential", 401),
     ("malformed_credential", 401),
