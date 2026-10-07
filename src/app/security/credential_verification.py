@@ -3,6 +3,7 @@
 import base64
 import binascii
 import json
+import math
 import re
 import time
 from collections.abc import Callable, Mapping
@@ -94,6 +95,19 @@ def _validate_time(claims: Mapping[str, Any], now: float) -> None:
         raise PrincipalDenied("expired_credential")
 
 
+def _finite_clock(clock: Callable[[], float]) -> float:
+    now = security_provider_call(clock)
+    if type(now) not in (int, float):
+        raise SecurityProviderUnavailable()
+    try:
+        finite = math.isfinite(now)
+    except OverflowError:
+        raise SecurityProviderUnavailable() from None
+    if not finite:
+        raise SecurityProviderUnavailable()
+    return now
+
+
 def _principal_identity(claims: Mapping[str, Any]) -> VerifiedCredential:
     kind = _text(claims, "principal_kind")
     if kind not in {"user", "service", "delegated"}:
@@ -118,7 +132,19 @@ def _public_key(key: Mapping[str, Any]) -> Ed25519PublicKey:
         raise ValueError("wrong key type")
     if key.get("alg", "EdDSA") != "EdDSA" or key.get("use", "sig") != "sig":
         raise ValueError("wrong key use")
+    _validate_key_operations(key)
     return Ed25519PublicKey.from_public_bytes(_decode(_text(key, "x")))
+
+
+def _validate_key_operations(key: Mapping[str, Any]) -> None:
+    if "key_ops" not in key:
+        return
+    operations = key["key_ops"]
+    if not isinstance(operations, list) or not all(isinstance(op, str) for op in operations):
+        raise ValueError("invalid key operations")
+    unique = set(operations)
+    if len(unique) != len(operations) or "verify" not in unique or unique - {"sign", "verify"}:
+        raise ValueError("wrong key operations")
 
 
 def _key_collection(document: Mapping[str, object]) -> list[Mapping[str, Any]]:
@@ -198,5 +224,5 @@ class Ed25519CredentialVerifier:
             raise PrincipalDenied("wrong_issuer")
         if self._audience not in _audiences(claims):
             raise PrincipalDenied("wrong_audience")
-        _validate_time(claims, self._clock())
+        _validate_time(claims, _finite_clock(self._clock))
         return _principal_identity(claims)

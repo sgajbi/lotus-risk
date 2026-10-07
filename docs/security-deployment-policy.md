@@ -14,6 +14,10 @@ revocation provider and clock. No provider, membership or grant is inferred from
 Only concentration, regime-scenario-pack evaluation and risk-event affected-cohort evaluation are
 admitted in this posture. Other protected writes, scenario jobs and operator routes fail closed;
 health probes remain available. This is not a full-service authentication rollout.
+One trailing slash on these three POST routes uses the canonical capability before the router's
+307 redirect; no financial engine runs during redirect. Following it repeats admission and
+portfolio-scope checks with the submitted method, body and credential unchanged. Multiple slashes
+and unadopted protected routes remain blocked; no endpoint alias is added.
 
 The verifier checks strict compact JWS framing, unique JSON members, EdDSA/Ed25519 signatures,
 issuer, audience, integer expiry/not-before, principal kind and revocation. Bearer scheme matching
@@ -43,6 +47,10 @@ Malformed trusted JWKS collections or matching public material return bounded 50
 Every matching key's material is validated before duplicate selection is classified; malformed
 matching material returns 503 in either order. Well-formed sets without exactly one matching key
 return 401 `unknown_key_id`. Unrelated keys do not become credential authority.
+If present, matching `key_ops` must be a unique array of signature operations including `verify`,
+consistent with `use=sig`; omitted constraints remain supported. Malformed or non-verifying
+constraints return 503. Injected clocks must return finite non-boolean numbers; invalid values or
+clock exceptions return 503. Exact expiry and not-before boundaries still produce 401.
 Verifier results must also satisfy the signed-claim identity bounds, exact user/service/delegated
 kind and actor relationship before membership lookup. Malformed typed results refuse 503;
 they cannot bypass delegated intersection by supplying an unsupported kind.
@@ -59,6 +67,8 @@ Evidence: `tests/e2e/test_verified_risk_authority_http.py` exercises actual loop
 real signatures, three financial engines, all thirteen refusal classes and concurrent synthetic
 tenant isolation. It does not establish a live Manage-to-Risk exchange. Keep [Risk #384](https://github.com/sgajbi/lotus-risk/issues/384)
 and the consumer-owned integration acceptance separate from production IAM approval.
+`tests/e2e/test_verified_risk_provider_policy_http.py` adds actual signed HTTP key/clock refusal,
+independent financial controls and single-slash redirect/replay evidence. Providers remain synthetic.
 
 ## Deployment Modes
 

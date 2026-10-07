@@ -12,14 +12,14 @@ completion claim.
 
 ## Generation Identity
 
-- Measured source/test SHA-256: `0d15dc0d800676e04707c6851f7ae1a776735bc4ee67ec38bac56f97f6146ae7`
+- Measured source/test SHA-256: `bab3afdbcee2eb2d856e9368bf8cdb1d2dc95d19779115c6fb03910c813838f2`
 - The branch, commit, tool output and timings belong to the CI run artifact, not this
   rebase-stable measurement. The immutable initial baseline remains commit `3254774`.
 
 ## Current Code Size
 
 - Python source files under `src/`: 287
-- Python test files under `tests/`: 170
+- Python test files under `tests/`: 172
 - Python packages under `src/`: 15
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
 
@@ -34,8 +34,8 @@ completion claim.
 | src/app/services/attribution_active_group_evidence.py | 414 | 16963 |
 | src/app/evidence/idea_opportunity_runtime.py | 400 | 15185 |
 | src/app/services/stateful_returns_series_parser.py | 386 | 14206 |
+| src/app/enterprise_readiness.py | 374 | 13440 |
 | src/app/services/risk_mode_adapter.py | 372 | 12684 |
-| src/app/enterprise_readiness.py | 366 | 13218 |
 | src/app/services/calculation_supportability.py | 320 | 12394 |
 | src/app/integrations/performance_async_execution.py | 308 | 9572 |
 | src/app/integrations/lotus_performance_transport.py | 304 | 10376 |
@@ -46,7 +46,7 @@ completion claim.
 | src/app/scenario_jobs/contracts.py | 233 | 8985 |
 | src/app/integrations/lotus_core_operations.py | 231 | 7376 |
 | src/app/services/supportability_periods.py | 229 | 8819 |
-| src/app/services/risk_event_cohort_engine.py | 225 | 7811 |
+| src/app/security/credential_verification.py | 228 | 8556 |
 
 ### Largest Functions And Classes
 
@@ -164,6 +164,6 @@ needs current CI status, generated OpenAPI artifact evidence, and reviewer-ready
 
 ## Validation Snapshot
 
-- Unit tests collected: 1825
+- Unit tests collected: 1864
 - Import-linter is an enforced architecture gate; its run verdict belongs to CI, not this
   rebase-stable snapshot.

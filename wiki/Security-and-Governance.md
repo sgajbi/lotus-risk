@@ -29,6 +29,12 @@ cannot select developer defaults. Malformed trusted JWKS data returns bounded 50
 well-formed no-match or duplicate-key sets retain 401 authentication refusal.
 Validate material for every matching key before classifying duplicates: mixed valid/malformed
 matches are provider unavailability, not caller authentication failure.
+Matching `key_ops`, when present, must be unique signature operations including `verify` and
+consistent with `use=sig`. Invalid constraints or non-finite/boolean clocks refuse 503; missing
+operation constraints and finite clocks remain supported. Clock exceptions are provider failures.
+The three approved POST routes support a single-slash 307 redirect only after canonical admission.
+No engine runs during redirect; following it repeats admission and scope checks with unchanged
+credential and body. Multiple slashes and other protected routes stay blocked, without new aliases.
 Typed verifier results must satisfy identity and kind/actor invariants before membership lookup;
 invalid fields refuse 503 without narrowing or bypassing delegated authorization.
 Bearer scheme matching is case-insensitive without changing credential bytes; duplicate or
@@ -43,6 +49,9 @@ The [deployment policy](https://github.com/sgajbi/lotus-risk/blob/main/docs/secu
 and [real HTTP tests](https://github.com/sgajbi/lotus-risk/blob/main/tests/e2e/test_verified_risk_authority_http.py)
 describe the bounded proof. Production key custody, revocation/GrantStore operation and live consumer
 acceptance remain separate requirements under [Risk #384](https://github.com/sgajbi/lotus-risk/issues/384).
+The [provider and redirect HTTP tests](https://github.com/sgajbi/lotus-risk/blob/main/tests/e2e/test_verified_risk_provider_policy_http.py)
+cover key/clock refusal, exact temporal boundaries and redirect/replay controls using real signatures
+and financial engines with synthetic authority.
 
 For `lotus-risk`, governance is mainly about analytical truth, contract discipline, and clear
 upstream authority boundaries.
