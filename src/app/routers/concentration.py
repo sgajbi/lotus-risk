@@ -58,8 +58,14 @@ async def analytics_risk_concentration(
         ),
     ] = None,
 ) -> ConcentrationResponse:
-    scope_input = payload.stateful_input or payload.simulation_input
-    require_portfolio_scope(request, [scope_input.portfolio_id] if scope_input is not None else [])
+    require_portfolio_scope(
+        request,
+        [
+            scope_input.portfolio_id
+            for scope_input in (payload.stateful_input, payload.simulation_input)
+            if scope_input is not None
+        ],
+    )
     # Stateless concentration keeps working without tenant authority; stateful and
     # simulation modes admit it here, before the observed operation, so a refused
     # request makes no upstream call and is not an endpoint execution.

@@ -18,6 +18,8 @@ The verified-principal pilot admits concentration, scenario-pack evaluation and 
 evaluation only. Deployment composition supplies trusted Ed25519 verification, revocation and
 GrantStore providers; requests cannot choose keys, tenants or grants. Delegated user/application
 capabilities and portfolio scopes intersect, and missing authority refuses before execution.
+Concentration requires entitlement for every named stateful and simulation portfolio, including
+inactive inputs; execution-mode selection cannot hide a foreign resource.
 Other protected routes are blocked in verified mode. Header-trust is local/dev compatibility only.
 
 The [deployment policy](https://github.com/sgajbi/lotus-risk/blob/main/docs/security-deployment-policy.md)

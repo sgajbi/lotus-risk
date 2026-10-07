@@ -17,6 +17,7 @@ import uvicorn
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from app.app_factory import create_app
+from app.integrations.lotus_core_client import LotusCoreClient
 from app.routers import concentration, source_products
 from app.security.configuration import PrincipalProviders
 from app.security.models import GrantSet, SecurityProviderUnavailable
@@ -372,3 +373,71 @@ def test_early_refusal_normalizes_diagnostic_correlation_before_audit(
     assert audit["correlation_id"] == response.headers["X-Correlation-Id"]
     assert 0 < len(audit["correlation_id"]) <= 128
     assert rejected not in str(audit)
+
+
+@pytest.mark.parametrize("mode", ["simulation", "stateful", "stateless"])
+@pytest.mark.parametrize(
+    ("stateful_portfolio", "simulation_portfolio"),
+    [
+        ("portfolio-a", "foreign"),
+        ("foreign", "portfolio-a"),
+        ("portfolio-a", "portfolio-a"),
+        ("portfolio-a", None),
+        (None, "portfolio-a"),
+        ("foreign", None),
+        (None, "foreign"),
+        (None, None),
+    ],
+)
+def test_concentration_checks_every_named_portfolio_before_engine_and_core(
+    runtime: HttpRuntime,
+    monkeypatch: pytest.MonkeyPatch,
+    mode: str,
+    stateful_portfolio: str | None,
+    simulation_portfolio: str | None,
+) -> None:
+    core_calls: list[str] = []
+
+    async def recording_core_boundary(self: LotusCoreClient, **kwargs: Any) -> Any:
+        core_calls.append(kwargs["portfolio_id"])
+        # Stop at the owned boundary: no external Core I/O or financial-success claim.
+        raise ValueError("owned Core recording boundary reached")
+
+    monkeypatch.setattr(LotusCoreClient, "create_simulation_session", recording_core_boundary)
+    monkeypatch.setattr(LotusCoreClient, "get_core_snapshot", recording_core_boundary)
+    body = payload(CONCENTRATION)
+    body["input_mode"] = mode
+    for name, portfolio in (
+        ("stateful_input", stateful_portfolio),
+        ("simulation_input", simulation_portfolio),
+    ):
+        if portfolio is not None:
+            body[name] = {
+                "portfolio_id": portfolio,
+                "as_of_date": "2026-05-03",
+                "reporting_currency": "USD",
+            }
+            if name == "simulation_input":
+                body[name]["simulation_changes"] = []
+    response = runtime.client.post(
+        CONCENTRATION, json=body, headers={"Authorization": "Bearer " + runtime.token()}
+    )
+    selected_missing = (mode == "stateful" and stateful_portfolio is None) or (
+        mode == "simulation" and simulation_portfolio is None
+    )
+    if selected_missing:
+        assert response.status_code == 422, response.text
+        assert runtime.calls == {} and core_calls == []
+    elif "foreign" in (stateful_portfolio, simulation_portfolio):
+        assert response.status_code == 403, response.text
+        assert "portfolio_outside_scope" in response.text
+        assert runtime.calls == {} and core_calls == []
+    else:
+        assert runtime.calls == {CONCENTRATION: 1}
+        if mode == "stateless":
+            assert response.status_code == 200, response.text
+            assert response.json()["risk_proxy"]["hhi_current"] == 6250
+            assert core_calls == []
+        else:
+            assert response.status_code == 400, response.text
+            assert core_calls == ["portfolio-a"]

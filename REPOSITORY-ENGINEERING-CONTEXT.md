@@ -25,6 +25,10 @@ No financial relationship store is an IAM GrantStore. Production custody, provid
 consumer certification remain outside the local proof. See `docs/security-deployment-policy.md` and
 `tests/e2e/test_verified_risk_authority_http.py` for exact scope and evidence.
 
+Concentration admission checks both stateful and simulation portfolio claims when present,
+including inactive inputs in stateless mode. Never select just one claim for authorization:
+execution-mode selection does not narrow the every-named-portfolio entitlement contract.
+
 `lotus-risk` is the authoritative risk analytics service in Lotus.
 
 It owns drawdown, rolling risk, attribution, concentration, and related risk review analytics.

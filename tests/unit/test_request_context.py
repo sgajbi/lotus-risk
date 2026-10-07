@@ -67,3 +67,23 @@ def test_verified_context_uses_admitted_identity_and_scope() -> None:
     with pytest.raises(HTTPException) as denial:
         require_portfolio_scope(cast(Any, request), ["portfolio", "foreign"])
     assert denial.value.status_code == 403
+
+
+@pytest.mark.parametrize("portfolios", [["portfolio", "foreign"], ["foreign", "portfolio"]])
+def test_portfolio_scope_refuses_any_foreign_resource_without_filtering(
+    portfolios: list[str],
+) -> None:
+    request = SimpleNamespace(
+        state=SimpleNamespace(
+            resolved_principal=ResolvedPrincipal(
+                VerifiedCredential("person", "tenant", "user", "identity"),
+                GrantSet(frozenset({"risk.test"}), frozenset({"portfolio"})),
+            )
+        )
+    )
+    with pytest.raises(HTTPException) as denial:
+        require_portfolio_scope(cast(Any, request), portfolios)
+    assert denial.value.status_code == 403
+    assert denial.value.detail == "portfolio_outside_scope"
+    require_portfolio_scope(cast(Any, request), ["portfolio", "portfolio"])
+    require_portfolio_scope(cast(Any, request), [])

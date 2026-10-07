@@ -22,6 +22,10 @@ intersection of user and application grants; every named portfolio must be entit
 or downstream execution. Header actor, tenant, role and capabilities cannot supply authority.
 Correlation remains diagnostic. Missing providers return bounded denial, never header fallback.
 
+Concentration checks every portfolio named in stateful or simulation input, including inactive
+inputs. Mixed inputs retain compatibility only when all named portfolios are entitled; selecting
+an execution mode cannot hide a foreign resource. Missing selected inputs still fail validation.
+
 `header-trust` is retained only for explicit `local` or `dev` environments selected by
 `LOTUS_RISK_DEPLOYMENT_ENVIRONMENT` (default `local`). Other environments reject header-trust at
 construction. Operators must declare the real deployment environment; a default is not evidence of
