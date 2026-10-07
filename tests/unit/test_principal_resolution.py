@@ -1,5 +1,7 @@
 """Membership and delegated scope/capability are refusals, not filters."""
 
+from typing import Any
+
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
@@ -153,3 +155,102 @@ def test_actual_app_factory_rejects_production_header_trust_and_invents_no_provi
     monkeypatch.setenv("LOTUS_RISK_DEPLOYMENT_ENVIRONMENT", " ")
     with pytest.raises(RuntimeError, match="invalid_deployment_environment"):
         create_app()
+
+
+@pytest.mark.parametrize(
+    ("environment", "posture"),
+    [
+        (None, None),
+        (None, "verified"),
+        ("production", None),
+        ("", "verified"),
+        (" ", "verified"),
+        ("production ", "verified"),
+        ("unsupported", "verified"),
+        ("production", ""),
+        ("production", " "),
+        ("production", "verified "),
+        ("production", "unsupported"),
+        ("production", "header-trust"),
+    ],
+)
+def test_enforced_deployment_refuses_implicit_or_invalid_classification(
+    monkeypatch: pytest.MonkeyPatch, environment: str | None, posture: str | None
+) -> None:
+    from app.app_factory import create_app
+    from app.enterprise_readiness import validate_enterprise_runtime_config
+    from tests.unit.test_enterprise_readiness import _set_valid_enterprise_runtime_config
+
+    _set_valid_enterprise_runtime_config(monkeypatch)
+    for name, value in (
+        ("LOTUS_RISK_DEPLOYMENT_ENVIRONMENT", environment),
+        ("LOTUS_RISK_PRINCIPAL_POSTURE", posture),
+    ):
+        if value is None:
+            monkeypatch.delenv(name, raising=False)
+        else:
+            monkeypatch.setenv(name, value)
+    with pytest.raises(RuntimeError):
+        create_app()
+    with pytest.raises(RuntimeError, match="enterprise_runtime_config_invalid"):
+        validate_enterprise_runtime_config()
+
+
+@pytest.mark.parametrize("environment", ["local", "dev", "test", "staging", "production"])
+def test_enforced_explicit_verified_classification_is_accepted(
+    monkeypatch: pytest.MonkeyPatch, environment: str
+) -> None:
+    from app.app_factory import create_app
+    from app.enterprise_readiness import validate_enterprise_runtime_config
+    from tests.unit.test_enterprise_readiness import _set_valid_enterprise_runtime_config
+
+    _set_valid_enterprise_runtime_config(monkeypatch)
+    monkeypatch.setenv("LOTUS_RISK_DEPLOYMENT_ENVIRONMENT", environment)
+    monkeypatch.setenv("LOTUS_RISK_PRINCIPAL_POSTURE", "verified")
+    assert validate_enterprise_runtime_config() == []
+    assert create_app().state.principal_security.environment == environment
+
+
+@pytest.mark.parametrize("environment", ["local", "dev"])
+def test_enforced_explicit_developer_header_trust_is_retained(
+    monkeypatch: pytest.MonkeyPatch, environment: str
+) -> None:
+    monkeypatch.setenv("ENTERPRISE_ENFORCE_RUNTIME_CONFIG", "true")
+    monkeypatch.setenv("LOTUS_RISK_DEPLOYMENT_ENVIRONMENT", environment)
+    monkeypatch.setenv("LOTUS_RISK_PRINCIPAL_POSTURE", "header-trust")
+    assert PrincipalSecurityConfiguration.from_environment().posture == "header-trust"
+
+
+def test_non_enforced_developer_defaults_are_retained(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ENTERPRISE_ENFORCE_RUNTIME_CONFIG", "false")
+    monkeypatch.delenv("LOTUS_RISK_DEPLOYMENT_ENVIRONMENT", raising=False)
+    monkeypatch.delenv("LOTUS_RISK_PRINCIPAL_POSTURE", raising=False)
+    assert PrincipalSecurityConfiguration.from_environment() == PrincipalSecurityConfiguration(
+        "header-trust", "local"
+    )
+
+
+@pytest.mark.parametrize("value", [None, {}, "provider-private-diagnostic"])
+def test_invalid_verified_provider_result_refuses_before_grant_lookup(
+    monkeypatch: pytest.MonkeyPatch, value: Any
+) -> None:
+    class InvalidVerifier:
+        def verify(self, credential: str) -> Any:
+            return value
+
+    store = Grants()
+    calls: list[str] = []
+
+    def unexpected_lookup(*args: Any) -> Any:
+        calls.append("lookup")
+        raise AssertionError("grant lookup preceded provider validation")
+
+    for method in ("tenant_members", "grants_for", "application_grants_for"):
+        monkeypatch.setattr(store, method, unexpected_lookup)
+    with pytest.raises(PrincipalDenied, match="grant_store_unavailable") as denial:
+        resolve_principal(
+            credential="synthetic",
+            capability="risk.test",
+            providers=PrincipalProviders(InvalidVerifier(), store),
+        )
+    assert denial.value.status == 503 and calls == []

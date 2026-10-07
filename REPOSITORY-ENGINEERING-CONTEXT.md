@@ -28,6 +28,9 @@ consumer certification remain outside the local proof. See `docs/security-deploy
 Concentration admission checks both stateful and simulation portfolio claims when present,
 including inactive inputs in stateless mode. Never select just one claim for authorization:
 execution-mode selection does not narrow the every-named-portfolio entitlement contract.
+Enforced runtime configuration requires explicit principal posture and deployment environment
+at construction and validation. Malformed trusted key-provider output is unavailable authority,
+not a caller authentication failure; valid no-match/duplicate-key sets still refuse authentication.
 
 `lotus-risk` is the authoritative risk analytics service in Lotus.
 

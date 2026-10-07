@@ -121,6 +121,22 @@ def _public_key(key: Mapping[str, Any]) -> Ed25519PublicKey:
     return Ed25519PublicKey.from_public_bytes(_decode(_text(key, "x")))
 
 
+def _key_collection(document: Mapping[str, object]) -> list[Mapping[str, Any]]:
+    keys = document.get("keys")
+    if not isinstance(keys, list):
+        raise SecurityProviderUnavailable()
+    for key in keys:
+        if not isinstance(key, Mapping):
+            raise SecurityProviderUnavailable()
+        try:
+            _text(key, "kty")
+            if "kid" in key:
+                _text(key, "kid")
+        except (ValueError, TypeError):
+            raise SecurityProviderUnavailable() from None
+    return keys
+
+
 class Ed25519CredentialVerifier:
     def __init__(
         self,
@@ -167,16 +183,14 @@ class Ed25519CredentialVerifier:
         document = security_provider_call(self._keys.jwks)
         if not isinstance(document, Mapping):
             raise SecurityProviderUnavailable()
-        keys = document.get("keys")
-        if not isinstance(keys, list):
-            raise PrincipalDenied("unknown_key_id")
-        matching = [key for key in keys if isinstance(key, dict) and key.get("kid") == kid]
+        keys = _key_collection(document)
+        matching = [key for key in keys if key.get("kid") == kid]
         if len(matching) != 1:
             raise PrincipalDenied("unknown_key_id")
         try:
             return _public_key(matching[0])
         except (ValueError, TypeError, binascii.Error):
-            raise PrincipalDenied("unknown_key_id") from None
+            raise SecurityProviderUnavailable() from None
 
     def _claims(self, claims: dict[str, Any]) -> VerifiedCredential:
         if _text(claims, "iss") != self._issuer:

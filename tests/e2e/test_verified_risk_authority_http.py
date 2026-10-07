@@ -20,16 +20,19 @@ from app.app_factory import create_app
 from app.integrations.lotus_core_client import LotusCoreClient
 from app.routers import concentration, source_products
 from app.security.configuration import PrincipalProviders
+from app.security.credential_verification import Ed25519CredentialVerifier
 from app.security.models import GrantSet, SecurityProviderUnavailable
 from app.services.concentration_engine import calculate_concentration
 from app.services.risk_event_cohort_engine import evaluate_risk_event_affected_cohort
 from app.services.scenario_engine import evaluate_regime_scenario_pack
 from tests.unit.test_principal_credential_verification import (
+    AUDIENCE,
+    ISSUER,
     NOW,
+    Keys,
     Revocations,
     claims,
     signed,
-    verifier,
 )
 
 CONCENTRATION = "/analytics/risk/concentration"
@@ -81,6 +84,8 @@ class HttpRuntime:
     grants: HttpGrants
     revocations: Revocations
     calls: Counter[str]
+    keys: Keys
+    identity_verifier: Ed25519CredentialVerifier
 
     def token(self, **changes: Any) -> str:
         return signed(self.key, claims(**changes))
@@ -141,11 +146,17 @@ def runtime(monkeypatch: pytest.MonkeyPatch) -> Iterator[HttpRuntime]:
     monkeypatch.setattr(concentration, "calculate_concentration", observed_concentration)
     monkeypatch.setattr(source_products, "evaluate_regime_scenario_pack", observed_scenario)
     monkeypatch.setattr(source_products, "evaluate_risk_event_affected_cohort", observed_cohort)
-    app = create_app(
-        principal_providers=PrincipalProviders(verifier(key, revocation=revocations), grants)
+    keys = Keys(key)
+    identity_verifier = Ed25519CredentialVerifier(
+        issuer=ISSUER,
+        audience=AUDIENCE,
+        key_provider=keys,
+        revocation=revocations,
+        clock=lambda: NOW,
     )
+    app = create_app(principal_providers=PrincipalProviders(identity_verifier, grants))
     with loopback(app) as client:
-        yield HttpRuntime(client, key, grants, revocations, calls)
+        yield HttpRuntime(client, key, grants, revocations, calls, keys, identity_verifier)
 
 
 def payload(route: str, portfolio: str = "portfolio-a") -> dict[str, Any]:
@@ -441,3 +452,92 @@ def test_concentration_checks_every_named_portfolio_before_engine_and_core(
         else:
             assert response.status_code == 400, response.text
             assert core_calls == ["portfolio-a"]
+
+
+@pytest.mark.parametrize("route", list(CAPABILITIES))
+def test_key_provider_failures_and_selection_controls_precede_engine(
+    runtime: HttpRuntime, route: str, caplog: pytest.LogCaptureFixture
+) -> None:
+    original = runtime.keys.document
+    entries = original["keys"]
+    assert isinstance(entries, list)
+    entry = entries[0]
+    controls: list[tuple[dict[str, object], int]] = [
+        ({}, 503),
+        ({"keys": "provider-private-diagnostic"}, 503),
+        ({"keys": [None]}, 503),
+        ({"keys": [{}]}, 503),
+        ({"keys": [{**entry, "kid": None}]}, 503),
+        ({"keys": [{**entry, "kty": " OKP"}]}, 503),
+        ({"keys": [{**entry, "x": "broken"}]}, 503),
+        ({"keys": [{**entry, "kty": "RSA"}]}, 503),
+        ({"keys": []}, 401),
+        ({"keys": [entry, entry]}, 401),
+        ({"keys": [{**entry, "kid": "other-key"}]}, 401),
+    ]
+    credential = runtime.token()
+    for document, status in controls:
+        runtime.keys.document = document
+        with caplog.at_level(logging.INFO, logger="enterprise_readiness"):
+            response = runtime.client.post(
+                route, json=payload(route), headers={"Authorization": "Bearer " + credential}
+            )
+        assert response.status_code == status, response.text
+        assert ("grant_store_unavailable" if status == 503 else "unknown_key_id") in response.text
+        assert runtime.calls == {}
+        audits = [record.audit for record in caplog.records if hasattr(record, "audit")]
+        assert audits and audits[-1]["actor_id"] == audits[-1]["tenant_id"] == "unverified"
+        assert "provider-private-diagnostic" not in response.text + str(audits)
+        assert credential not in response.text + str(audits)
+        caplog.clear()
+    runtime.keys.document = original
+    recovered = runtime.client.post(
+        route, json=payload(route), headers={"Authorization": "Bearer " + credential}
+    )
+    assert recovered.status_code == 200, recovered.text
+    assert runtime.calls == {route: 1}
+
+
+@pytest.mark.parametrize("route", list(CAPABILITIES))
+def test_invalid_verifier_output_precedes_identity_lookup_and_engine(
+    runtime: HttpRuntime,
+    route: str,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    grant_calls: list[str] = []
+    methods = ("tenant_members", "grants_for", "application_grants_for")
+    original_grants = {method: getattr(runtime.grants, method) for method in methods}
+    original_verify = runtime.identity_verifier.verify
+
+    def unexpected_lookup(*args: Any) -> Any:
+        grant_calls.append("lookup")
+        raise AssertionError("grant lookup preceded verifier-result validation")
+
+    for method in methods:
+        monkeypatch.setattr(runtime.grants, method, unexpected_lookup)
+    credential = runtime.token()
+    invalid_results: tuple[object, ...] = (None, {}, "provider-private-diagnostic")
+    for value in invalid_results:
+        monkeypatch.setattr(
+            runtime.identity_verifier, "verify", lambda credential, result=value: result
+        )
+        with caplog.at_level(logging.INFO, logger="enterprise_readiness"):
+            response = runtime.client.post(
+                route, json=payload(route), headers={"Authorization": "Bearer " + credential}
+            )
+        assert response.status_code == 503 and "grant_store_unavailable" in response.text
+        assert runtime.calls == {} and grant_calls == []
+        audits = [record.audit for record in caplog.records if hasattr(record, "audit")]
+        assert audits and audits[-1]["actor_id"] == audits[-1]["tenant_id"] == "unverified"
+        assert "provider-private-diagnostic" not in response.text + str(audits)
+        assert credential not in response.text + str(audits)
+        caplog.clear()
+    monkeypatch.setattr(runtime.identity_verifier, "verify", original_verify)
+    for method, original in original_grants.items():
+        monkeypatch.setattr(runtime.grants, method, original)
+    recovered = runtime.client.post(
+        route, json=payload(route), headers={"Authorization": "Bearer " + credential}
+    )
+    assert recovered.status_code == 200, recovered.text
+    assert runtime.calls == {route: 1}

@@ -26,10 +26,15 @@ Concentration checks every portfolio named in stateful or simulation input, incl
 inputs. Mixed inputs retain compatibility only when all named portfolios are entitled; selecting
 an execution mode cannot hide a foreign resource. Missing selected inputs still fail validation.
 
-`header-trust` is retained only for explicit `local` or `dev` environments selected by
-`LOTUS_RISK_DEPLOYMENT_ENVIRONMENT` (default `local`). Other environments reject header-trust at
-construction. Operators must declare the real deployment environment; a default is not evidence of
-deployment classification. Existing enterprise ingress, payload and image controls remain necessary
+Enforced runtime configuration requires explicit `LOTUS_RISK_DEPLOYMENT_ENVIRONMENT` and
+`LOTUS_RISK_PRINCIPAL_POSTURE` at construction and validation. Environment values are `local`,
+`dev`, `test`, `staging` or `production`; blank, whitespace-padded and unknown values refuse.
+`header-trust` is retained only for explicitly classified `local` or `dev` environments.
+Non-enforced development retains `local`/`header-trust` defaults. Operators must declare the real
+environment; explicit local classification is not evidence of a shared deployment's safety.
+Malformed trusted JWKS collections or matching public material return bounded 503 unavailability;
+well-formed sets without exactly one matching key return 401 `unknown_key_id`.
+Existing enterprise ingress, payload and image controls remain necessary
 but do not certify trusted key custody, revocation availability or production GrantStore operation.
 
 Evidence: `tests/e2e/test_verified_risk_authority_http.py` exercises actual loopback HTTP,

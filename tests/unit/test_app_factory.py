@@ -30,6 +30,8 @@ def test_create_app_fails_closed_for_incomplete_enterprise_bank_posture(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("ENTERPRISE_ENFORCE_RUNTIME_CONFIG", "true")
+    monkeypatch.setenv("LOTUS_RISK_DEPLOYMENT_ENVIRONMENT", "local")
+    monkeypatch.setenv("LOTUS_RISK_PRINCIPAL_POSTURE", "header-trust")
     monkeypatch.setenv("ENTERPRISE_ENFORCE_AUTHZ", "false")
 
     with pytest.raises(RuntimeError, match="authorization_not_enforced"):

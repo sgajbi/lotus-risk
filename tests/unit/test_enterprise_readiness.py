@@ -24,6 +24,8 @@ from app.enterprise_trusted_ingress import TRUSTED_INGRESS_HEADER
 def _set_valid_enterprise_runtime_config(monkeypatch: pytest.MonkeyPatch) -> None:
     for name, value in {
         "ENTERPRISE_ENFORCE_RUNTIME_CONFIG": "true",
+        "LOTUS_RISK_DEPLOYMENT_ENVIRONMENT": "local",
+        "LOTUS_RISK_PRINCIPAL_POSTURE": "header-trust",
         "ENTERPRISE_ENFORCE_AUTHZ": "true",
         "ENTERPRISE_POLICY_VERSION": "2.0.0",
         "ENTERPRISE_PRIMARY_KEY_ID": "key-2026-01",
