@@ -54,6 +54,7 @@ def resolve_principal(
         principal = security_provider_call(lambda: verifier.verify(credential))
         if not isinstance(principal, VerifiedCredential):
             raise SecurityProviderUnavailable()
+        VerifiedCredential.require_valid_provider_result(principal)
         store = providers.grant_store
         if store is None:
             raise PrincipalDenied("grant_store_unavailable", 503)

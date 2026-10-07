@@ -34,6 +34,9 @@ Non-enforced development retains `local`/`header-trust` defaults. Operators must
 environment; explicit local classification is not evidence of a shared deployment's safety.
 Malformed trusted JWKS collections or matching public material return bounded 503 unavailability;
 well-formed sets without exactly one matching key return 401 `unknown_key_id`.
+Verifier results must also satisfy the signed-claim identity bounds, exact user/service/delegated
+kind and actor relationship before membership lookup. Malformed typed results refuse 503;
+they cannot bypass delegated intersection by supplying an unsupported kind.
 Existing enterprise ingress, payload and image controls remain necessary
 but do not certify trusted key custody, revocation availability or production GrantStore operation.
 
