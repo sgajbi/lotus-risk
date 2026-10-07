@@ -19,7 +19,10 @@ def _request_principal(request: Request) -> ResolvedPrincipal | None:
 
 
 def request_correlation_id(request: Request) -> str | None:
-    return request.headers.get(CORRELATION_ID_HEADER)
+    correlation = getattr(getattr(request, "state", None), "correlation_id", None)
+    return (
+        correlation if isinstance(correlation, str) else request.headers.get(CORRELATION_ID_HEADER)
+    )
 
 
 def request_actor_id(request: Request) -> str | None:

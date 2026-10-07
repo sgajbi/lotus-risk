@@ -24,10 +24,11 @@ def create_app(*, principal_providers: PrincipalProviders | None = None) -> Fast
     risk_app = FastAPI(title=SERVICE_NAME, version=SERVICE_VERSION, lifespan=application_lifespan)
     risk_app.state.principal_security = PrincipalSecurityConfiguration.from_environment()
     risk_app.state.principal_providers = principal_providers or PrincipalProviders()
-    risk_app.add_middleware(CorrelationIdMiddleware, service_name=SERVICE_NAME)
     validate_enterprise_runtime_config()
     risk_app.middleware("http")(build_enterprise_audit_middleware())
     risk_app.middleware("http")(build_http_observation_middleware())
+    # Correlation normalization must wrap early admission refusals as well as routes.
+    risk_app.add_middleware(CorrelationIdMiddleware, service_name=SERVICE_NAME)
     register_exception_handlers(risk_app)
     risk_app.include_router(operational_router)
     risk_app.include_router(source_products_router)
