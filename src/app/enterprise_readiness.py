@@ -21,6 +21,7 @@ from app.enterprise_trusted_ingress import (
 )
 from app.error_response import error_response
 from app.integrations.downstream_profile_env import invalid_downstream_runtime_setting_issues
+from app.security.configuration import PrincipalSecurityConfiguration
 from app.security.models import PrincipalDenied, ResolvedPrincipal
 from app.security.resolution import resolve_principal
 
@@ -83,6 +84,10 @@ def _base_runtime_config_issues() -> list[str]:
 
 def _enterprise_bank_config_issues() -> list[str]:
     issues: list[str] = []
+    try:
+        PrincipalSecurityConfiguration.from_environment()
+    except RuntimeError as failure:
+        issues.append(str(failure))
     if not _env_enabled("ENTERPRISE_ENFORCE_AUTHZ", "false"):
         issues.append("authorization_not_enforced")
     for env_name, issue in (

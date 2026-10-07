@@ -21,6 +21,9 @@ capabilities and portfolio scopes intersect, and missing authority refuses befor
 Concentration requires entitlement for every named stateful and simulation portfolio, including
 inactive inputs; execution-mode selection cannot hide a foreign resource.
 Other protected routes are blocked in verified mode. Header-trust is local/dev compatibility only.
+Enforced deployments must explicitly declare environment and principal posture; omitted settings
+cannot select developer defaults. Malformed trusted JWKS data returns bounded 503 unavailability;
+well-formed no-match or duplicate-key sets retain 401 authentication refusal.
 
 The [deployment policy](https://github.com/sgajbi/lotus-risk/blob/main/docs/security-deployment-policy.md)
 and [real HTTP tests](https://github.com/sgajbi/lotus-risk/blob/main/tests/e2e/test_verified_risk_authority_http.py)

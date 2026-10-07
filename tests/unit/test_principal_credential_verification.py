@@ -170,3 +170,60 @@ def test_alg_none_and_unknown_key_and_revocation_refuse() -> None:
     ]:
         with pytest.raises(PrincipalDenied, match=reason):
             instance.verify(token)
+
+
+@pytest.mark.parametrize(
+    "document",
+    [
+        {},
+        {"keys": "provider-private-diagnostic"},
+        {"keys": [None]},
+        {"keys": [{}]},
+        {"keys": [{"kty": "OKP", "kid": None}]},
+        {"keys": [{"kty": " OKP", "kid": "test-key"}]},
+        {"keys": [{"kid": "test-key", "kty": "OKP", "crv": "Ed25519", "x": "broken"}]},
+        {"keys": [{"kid": "test-key", "kty": "RSA", "crv": "Ed25519", "x": "broken"}]},
+    ],
+)
+def test_malformed_trusted_key_provider_is_unavailable(document: dict[str, Any]) -> None:
+    key = Ed25519PrivateKey.generate()
+    provider = Keys(key)
+    provider.document = document
+    instance = Ed25519CredentialVerifier(
+        issuer=ISSUER,
+        audience=AUDIENCE,
+        key_provider=provider,
+        revocation=Revocations(),
+        clock=lambda: NOW,
+    )
+    with pytest.raises(SecurityProviderUnavailable):
+        instance.verify(signed(key, claims()))
+
+
+@pytest.mark.parametrize("selection", ["empty", "duplicate", "no-match"])
+def test_well_formed_key_selection_failure_remains_unknown_key(selection: str) -> None:
+    key = Ed25519PrivateKey.generate()
+    provider = Keys(key)
+    entries = provider.document["keys"]
+    assert isinstance(entries, list)
+    entry = entries[0]
+    provider.document = {"keys": [] if selection == "empty" else [entry, entry]}
+    instance = Ed25519CredentialVerifier(
+        issuer=ISSUER,
+        audience=AUDIENCE,
+        key_provider=provider,
+        revocation=Revocations(),
+        clock=lambda: NOW,
+    )
+    with pytest.raises(PrincipalDenied, match="unknown_key_id") as denial:
+        instance.verify(
+            signed(key, claims(), kid="foreign-id" if selection == "no-match" else "test-key")
+        )
+    assert denial.value.status == 401
+
+
+def test_signature_failure_precedes_invalid_claims() -> None:
+    key = Ed25519PrivateKey.generate()
+    foreign = Ed25519PrivateKey.generate()
+    with pytest.raises(PrincipalDenied, match="present_but_unverified"):
+        verifier(key).verify(signed(foreign, claims(iss="wrong", exp=0)))
