@@ -12,15 +12,15 @@ completion claim.
 
 ## Generation Identity
 
-- Measured source/test SHA-256: `6126afaa5436892b1e38f809dd7b5c719fb6dfad7bcbdeab57509b90232f0328`
+- Measured source/test SHA-256: `c930978ba9ac56818538b2bffc3e245421f467c2e317dc4e6e74c000d2f722aa`
 - The branch, commit, tool output and timings belong to the CI run artifact, not this
   rebase-stable measurement. The immutable initial baseline remains commit `3254774`.
 
 ## Current Code Size
 
-- Python source files under `src/`: 281
-- Python test files under `tests/`: 166
-- Python packages under `src/`: 14
+- Python source files under `src/`: 287
+- Python test files under `tests/`: 169
+- Python packages under `src/`: 15
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
 
 ### Largest Source Files
@@ -35,12 +35,12 @@ completion claim.
 | src/app/evidence/idea_opportunity_runtime.py | 400 | 15185 |
 | src/app/services/stateful_returns_series_parser.py | 386 | 14206 |
 | src/app/services/risk_mode_adapter.py | 372 | 12684 |
+| src/app/enterprise_readiness.py | 348 | 12480 |
 | src/app/services/calculation_supportability.py | 320 | 12394 |
 | src/app/integrations/performance_async_execution.py | 308 | 9572 |
 | src/app/integrations/lotus_performance_transport.py | 304 | 10376 |
 | src/app/services/attribution_calculation.py | 300 | 11612 |
 | src/app/services/risk/period_metrics.py | 282 | 9471 |
-| src/app/enterprise_readiness.py | 279 | 9484 |
 | src/app/services/attribution_decomposition.py | 266 | 9711 |
 | src/app/services/scenario_engine.py | 255 | 8966 |
 | src/app/scenario_jobs/contracts.py | 233 | 8985 |
@@ -164,6 +164,6 @@ needs current CI status, generated OpenAPI artifact evidence, and reviewer-ready
 
 ## Validation Snapshot
 
-- Unit tests collected: 1643
+- Unit tests collected: 1689
 - Import-linter is an enforced architecture gate; its run verdict belongs to CI, not this
   rebase-stable snapshot.
