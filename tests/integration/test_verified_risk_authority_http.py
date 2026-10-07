@@ -1,5 +1,6 @@
 """Real loopback HTTP admission and independent figures; synthetic identity only."""
 
+import logging
 import socket
 import threading
 import time
@@ -352,3 +353,22 @@ def test_raw_provider_exceptions_are_bounded_unavailability(
     assert "grant_store_unavailable" in response.text
     assert "provider-private-diagnostic" not in response.text
     assert runtime.calls == {}
+
+
+def test_early_refusal_normalizes_diagnostic_correlation_before_audit(
+    runtime: HttpRuntime,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    rejected = "private-correlation-" * 50
+    with caplog.at_level(logging.INFO, logger="enterprise_readiness"):
+        response = runtime.client.post(
+            SCENARIO,
+            json=payload(SCENARIO),
+            headers={"X-Correlation-Id": rejected, "X-Actor-Id": "forged-person"},
+        )
+    assert response.status_code == 401 and runtime.calls == {}
+    audit = next(record.audit for record in caplog.records if hasattr(record, "audit"))
+    assert audit["actor_id"] == audit["tenant_id"] == "unverified"
+    assert audit["correlation_id"] == response.headers["X-Correlation-Id"]
+    assert 0 < len(audit["correlation_id"]) <= 128
+    assert rejected not in str(audit)

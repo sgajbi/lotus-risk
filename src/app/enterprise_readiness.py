@@ -239,7 +239,9 @@ def _emit_write_audit_event(request: Request, response: Response) -> None:
         role=principal.credential.kind
         if isinstance(principal, ResolvedPrincipal)
         else request.headers.get("X-Role", "unknown"),
-        correlation_id=request.headers.get("X-Correlation-Id"),
+        correlation_id=getattr(request.state, "correlation_id", None)
+        if isinstance(principal, ResolvedPrincipal)
+        else request.headers.get("X-Correlation-Id"),
         metadata={"status_code": response.status_code},
     )
 
@@ -318,7 +320,7 @@ async def _verified_admission(request: Request, call_next: MiddlewareNext) -> Re
             actor_id="unverified",
             tenant_id="unverified",
             role="unverified",
-            correlation_id=request.headers.get("X-Correlation-Id"),
+            correlation_id=getattr(request.state, "correlation_id", None),
             metadata={"reason": denial.reason},
         )
         return _apply_enterprise_response_headers(
