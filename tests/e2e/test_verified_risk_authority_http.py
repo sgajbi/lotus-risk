@@ -437,6 +437,64 @@ def test_verified_401_challenge_preserves_non_authentication_outcomes(
         assert result["affected_portfolios"][0]["impact_score"] == 0.18
 
 
+@pytest.mark.parametrize("route", list(CAPABILITIES))
+def test_mixed_duplicate_key_material_is_unavailable_before_selection(
+    runtime: HttpRuntime, route: str, caplog: pytest.LogCaptureFixture
+) -> None:
+    entries = runtime.keys.document["keys"]
+    assert isinstance(entries, list)
+    good = entries[0]
+    credential = runtime.token()
+    headers = {"Authorization": "Bearer " + credential}
+    for changes in (
+        {"x": "broken"},
+        {"x": None},
+        {"kty": "RSA"},
+        {"crv": "unsupported"},
+        {"alg": "unsupported"},
+        {"use": "enc"},
+    ):
+        malformed = {**good, **changes}
+        for matching in ([good, malformed], [malformed, good]):
+            runtime.keys.document = {"keys": matching}
+            with caplog.at_level(logging.INFO, logger="enterprise_readiness"):
+                refused = runtime.client.post(route, json=payload(route), headers=headers)
+            assert refused.status_code == 503 and "grant_store_unavailable" in refused.text
+            assert "WWW-Authenticate" not in refused.headers and runtime.calls == {}
+            audits = [record.audit for record in caplog.records if hasattr(record, "audit")]
+            assert len(audits) == 1 and audits[0]["metadata"] == {
+                "reason": "grant_store_unavailable"
+            }
+            assert audits[0]["actor_id"] == audits[0]["tenant_id"] == "unverified"
+            assert credential not in refused.text + str(audits)
+            caplog.clear()
+    for matching in ([good, good], [], [{**good, "kid": "unrelated-key"}]):
+        runtime.keys.document = {"keys": matching}
+        refused = runtime.client.post(route, json=payload(route), headers=headers)
+        assert refused.status_code == 401 and "unknown_key_id" in refused.text
+        assert refused.headers.get_list("WWW-Authenticate") == ["Bearer"]
+        assert runtime.calls == {}
+    foreign = Ed25519PrivateKey.generate()
+    others = Keys(foreign).document["keys"]
+    assert isinstance(others, list)
+    runtime.keys.document = {"keys": [good, {**others[0], "kid": "unrelated-key"}]}
+    wrong_signature = signed(foreign, claims())
+    refused = runtime.client.post(
+        route, json=payload(route), headers={"Authorization": "Bearer " + wrong_signature}
+    )
+    assert refused.status_code == 401 and "present_but_unverified" in refused.text
+    assert refused.headers.get_list("WWW-Authenticate") == ["Bearer"] and runtime.calls == {}
+    admitted = runtime.client.post(route, json=payload(route), headers=headers)
+    assert admitted.status_code == 200 and runtime.calls == {route: 1}
+    result = admitted.json()
+    if route == CONCENTRATION:
+        assert result["risk_proxy"]["hhi_current"] == 6250
+    elif route == SCENARIO:
+        assert result["worst_case_loss_pct"] == 0.18
+    else:
+        assert result["affected_portfolios"][0]["impact_score"] == 0.18
+
+
 DENIALS = [
     ("missing_credential", 401),
     ("malformed_credential", 401),

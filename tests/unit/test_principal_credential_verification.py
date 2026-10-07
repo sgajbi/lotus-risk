@@ -229,6 +229,58 @@ def test_signature_failure_precedes_invalid_claims() -> None:
         verifier(key).verify(signed(foreign, claims(iss="wrong", exp=0)))
 
 
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"x": "broken"},
+        {"x": None},
+        {"kty": "RSA"},
+        {"crv": "unsupported"},
+        {"alg": "unsupported"},
+        {"use": "enc"},
+    ],
+)
+@pytest.mark.parametrize("malformed_first", [False, True])
+def test_malformed_matching_duplicate_is_unavailable_in_either_order(
+    changes: dict[str, Any], malformed_first: bool
+) -> None:
+    key = Ed25519PrivateKey.generate()
+    provider = Keys(key)
+    entries = provider.document["keys"]
+    assert isinstance(entries, list)
+    good = entries[0]
+    malformed = {**good, **changes}
+    provider.document = {"keys": [malformed, good] if malformed_first else [good, malformed]}
+    instance = Ed25519CredentialVerifier(
+        issuer=ISSUER,
+        audience=AUDIENCE,
+        key_provider=provider,
+        revocation=Revocations(),
+        clock=lambda: NOW,
+    )
+    with pytest.raises(SecurityProviderUnavailable):
+        instance.verify(signed(key, claims()))
+
+
+def test_unrelated_well_formed_key_preserves_singleton_and_signature_verification() -> None:
+    key, foreign = Ed25519PrivateKey.generate(), Ed25519PrivateKey.generate()
+    provider = Keys(key)
+    entries, others = provider.document["keys"], Keys(foreign).document["keys"]
+    assert isinstance(entries, list) and isinstance(others, list)
+    provider.document = {"keys": [entries[0], {**others[0], "kid": "unrelated-key"}]}
+    instance = Ed25519CredentialVerifier(
+        issuer=ISSUER,
+        audience=AUDIENCE,
+        key_provider=provider,
+        revocation=Revocations(),
+        clock=lambda: NOW,
+    )
+    assert instance.verify(signed(key, claims())).subject == "person-a"
+    with pytest.raises(PrincipalDenied, match="present_but_unverified") as denial:
+        instance.verify(signed(foreign, claims()))
+    assert denial.value.status == 401
+
+
 def test_provider_identity_bounds_match_actual_signed_claim_vocabulary() -> None:
     key = Ed25519PrivateKey.generate()
     identity = verifier(key).verify(

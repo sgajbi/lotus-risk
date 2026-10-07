@@ -185,12 +185,13 @@ class Ed25519CredentialVerifier:
             raise SecurityProviderUnavailable()
         keys = _key_collection(document)
         matching = [key for key in keys if key.get("kid") == kid]
-        if len(matching) != 1:
-            raise PrincipalDenied("unknown_key_id")
         try:
-            return _public_key(matching[0])
+            public_keys = [_public_key(key) for key in matching]
         except (ValueError, TypeError, binascii.Error):
             raise SecurityProviderUnavailable() from None
+        if len(public_keys) != 1:
+            raise PrincipalDenied("unknown_key_id")
+        return public_keys[0]
 
     def _claims(self, claims: dict[str, Any]) -> VerifiedCredential:
         if _text(claims, "iss") != self._issuer:

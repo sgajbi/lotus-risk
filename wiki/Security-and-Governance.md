@@ -27,6 +27,8 @@ Other protected routes are blocked in verified mode. Header-trust is local/dev c
 Enforced deployments must explicitly declare environment and principal posture; omitted settings
 cannot select developer defaults. Malformed trusted JWKS data returns bounded 503 unavailability;
 well-formed no-match or duplicate-key sets retain 401 authentication refusal.
+Validate material for every matching key before classifying duplicates: mixed valid/malformed
+matches are provider unavailability, not caller authentication failure.
 Typed verifier results must satisfy identity and kind/actor invariants before membership lookup;
 invalid fields refuse 503 without narrowing or bypassing delegated authorization.
 Bearer scheme matching is case-insensitive without changing credential bytes; duplicate or
