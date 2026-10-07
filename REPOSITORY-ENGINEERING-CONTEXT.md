@@ -31,6 +31,8 @@ execution-mode selection does not narrow the every-named-portfolio entitlement c
 Enforced runtime configuration requires explicit principal posture and deployment environment
 at construction and validation. Malformed trusted key-provider output is unavailable authority,
 not a caller authentication failure; valid no-match/duplicate-key sets still refuse authentication.
+Validate all matching public-key material before duplicate selection; mixed malformed/valid
+matches are unavailable authority in either order. Do not select a valid key from an ambiguous set.
 Validate verifier-result fields before lookup, not just their dataclass type. Identity bounds and
 kind/actor relationships match signed claims; invalid kinds cannot bypass delegated intersection.
 Keep exception origins distinct: `security_provider_call` normalizes every key, revocation and
