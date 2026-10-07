@@ -21,7 +21,7 @@ grants through injected trusted providers; user/application grants intersect for
 Caller authority headers do not override the signed tenant. In concentration, admitted identity
 continues into existing tenant-scoped downstream transport; scope is checked before I/O.
 
-The [HTTP admission suite](https://github.com/sgajbi/lotus-risk/blob/main/tests/integration/test_verified_risk_authority_http.py)
+The [HTTP admission suite](https://github.com/sgajbi/lotus-risk/blob/main/tests/e2e/test_verified_risk_authority_http.py)
 uses real financial engines and signatures with synthetic provider data, not live Manage identity.
 Manage consumer adoption and production IAM remain open acceptance boundaries; other protected
 Risk routes are blocked in verified mode. See [Security and Governance](Security-and-Governance).

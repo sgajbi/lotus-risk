@@ -28,7 +28,7 @@ construction. Operators must declare the real deployment environment; a default 
 deployment classification. Existing enterprise ingress, payload and image controls remain necessary
 but do not certify trusted key custody, revocation availability or production GrantStore operation.
 
-Evidence: `tests/integration/test_verified_risk_authority_http.py` exercises actual loopback HTTP,
+Evidence: `tests/e2e/test_verified_risk_authority_http.py` exercises actual loopback HTTP,
 real signatures, three financial engines, all thirteen refusal classes and concurrent synthetic
 tenant isolation. It does not establish a live Manage-to-Risk exchange. Keep [Risk #384](https://github.com/sgajbi/lotus-risk/issues/384)
 and the consumer-owned integration acceptance separate from production IAM approval.

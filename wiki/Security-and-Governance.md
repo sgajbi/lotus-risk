@@ -21,7 +21,7 @@ capabilities and portfolio scopes intersect, and missing authority refuses befor
 Other protected routes are blocked in verified mode. Header-trust is local/dev compatibility only.
 
 The [deployment policy](https://github.com/sgajbi/lotus-risk/blob/main/docs/security-deployment-policy.md)
-and [real HTTP tests](https://github.com/sgajbi/lotus-risk/blob/main/tests/integration/test_verified_risk_authority_http.py)
+and [real HTTP tests](https://github.com/sgajbi/lotus-risk/blob/main/tests/e2e/test_verified_risk_authority_http.py)
 describe the bounded proof. Production key custody, revocation/GrantStore operation and live consumer
 acceptance remain separate requirements under [Risk #384](https://github.com/sgajbi/lotus-risk/issues/384).
 
