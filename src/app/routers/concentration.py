@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, Request
 
-from app.api_errors import STATEFUL_TENANT_ERROR_RESPONSES
+from app.api_errors import verified_principal_error_responses
 from app.contracts.concentration import (
     ConcentrationInputMode,
     ConcentrationRequest,
@@ -29,7 +29,9 @@ router = APIRouter(tags=["risk-analytics"])
 @router.post(
     "/analytics/risk/concentration",
     response_model=ConcentrationResponse,
-    responses=STATEFUL_TENANT_ERROR_RESPONSES,
+    responses=verified_principal_error_responses(
+        instance="/analytics/risk/concentration", stateful_tenant=True
+    ),
     operation_id="calculateConcentrationRiskAnalytics",
     summary="Calculate concentration risk analytics",
     openapi_extra=stateful_request_openapi_extra(CONCENTRATION_EXAMPLES, verified_pilot=True),

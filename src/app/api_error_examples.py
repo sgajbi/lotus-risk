@@ -177,6 +177,58 @@ STATEFUL_TENANT_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
 }
 
 
+def verified_principal_error_responses(
+    *, instance: str, stateful_tenant: bool = False
+) -> dict[int | str, dict[str, Any]]:
+    description = "Credential refused in verified-principal posture before protected execution."
+    if stateful_tenant:
+        description += " In local/dev header-trust posture, stateful or simulation input also requires admitted tenant authority."
+    response = _error_response_metadata(
+        description=description,
+        status_code=401,
+        code="AUTHORIZATION_DENIED",
+        message="missing_credential",
+        instance=instance,
+    )
+    response["headers"] = {
+        "WWW-Authenticate": {
+            "description": (
+                "Static Bearer challenge on verified-principal 401 responses only; "
+                "header-trust missing-tenant responses do not carry this challenge."
+            ),
+            "schema": {"type": "string", "const": "Bearer"},
+            "example": "Bearer",
+        }
+    }
+    examples = {
+        reason: {
+            "value": _error_example(
+                status_code=401,
+                code="AUTHORIZATION_DENIED",
+                message=reason,
+                instance=instance,
+            )
+        }
+        for reason in (
+            "missing_credential",
+            "malformed_credential",
+            "expired_credential",
+            "revoked_principal",
+        )
+    }
+    if stateful_tenant:
+        examples["missing_tenant_authority"] = {
+            "value": _error_example(
+                status_code=401,
+                code=MISSING_TENANT_AUTHORITY_CODE,
+                message=MISSING_TENANT_AUTHORITY_MESSAGE,
+                instance=instance,
+            )
+        }
+    response["content"]["application/json"] = {"examples": examples}
+    return {**STANDARD_ERROR_RESPONSES, 401: response}
+
+
 __all__ = [
     "ERROR_RESPONSE_400",
     "ERROR_RESPONSE_401",
@@ -186,4 +238,5 @@ __all__ = [
     "ERROR_RESPONSE_DEFAULT",
     "STANDARD_ERROR_RESPONSES",
     "STATEFUL_TENANT_ERROR_RESPONSES",
+    "verified_principal_error_responses",
 ]

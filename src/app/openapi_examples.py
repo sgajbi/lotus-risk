@@ -63,20 +63,35 @@ def _enterprise_authorization_extension(*, verified_pilot: bool) -> JsonObject:
     }
 
 
-def _stateful_tenant_header_parameter() -> JsonObject:
+def _stateful_tenant_header_parameter(*, verified_pilot: bool) -> JsonObject:
+    verified_description = (
+        (
+            "With LOTUS_RISK_PRINCIPAL_POSTURE=verified, tenant authority comes from the resolved "
+            "credential and X-Tenant-Id is ignored in every input mode; the credential tenant is "
+            "forwarded on tenant-owned downstream requests. In local/dev header-trust posture: "
+        )
+        if verified_pilot
+        else ""
+    )
+    stateless_description = (
+        "Stateless header-trust requests do not require tenant authority."
+        if verified_pilot
+        else "Stateless requests do not require tenant authority."
+    )
     return {
         "name": TENANT_ID_HEADER,
         "in": "header",
         "required": False,
-        "description": (
+        "description": verified_description
+        + (
             "Admitted tenant authority for stateful (and concentration simulation) input "
             "modes. The admitted value is forwarded on every tenant-owned lotus-performance "
             "and lotus-core request, including async status/result polling. A stateful "
             f"request without a non-blank value refuses with 401 {MISSING_TENANT_AUTHORITY_CODE} "
             "before any upstream request is made; a trimmed value longer than "
             f"{MAX_TENANT_ID_LENGTH} characters refuses with 400 {INVALID_TENANT_AUTHORITY_CODE}. "
-            "Stateless requests do not require tenant authority."
-        ),
+        )
+        + stateless_description,
         "schema": {
             "type": "string",
             "minLength": 1,
@@ -91,7 +106,7 @@ def stateful_request_openapi_extra(
 ) -> JsonObject:
     return {
         **request_body_examples(examples, verified_pilot=verified_pilot),
-        "parameters": [_stateful_tenant_header_parameter()],
+        "parameters": [_stateful_tenant_header_parameter(verified_pilot=verified_pilot)],
     }
 
 

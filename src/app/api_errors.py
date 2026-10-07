@@ -8,6 +8,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.api_error_examples import (
     STANDARD_ERROR_RESPONSES,
     STATEFUL_TENANT_ERROR_RESPONSES,
+    verified_principal_error_responses,
 )
 from app.contracts.downstream_authority import TenantAuthorityError
 from app.error_response import error_response
@@ -146,4 +147,5 @@ __all__ = [
     "STANDARD_ERROR_RESPONSES",
     "STATEFUL_TENANT_ERROR_RESPONSES",
     "register_exception_handlers",
+    "verified_principal_error_responses",
 ]

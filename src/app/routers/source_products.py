@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request
 
-from app.api_errors import STANDARD_ERROR_RESPONSES
+from app.api_errors import STANDARD_ERROR_RESPONSES, verified_principal_error_responses
 from app.contracts.mandate_health import (
     MandateRiskHealthContextRequest,
     MandateRiskHealthContextResponse,
@@ -59,7 +59,9 @@ async def analytics_risk_mandate_health_context(
 @router.post(
     "/analytics/risk/regime-scenario-pack/evaluate",
     response_model=RegimeScenarioPackResponse,
-    responses=STANDARD_ERROR_RESPONSES,
+    responses=verified_principal_error_responses(
+        instance="/analytics/risk/regime-scenario-pack/evaluate"
+    ),
     operation_id="evaluateRegimeScenarioPack",
     summary="Evaluate a governed regime scenario pack",
     openapi_extra=request_body_examples(REGIME_SCENARIO_EXAMPLES, verified_pilot=True),
@@ -94,7 +96,9 @@ async def analytics_risk_regime_scenario_pack(
 @router.post(
     "/analytics/risk/risk-event-cohorts/evaluate",
     response_model=RiskEventAffectedCohortResponse,
-    responses=STANDARD_ERROR_RESPONSES,
+    responses=verified_principal_error_responses(
+        instance="/analytics/risk/risk-event-cohorts/evaluate"
+    ),
     operation_id="evaluateRiskEventAffectedCohort",
     summary="Evaluate a governed risk-event affected cohort",
     openapi_extra=request_body_examples(RISK_EVENT_COHORT_EXAMPLES, verified_pilot=True),
