@@ -326,8 +326,7 @@ async def _verified_admission(request: Request, call_next: MiddlewareNext) -> Re
     if payload_limit is not None:
         return _apply_enterprise_response_headers(payload_limit)
     try:
-        if request.method != "POST" or request.url.path not in _VERIFIED_WRITE_ROUTES:
-            raise PrincipalDenied("capability_not_granted", 403)
+        canonical_path = _verified_route_path(request)
         headers = request.headers.getlist("Authorization")
         credential: str | None = None
         if headers:
@@ -336,7 +335,7 @@ async def _verified_admission(request: Request, call_next: MiddlewareNext) -> Re
             credential = headers[0][7:]
         request.state.resolved_principal = resolve_principal(
             credential=credential,
-            capability=required_route_capability(request.method, request.url.path),
+            capability=required_route_capability(request.method, canonical_path),
             providers=request.app.state.principal_providers,
         )
     except PrincipalDenied as denial:
@@ -352,6 +351,15 @@ async def _verified_admission(request: Request, call_next: MiddlewareNext) -> Re
     response = await call_next(request)
     _emit_write_audit_event(request, response)
     return _apply_enterprise_response_headers(response)
+
+
+def _verified_route_path(request: Request) -> str:
+    path = request.url.path
+    if path.endswith("/") and path[:-1] in _VERIFIED_WRITE_ROUTES:
+        path = path[:-1]
+    if request.method != "POST" or path not in _VERIFIED_WRITE_ROUTES:
+        raise PrincipalDenied("capability_not_granted", 403)
+    return path
 
 
 __all__ = [

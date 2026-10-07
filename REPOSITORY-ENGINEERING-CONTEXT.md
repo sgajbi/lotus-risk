@@ -33,6 +33,9 @@ at construction and validation. Malformed trusted key-provider output is unavail
 not a caller authentication failure; valid no-match/duplicate-key sets still refuse authentication.
 Validate all matching public-key material before duplicate selection; mixed malformed/valid
 matches are unavailable authority in either order. Do not select a valid key from an ambiguous set.
+Optional matching `key_ops` must be unique signature operations including `verify`, consistent
+with `use=sig`. An omitted constraint remains supported. Injected clocks must return finite,
+non-boolean numbers; invalid values and clock exceptions are provider unavailability, not expiry.
 Validate verifier-result fields before lookup, not just their dataclass type. Identity bounds and
 kind/actor relationships match signed claims; invalid kinds cannot bypass delegated intersection.
 Keep exception origins distinct: `security_provider_call` normalizes every key, revocation and
@@ -43,6 +46,9 @@ Bearer scheme comparison is case-insensitive. Normalize only the scheme prefix, 
 credential bytes; retain duplicate-header and malformed-credential refusal.
 All verified-admission 401 denials share a static Bearer challenge. Keep 403/503 unchanged and
 never reflect credentials, provider diagnostics or resource claims into challenge parameters.
+The three approved POST routes allow one trailing slash through canonical capability admission,
+then the router's 307 redirect. Keep the original path/body intact; the canonical route repeats
+admission and scope checks after redirect. Multiple slashes and other protected routes stay blocked.
 Route scope refusals mark internal request state before HTTPException translation. Write auditing
 uses that marker plus verified identity and 403 to retain bounded DENY/portfolio_outside_scope
 classification; do not infer authorization failure from arbitrary response status or body.
