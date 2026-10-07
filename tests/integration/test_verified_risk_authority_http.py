@@ -43,10 +43,13 @@ CAPABILITIES = {
 class HttpGrants:
     def __init__(self) -> None:
         self.unavailable = False
+        self.raw_failure = False
         self.user_capabilities = frozenset(CAPABILITIES.values())
         self.application_capabilities = self.user_capabilities
 
     def tenant_members(self, subject: str, tenant_id: str) -> bool:
+        if self.raw_failure:
+            raise RuntimeError("provider-private-diagnostic")
         if self.unavailable:
             raise SecurityProviderUnavailable()
         return (subject, tenant_id) in {
@@ -326,4 +329,26 @@ def test_verified_denies_unconfigured_families_and_duplicate_authorization(
         ).status_code
         == 403
     )
+    assert runtime.calls == {}
+
+
+@pytest.mark.parametrize("route", [CONCENTRATION, SCENARIO, COHORT])
+@pytest.mark.parametrize("provider", ["revocation", "membership"])
+def test_raw_provider_exceptions_are_bounded_unavailability(
+    runtime: HttpRuntime,
+    route: str,
+    provider: str,
+) -> None:
+    if provider == "revocation":
+        runtime.revocations.raw_failure = True
+    else:
+        runtime.grants.raw_failure = True
+    response = runtime.client.post(
+        route,
+        json=payload(route),
+        headers={"Authorization": "Bearer " + runtime.token()},
+    )
+    assert response.status_code == 503
+    assert "grant_store_unavailable" in response.text
+    assert "provider-private-diagnostic" not in response.text
     assert runtime.calls == {}
