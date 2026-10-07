@@ -11,6 +11,7 @@ from app.enterprise_authorization import (
     authorize_write_request,
     load_capability_rules,
     missing_supported_write_route_capability_rules,
+    required_route_capability,
 )
 from app.enterprise_policy import enterprise_policy_version
 from app.enterprise_trusted_ingress import (
@@ -20,6 +21,8 @@ from app.enterprise_trusted_ingress import (
 )
 from app.error_response import error_response
 from app.integrations.downstream_profile_env import invalid_downstream_runtime_setting_issues
+from app.security.models import PrincipalDenied, ResolvedPrincipal
+from app.security.resolution import resolve_principal
 
 MiddlewareNext = Callable[[Request], Awaitable[Response]]
 MiddlewareCallable = Callable[[Request, MiddlewareNext], Awaitable[Response]]
@@ -224,11 +227,18 @@ def _trusted_ingress_denied_response(request: Request) -> Response:
 def _emit_write_audit_event(request: Request, response: Response) -> None:
     if request.method not in WRITE_METHODS:
         return
+    principal = getattr(request.state, "resolved_principal", None)
     emit_audit_event(
         action=f"{request.method} {request.url.path}",
-        actor_id=request.headers.get("X-Actor-Id", "unknown"),
-        tenant_id=request.headers.get("X-Tenant-Id", "default"),
-        role=request.headers.get("X-Role", "unknown"),
+        actor_id=principal.credential.subject
+        if isinstance(principal, ResolvedPrincipal)
+        else request.headers.get("X-Actor-Id", "unknown"),
+        tenant_id=principal.credential.tenant_id
+        if isinstance(principal, ResolvedPrincipal)
+        else request.headers.get("X-Tenant-Id", "default"),
+        role=principal.credential.kind
+        if isinstance(principal, ResolvedPrincipal)
+        else request.headers.get("X-Role", "unknown"),
         correlation_id=request.headers.get("X-Correlation-Id"),
         metadata={"status_code": response.status_code},
     )
@@ -243,6 +253,9 @@ def _apply_enterprise_response_headers(response: Response) -> Response:
 
 def build_enterprise_audit_middleware() -> MiddlewareCallable:
     async def middleware(request: Request, call_next: MiddlewareNext) -> Response:
+        security = getattr(request.app.state, "principal_security", None)
+        if security is not None and security.posture == "verified":
+            return await _verified_admission(request, call_next)
         if trusted_ingress_required(
             request.method, request.url.path
         ) and not trusted_ingress_authorized(dict(request.headers)):
@@ -265,6 +278,60 @@ def build_enterprise_audit_middleware() -> MiddlewareCallable:
         return _apply_enterprise_response_headers(response)
 
     return middleware
+
+
+_VERIFIED_WRITE_ROUTES = frozenset(
+    {
+        "/analytics/risk/concentration",
+        "/analytics/risk/regime-scenario-pack/evaluate",
+        "/analytics/risk/risk-event-cohorts/evaluate",
+    }
+)
+
+
+async def _verified_admission(request: Request, call_next: MiddlewareNext) -> Response:
+    protected = trusted_ingress_required(
+        request.method, request.url.path
+    ) or request.url.path.startswith("/analytics/risk/regime-scenario-pack/jobs")
+    if not protected:
+        return _apply_enterprise_response_headers(await call_next(request))
+    payload_limit = _payload_limit_response(request)
+    if payload_limit is not None:
+        return _apply_enterprise_response_headers(payload_limit)
+    try:
+        if request.method != "POST" or request.url.path not in _VERIFIED_WRITE_ROUTES:
+            raise PrincipalDenied("capability_not_granted", 403)
+        headers = request.headers.getlist("Authorization")
+        credential: str | None = None
+        if headers:
+            if len(headers) != 1 or not headers[0].startswith("Bearer "):
+                raise PrincipalDenied("malformed_credential")
+            credential = headers[0][7:]
+        request.state.resolved_principal = resolve_principal(
+            credential=credential,
+            capability=required_route_capability(request.method, request.url.path),
+            providers=request.app.state.principal_providers,
+        )
+    except PrincipalDenied as denial:
+        emit_audit_event(
+            action=f"DENY {request.method} {request.url.path}",
+            actor_id="unverified",
+            tenant_id="unverified",
+            role="unverified",
+            correlation_id=request.headers.get("X-Correlation-Id"),
+            metadata={"reason": denial.reason},
+        )
+        return _apply_enterprise_response_headers(
+            error_response(
+                request,
+                status_code=denial.status,
+                code="AUTHORIZATION_DENIED",
+                message=denial.reason,
+            )
+        )
+    response = await call_next(request)
+    _emit_write_audit_event(request, response)
+    return _apply_enterprise_response_headers(response)
 
 
 __all__ = [

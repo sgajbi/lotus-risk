@@ -1,8 +1,37 @@
 # Lotus Risk Enterprise Deployment Security Policy
 
 This document records the governed deployment posture for `lotus-risk`. It is a production-readiness
-policy for how the existing enterprise-readiness controls must be configured in bank or enterprise
-environments. It does not change local developer defaults.
+policy for existing enterprise-readiness controls and the bounded verified-principal pilot.
+Configuration alone does not certify production IAM or bank readiness.
+
+## Verified-Principal Pilot
+
+Set `LOTUS_RISK_PRINCIPAL_POSTURE=verified` at application construction. The deployment composition
+must inject `PrincipalProviders` through `create_app`: a credential verifier and a live GrantStore.
+The supplied `Ed25519CredentialVerifier` requires explicit issuer, audience, deployment-trusted JWKS,
+revocation provider and clock. No provider, membership or grant is inferred from caller data.
+
+Only concentration, regime-scenario-pack evaluation and risk-event affected-cohort evaluation are
+admitted in this posture. Other protected writes, scenario jobs and operator routes fail closed;
+health probes remain available. This is not a full-service authentication rollout.
+
+The verifier checks strict compact JWS framing, unique JSON members, EdDSA/Ed25519 signatures,
+issuer, audience, integer expiry/not-before, principal kind and revocation. Membership and configured
+route capabilities are resolved from GrantStore. Delegated capabilities and portfolio scope are the
+intersection of user and application grants; every named portfolio must be entitled before engine
+or downstream execution. Header actor, tenant, role and capabilities cannot supply authority.
+Correlation remains diagnostic. Missing providers return bounded denial, never header fallback.
+
+`header-trust` is retained only for explicit `local` or `dev` environments selected by
+`LOTUS_RISK_DEPLOYMENT_ENVIRONMENT` (default `local`). Other environments reject header-trust at
+construction. Operators must declare the real deployment environment; a default is not evidence of
+deployment classification. Existing enterprise ingress, payload and image controls remain necessary
+but do not certify trusted key custody, revocation availability or production GrantStore operation.
+
+Evidence: `tests/integration/test_verified_risk_authority_http.py` exercises actual loopback HTTP,
+real signatures, three financial engines, all thirteen refusal classes and concurrent synthetic
+tenant isolation. It does not establish a live Manage-to-Risk exchange. Keep [Risk #384](https://github.com/sgajbi/lotus-risk/issues/384)
+and the consumer-owned integration acceptance separate from production IAM approval.
 
 ## Deployment Modes
 
@@ -11,8 +40,8 @@ environments. It does not change local developer defaults.
 | Local development | Fast local service execution, isolated tests, and contract generation | `ENTERPRISE_ENFORCE_AUTHZ` may remain unset or `false`; local callers may use test headers |
 | Enterprise bank deployment | Any shared, client-facing, gateway-connected, or bank evaluation environment | `ENTERPRISE_ENFORCE_AUTHZ=true` and `ENTERPRISE_ENFORCE_RUNTIME_CONFIG=true` are required |
 
-Enterprise bank deployment mode is the only mode that supports a bank-buyable production-readiness
-claim. Local development mode is intentionally not a production security posture.
+Enterprise bank deployment requirements below are baseline controls, not a production-readiness
+verdict. Local development mode is intentionally not a production security posture.
 
 ## Required Enterprise Configuration
 
@@ -62,9 +91,10 @@ enterprise application construction succeeds. Prefix rules remain supported, so
 Unmapped writes fail startup with `missing_capability_rule:<METHOD> <PATH>`, and overlapping
 prefixes resolve to the most specific path rule at request time.
 
-## Identity Boundary
+## Retained Header-Trust Boundary (Local/Dev Only)
 
-`lotus-risk` is not the platform identity provider. In enterprise deployment mode:
+`lotus-risk` is not the platform identity provider. The retained compatibility path behaves as follows;
+it is not admission evidence for the verified-principal pilot:
 
 1. `lotus-gateway` or the platform ingress layer validates caller credentials and token integrity.
 2. The approved gateway or ingress strips any caller-supplied `X-Lotus-Trusted-Ingress` header and

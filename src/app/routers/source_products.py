@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 
 from app.api_errors import STANDARD_ERROR_RESPONSES
 from app.contracts.mandate_health import (
@@ -10,6 +10,7 @@ from app.contracts.risk_event_cohort import (
     RiskEventAffectedCohortResponse,
 )
 from app.contracts.scenario import RegimeScenarioPackRequest, RegimeScenarioPackResponse
+from app.dependencies.request_context import require_portfolio_scope
 from app.openapi_examples import (
     MANDATE_HEALTH_EXAMPLES,
     REGIME_SCENARIO_EXAMPLES,
@@ -72,7 +73,11 @@ async def analytics_risk_mandate_health_context(
 )
 async def analytics_risk_regime_scenario_pack(
     request_payload: RegimeScenarioPackRequest,
+    request: Request,
 ) -> RegimeScenarioPackResponse:
+    require_portfolio_scope(
+        request, [request_payload.portfolio_id] if request_payload.portfolio_id else []
+    )
     response = await observed_endpoint(
         endpoint="regime-scenario-pack",
         input_mode="stateless",
@@ -103,7 +108,9 @@ async def analytics_risk_regime_scenario_pack(
 )
 async def analytics_risk_event_affected_cohort(
     request_payload: RiskEventAffectedCohortRequest,
+    request: Request,
 ) -> RiskEventAffectedCohortResponse:
+    require_portfolio_scope(request, [item.portfolio_id for item in request_payload.portfolios])
     response = await observed_endpoint(
         endpoint="risk-event-cohort",
         input_mode="stateless",
