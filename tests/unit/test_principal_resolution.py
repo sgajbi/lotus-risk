@@ -134,3 +134,22 @@ def test_revocation_outage_and_missing_capability_fail_closed() -> None:
 def test_malformed_grant_values_are_not_authority(value: str) -> None:
     with pytest.raises(SecurityProviderUnavailable):
         GrantSet(frozenset({value}), frozenset({"portfolio-a"}))
+
+
+def test_actual_app_factory_rejects_production_header_trust_and_invents_no_providers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.app_factory import create_app
+
+    monkeypatch.setenv("LOTUS_RISK_DEPLOYMENT_ENVIRONMENT", "production")
+    monkeypatch.setenv("LOTUS_RISK_PRINCIPAL_POSTURE", "header-trust")
+    with pytest.raises(RuntimeError, match="header_trust_requires_local_or_dev"):
+        create_app()
+    monkeypatch.setenv("LOTUS_RISK_PRINCIPAL_POSTURE", "verified")
+    monkeypatch.setenv("ENTERPRISE_ENFORCE_RUNTIME_CONFIG", "false")
+    app = create_app()
+    assert app.state.principal_security.environment == "production"
+    assert app.state.principal_providers == PrincipalProviders()
+    monkeypatch.setenv("LOTUS_RISK_DEPLOYMENT_ENVIRONMENT", " ")
+    with pytest.raises(RuntimeError, match="invalid_deployment_environment"):
+        create_app()

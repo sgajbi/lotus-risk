@@ -66,11 +66,16 @@ class Keys:
 
 
 class Revocations:
-    def __init__(self, *, revoked: bool = False, unavailable: bool = False) -> None:
+    def __init__(
+        self, *, revoked: bool = False, unavailable: bool = False, raw_failure: bool = False
+    ) -> None:
         self.revoked = revoked
         self.unavailable = unavailable
+        self.raw_failure = raw_failure
 
     def is_revoked(self, credential_id: str, subject: str) -> bool:
+        if self.raw_failure:
+            raise RuntimeError("provider-private-diagnostic")
         if self.unavailable:
             raise SecurityProviderUnavailable()
         return self.revoked

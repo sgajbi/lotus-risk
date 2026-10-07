@@ -1,9 +1,26 @@
 """Injected identity authority ports; no domain table or hosted grant store."""
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import Protocol
 
-from app.security.models import GrantSet, VerifiedCredential
+from app.security.models import (
+    GrantSet,
+    PrincipalDenied,
+    SecurityProviderUnavailable,
+    VerifiedCredential,
+)
+
+
+def security_provider_call[ProviderResult](
+    operation: Callable[[], ProviderResult],
+) -> ProviderResult:
+    """Provider failure is unavailable authority, never caller-visible exception text."""
+    try:
+        return operation()
+    except PrincipalDenied:
+        raise
+    except Exception as failure:
+        raise SecurityProviderUnavailable() from failure
 
 
 class TrustedKeyProvider(Protocol):

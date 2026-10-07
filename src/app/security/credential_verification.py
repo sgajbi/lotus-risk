@@ -17,7 +17,7 @@ from app.security.models import (
     SecurityProviderUnavailable,
     VerifiedCredential,
 )
-from app.security.ports import RevocationProvider, TrustedKeyProvider
+from app.security.ports import RevocationProvider, TrustedKeyProvider, security_provider_call
 
 
 def _decode(segment: str) -> bytes:
@@ -154,7 +154,9 @@ class Ed25519CredentialVerifier:
             principal = self._claims(claims)
         except (ValueError, TypeError, binascii.Error, UnicodeError, RecursionError):
             raise PrincipalDenied("malformed_credential") from None
-        revoked = self._revocation.is_revoked(principal.credential_id, principal.subject)
+        revoked = security_provider_call(
+            lambda: self._revocation.is_revoked(principal.credential_id, principal.subject)
+        )
         if type(revoked) is not bool:
             raise SecurityProviderUnavailable()
         if revoked:
@@ -162,7 +164,10 @@ class Ed25519CredentialVerifier:
         return principal
 
     def _key(self, kid: str) -> Ed25519PublicKey:
-        keys = self._keys.jwks().get("keys")
+        document = security_provider_call(self._keys.jwks)
+        if not isinstance(document, Mapping):
+            raise SecurityProviderUnavailable()
+        keys = document.get("keys")
         if not isinstance(keys, list):
             raise PrincipalDenied("unknown_key_id")
         matching = [key for key in keys if isinstance(key, dict) and key.get("kid") == kid]

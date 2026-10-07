@@ -8,11 +8,11 @@ from app.security.models import (
     SecurityProviderUnavailable,
     VerifiedCredential,
 )
-from app.security.ports import GrantStore
+from app.security.ports import GrantStore, security_provider_call
 
 
 def _require_membership(store: GrantStore, subject: str, tenant: str) -> None:
-    membership = store.tenant_members(subject, tenant)
+    membership = security_provider_call(lambda: store.tenant_members(subject, tenant))
     if type(membership) is not bool:
         raise SecurityProviderUnavailable()
     if not membership:
@@ -25,7 +25,10 @@ def _delegated_grants(
     if principal.actor is None:
         raise PrincipalDenied("malformed_credential")
     _require_membership(store, principal.actor, principal.tenant_id)
-    application = store.application_grants_for(principal.actor, principal.tenant_id)
+    actor = principal.actor
+    application = security_provider_call(
+        lambda: store.application_grants_for(actor, principal.tenant_id)
+    )
     if not isinstance(application, GrantSet):
         raise SecurityProviderUnavailable()
     if capability not in grants.capabilities and capability in application.capabilities:
@@ -44,15 +47,18 @@ def resolve_principal(
 ) -> ResolvedPrincipal:
     if not credential:
         raise PrincipalDenied("missing_credential")
-    if providers.verifier is None:
+    verifier = providers.verifier
+    if verifier is None:
         raise PrincipalDenied("grant_store_unavailable", 503)
     try:
-        principal = providers.verifier.verify(credential)
+        principal = security_provider_call(lambda: verifier.verify(credential))
         store = providers.grant_store
         if store is None:
             raise PrincipalDenied("grant_store_unavailable", 503)
         _require_membership(store, principal.subject, principal.tenant_id)
-        grants = store.grants_for(principal.subject, principal.tenant_id)
+        grants = security_provider_call(
+            lambda: store.grants_for(principal.subject, principal.tenant_id)
+        )
         if not isinstance(grants, GrantSet):
             raise SecurityProviderUnavailable()
         if principal.kind == "delegated":
