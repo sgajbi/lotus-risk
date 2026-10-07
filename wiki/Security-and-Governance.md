@@ -26,6 +26,8 @@ cannot select developer defaults. Malformed trusted JWKS data returns bounded 50
 well-formed no-match or duplicate-key sets retain 401 authentication refusal.
 Typed verifier results must satisfy identity and kind/actor invariants before membership lookup;
 invalid fields refuse 503 without narrowing or bypassing delegated authorization.
+Bearer scheme matching is case-insensitive without changing credential bytes; duplicate or
+wrong-scheme Authorization headers still refuse.
 Key, revocation, membership and grant adapter exceptions always refuse 503 without exposing their
 diagnostics or selected status. Injected credential verifiers may express only declared denial
 reason/status pairs; legitimate 401/403 refusals remain distinct from provider outages.

@@ -16,8 +16,10 @@ admitted in this posture. Other protected writes, scenario jobs and operator rou
 health probes remain available. This is not a full-service authentication rollout.
 
 The verifier checks strict compact JWS framing, unique JSON members, EdDSA/Ed25519 signatures,
-issuer, audience, integer expiry/not-before, principal kind and revocation. Membership and configured
-route capabilities are resolved from GrantStore. Delegated capabilities and portfolio scope are the
+issuer, audience, integer expiry/not-before, principal kind and revocation. Bearer scheme matching
+is case-insensitive; credential bytes are not normalized. Duplicate or wrong-scheme Authorization
+headers refuse before verification. Membership and configured route capabilities are resolved from
+GrantStore. Delegated capabilities and portfolio scope are the
 intersection of user and application grants; every named portfolio must be entitled before engine
 or downstream execution. Header actor, tenant, role and capabilities cannot supply authority.
 Correlation remains diagnostic. Missing providers return bounded denial, never header fallback.
