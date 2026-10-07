@@ -8,7 +8,7 @@ from app.security.models import (
     SecurityProviderUnavailable,
     VerifiedCredential,
 )
-from app.security.ports import GrantStore, security_provider_call
+from app.security.ports import GrantStore, credential_verifier_call, security_provider_call
 
 
 def _require_membership(store: GrantStore, subject: str, tenant: str) -> None:
@@ -51,7 +51,7 @@ def resolve_principal(
     if verifier is None:
         raise PrincipalDenied("grant_store_unavailable", 503)
     try:
-        principal = security_provider_call(lambda: verifier.verify(credential))
+        principal = credential_verifier_call(lambda: verifier.verify(credential))
         if not isinstance(principal, VerifiedCredential):
             raise SecurityProviderUnavailable()
         VerifiedCredential.require_valid_provider_result(principal)

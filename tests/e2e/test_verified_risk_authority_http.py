@@ -21,7 +21,7 @@ from app.integrations.lotus_core_client import LotusCoreClient
 from app.routers import concentration, source_products
 from app.security.configuration import PrincipalProviders
 from app.security.credential_verification import Ed25519CredentialVerifier
-from app.security.models import GrantSet, SecurityProviderUnavailable
+from app.security.models import GrantSet, PrincipalDenied, SecurityProviderUnavailable
 from app.services.concentration_engine import calculate_concentration
 from app.services.risk_event_cohort_engine import evaluate_risk_event_affected_cohort
 from app.services.scenario_engine import evaluate_regime_scenario_pack
@@ -33,6 +33,10 @@ from tests.unit.test_principal_credential_verification import (
     Revocations,
     claims,
     signed,
+)
+from tests.unit.test_principal_provider_boundaries import (
+    DECLARED_CALLER_DENIALS,
+    INVALID_VERIFIER_DENIALS,
 )
 from tests.unit.test_principal_resolution import INVALID_IDENTITIES, provider_identity
 
@@ -598,3 +602,104 @@ def test_invalid_identity_fields_precede_lookup_and_engine_with_valid_kind_contr
     )
     assert refused.status_code == 403 and "capability_not_granted" in refused.text
     assert runtime.calls == {route: 3}
+
+
+@pytest.mark.parametrize("route", list(CAPABILITIES))
+def test_all_authority_adapter_denials_are_unavailability_not_public_status(
+    runtime: HttpRuntime,
+    route: str,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    targets = [
+        ("key", runtime.keys, "jwks"),
+        ("revocation", runtime.revocations, "is_revoked"),
+        ("membership", runtime.grants, "tenant_members"),
+        ("user_grants", runtime.grants, "grants_for"),
+        ("delegated_membership", runtime.grants, "tenant_members"),
+        ("application_grants", runtime.grants, "application_grants_for"),
+    ]
+    controls = [
+        ("provider-private-diagnostic", 200),
+        ("unknown_key_id", 401),
+        ("capability_not_granted", 403),
+        ("provider-private-diagnostic", 503),
+    ]
+    credential = runtime.token()
+    for role, target, method in targets:
+        original = getattr(target, method)
+        for reason, status in controls:
+
+            def adapter_failure(
+                *args: Any,
+                selected_role: str = role,
+                original_call: Any = original,
+                selected_reason: str = reason,
+                selected_status: int = status,
+            ) -> Any:
+                if selected_role == "delegated_membership" and args[0] != "application-manage":
+                    return original_call(*args)
+                raise PrincipalDenied(selected_reason, selected_status)
+
+            before = runtime.calls.copy()
+            with monkeypatch.context() as scoped:
+                scoped.setattr(target, method, adapter_failure)
+                with caplog.at_level(logging.INFO, logger="enterprise_readiness"):
+                    response = runtime.client.post(
+                        route,
+                        json=payload(route),
+                        headers={"Authorization": "Bearer " + credential},
+                    )
+            assert response.status_code == 503 and "grant_store_unavailable" in response.text
+            assert runtime.calls == before
+            audits = [record.audit for record in caplog.records if hasattr(record, "audit")]
+            assert audits and audits[-1]["actor_id"] == audits[-1]["tenant_id"] == "unverified"
+            assert audits[-1]["metadata"]["reason"] == "grant_store_unavailable"
+            assert "provider-private-diagnostic" not in response.text + str(audits)
+            assert credential not in response.text + str(audits)
+            caplog.clear()
+        recovered = runtime.client.post(
+            route, json=payload(route), headers={"Authorization": "Bearer " + credential}
+        )
+        assert recovered.status_code == 200, recovered.text
+    assert runtime.calls == {route: len(targets)}
+
+
+@pytest.mark.parametrize("route", list(CAPABILITIES))
+def test_injected_verifier_denials_must_obey_declared_caller_contract(
+    runtime: HttpRuntime,
+    route: str,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    credential = runtime.token()
+    for reason, status in [*INVALID_VERIFIER_DENIALS, *DECLARED_CALLER_DENIALS]:
+
+        def verifier_denial(
+            credential: str, selected_reason: Any = reason, selected_status: Any = status
+        ) -> Any:
+            raise PrincipalDenied(selected_reason, selected_status)
+
+        expected_status = status if (reason, status) in DECLARED_CALLER_DENIALS else 503
+        # Float 401 compares equal in Python; it is not an integer contract status.
+        if type(status) is not int:
+            expected_status = 503
+        expected_reason = reason if expected_status != 503 else "grant_store_unavailable"
+        with monkeypatch.context() as scoped:
+            scoped.setattr(runtime.identity_verifier, "verify", verifier_denial)
+            with caplog.at_level(logging.INFO, logger="enterprise_readiness"):
+                response = runtime.client.post(
+                    route, json=payload(route), headers={"Authorization": "Bearer " + credential}
+                )
+        assert response.status_code == expected_status and expected_reason in response.text
+        assert runtime.calls == {}
+        audits = [record.audit for record in caplog.records if hasattr(record, "audit")]
+        assert audits and audits[-1]["actor_id"] == audits[-1]["tenant_id"] == "unverified"
+        assert "provider-private-diagnostic" not in response.text + str(audits)
+        assert credential not in response.text + str(audits)
+        caplog.clear()
+    recovered = runtime.client.post(
+        route, json=payload(route), headers={"Authorization": "Bearer " + credential}
+    )
+    assert recovered.status_code == 200, recovered.text
+    assert runtime.calls == {route: 1}

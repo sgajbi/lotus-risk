@@ -37,6 +37,12 @@ well-formed sets without exactly one matching key return 401 `unknown_key_id`.
 Verifier results must also satisfy the signed-claim identity bounds, exact user/service/delegated
 kind and actor relationship before membership lookup. Malformed typed results refuse 503;
 they cannot bypass delegated intersection by supplying an unsupported kind.
+All key, revocation, membership and grant adapter exceptions become bounded 503 unavailability,
+including adapter-raised caller-denial exceptions. Their status and diagnostics are not public
+authority. The deployment-owned credential verifier may raise only declared reason/status pairs;
+unknown reasons or mismatched/non-integer statuses become 503. Legitimate verifier 401/403 refusals
+remain distinct from provider outages. This boundary does not certify an injected verifier's
+signature implementation or grant policy.
 Existing enterprise ingress, payload and image controls remain necessary
 but do not certify trusted key custody, revocation availability or production GrantStore operation.
 

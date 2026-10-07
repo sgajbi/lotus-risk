@@ -33,6 +33,10 @@ at construction and validation. Malformed trusted key-provider output is unavail
 not a caller authentication failure; valid no-match/duplicate-key sets still refuse authentication.
 Validate verifier-result fields before lookup, not just their dataclass type. Identity bounds and
 kind/actor relationships match signed claims; invalid kinds cannot bypass delegated intersection.
+Keep exception origins distinct: `security_provider_call` normalizes every key, revocation and
+GrantStore adapter exception to bounded 503. `credential_verifier_call` admits only declared
+reason/status pairs from the deployment-owned verifier, preserving legitimate 401/403 refusals.
+Never forward arbitrary provider diagnostics or statuses, even through `PrincipalDenied`.
 
 `lotus-risk` is the authoritative risk analytics service in Lotus.
 
