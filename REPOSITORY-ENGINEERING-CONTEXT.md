@@ -23,7 +23,7 @@ providers fail closed. Only concentration, scenario-pack evaluation and affected
 are admitted; other protected routes remain blocked. Header-trust is local/dev compatibility only.
 No financial relationship store is an IAM GrantStore. Production custody, provider availability and
 consumer certification remain outside the local proof. See `docs/security-deployment-policy.md` and
-`tests/integration/test_verified_risk_authority_http.py` for exact scope and evidence.
+`tests/e2e/test_verified_risk_authority_http.py` for exact scope and evidence.
 
 `lotus-risk` is the authoritative risk analytics service in Lotus.
 
