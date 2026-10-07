@@ -47,4 +47,5 @@ def require_portfolio_scope(request: Request, portfolio_ids: list[str]) -> None:
     try:
         principal.require_portfolios(portfolio_ids)
     except PrincipalDenied as denial:
+        request.state.portfolio_scope_denied = True
         raise HTTPException(status_code=denial.status, detail=denial.reason) from None

@@ -15,6 +15,7 @@ import httpx
 import pytest
 import uvicorn
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from fastapi import HTTPException
 
 from app.app_factory import create_app
 from app.integrations.lotus_core_client import LotusCoreClient
@@ -283,6 +284,87 @@ def test_bearer_scheme_case_preserves_exact_credentials_and_refusals(
         caplog.clear()
     # The extra space reaches the verifier unchanged and fails compact-JWS framing.
     assert verified_bytes == [credential] * 3 + [" " + credential]
+
+
+@pytest.mark.parametrize("route", list(CAPABILITIES))
+def test_portfolio_scope_denial_audit_is_distinct_from_endpoint_403(
+    runtime: HttpRuntime,
+    route: str,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    credential = runtime.token()
+    headers = {
+        "Authorization": "Bearer " + credential,
+        "X-Correlation-Id": "scope-audit-control",
+        "X-Actor-Id": "forged-actor",
+        "X-Tenant-Id": "forged-tenant",
+    }
+    body = payload(route, "private-foreign-portfolio")
+    if route == CONCENTRATION:
+        body["stateful_input"] = {
+            "portfolio_id": "private-foreign-portfolio",
+            "as_of_date": "2026-05-03",
+            "reporting_currency": "USD",
+        }
+    with caplog.at_level(logging.INFO, logger="enterprise_readiness"):
+        refused = runtime.client.post(route, json=body, headers=headers)
+    assert refused.status_code == 403 and "portfolio_outside_scope" in refused.text
+    assert runtime.calls == {}
+    audits = [record.audit for record in caplog.records if hasattr(record, "audit")]
+    assert len(audits) == 1
+    audit = audits[0]
+    assert audit["action"] == "DENY POST " + route
+    assert audit["metadata"] == {"status_code": 403, "reason": "portfolio_outside_scope"}
+    assert audit["actor_id"] == "person-a" and audit["tenant_id"] == "tenant-a"
+    assert audit["role"] == "delegated" and audit["correlation_id"] == "scope-audit-control"
+    for private in (credential, "private-foreign-portfolio", "forged-actor", "forged-tenant"):
+        assert private not in refused.text + str(audits)
+    caplog.clear()
+
+    with caplog.at_level(logging.INFO, logger="enterprise_readiness"):
+        admitted = runtime.client.post(route, json=payload(route), headers=headers)
+    assert admitted.status_code == 200, admitted.text
+    result = admitted.json()
+    if route == CONCENTRATION:
+        assert result["risk_proxy"]["hhi_current"] == 6250
+    elif route == SCENARIO:
+        assert result["worst_case_loss_pct"] == 0.18
+    else:
+        assert result["affected_portfolios"][0]["impact_score"] == 0.18
+    assert runtime.calls == {route: 1}
+    audits = [record.audit for record in caplog.records if hasattr(record, "audit")]
+    assert len(audits) == 1 and audits[0]["action"] == "POST " + route
+    assert audits[0]["metadata"] == {"status_code": 200}
+    caplog.clear()
+
+    endpoint_calls: list[str] = []
+
+    def endpoint_refusal(*args: Any, **kwargs: Any) -> Any:
+        endpoint_calls.append(route)
+        raise HTTPException(status_code=403, detail="endpoint_control_refusal")
+
+    async def async_endpoint_refusal(*args: Any, **kwargs: Any) -> Any:
+        return endpoint_refusal(*args, **kwargs)
+
+    if route == CONCENTRATION:
+        monkeypatch.setattr(concentration, "calculate_concentration", async_endpoint_refusal)
+    else:
+        method = (
+            "evaluate_regime_scenario_pack"
+            if route == SCENARIO
+            else "evaluate_risk_event_affected_cohort"
+        )
+        monkeypatch.setattr(source_products, method, endpoint_refusal)
+    with caplog.at_level(logging.INFO, logger="enterprise_readiness"):
+        unrelated = runtime.client.post(route, json=payload(route), headers=headers)
+    assert unrelated.status_code == 403 and "endpoint_control_refusal" in unrelated.text
+    assert endpoint_calls == [route] and runtime.calls == {route: 1}
+    audits = [record.audit for record in caplog.records if hasattr(record, "audit")]
+    assert len(audits) == 1 and audits[0]["action"] == "POST " + route
+    assert audits[0]["metadata"] == {"status_code": 403}
+    assert audits[0]["actor_id"] == "person-a" and audits[0]["tenant_id"] == "tenant-a"
+    assert credential not in unrelated.text + str(audits)
 
 
 DENIALS = [

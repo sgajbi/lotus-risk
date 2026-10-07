@@ -23,6 +23,9 @@ GrantStore. Delegated capabilities and portfolio scope are the
 intersection of user and application grants; every named portfolio must be entitled before engine
 or downstream execution. Header actor, tenant, role and capabilities cannot supply authority.
 Correlation remains diagnostic. Missing providers return bounded denial, never header fallback.
+Portfolio-scope refusals emit classified denial audits with verified identity, correlation and
+bounded `portfolio_outside_scope` reason, without requested portfolio IDs or credential bytes.
+An internal scope-refusal marker distinguishes these from unrelated endpoint-generated 403s.
 
 Concentration checks every portfolio named in stateful or simulation input, including inactive
 inputs. Mixed inputs retain compatibility only when all named portfolios are entitled; selecting

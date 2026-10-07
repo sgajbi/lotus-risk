@@ -233,8 +233,16 @@ def _emit_write_audit_event(request: Request, response: Response) -> None:
     if request.method not in WRITE_METHODS:
         return
     principal = getattr(request.state, "resolved_principal", None)
+    scope_denied = (
+        isinstance(principal, ResolvedPrincipal)
+        and response.status_code == 403
+        and getattr(request.state, "portfolio_scope_denied", False) is True
+    )
+    metadata: dict[str, Any] = {"status_code": response.status_code}
+    if scope_denied:
+        metadata["reason"] = "portfolio_outside_scope"
     emit_audit_event(
-        action=f"{request.method} {request.url.path}",
+        action=f"{'DENY ' if scope_denied else ''}{request.method} {request.url.path}",
         actor_id=principal.credential.subject
         if isinstance(principal, ResolvedPrincipal)
         else request.headers.get("X-Actor-Id", "unknown"),
@@ -247,7 +255,7 @@ def _emit_write_audit_event(request: Request, response: Response) -> None:
         correlation_id=getattr(request.state, "correlation_id", None)
         if isinstance(principal, ResolvedPrincipal)
         else request.headers.get("X-Correlation-Id"),
-        metadata={"status_code": response.status_code},
+        metadata=metadata,
     )
 
 

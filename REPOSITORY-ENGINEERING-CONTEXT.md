@@ -39,6 +39,9 @@ reason/status pairs from the deployment-owned verifier, preserving legitimate 40
 Never forward arbitrary provider diagnostics or statuses, even through `PrincipalDenied`.
 Bearer scheme comparison is case-insensitive. Normalize only the scheme prefix, never signed
 credential bytes; retain duplicate-header and malformed-credential refusal.
+Route scope refusals mark internal request state before HTTPException translation. Write auditing
+uses that marker plus verified identity and 403 to retain bounded DENY/portfolio_outside_scope
+classification; do not infer authorization failure from arbitrary response status or body.
 
 `lotus-risk` is the authoritative risk analytics service in Lotus.
 
