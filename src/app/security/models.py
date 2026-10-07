@@ -27,6 +27,30 @@ class VerifiedCredential:
     credential_id: str
     actor: str | None = None
 
+    def require_valid_provider_result(self) -> None:
+        for value, maximum in (
+            (self.subject, 512),
+            (self.tenant_id, 128),
+            (self.credential_id, 512),
+        ):
+            _require_identity_text(value, maximum)
+        if not isinstance(self.kind, str) or self.kind not in {"user", "service", "delegated"}:
+            raise SecurityProviderUnavailable()
+        if self.kind == "delegated":
+            _require_identity_text(self.actor, 512)
+        elif self.actor is not None:
+            raise SecurityProviderUnavailable()
+
+
+def _require_identity_text(value: object, maximum: int) -> None:
+    if (
+        not isinstance(value, str)
+        or not value.strip()
+        or value != value.strip()
+        or len(value) > maximum
+    ):
+        raise SecurityProviderUnavailable()
+
 
 @dataclass(frozen=True)
 class GrantSet:

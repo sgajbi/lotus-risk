@@ -31,6 +31,8 @@ execution-mode selection does not narrow the every-named-portfolio entitlement c
 Enforced runtime configuration requires explicit principal posture and deployment environment
 at construction and validation. Malformed trusted key-provider output is unavailable authority,
 not a caller authentication failure; valid no-match/duplicate-key sets still refuse authentication.
+Validate verifier-result fields before lookup, not just their dataclass type. Identity bounds and
+kind/actor relationships match signed claims; invalid kinds cannot bypass delegated intersection.
 
 `lotus-risk` is the authoritative risk analytics service in Lotus.
 

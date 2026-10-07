@@ -6,7 +6,12 @@ import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from app.security.configuration import PrincipalProviders, PrincipalSecurityConfiguration
-from app.security.models import GrantSet, PrincipalDenied, SecurityProviderUnavailable
+from app.security.models import (
+    GrantSet,
+    PrincipalDenied,
+    SecurityProviderUnavailable,
+    VerifiedCredential,
+)
 from app.security.resolution import resolve_principal
 from tests.unit.test_principal_credential_verification import claims, signed, verifier
 
@@ -254,3 +259,99 @@ def test_invalid_verified_provider_result_refuses_before_grant_lookup(
             providers=PrincipalProviders(InvalidVerifier(), store),
         )
     assert denial.value.status == 503 and calls == []
+
+
+INVALID_TEXT_VALUES: tuple[object, ...] = (
+    None,
+    1,
+    True,
+    [],
+    {},
+    "",
+    " ",
+    " padded",
+    "padded ",
+    "x" * 513,
+)
+INVALID_KIND_VALUES: tuple[object, ...] = (None, 1, True, [], {}, "", "bogus", " user", "user ")
+INVALID_IDENTITIES: list[dict[str, Any]] = [
+    {field: value}
+    for field in ("subject", "tenant_id", "credential_id")
+    for value in INVALID_TEXT_VALUES
+] + [
+    {"tenant_id": "x" * 129},
+    *({"kind": value} for value in INVALID_KIND_VALUES),
+    *({"actor": value} for value in INVALID_TEXT_VALUES),
+    {"kind": "user", "actor": "application-manage"},
+    {"kind": "service", "actor": ""},
+]
+
+
+def provider_identity(**changes: Any) -> VerifiedCredential:
+    return VerifiedCredential(
+        **{
+            "subject": "person-a",
+            "tenant_id": "tenant-a",
+            "kind": "delegated",
+            "credential_id": "credential-a",
+            "actor": "application-manage",
+            **changes,
+        }
+    )
+
+
+@pytest.mark.parametrize("changes", INVALID_IDENTITIES)
+def test_malformed_identity_fields_refuse_before_membership(
+    monkeypatch: pytest.MonkeyPatch, changes: dict[str, Any]
+) -> None:
+    identity = provider_identity(**changes)
+
+    class InjectedVerifier:
+        def verify(self, credential: str) -> VerifiedCredential:
+            return identity
+
+    store = Grants()
+    calls: list[str] = []
+
+    def unexpected_lookup(*args: Any) -> Any:
+        calls.append("lookup")
+        raise AssertionError("identity validation must precede lookup")
+
+    for method in ("tenant_members", "grants_for", "application_grants_for"):
+        monkeypatch.setattr(store, method, unexpected_lookup)
+    with pytest.raises(PrincipalDenied, match="grant_store_unavailable") as denial:
+        resolve_principal(
+            credential="synthetic",
+            capability="risk.test",
+            providers=PrincipalProviders(InjectedVerifier(), store),
+        )
+    assert denial.value.status == 503 and calls == []
+
+
+@pytest.mark.parametrize("kind", ["user", "service", "delegated"])
+def test_valid_provider_identity_preserves_kind_and_delegated_intersection(kind: str) -> None:
+    identity = provider_identity(
+        kind=kind, actor="application-manage" if kind == "delegated" else None
+    )
+
+    class InjectedVerifier:
+        def verify(self, credential: str) -> VerifiedCredential:
+            return identity
+
+    store = Grants(application_capabilities=frozenset())
+    providers = PrincipalProviders(InjectedVerifier(), store)
+    if kind == "delegated":
+        with pytest.raises(PrincipalDenied, match="capability_not_granted"):
+            resolve_principal(credential="synthetic", capability="risk.test", providers=providers)
+        admitted = resolve_principal(
+            credential="synthetic",
+            capability="risk.test",
+            providers=PrincipalProviders(InjectedVerifier(), Grants()),
+        )
+        assert admitted.credential is identity
+        assert admitted.grants.portfolio_ids == frozenset({"portfolio-a"})
+    else:
+        admitted = resolve_principal(
+            credential="synthetic", capability="risk.test", providers=providers
+        )
+        assert admitted.credential is identity and store.application_calls == 0

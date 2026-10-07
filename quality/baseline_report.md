@@ -12,7 +12,7 @@ completion claim.
 
 ## Generation Identity
 
-- Measured source/test SHA-256: `ce03d8f4e648100c40f5d37286ab79e33d806fac437d0f3910a4117ea9eb4e12`
+- Measured source/test SHA-256: `54b951d8e320c9c3d59f391cf38ded81089a68fe62963cfc23666b6abb61f3d5`
 - The branch, commit, tool output and timings belong to the CI run artifact, not this
   rebase-stable measurement. The immutable initial baseline remains commit `3254774`.
 
@@ -164,6 +164,6 @@ needs current CI status, generated OpenAPI artifact evidence, and reviewer-ready
 
 ## Validation Snapshot
 
-- Unit tests collected: 1726
+- Unit tests collected: 1782
 - Import-linter is an enforced architecture gate; its run verdict belongs to CI, not this
   rebase-stable snapshot.

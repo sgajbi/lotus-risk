@@ -227,3 +227,20 @@ def test_signature_failure_precedes_invalid_claims() -> None:
     foreign = Ed25519PrivateKey.generate()
     with pytest.raises(PrincipalDenied, match="present_but_unverified"):
         verifier(key).verify(signed(foreign, claims(iss="wrong", exp=0)))
+
+
+def test_provider_identity_bounds_match_actual_signed_claim_vocabulary() -> None:
+    key = Ed25519PrivateKey.generate()
+    identity = verifier(key).verify(
+        signed(
+            key,
+            claims(
+                sub="s" * 512,
+                tenant="t" * 128,
+                jti="i" * 512,
+                act="a" * 512,
+            ),
+        )
+    )
+    identity.require_valid_provider_result()
+    assert identity.kind == "delegated" and len(identity.tenant_id) == 128

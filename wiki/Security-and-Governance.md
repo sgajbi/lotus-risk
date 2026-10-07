@@ -24,6 +24,8 @@ Other protected routes are blocked in verified mode. Header-trust is local/dev c
 Enforced deployments must explicitly declare environment and principal posture; omitted settings
 cannot select developer defaults. Malformed trusted JWKS data returns bounded 503 unavailability;
 well-formed no-match or duplicate-key sets retain 401 authentication refusal.
+Typed verifier results must satisfy identity and kind/actor invariants before membership lookup;
+invalid fields refuse 503 without narrowing or bypassing delegated authorization.
 
 The [deployment policy](https://github.com/sgajbi/lotus-risk/blob/main/docs/security-deployment-policy.md)
 and [real HTTP tests](https://github.com/sgajbi/lotus-risk/blob/main/tests/e2e/test_verified_risk_authority_http.py)

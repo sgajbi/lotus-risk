@@ -34,6 +34,7 @@ from tests.unit.test_principal_credential_verification import (
     claims,
     signed,
 )
+from tests.unit.test_principal_resolution import INVALID_IDENTITIES, provider_identity
 
 CONCENTRATION = "/analytics/risk/concentration"
 SCENARIO = "/analytics/risk/regime-scenario-pack/evaluate"
@@ -541,3 +542,59 @@ def test_invalid_verifier_output_precedes_identity_lookup_and_engine(
     )
     assert recovered.status_code == 200, recovered.text
     assert runtime.calls == {route: 1}
+
+
+@pytest.mark.parametrize("route", list(CAPABILITIES))
+def test_invalid_identity_fields_precede_lookup_and_engine_with_valid_kind_controls(
+    runtime: HttpRuntime,
+    route: str,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    grant_calls: list[str] = []
+    methods = ("tenant_members", "grants_for", "application_grants_for")
+    original_grants = {method: getattr(runtime.grants, method) for method in methods}
+
+    def unexpected_lookup(*args: Any) -> Any:
+        grant_calls.append("lookup")
+        raise AssertionError("identity field validation must precede lookup")
+
+    for method in methods:
+        monkeypatch.setattr(runtime.grants, method, unexpected_lookup)
+    credential = runtime.token()
+    for changes in INVALID_IDENTITIES:
+        identity = provider_identity(**changes)
+        monkeypatch.setattr(
+            runtime.identity_verifier, "verify", lambda credential, result=identity: result
+        )
+        with caplog.at_level(logging.INFO, logger="enterprise_readiness"):
+            response = runtime.client.post(
+                route, json=payload(route), headers={"Authorization": "Bearer " + credential}
+            )
+        assert response.status_code == 503 and "grant_store_unavailable" in response.text
+        assert runtime.calls == {} and grant_calls == []
+        audits = [record.audit for record in caplog.records if hasattr(record, "audit")]
+        assert audits and audits[-1]["actor_id"] == audits[-1]["tenant_id"] == "unverified"
+        assert credential not in response.text + str(audits)
+        assert "application-manage" not in response.text + str(audits)
+        caplog.clear()
+    for method, original in original_grants.items():
+        monkeypatch.setattr(runtime.grants, method, original)
+    for kind in ("user", "service", "delegated"):
+        identity = provider_identity(
+            kind=kind, actor="application-manage" if kind == "delegated" else None
+        )
+        monkeypatch.setattr(
+            runtime.identity_verifier, "verify", lambda credential, result=identity: result
+        )
+        admitted = runtime.client.post(
+            route, json=payload(route), headers={"Authorization": "Bearer " + credential}
+        )
+        assert admitted.status_code == 200, admitted.text
+    assert runtime.calls == {route: 3}
+    runtime.grants.application_capabilities = frozenset()
+    refused = runtime.client.post(
+        route, json=payload(route), headers={"Authorization": "Bearer " + credential}
+    )
+    assert refused.status_code == 403 and "capability_not_granted" in refused.text
+    assert runtime.calls == {route: 3}
