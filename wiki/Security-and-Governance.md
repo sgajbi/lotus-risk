@@ -20,6 +20,9 @@ GrantStore providers; requests cannot choose keys, tenants or grants. Delegated 
 capabilities and portfolio scopes intersect, and missing authority refuses before execution.
 Concentration requires entitlement for every named stateful and simulation portfolio, including
 inactive inputs; execution-mode selection cannot hide a foreign resource.
+Scope refusals retain verified audit identity and correlation as `DENY` with bounded
+`portfolio_outside_scope`; unrelated endpoint 403s are not reclassified. Requested portfolio IDs
+and credential bytes are not denial-audit evidence.
 Other protected routes are blocked in verified mode. Header-trust is local/dev compatibility only.
 Enforced deployments must explicitly declare environment and principal posture; omitted settings
 cannot select developer defaults. Malformed trusted JWKS data returns bounded 503 unavailability;

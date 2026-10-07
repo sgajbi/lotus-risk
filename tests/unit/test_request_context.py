@@ -64,9 +64,11 @@ def test_verified_context_uses_admitted_identity_and_scope() -> None:
     assert request_actor_id(cast(Any, request)) == "person"
     assert request_tenant_id(cast(Any, request)) == "tenant"
     require_portfolio_scope(cast(Any, request), ["portfolio"])
+    assert not hasattr(request.state, "portfolio_scope_denied")
     with pytest.raises(HTTPException) as denial:
         require_portfolio_scope(cast(Any, request), ["portfolio", "foreign"])
     assert denial.value.status_code == 403
+    assert request.state.portfolio_scope_denied is True
 
 
 @pytest.mark.parametrize("portfolios", [["portfolio", "foreign"], ["foreign", "portfolio"]])
