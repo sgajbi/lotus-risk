@@ -12,14 +12,14 @@ completion claim.
 
 ## Generation Identity
 
-- Measured source/test SHA-256: `54b951d8e320c9c3d59f391cf38ded81089a68fe62963cfc23666b6abb61f3d5`
+- Measured source/test SHA-256: `020bf386cdbaf9278ebe6e79526988c09b5f7df88c08718963828f584146ad20`
 - The branch, commit, tool output and timings belong to the CI run artifact, not this
   rebase-stable measurement. The immutable initial baseline remains commit `3254774`.
 
 ## Current Code Size
 
 - Python source files under `src/`: 287
-- Python test files under `tests/`: 169
+- Python test files under `tests/`: 170
 - Python packages under `src/`: 15
 - API entry point route/middleware/handler decorators in `src/app/main.py`: 0
 
@@ -164,6 +164,6 @@ needs current CI status, generated OpenAPI artifact evidence, and reviewer-ready
 
 ## Validation Snapshot
 
-- Unit tests collected: 1782
+- Unit tests collected: 1812
 - Import-linter is an enforced architecture gate; its run verdict belongs to CI, not this
   rebase-stable snapshot.
